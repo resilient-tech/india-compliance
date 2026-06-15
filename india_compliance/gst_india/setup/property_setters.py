@@ -200,10 +200,8 @@ SUBCONTRACTING_RECEIPT_PROPERTIES = [
     for field in TRANSPORTER_NAME_PROPERTIES + LR_NO_PROPERTIES + LR_DATE_PROPERTIES
 ]
 
-# Party GSTIN + GST Category are read_only / fetch_from the party address, so they
-# need allow_on_submit too — otherwise a post-submit address / Place of Supply edit
-# that re-fetches them is rejected by Frappe's update-after-submit guard.
-# company_gstin is intentionally excluded so the Company GSTIN stays frozen.
+# Party GSTIN/GST Category fetch_from the party address, so they need allow_on_submit
+# company_gstin is excluded as it affects GL.
 SALES_ADDRESS_FIELDS = (
     "customer_address",
     "address_display",
@@ -236,7 +234,7 @@ ADDRESS_ALLOW_ON_SUBMIT_PROPERTIES = [
         "value": "1",
     }
     for doctype, fieldnames in ADDRESS_FIELDS_BY_DOCTYPE.items()
-    for fieldname in (*fieldnames, "place_of_supply")
+    for fieldname in fieldnames
 ]
 
 

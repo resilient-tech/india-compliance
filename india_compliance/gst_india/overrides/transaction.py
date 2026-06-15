@@ -1870,14 +1870,9 @@ ADDRESS_FIELDS_ON_SUBMIT = (
 
 
 def sync_address_dependent_fields_on_submit(doc, method=None):
-    """Recompute Place of Supply and block a party-address / place_of_supply edit
-    after submission if it would change the applicable GST taxes (e.g. intra <->
-    inter-state). company_gstin is never touched.
-
-    Runs on before_update_after_submit, before fetch_from re-fetches the address
-    fields, so the dependent GSTIN / GST Category are synced here first to feed
-    the tax comparison with the new address values.
-    """
+    """Block a post-submit address / Place of Supply edit that would change the
+    applicable GST taxes (intra <-> inter-state, or a tax-category change).
+    company_gstin is never touched as it affects GL."""
     if doc.docstatus != 1 or ignore_gst_validations(doc):
         return
 
@@ -1885,48 +1880,47 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
     if not doc_before:
         return
 
-    address_changed = any(
-        doc.meta.has_field(field) and doc.has_value_changed(field) for field in ADDRESS_FIELDS_ON_SUBMIT
-    )
-    place_of_supply_changed = doc.meta.has_field("place_of_supply") and doc.has_value_changed(
-        "place_of_supply"
-    )
+    def has_changed(field):
+        return doc.meta.has_field(field) and doc.get(field) != doc_before.get(field)
 
-    if not address_changed and not place_of_supply_changed:
+    changed_address_fields = [field for field in ADDRESS_FIELDS_ON_SUBMIT if has_changed(field)]
+    pos_changed = has_changed("place_of_supply")
+
+    if not changed_address_fields and not pos_changed:
         return
+
+    address_changed = bool(changed_address_fields)
 
     # On address change, Place of Supply follows the address; otherwise the edited value stands.
     old_gst_details = get_gst_details(
         doc_before.as_dict(), doc.doctype, doc.company, update_place_of_supply=address_changed
     )
+    old_taxes = get_applicable_taxes(old_gst_details)
 
     if address_changed:
-        sync_gst_details_from_address(doc)
+        sync_gst_details_from_address(doc, changed_address_fields)
 
     new_gst_details = get_gst_details(
         doc.as_dict(), doc.doctype, doc.company, update_place_of_supply=address_changed
     )
 
-    if get_applicable_taxes(old_gst_details) != get_applicable_taxes(new_gst_details):
+    if old_taxes != get_applicable_taxes(new_gst_details):
         frappe.throw(
             _(
-                "This change would alter the GST taxes applicable to the document"
-                " (for example by switching between intra-state and inter-state"
-                " supply), which is not allowed after submission."
-                "<br>Please cancel and amend the document instead."
+                "This change alters the GST taxes applicable to the document, which"
+                " is not allowed after submission. Please cancel and amend instead."
             ),
             title=_("Cannot Update After Submit"),
         )
 
-    if address_changed:
+    if address_changed and not pos_changed:  # respect manual overrides
         doc.place_of_supply = new_gst_details.get("place_of_supply") or doc.place_of_supply
 
 
-def sync_gst_details_from_address(doc):
-    """Set party GSTIN / GST Category from the new Address so the tax comparison
-    uses the new values (Frappe's fetch_from re-fetches them later, in validation)."""
+def sync_gst_details_from_address(doc, changed_address_fields):
+    """Set party GSTIN / GST Category from the new Address (fetch_from re-fetches them later)."""
     for address_field, (gstin_field, category_field) in ADDRESS_DEPENDENT_FIELDS.items():
-        if not (doc.meta.has_field(address_field) and doc.has_value_changed(address_field)):
+        if address_field not in changed_address_fields:
             continue
 
         address = doc.get(address_field)
@@ -1942,12 +1936,7 @@ def sync_gst_details_from_address(doc):
 
 
 def get_applicable_taxes(gst_details):
-    """Signature of the GST actually applied — the set of (account, rate, charge
-    type) from the tax rows resolved by get_gst_details."""
-    return frozenset(
-        (row.get("account_head"), flt(row.get("rate")), row.get("charge_type"))
-        for row in (gst_details.get("taxes") or [])
-    )
+    return frozenset(row.get("account_head") for row in (gst_details.get("taxes") or []))
 
 
 def set_ecommerce_supply_type(doc):
