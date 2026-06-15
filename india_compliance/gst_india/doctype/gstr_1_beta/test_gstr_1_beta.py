@@ -1,18 +1,11 @@
 # Copyright (c) 2024, Resilient Tech and Contributors
 # See license.txt
 
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/test_gstr_1_beta.py
-# import frappe
+import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
-=======
-import frappe
-from frappe.tests import IntegrationTestCase
-
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
-from india_compliance.gst_india.doctype.gstr_1.gstr_1_export import (
->>>>>>> 7c974edf (fix: add error handling for SUPECO section in GSTR-1 API):india_compliance/gst_india/doctype/gstr_1/test_gstr_1.py
+from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
     GovExcel,
     _filter_data_by_sections,
     _get_excel_sheet_names,
@@ -33,14 +26,7 @@ GOV_EXCEL_SECTIONS = frozenset(
 )
 
 
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/test_gstr_1_beta.py
-class TestGSTR1Export(FrappeTestCase):
-=======
-class TestGSTR1(IntegrationTestCase):
-    pass
-
-
-class TestGSTR1APIErrorHandling(IntegrationTestCase):
+class TestGSTR1APIErrorHandling(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -77,8 +63,7 @@ class TestGSTR1APIErrorHandling(IntegrationTestCase):
         self.assertRaises(frappe.ValidationError, self.api.handle_error_response, response)
 
 
-class TestGSTR1Export(IntegrationTestCase):
->>>>>>> 7c974edf (fix: add error handling for SUPECO section in GSTR-1 API):india_compliance/gst_india/doctype/gstr_1/test_gstr_1.py
+class TestGSTR1Export(FrappeTestCase):
     GSTIN = "29AABCU9603R1ZM"
     PERIOD = "032024"
 
