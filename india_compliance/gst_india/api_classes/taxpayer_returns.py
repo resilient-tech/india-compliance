@@ -21,6 +21,7 @@ class ReturnsAPI(TaxpayerBaseAPI):
         "RET2B1016": "no_docs_found",
         "RT-3BAS1009": "no_docs_found",
         "RET11417": "no_docs_found",  # GSTR-1 Exports
+        "RETWEB_04": "no_docs_found",  # GSTR-1 SUPECO
         "RET2B1018": "requested_before_cutoff_date",
         "RTN_24": "queued",
         "RET11402": "authorization_failed",  # API Authorization Failed for 2A
