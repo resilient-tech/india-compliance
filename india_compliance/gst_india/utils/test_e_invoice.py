@@ -246,6 +246,37 @@ class TestEInvoice(FrappeTestCase):
             "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
         )
 
+<<<<<<< HEAD
+=======
+        error_response = test_data.get("error_response_standard")
+
+        responses.add(
+            responses.POST,
+            BASE_URL + "/standard/ei/api/invoice",
+            json=error_response,
+            status=200,
+        )
+
+        sync_gstin_response = test_data.get("sync_gstin_response_inactive")
+
+        responses.add(
+            responses.GET,
+            BASE_URL + "/standard/ei/api/master/syncgstin",
+            match=[matchers.query_param_matcher({"gstin": "29AAACI1195H2ZH"})],
+            json=sync_gstin_response,
+            status=200,
+        )
+
+        frappe.flags.bypass_auth = True
+        try:
+            with self.assertRaises(frappe.exceptions.ValidationError) as cm:
+                generate_e_invoice(si.name)
+        finally:
+            frappe.flags.bypass_auth = False
+
+        self.assertIn("GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception))
+
+>>>>>>> e9d107e4 (refactor: improve error handling in e-invoice and e-waybill tests)
     @responses.activate
     def test_generate_e_invoice_with_goods_item(self):
         """Generate test e-Invoice for goods item"""
