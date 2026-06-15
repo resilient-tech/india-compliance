@@ -1620,28 +1620,17 @@ class EWaybillData(GSTTransactionData):
         if self.doc.is_return:
             to_party, from_party = from_party, to_party
 
-<<<<<<< HEAD
         self.bill_to.legal_name = to_party
         self.bill_from.legal_name = from_party
 
         if self.doc.gst_category == "SEZ":
             self.bill_to.state_number = 96
-=======
-        self.bill_to.legal_name = to_party or self.bill_to.address_title
-        self.bill_from.legal_name = from_party or self.bill_from.address_title
 
-<<<<<<< HEAD
-        if transaction_type not in (2, 4):
-            self.ship_to.gstin = None
-            self.ship_to.legal_name = None
->>>>>>> 61d0027d (fix: add shipToGSTIN and shipToTradeName for e-waybill data and update tests)
-=======
         self.ship_to.legal_name = (
             self.bill_to.legal_name
             if self.ship_to.gstin == self.bill_to.gstin
             else self.ship_to.address_title
         )
->>>>>>> ddd32f23 (fix: implement change date for early release)
 
     def get_address_details(self, *args, **kwargs):
         address_details = super().get_address_details(*args, **kwargs)

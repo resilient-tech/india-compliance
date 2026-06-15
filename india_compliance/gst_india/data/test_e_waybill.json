@@ -1148,8 +1148,6 @@
             "Status": "CAN",
             "StatusDesc": "Cancelled"
         }
-<<<<<<< HEAD
-=======
     },
     "overseas_customer_domestic_shipping": {
         "kwargs": {
@@ -1225,6 +1223,5 @@
             },
             "success": true
         }
->>>>>>> 61d0027d (fix: add shipToGSTIN and shipToTradeName for e-waybill data and update tests)
     }
 }

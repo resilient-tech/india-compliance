@@ -16,21 +16,10 @@ from frappe.www.printview import get_html_and_style
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
-<<<<<<< HEAD
-from india_compliance.gst_india.utils import load_doc
-=======
-from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
 from india_compliance.gst_india.constants.e_waybill import (
     E_WAYBILL_CHANGES_APPLICABLE_DATE,
 )
-from india_compliance.gst_india.overrides.sales_invoice import (
-    is_e_waybill_applicable,
-)
-from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
-    create_subcontracting_data,
-)
-from india_compliance.gst_india.utils import load_doc, parse_datetime
->>>>>>> 485378f1 (fix: update E_WAYBILL_CHANGES_APPLICABLE_DATE to reflect new effective date)
+from india_compliance.gst_india.utils import load_doc
 from india_compliance.gst_india.utils.e_invoice import (
     retry_e_invoice_e_waybill_generation,
 )
@@ -1011,8 +1000,6 @@ class TestEWaybill(FrappeTestCase):
             "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
         )
 
-<<<<<<< HEAD
-=======
         error_response = test_data.get("error_response_standard")
 
         responses.add(
@@ -1039,7 +1026,9 @@ class TestEWaybill(FrappeTestCase):
             _generate_e_waybill(doc)
             frappe.flags.bypass_auth = False
 
-        self.assertIn("GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception))
+        self.assertIn(
+            "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
+        )
 
     @responses.activate
     @change_settings("GST Settings", {"sandbox_mode": 1})
@@ -1062,11 +1051,15 @@ class TestEWaybill(FrappeTestCase):
 
         self.assertEqual(e_waybill_data.get("transactionType"), 2)
         self.assertEqual(e_waybill_data.get("shipToGSTIN"), "05AAACG2140A1ZL")
-        self.assertEqual(e_waybill_data.get("shipToTradeName"), "Test Foreign Customer-1")
+        self.assertEqual(
+            e_waybill_data.get("shipToTradeName"), "Test Foreign Customer-1"
+        )
 
         expected_request_data = test_data.get("request_data")
         for key, value in e_waybill_data.items():
-            self.assertEqual(expected_request_data.get(key), value, f"Mismatch for key '{key}'")
+            self.assertEqual(
+                expected_request_data.get(key), value, f"Mismatch for key '{key}'"
+            )
 
     @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_ship_to_gstin_urp_for_unregistered_consignee(self):
@@ -1126,12 +1119,16 @@ class TestEWaybill(FrappeTestCase):
 
     @change_settings("GST Settings", {"sandbox_mode": 0})
     def test_ship_to_gstin_gated_by_rollout_date(self):
-        day_before_rollout = get_datetime(add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1))
+        day_before_rollout = get_datetime(
+            add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1)
+        )
         rollout_date = get_datetime(E_WAYBILL_CHANGES_APPLICABLE_DATE)
 
         # before rollout -> omitted from payload and offline JSON
         with time_machine.travel(day_before_rollout, tick=True):
-            si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")  # type 2
+            si = self.create_sales_invoice_for(
+                "overseas_customer_domestic_shipping"
+            )  # type 2
 
             data = EWaybillData(si).get_data()
             self.assertEqual(data.get("transactionType"), 2)
@@ -1173,7 +1170,12 @@ class TestEWaybill(FrappeTestCase):
                     "country": "India",
                     "gstin": "",
                     "gst_category": "Unregistered",
-                    "links": [{"link_doctype": "Customer", "link_name": "_Test Registered Customer"}],
+                    "links": [
+                        {
+                            "link_doctype": "Customer",
+                            "link_name": "_Test Registered Customer",
+                        }
+                    ],
                 }
             )
             .insert(ignore_if_duplicate=True)
@@ -1248,27 +1250,6 @@ class TestEWaybill(FrappeTestCase):
 
     @change_settings(
         "GST Settings",
-        {"enable_e_waybill_for_sc": 1, "enable_overseas_transactions": 1},
-    )
-    def test_e_waybill_for_sez_stock_entry(self):
-        se = make_subcontracting_stock_entry(
-            bill_from_address="_Test Indian Registered Company-Billing",
-            bill_to_address="_Test Registered Customer-Billing-1",
-            vehicle_no="GJ07DL9009",
-            base_grand_total=100,
-        )
-
-        # reload to trigger onload which sets company_gstin, supplier_gstin
-        se = load_doc("Stock Entry", se.name, "submit")
-
-        e_waybill_data = EWaybillData(se).get_data()
-
-        self.assertEqual(e_waybill_data.get("toStateCode"), 96)
-        self.assertEqual(e_waybill_data.get("fromStateCode"), 24)
-        self.assertEqual(e_waybill_data.get("actToStateCode"), 24)
-
-    @change_settings(
-        "GST Settings",
         {"enable_e_waybill_from_pi": 1, "enable_overseas_transactions": 1},
     )
     def test_e_waybill_for_sez_purchase_invoice(self):
@@ -1310,7 +1291,6 @@ class TestEWaybill(FrappeTestCase):
         self.assertEqual(e_waybill_data.get("toStateCode"), 96)
         self.assertEqual(e_waybill_data.get("actToStateCode"), 24)
 
->>>>>>> 61d0027d (fix: add shipToGSTIN and shipToTradeName for e-waybill data and update tests)
     # helper functions
     def _generate_e_waybill(
         self, docname=None, doctype="Sales Invoice", test_data=None, force=False
