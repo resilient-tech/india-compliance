@@ -78,16 +78,14 @@ frappe.ui.form.on(DOCTYPE, {
                 __("ISD Invoice"),
                 () => {
                     const isd_tax = get_taxes_from_frm(frm);
-                    const pi_context = [
-                        {
-                            name: frm.doc.name,
-                            posting_date: frm.doc.posting_date,
-                            supplier: frm.doc.supplier,
-                            company: frm.doc.company,
-                            taxes_by_eligibility: isd_tax.taxes_by_eligibility,
-                            isd_credit_distributed_percent: frm.doc.isd_credit_distributed_percent || 0,
-                        },
-                    ];
+                    const pi_context = {
+                        name: frm.doc.name,
+                        posting_date: frm.doc.posting_date,
+                        supplier: frm.doc.supplier,
+                        company: frm.doc.company,
+                        taxes_by_eligibility: isd_tax.taxes_by_eligibility,
+                        isd_credit_distributed_percent: frm.doc.isd_credit_distributed_percent || 0,
+                    };
                     india_compliance.show_isd_invoice_distribution_dialog(pi_context);
                 },
                 __("Create"),

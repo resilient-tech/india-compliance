@@ -5,25 +5,16 @@ india_compliance.get_address_query = function (link_doctype, link_name, extra_fi
     };
 };
 
-india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoices) {
-    // purchase_invoices: [{ name, posting_date, supplier, company, taxes_by_eligibility, isd_credit_distributed_percent }]
-    const is_single = purchase_invoices.length === 1;
-    const purchase_invoice = purchase_invoices.map((p) => p.name);
+india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoice) {
     // { purchase invoice name: { total_tax, available } } from the distribution summary
     let summary_by_pi = {};
-    // the first invoice's value is treated as default value
-    const company = purchase_invoices[0].company;
-    const posting_date = purchase_invoices[0].posting_date;
-    if (is_single) {
-        //TODO: remaining, get clarificaiton what is the required data for creating a single isd invoice
-    }
+    const company = purchase_invoice.company;
+    const posting_date = purchase_invoice.posting_date;
 
     // last column will be too narrow, frappe issue #38228
     const dialog = new frappe.ui.Dialog({
         title: __("Select Addresses for ISD Distribution"),
         size: "extra-large",
-        // TODO: purchase_invoice_summary .... field type to be asked to smit bhai
-        // currently field type is html because of frappe bug, last column in table is not shown properly
         fields: [
             {
                 fieldtype: "Section Break",
@@ -39,6 +30,10 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                 fieldname: "general_section",
             },
             {
+                fieldtype: "Column Break",
+                fieldname: "column_1",
+            },
+            {
                 fieldtype: "Check",
                 fieldname: "is_against_party",
                 label: __("Against Party"),
@@ -50,6 +45,16 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     distribution_grid.reset_grid();
                     distribution_grid.refresh();
                 },
+            },
+            {
+                fieldtype: "Column Break",
+                fieldname: "column_2",
+            },
+            {
+                fieldtype: "Date",
+                fieldname: "posting_date",
+                label: __("Posting Date"),
+                default: "Today",
             },
             {
                 fieldtype: "Section Break",
@@ -185,7 +190,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
         ],
         primary_action_label: __("Create ISD Invoices"),
         primary_action() {
-            const { distribution_table = [], is_against_party } = dialog.get_values();
+            const { distribution_table = [], is_against_party, posting_date } = dialog.get_values();
             const rows_with_turnover = distribution_table.filter((row) => row.turnover_amount);
 
             dialog.hide();
@@ -200,21 +205,20 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                 party: is_against_party ? row.party : null,
             }));
 
-            // { purchase invoice name: amount to distribute } - distribute the available amount
-            const purchase_invoices_payload = Object.fromEntries(
-                purchase_invoice.map((name) => [name, summary_by_pi[name]?.available ?? 0]),
-            );
-
             frappe.call({
                 method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.bulk_create_isd_invoices",
-                args: { distribution_table: payload, purchase_invoices: purchase_invoices_payload },
+                args: {
+                    distribution_table: payload,
+                    purchase_invoices: [purchase_invoice.name],
+                    posting_date: posting_date,
+                },
                 freeze: true,
                 freeze_message: __("Creating ISD Invoices..."),
                 callback(r) {
                     if (!r.message) return;
-                    const [success, invalid] = r.message;
+                    const [invoices, invalid] = r.message;
 
-                    if (!invalid.length && !success.length) {
+                    if (!invalid.length && !invoices.length) {
                         frappe.msgprint({ title: __("No ISD Invoices Created"), indicator: "red" });
                         return;
                     }
@@ -225,12 +229,12 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                             ? __("Some ISD Invoices failed validations \n Check {0} for details", [
                                   invalid.join(", "),
                               ])
-                            : __("{0} ISD Invoices created successfully", [success.length]),
+                            : __("{0} ISD Invoices created successfully", [invoices.length]),
                         indicator: invalid.length ? "orange" : "green",
                         primary_action_label: __("View ISD Invoices"),
                         primary_action: {
                             action() {
-                                frappe.route_options = { name: ["in", success.concat(invalid)] };
+                                frappe.route_options = { name: ["in", invoices.concat(invalid)] };
                                 frappe.set_route("List", "ISD Invoice");
                             },
                         },
@@ -245,7 +249,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
         let total_tax = 0;
         let total_available = 0;
 
-        const rows_html = purchase_invoices
+        const rows_html = [purchase_invoice]
             .map((pi) => {
                 const s = summary[pi.name] ?? {};
                 const tt = s.total_tax ?? pi.total_tax ?? 0;
@@ -295,18 +299,16 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
 
     frappe.call({
         method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_purchase_invoices_distribution_summary",
-        args: { purchase_invoices: purchase_invoice },
+        args: { purchase_invoices: [purchase_invoice.name] },
         callback({ message: rows = [] }) {
             const p = (v) => parseFloat(v) || 0;
-            summary_by_pi = Object.fromEntries(
-                rows.map((x) => [
-                    x.purchase_invoice,
-                    {
-                        total_tax: p(x.total_tax),
-                        available: p(x.available_to_distribute),
-                    },
-                ]),
-            );
+            summary_by_pi = {};
+            rows.forEach((x) => {
+                const pi = x.purchase_invoice;
+                if (!summary_by_pi[pi]) summary_by_pi[pi] = { total_tax: 0, available: 0 };
+                summary_by_pi[pi].total_tax += p(x.total_tax);
+                summary_by_pi[pi].available += p(x.available_tax);
+            });
             render_summary(summary_by_pi);
         },
     });
@@ -314,7 +316,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
     function fetch_and_prefill_grid() {
         frappe.call({
             method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_distribution_addresses",
-            args: { party_type: "Company", party: company, posting_date },
+            args: { party_type: "Company", party: company, posting_date: posting_date },
             callback({ message: rows = [] }) {
                 if (!rows.length) return;
                 distribution_grid.df.data = rows.map((r) => ({
@@ -329,5 +331,5 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
         });
     }
 
-    if (is_single) fetch_and_prefill_grid();
+    fetch_and_prefill_grid();
 };
