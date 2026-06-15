@@ -809,6 +809,10 @@ class IMSAction {
             await this.frm.ims_actions.get_ims_data();
         }
 
+        if (!this.frm.reconciliation_tabs.filtered_data?.length) {
+            frappe.throw(__("There is no data to export"));
+        }
+
         const url = `${DOC_PATH}.download_excel_report`;
         open_url_post(`/api/method/${url}`, {
             data: JSON.stringify(this.frm.reconciliation_tabs.filtered_data),

@@ -147,10 +147,11 @@ class Worksheet:
         self.add_data(headers, is_header=True)
         self.add_data(data, is_data=True)
 
-        if add_totals:
+        if data and add_totals:
             self.add_data(self.get_totals(), is_total=True)
 
-        self.apply_conditional_formatting(add_totals)
+        if data:
+            self.apply_conditional_formatting(add_totals)
 
     def insert_data(
         self,
