@@ -200,15 +200,11 @@ SUBCONTRACTING_RECEIPT_PROPERTIES = [
     for field in TRANSPORTER_NAME_PROPERTIES + LR_NO_PROPERTIES + LR_DATE_PROPERTIES
 ]
 
-# Party GSTIN/GST Category fetch_from the party address, so they need allow_on_submit
-# company_gstin is excluded as it affects GL.
 SALES_ADDRESS_FIELDS = (
     "customer_address",
     "address_display",
     "shipping_address_name",
     "shipping_address",
-    "billing_address_gstin",
-    "gst_category",
 )
 
 PURCHASE_ADDRESS_FIELDS = (
@@ -216,13 +212,17 @@ PURCHASE_ADDRESS_FIELDS = (
     "address_display",
     "shipping_address",
     "shipping_address_display",
-    "supplier_gstin",
-    "gst_category",
 )
 
 ADDRESS_FIELDS_BY_DOCTYPE = {
-    "Sales Invoice": SALES_ADDRESS_FIELDS,
-    "Purchase Invoice": PURCHASE_ADDRESS_FIELDS,
+    **dict.fromkeys(
+        ("Quotation", "Sales Order", "Delivery Note", "Sales Invoice", "POS Invoice"),
+        SALES_ADDRESS_FIELDS,
+    ),
+    **dict.fromkeys(
+        ("Supplier Quotation", "Purchase Order", "Purchase Receipt", "Purchase Invoice"),
+        PURCHASE_ADDRESS_FIELDS,
+    ),
 }
 
 ADDRESS_ALLOW_ON_SUBMIT_PROPERTIES = [

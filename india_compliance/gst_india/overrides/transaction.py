@@ -3,6 +3,7 @@ from collections import defaultdict
 from typing import ClassVar
 
 import frappe
+from erpnext.accounts.party import get_address_tax_category
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_default_address
@@ -1837,12 +1838,12 @@ def on_change_item(doc, method=None):
 
 
 def before_update_after_submit(doc, method=None):
+    if ignore_gst_validations(doc):
+        return
+
     sync_address_dependent_fields_on_submit(doc)
 
     if not frappe.flags.through_update_item:
-        return
-
-    if ignore_gst_validations(doc):
         return
 
     validate_items(doc)
@@ -1888,6 +1889,15 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
 
     if not changed_address_fields and not pos_changed:
         return
+
+    if doc.get("ewaybill") or doc.get("irn"):
+        frappe.throw(
+            _(
+                "Cannot change the Place of Supply or address after the e-Waybill or"
+                " e-Invoice has been generated. Cancel it first."
+            ),
+            title=_("Cannot Update After Submit"),
+        )
 
     address_changed = bool(changed_address_fields)
 
