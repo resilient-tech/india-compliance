@@ -257,27 +257,24 @@ class TestTransaction(IntegrationTestCase):
         doc.save()
 
     def test_address_fields_allow_on_submit(self):
-        """Only SI/PI party fields + place_of_supply are editable after submit;
-        company address stays locked so company_gstin can't change."""
+        """Party address fields, dependent GST fields and place_of_supply are editable
+        after submit on all GST transaction doctypes; the company address stays locked."""
         meta = frappe.get_meta(self.doctype)
 
-        if self.doctype not in ADDRESS_FIELDS_BY_DOCTYPE:
-            party_field = "customer_address" if self.is_sales_doctype else "supplier_address"
-            field = meta.get_field(party_field)
-            if field:
-                self.assertFalse(
-                    field.allow_on_submit,
-                    msg=f"{self.doctype}.{party_field} should not be editable after submit by default",
-                )
-            return
+        gst_fields = (
+            ("billing_address_gstin", "gst_category")
+            if self.is_sales_doctype
+            else ("supplier_gstin", "gst_category")
+        )
+        editable = (*ADDRESS_FIELDS_BY_DOCTYPE.get(self.doctype, ()), *gst_fields, "place_of_supply")
 
-        for fieldname in (*ADDRESS_FIELDS_BY_DOCTYPE[self.doctype], "place_of_supply"):
+        for fieldname in editable:
             field = meta.get_field(fieldname)
-            self.assertIsNotNone(field, msg=f"{self.doctype}.{fieldname} missing on doctype")
-            self.assertTrue(
-                field.allow_on_submit,
-                msg=f"{self.doctype}.{fieldname} must have allow_on_submit=1",
-            )
+            if field:  # not every address field exists on every doctype
+                self.assertTrue(
+                    field.allow_on_submit,
+                    msg=f"{self.doctype}.{fieldname} must have allow_on_submit=1",
+                )
 
         company_address_field = "company_address" if self.is_sales_doctype else "billing_address"
         field = meta.get_field(company_address_field)
@@ -288,12 +285,7 @@ class TestTransaction(IntegrationTestCase):
             )
 
     def test_sync_address_dependent_fields_on_submit(self):
-        """A tax-neutral address change after submit is allowed: party GSTIN /
-        GST Category are re-synced, company GSTIN unchanged. Same-state taxable
-        category change (UIN Holders ~ Registered Regular) keeps taxes unchanged."""
-        if self.doctype not in ADDRESS_FIELDS_BY_DOCTYPE:
-            return
-
+        """Tax-neutral post-submit address change is allowed: party GSTIN/category re-sync, company GSTIN unchanged."""
         doc = create_transaction(**self.transaction_details)
 
         if self.is_sales_doctype:
@@ -327,10 +319,7 @@ class TestTransaction(IntegrationTestCase):
         self.assertEqual(doc.company_gstin, doc.get_doc_before_save().company_gstin)
 
     def test_block_tax_changing_address_after_submit(self):
-        """An address change after submit that would change the taxes is blocked."""
-        if self.doctype not in ADDRESS_FIELDS_BY_DOCTYPE:
-            return
-
+        """An address change after submit that changes the taxes (different state) is blocked."""
         doc = create_transaction(**self.transaction_details)
 
         if self.is_sales_doctype:
