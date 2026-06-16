@@ -1840,9 +1840,8 @@ def before_update_after_submit(doc, method=None):
     if ignore_gst_validations(doc):
         return
 
-    sync_address_dependent_fields_on_submit(doc)
-
     if not frappe.flags.through_update_item:
+        sync_address_dependent_fields_on_submit(doc)
         return
 
     validate_items(doc)
@@ -1861,32 +1860,17 @@ ADDRESS_DEPENDENT_FIELDS = {
     "supplier_address": ("supplier_gstin", "gst_category"),
 }
 
-ADDRESS_FIELDS_ON_SUBMIT = (
-    "customer_address",
-    "shipping_address_name",
-    "supplier_address",
-    "shipping_address",
-)
-
 
 def sync_address_dependent_fields_on_submit(doc, method=None):
-    """Block a post-submit address / Place of Supply edit that would change the
-    applicable GST taxes (intra <-> inter-state, or a tax-category change).
-    company_gstin is never touched as it affects GL."""
     if doc.docstatus != 1 or ignore_gst_validations(doc):
         return
 
-    doc_before = doc.get_doc_before_save()
-    if not doc_before:
-        return
-
     def has_changed(field):
-        return doc.meta.has_field(field) and doc.get(field) != doc_before.get(field)
+        return doc.meta.has_field(field) and doc.has_value_changed(field)
 
-    changed_address_fields = [field for field in ADDRESS_FIELDS_ON_SUBMIT if has_changed(field)]
-    pos_changed = has_changed("place_of_supply")
+    changed_address_fields = [field for field in ADDRESS_DEPENDENT_FIELDS if has_changed(field)]
 
-    if not changed_address_fields and not pos_changed:
+    if not changed_address_fields and not has_changed("place_of_supply"):
         return
 
     if doc.get("ewaybill") or doc.get("irn"):
@@ -1898,36 +1882,26 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
             title=_("Cannot Update After Submit"),
         )
 
-    address_changed = bool(changed_address_fields)
-
-    # On address change, Place of Supply follows the address; otherwise the edited value stands.
-    old_gst_details = get_gst_details(
-        doc_before.as_dict(), doc.doctype, doc.company, update_place_of_supply=address_changed
-    )
-    old_taxes = get_applicable_taxes(old_gst_details)
-
-    if address_changed:
+    if changed_address_fields:
         sync_gst_details_from_address(doc, changed_address_fields)
 
-    new_gst_details = get_gst_details(
-        doc.as_dict(), doc.doctype, doc.company, update_place_of_supply=address_changed
-    )
+    is_sales_transaction = doc.doctype in SALES_DOCTYPES
+    gstin = doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin
 
-    if old_taxes != get_applicable_taxes(new_gst_details):
-        frappe.throw(
-            _(
-                "This change alters the GST taxes applicable to the document, which"
-                " is not allowed after submission. Please cancel and amend instead."
-            ),
-            title=_("Cannot Update After Submit"),
-        )
+    validate_place_of_supply(doc)
+    validate_overseas_gst_category(doc)
 
-    if address_changed and not pos_changed:  # respect manual overrides
-        doc.place_of_supply = new_gst_details.get("place_of_supply") or doc.place_of_supply
+    if gstin:
+        validate_gstin_status(gstin, doc)
+
+    validate_gst_category(doc.gst_category, gstin)
+    GSTAccounts().validate(doc, is_sales_transaction)
+
+    if doc.doctype == "Sales Invoice":
+        validate_backdated_transaction(doc, action="update")
 
 
 def sync_gst_details_from_address(doc, changed_address_fields):
-    """Set party GSTIN / GST Category from the new Address (fetch_from re-fetches them later)."""
     for address_field, (gstin_field, category_field) in ADDRESS_DEPENDENT_FIELDS.items():
         if address_field not in changed_address_fields:
             continue
