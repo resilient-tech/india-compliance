@@ -325,7 +325,7 @@ class ISDInvoice(Document):
 
     def on_cancel(self):
         self._sync_purchase_invoice_distribution()
-        self.ignore_linked_doctypes = ("GL Entry",)
+        self.ignore_linked_doctypes = ("GL Entry", "Payment Ledger Entry")
         make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
 
     def get_gl_entries(self):
@@ -406,6 +406,9 @@ class ISDInvoice(Document):
 
         # on_cancel does not run validate(), so set_taxes_and_totals() never sets this
         self._source_item_precision = self.precision("distributed_igst", "source_invoices")
+        self._pi_names = list(
+            {row.purchase_invoice for row in self.source_invoices}
+        )  # list of unique purchase invoices
 
         total_tax_map = defaultdict(float)
         dist_map = defaultdict(float)
