@@ -372,10 +372,11 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval: doc.is_external_invoice",
-   "fieldname": "external_invoice_number",
-   "fieldtype": "Data",
-   "label": "External Invoice Number"
+    "fieldname": "external_invoice_number",
+    "fieldtype": "Data",
+    "label": "External Invoice Number",
+    "depends_on": "eval: doc.is_external_invoice",
+    "mandatory_depends_on": "eval: doc.is_external_invoice"
   }
  ],
  "index_web_pages_for_search": 1,

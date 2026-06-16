@@ -10,7 +10,6 @@ frappe.ui.form.on("ISD Invoice", {
     },
 
     refresh(frm) {
-        frm.fields_dict.source_invoices.grid.toggle_reqd("purchase_invoice", !frm.doc.is_external_invoice);
         if (frm.doc.docstatus === 1 && frm.doc.is_against_party && frappe.model.can_create("ISD Invoice")) {
             frm.add_custom_button(
                 __("Inter Company ISD Invoice"),
@@ -83,10 +82,9 @@ frappe.ui.form.on("ISD Invoice", {
     },
 
     is_external_invoice(frm) {
-        frm.fields_dict.source_invoices.grid.toggle_reqd("purchase_invoice", !frm.doc.is_external_invoice);
-
         if (frm.doc.is_external_invoice) {
             frm.clear_table("source_invoices");
+            frm.refresh_field("source_invoices");
         }
     },
 

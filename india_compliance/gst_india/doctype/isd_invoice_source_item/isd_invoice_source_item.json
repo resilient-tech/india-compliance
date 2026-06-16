@@ -32,7 +32,9 @@
    "fieldname": "purchase_invoice",
    "fieldtype": "Autocomplete",
    "in_list_view": 1,
-   "label": "Purchase Invoice"
+   "label": "Purchase Invoice",
+   "mandatory_depends_on": "eval:!parent.is_external_invoice",
+   "read_only_depends_on": "eval:parent.is_external_invoice"
   },
   {
    "fieldname": "column_break_gcgg",
