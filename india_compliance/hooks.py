@@ -107,7 +107,6 @@ doctype_js = {
     "Document Naming Settings": "gst_india/client_scripts/document_naming_settings.js",
     "Document Naming Rule": "gst_india/client_scripts/document_naming_rule.js",
 }
-
 doctype_list_js = {
     "Sales Invoice": [
         "gst_india/client_scripts/e_waybill_applicability.js",
@@ -478,6 +477,8 @@ fields_for_group_similar_items = [
 ]
 
 require_type_annotated_api_methods = True
+
+repost_allowed_doctypes = ["ISD Invoice"]
 
 
 # Includes in <head>
