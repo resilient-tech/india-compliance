@@ -86,6 +86,49 @@
 				<td>{{ inward_supply.taxable_value || '-' }}</td>
 				<td>{{ purchase.taxable_value || '-' }}</td>
 			</tr>
+			{% if inward_supply.reason_itc_unavailability %}
+			<tr>
+				<th>Reason for ITC Unavailability</th>
+				<td data-label="reason_itc_unavailability">{{ inward_supply.reason_itc_unavailability || '-' }}</td>
+				<td data-label="reason_itc_unavailability">-</td>
+			</tr>
+			{% endif %}
+			{% if inward_supply.gstr_1_filled != null || inward_supply.gstr_3b_filled != null %}
+			<tr>
+				<th>GSTR-1 Filed</th>
+				<td data-label="gstr_1_filled">
+					{{ inward_supply.gstr_1_filled == null ? '-' : (inward_supply.gstr_1_filled ? 'Yes' : 'No') }}
+				</td>
+				<td data-label="gstr_1_filled">-</td>
+			</tr>
+			<tr>
+				<th>GSTR-3B Filed</th>
+				<td data-label="gstr_3b_filled">
+					{{ inward_supply.gstr_3b_filled == null ? '-' : (inward_supply.gstr_3b_filled ? 'Yes' : 'No') }}
+				</td>
+				<td data-label="gstr_3b_filled">-</td>
+			</tr>
+			{% endif %}
+
+			{% if inward_supply.irn_source || inward_supply.irn_number || inward_supply.irn_gen_date %}
+			<tr>
+				<th>IRN Source</th>
+				<td data-label="irn_source">{{ inward_supply.irn_source || '-' }}</td>
+				<td data-label="irn_source">-</td>
+			</tr>
+			<tr>
+				<th>IRN Number</th>
+				<td data-label="irn_number" style="word-break: break-all;">{{ inward_supply.irn_number || '-' }}</td>
+				<td data-label="irn_number">-</td>
+			</tr>
+			<tr>
+				<th>IRN Generation Date</th>
+				<td data-label="irn_gen_date">
+					{{ frappe.format(inward_supply.irn_gen_date, {'fieldtype': 'Date'}) || '-' }}
+				</td>
+				<td data-label="irn_gen_date">-</td>
+			</tr>
+			{% endif %}
 		</tbody>
 	</table>
 </div>

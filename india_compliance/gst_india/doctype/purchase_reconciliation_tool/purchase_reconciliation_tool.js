@@ -614,6 +614,19 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 align: "Left",
             },
             {
+                label: "ITC Availability",
+                fieldname: "itc_availability",
+                width: 120,
+                align: "left",
+            },
+            {
+                label: "IRN",
+                fieldname: "irn_number",
+                width: 80,
+                align: "center",
+                _value: (...args) => get_irn_indicator(args[0], args[2]),
+            },
+            {
                 label: "Action",
                 fieldname: "action",
                 _value: (...args) => {
@@ -1255,6 +1268,12 @@ function get_icon(value, column, data, icon) {
     return `<button class="btn ${icon}" data-name="${hash}">
                 <i class="fa fa-${icon}"></i>
             </button>`;
+}
+
+function get_irn_indicator(value, row) {
+    if (!row.inward_supply_name) return "";
+    const color = value ? "green" : "red";
+    return `<span class="indicator ${color}">${value ? "Yes" : "No"}</span>`;
 }
 
 function get_hash(data) {

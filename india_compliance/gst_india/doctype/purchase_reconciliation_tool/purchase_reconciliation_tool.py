@@ -865,6 +865,10 @@ class BuildExcel:
             target_data[field] = "Yes" if source_data.get(field) else "No"
             return
 
+        if field in ("gstr_1_filled", "gstr_3b_filled"):
+            target_data[field] = "Yes" if source_data.get(field) else "No"
+            return
+
         target_data[field] = source_data.get(field)
 
     def get_file_name(self):
@@ -1028,7 +1032,7 @@ class BuildExcel:
                 "fieldname": "bill_date",
                 "compare_with": "inward_supply_bill_date",
                 "data_format": {
-                    "horizontal": "left",
+                    "horizontal": "center",
                     "bg_color": self.COLOR_PALLATE.light_green,
                 },
                 "header_format": {
@@ -1067,7 +1071,7 @@ class BuildExcel:
                 "fieldname": "is_reverse_charge",
                 "compare_with": "inward_supply_is_reverse_charge",
                 "data_format": {
-                    "horizontal": "left",
+                    "horizontal": "center",
                     "bg_color": self.COLOR_PALLATE.light_green,
                 },
                 "header_format": {
@@ -1166,7 +1170,7 @@ class BuildExcel:
                 "fieldname": "inward_supply_bill_date",
                 "compare_with": "bill_date",
                 "data_format": {
-                    "horizontal": "left",
+                    "horizontal": "center",
                     "bg_color": self.COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
@@ -1205,7 +1209,7 @@ class BuildExcel:
                 "fieldname": "inward_supply_is_reverse_charge",
                 "compare_with": "is_reverse_charge",
                 "data_format": {
-                    "horizontal": "left",
+                    "horizontal": "center",
                     "bg_color": self.COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
@@ -1289,7 +1293,7 @@ class BuildExcel:
             {
                 "label": "Action Status",
                 "fieldname": "action",
-                "data_format": {"horizontal": "left"},
+                "data_format": {"horizontal": "center"},
             },
             {
                 "label": "Match Status",
@@ -1312,9 +1316,9 @@ class BuildExcel:
             {
                 "label": "Classification",
                 "fieldname": "classification",
-                "data_format": {"horizontal": "left"},
+                "data_format": {"horizontal": "center"},
                 "header_format": {
-                    "width": 11,
+                    "width": 14,
                 },
             },
             *dimension_columns,
@@ -1357,6 +1361,60 @@ class BuildExcel:
                     "bg_color": self.COLOR_PALLATE.dark_pink,
                     "width": 12,
                 },
+            },
+            {
+                "label": "Differences",
+                "fieldname": "differences",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.dark_pink,
+                    "width": 25,
+                },
+            },
+            {
+                "label": "ITC Availability",
+                "fieldname": "itc_availability",
+                "data_format": {"horizontal": "left"},
+                "header_format": {"width": 12},
+            },
+            {
+                "label": "Reason for ITC Unavailability",
+                "fieldname": "reason_itc_unavailability",
+                "data_format": {"horizontal": "left"},
+                "header_format": {"width": 25},
+            },
+            {
+                "label": "GSTR-1 Filed",
+                "fieldname": "gstr_1_filled",
+                "data_format": {"horizontal": "center"},
+                "header_format": {"width": 12},
+            },
+            {
+                "label": "GSTR-3B Filed",
+                "fieldname": "gstr_3b_filled",
+                "data_format": {"horizontal": "center"},
+                "header_format": {"width": 12},
+            },
+            {
+                "label": "IRN Source",
+                "fieldname": "irn_source",
+                "data_format": {"horizontal": "center"},
+                "header_format": {"width": 15},
+            },
+            {
+                "label": "IRN Number",
+                "fieldname": "irn_number",
+                "data_format": {"horizontal": "left"},
+                "header_format": {"width": 35},
+            },
+            {
+                "label": "IRN Generation Date",
+                "fieldname": "irn_gen_date",
+                "data_format": {"horizontal": "center"},
+                "header_format": {"width": 15},
             },
         ]
 
