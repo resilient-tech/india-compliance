@@ -16,5 +16,3 @@ class IntegrationTestTurnoverRecord(IntegrationTestCase):
     Integration tests for TurnoverRecord.
     Use this class for testing interactions between multiple components.
     """
-
-    pass

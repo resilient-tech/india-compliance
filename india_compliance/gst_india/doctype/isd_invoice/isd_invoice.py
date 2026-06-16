@@ -613,6 +613,7 @@ def _resolve_party(doc):
 
 
 PARTY_RESOLVERS = {
+    "is_against_party": lambda doc: doc.is_against_party,
     "credit_flow": _resolve_credit_flow,
     "party_type": _resolve_party_type,
     "party": _resolve_party,
@@ -662,7 +663,7 @@ def _get_autofill_addresses(doc):
 
 @frappe.whitelist()
 def get_isd_autofill_values(changed_field: str, doc: str | dict):
-    PARTY_CHAIN = ("is_against_party", "credit_flow", "party_type", "party")
+    PARTY_CHAIN = ("company", "is_against_party", "credit_flow", "party_type", "party")
 
     doc = frappe._dict(frappe.parse_json(doc))
     doc.is_against_party = cint(doc.is_against_party)

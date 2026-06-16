@@ -10,7 +10,6 @@ frappe.ui.form.on("ISD Invoice", {
     },
 
     refresh(frm) {
-        frm.isd_controller.update_address_labels();
         frm.fields_dict.source_invoices.grid.toggle_reqd("purchase_invoice", !frm.doc.is_external_invoice);
         if (frm.doc.docstatus === 1 && frm.doc.is_against_party && frappe.model.can_create("ISD Invoice")) {
             frm.add_custom_button(
@@ -63,12 +62,13 @@ frappe.ui.form.on("ISD Invoice", {
     async is_against_party(frm) {
         if (frm.__updating_isd_autofill) return;
         await fetch_isd_autofill(frm, "is_against_party");
+        frm.isd_controller.update_address_labels();
     },
 
     async credit_flow(frm) {
-        frm.isd_controller.update_address_labels();
         if (frm.__updating_isd_autofill || !frm.doc.is_against_party) return;
         await fetch_isd_autofill(frm, "credit_flow");
+        frm.isd_controller.update_address_labels();
     },
 
     async party_type(frm) {
@@ -86,9 +86,7 @@ frappe.ui.form.on("ISD Invoice", {
         frm.fields_dict.source_invoices.grid.toggle_reqd("purchase_invoice", !frm.doc.is_external_invoice);
 
         if (frm.doc.is_external_invoice) {
-            (frm.doc.source_invoices || []).forEach((row) => {
-                frappe.model.set_value(row.doctype, row.name, "purchase_invoice", null);
-            });
+            frm.clear_table("source_invoices");
         }
     },
 
@@ -164,7 +162,7 @@ frappe.ui.form.on("ISD Invoice", {
         });
 
         // Move distribution_ratio section before the results area.
-        // rearrangement runs after make is complete; patch handles non-cached case
+        // rearrangement runs after make is complete; this is required for non-cached loads
         const _make = d.make.bind(d);
         const rearrange = () => {
             const $dist = d.dialog?.fields_dict?.distribution_ratio?.$wrapper?.closest(".form-section");
@@ -180,7 +178,6 @@ frappe.ui.form.on("ISD Invoice", {
     },
 });
 
-// Keep CREDIT_FLOW local to this file only
 const CREDIT_FLOW = {
     DISTRIBUTION: "Credit Distribution",
     RECEIPT: "Credit Receipt",
@@ -354,8 +351,7 @@ class ISDInvoiceController {
 
         this.frm.set_df_property("company_address", "label", labels.company_address);
         this.frm.set_df_property("party_address", "label", labels.party_address);
-        this.frm.refresh_field("company_address");
-        this.frm.refresh_field("party_address");
+        this.frm.refresh_fields(["company_address", "party_address"]);
     }
 
     autofill_source_item(cdt, cdn) {

@@ -110,7 +110,6 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                         async change() {
                             const { address, party_type, party } = this.doc;
                             if (!address) return;
-                            // BUG: upsert for unregistered category is not working
 
                             frappe.call({
                                 method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_distribution_addresses",

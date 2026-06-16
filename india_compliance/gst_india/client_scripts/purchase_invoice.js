@@ -72,19 +72,15 @@ frappe.ui.form.on(DOCTYPE, {
             frm.doc.docstatus === 1 &&
             frm.doc.is_isd_applicable &&
             frappe.model.can_create("ISD Invoice") &&
-            frm.doc.isd_credit_distributed_percent != 100
+            frm.doc.isd_credit_distributed_percent < 100
         ) {
             frm.add_custom_button(
                 __("ISD Invoice"),
                 () => {
-                    const isd_tax = get_taxes_from_frm(frm);
                     const pi_context = {
                         name: frm.doc.name,
                         posting_date: frm.doc.posting_date,
-                        supplier: frm.doc.supplier,
                         company: frm.doc.company,
-                        taxes_by_eligibility: isd_tax.taxes_by_eligibility,
-                        isd_credit_distributed_percent: frm.doc.isd_credit_distributed_percent || 0,
                     };
                     india_compliance.show_isd_invoice_distribution_dialog(pi_context);
                 },
@@ -172,22 +168,4 @@ function has_goods_items(frm) {
 
 function is_import_gst_category(gst_category) {
     return IMPORT_GST_CATEGORIES.includes(gst_category);
-}
-
-function get_taxes_from_frm(frm) {
-    const taxes_by_eligibility = {
-        eligible: Object.fromEntries(india_compliance.GST_TAX_TYPES.map((t) => [t, 0])),
-        ineligible: Object.fromEntries(india_compliance.GST_TAX_TYPES.map((t) => [t, 0])),
-    };
-
-    for (const item of frm.doc.items || []) {
-        const eligibility = item.is_ineligible_for_itc ? "ineligible" : "eligible";
-        for (const tax_type of india_compliance.GST_TAX_TYPES) {
-            taxes_by_eligibility[eligibility][tax_type] += item[`${tax_type}_amount`] || 0;
-        }
-    }
-
-    return {
-        taxes_by_eligibility,
-    };
 }
