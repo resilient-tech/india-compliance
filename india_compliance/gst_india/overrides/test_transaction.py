@@ -1584,7 +1584,6 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertTrue(si.name in comment)
 
 
-
 def create_cess_accounts():
     input_cess_non_advol_account = create_tax_accounts("Input Tax Cess Non Advol")
     output_cess_non_advol_account = create_tax_accounts("Output Tax Cess Non Advol")
