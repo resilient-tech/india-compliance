@@ -301,6 +301,9 @@ class ISDInvoiceController {
         });
 
         this.frm.set_query("purchase_invoice", "source_invoices", () => {
+            if (this.frm.doc.is_against_party && this.frm.doc.credit_flow == CREDIT_FLOW.RECEIPT) {
+                return {};
+            }
             return {
                 query: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.search_purchase_invoice",
                 params: {
