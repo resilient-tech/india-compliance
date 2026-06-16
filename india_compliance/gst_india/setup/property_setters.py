@@ -216,7 +216,7 @@ PURCHASE_ADDRESS_FIELDS = (
 
 ADDRESS_FIELDS_BY_DOCTYPE = {
     **dict.fromkeys(
-        ("Quotation", "Sales Order", "Delivery Note", "Sales Invoice", "POS Invoice"),
+        ("Quotation", "Sales Order", "Delivery Note", "Sales Invoice"),
         SALES_ADDRESS_FIELDS,
     ),
     **dict.fromkeys(
