@@ -5,7 +5,8 @@
     "context": {
         "repos": [
             "frappe/frappe",
-            "frappe/erpnext"
+            "frappe/erpnext",
+            "resilient-tech/india-compliance-docs"
         ]
     }
 }
