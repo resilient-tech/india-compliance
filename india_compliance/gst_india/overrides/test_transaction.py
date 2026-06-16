@@ -359,25 +359,32 @@ class TestTransaction(IntegrationTestCase):
         )
 
     def test_allow_tax_neutral_pos_change_after_submit(self):
-        """A post-submit Place of Supply edit that keeps the GST taxes the same is allowed
-        and saved (here: inter-state -> another inter-state, taxes stay IGST)."""
-        if not self.is_sales_doctype:
+        """A post-submit Place of Supply edit that keeps the GST taxes the same — moving
+        between two inter-state Places of Supply (taxes stay IGST) — is allowed and saved.
+        Sales: inter/intra is POS vs company state; Purchase: POS vs supplier state."""
+        if self.doctype not in ADDRESS_FIELDS_BY_DOCTYPE:
             return
 
-        # Inter-state invoice (customer in Karnataka) => IGST.
-        doc = create_transaction(
-            **{**self.transaction_details, "customer_address": "_Test Registered Customer-Billing-3"}
-        )
+        details = dict(self.transaction_details)
+        if self.is_sales_doctype:
+            # Customer in Karnataka => Place of Supply Karnataka, inter-state vs Gujarat company.
+            details["customer_address"] = "_Test Registered Customer-Billing-3"
+            new_pos = "27-Maharashtra"
+        else:
+            # Purchase Place of Supply defaults to the supplier state (intra); force an
+            # inter-state Place of Supply so it is IGST, then move to another inter-state.
+            details["supplier_address"] = "_Test Registered Supplier-Billing"
+            details["place_of_supply"] = "29-Karnataka"
+            new_pos = "27-Maharashtra"
+
+        doc = create_transaction(**details)
         doc.reload()
-        if doc.place_of_supply == "27-Maharashtra":
-            return
 
-        # Another inter-state Place of Supply keeps IGST, so the edit is allowed after submit.
-        doc.place_of_supply = "27-Maharashtra"
+        doc.place_of_supply = new_pos
         doc.save()
 
         doc.reload()
-        self.assertEqual(doc.place_of_supply, "27-Maharashtra")
+        self.assertEqual(doc.place_of_supply, new_pos)
 
     def test_block_gst_category_change_after_submit(self):
         """A post-submit address change that changes GST Category (e.g. to SEZ, hence the
