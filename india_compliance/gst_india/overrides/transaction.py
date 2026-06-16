@@ -3,7 +3,6 @@ from collections import defaultdict
 from typing import ClassVar
 
 import frappe
-from erpnext.accounts.party import get_address_tax_category
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_default_address
