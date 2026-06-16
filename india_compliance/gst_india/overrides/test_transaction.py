@@ -63,7 +63,6 @@ class TestTransaction(IntegrationTestCase):
         frappe.db.savepoint("before_test_transaction")
         cls.is_sales_doctype = cls.doctype in SALES_DOCTYPES
         create_cess_accounts()
-        create_lower_gst_setup()
 
     @classmethod
     def tearDownClass(cls):
@@ -334,6 +333,90 @@ class TestTransaction(IntegrationTestCase):
         doc.reload()
         doc.load_doc_before_save()
         doc.set(address_field, new_address)
+
+        self.assertRaises(
+            frappe.exceptions.ValidationError,
+            sync_address_dependent_fields_on_submit,
+            doc,
+        )
+
+    def test_block_pos_change_to_different_state_after_submit(self):
+        """A post-submit Place of Supply edit that flips intra <-> inter-state is blocked."""
+        doc = create_transaction(**self.transaction_details)
+        doc.reload()
+
+        # Company is in Gujarat (24); moving POS to another state turns intra -> inter-state.
+        if doc.place_of_supply == "27-Maharashtra":
+            return
+
+        doc.load_doc_before_save()
+        doc.place_of_supply = "27-Maharashtra"
+
+        self.assertRaises(
+            frappe.exceptions.ValidationError,
+            sync_address_dependent_fields_on_submit,
+            doc,
+        )
+
+    def test_allow_tax_neutral_pos_change_after_submit(self):
+        """A post-submit Place of Supply edit that keeps the GST taxes the same is allowed
+        and saved (here: inter-state -> another inter-state, taxes stay IGST)."""
+        if not self.is_sales_doctype:
+            return
+
+        # Inter-state invoice (customer in Karnataka) => IGST.
+        doc = create_transaction(
+            **{**self.transaction_details, "customer_address": "_Test Registered Customer-Billing-3"}
+        )
+        doc.reload()
+        if doc.place_of_supply == "27-Maharashtra":
+            return
+
+        # Another inter-state Place of Supply keeps IGST, so the edit is allowed after submit.
+        doc.place_of_supply = "27-Maharashtra"
+        doc.save()
+
+        doc.reload()
+        self.assertEqual(doc.place_of_supply, "27-Maharashtra")
+
+    def test_block_gst_category_change_after_submit(self):
+        """A post-submit address change that changes GST Category (e.g. to SEZ, hence the
+        tax treatment) is blocked, even when the state is unchanged."""
+        doc = create_transaction(**self.transaction_details)
+        doc.reload()
+
+        if self.is_sales_doctype:
+            # Same state (Gujarat) but SEZ => inter-state / zero-rated treatment.
+            address_field = "customer_address"
+            new_address = "_Test Registered Customer-Billing-1"
+        else:
+            address_field = "supplier_address"
+            new_address = "_Test Registered Supplier-Billing-2"
+
+        doc.load_doc_before_save()
+        doc.set(address_field, new_address)
+
+        self.assertRaises(
+            frappe.exceptions.ValidationError,
+            sync_address_dependent_fields_on_submit,
+            doc,
+        )
+
+    def test_block_address_or_pos_change_when_ewaybill_or_irn_exists(self):
+        """Once an e-Waybill / e-Invoice (IRN) exists, no post-submit Place of Supply /
+        address change is allowed at all, even a tax-neutral one."""
+        meta = frappe.get_meta(self.doctype)
+        ewb_field = "ewaybill" if meta.has_field("ewaybill") else ("irn" if meta.has_field("irn") else None)
+        if not ewb_field:
+            return
+
+        doc = create_transaction(**self.transaction_details)
+        doc.reload()
+        doc.load_doc_before_save()
+
+        # simulate a generated e-Waybill / e-Invoice and a (tax-neutral) POS edit
+        doc.set(ewb_field, "123456789012" if ewb_field == "ewaybill" else "a" * 64)
+        doc.place_of_supply = "27-Maharashtra" if doc.place_of_supply != "27-Maharashtra" else "29-Karnataka"
 
         self.assertRaises(
             frappe.exceptions.ValidationError,
@@ -1493,83 +1576,6 @@ class TestSpecificTransactions(IntegrationTestCase):
         )
         self.assertTrue(si.name in comment)
 
-
-LOWER_GST_TAX_CATEGORY = "_Test Lower GST"
-LOWER_GST_CUSTOMER_ADDRESS = "_Test Lower GST Customer-Billing"
-LOWER_GST_SUPPLIER_ADDRESS = "_Test Lower GST Supplier-Billing"
-
-
-def create_lower_gst_setup():
-    """Tax Category + 0.1% templates (same accounts as the regular ones, lower rate) +
-    same-state party addresses carrying that tax category. Lets tests verify that a
-    tax-category-driven template (rate) change is blocked after submit, without any
-    state / gst_category change to confound it."""
-    if not frappe.db.exists("Tax Category", LOWER_GST_TAX_CATEGORY):
-        # gst_state (an unused state) keeps this category out of the state-based template
-        # fallback (get_tax_template), so it applies only via an explicit tax_category and
-        # does not leak into ordinary transactions.
-        frappe.get_doc(
-            {"doctype": "Tax Category", "title": LOWER_GST_TAX_CATEGORY, "gst_state": "Goa"}
-        ).insert()
-
-    _create_lower_gst_template(
-        "Sales Taxes and Charges Template",
-        "_Test Lower GST Output",
-        ("Output Tax CGST - _TIRC", "Output Tax SGST - _TIRC"),
-    )
-    _create_lower_gst_template(
-        "Purchase Taxes and Charges Template",
-        "_Test Lower GST Input",
-        ("Input Tax CGST - _TIRC", "Input Tax SGST - _TIRC"),
-    )
-
-    _create_lower_gst_address(LOWER_GST_CUSTOMER_ADDRESS, "Customer", "_Test Registered Customer")
-    _create_lower_gst_address(LOWER_GST_SUPPLIER_ADDRESS, "Supplier", "_Test Registered Supplier")
-
-
-def _create_lower_gst_template(doctype, title, accounts):
-    if frappe.db.exists(doctype, f"{title} - _TIRC"):
-        return
-
-    frappe.get_doc(
-        {
-            "doctype": doctype,
-            "title": title,
-            "company": "_Test Indian Registered Company",
-            "tax_category": LOWER_GST_TAX_CATEGORY,
-            "taxes": [
-                {
-                    "charge_type": "On Net Total",
-                    "account_head": account,
-                    "description": account.split(" - ")[0],
-                    "rate": 0.05,
-                }
-                for account in accounts
-            ],
-        }
-    ).insert()
-
-
-def _create_lower_gst_address(name, party_type, party):
-    if frappe.db.exists("Address", name):
-        return
-
-    frappe.get_doc(
-        {
-            "doctype": "Address",
-            "address_title": name.replace("-Billing", ""),
-            "address_type": "Billing",
-            "address_line1": "Test Lower GST Address",
-            "city": "Test City",
-            "state": "Gujarat",
-            "pincode": "380015",
-            "country": "India",
-            "gstin": "24AANFA2641L1ZF",
-            "gst_category": "Registered Regular",
-            "tax_category": LOWER_GST_TAX_CATEGORY,
-            "links": [{"link_doctype": party_type, "link_name": party}],
-        }
-    ).insert()
 
 
 def create_cess_accounts():
