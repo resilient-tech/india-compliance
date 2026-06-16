@@ -10,6 +10,7 @@ frappe.ui.form.on("ISD Invoice", {
     },
 
     refresh(frm) {
+        frm.isd_controller.update_address_labels(); //need to set labels when auto creating doc using backend call
         if (frm.doc.docstatus === 1 && frm.doc.is_against_party && frappe.model.can_create("ISD Invoice")) {
             frm.add_custom_button(
                 __("Inter Company ISD Invoice"),

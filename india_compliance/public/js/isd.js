@@ -112,7 +112,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                             if (!address) return;
 
                             frappe.call({
-                                method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_distribution_addresses",
+                                method: "india_compliance.gst_india.utils.isd.get_distribution_addresses",
                                 args: { party_type, party, posting_date, address },
                                 callback: ({ message: [row] = [] }) => {
                                     if (!row) return;
@@ -205,7 +205,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
             }));
 
             frappe.call({
-                method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.bulk_create_isd_invoices",
+                method: "india_compliance.gst_india.utils.isd.bulk_create_isd_invoices",
                 args: {
                     distribution_table: payload,
                     purchase_invoices: [purchase_invoice.name],
@@ -297,7 +297,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
     render_summary({});
 
     frappe.call({
-        method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_purchase_invoices_distribution_summary",
+        method: "india_compliance.gst_india.utils.isd.get_purchase_invoices_distribution_summary",
         args: { purchase_invoices: [purchase_invoice.name] },
         callback({ message: rows = [] }) {
             const p = (v) => parseFloat(v) || 0;
@@ -314,7 +314,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
 
     function fetch_and_prefill_grid() {
         frappe.call({
-            method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_distribution_addresses",
+            method: "india_compliance.gst_india.utils.isd.get_distribution_addresses",
             args: { party_type: "Company", party: company, posting_date: posting_date },
             callback({ message: rows = [] }) {
                 if (!rows.length) return;
