@@ -184,7 +184,6 @@ class ISDInvoice(Document):
             filters={"name": ("in", self._pi_names)},
             fields=["name", "docstatus", "is_isd_applicable", "posting_date", "company"],
         )
-        _validate_source_invoices_exist(self._pi_rows)
         self._validate_duplication()
         self._validate_pi_with_company()
         _validate_purchase_invoice_is_distributable(self._pi_rows)
@@ -462,11 +461,6 @@ class ISDInvoice(Document):
                 self.append("source_invoices", {**item, "distribution_ratio": distribution_ratio})
 
 
-def _validate_source_invoices_exist(_pi_rows):
-    if not _pi_rows:
-        return frappe.throw(_("At least one source invoice must be added."))
-
-
 def _validate_purchase_invoice_is_distributable(pi_rows):
     invalid_purchase_invoices = [
         row.name for row in pi_rows if row.docstatus != 1 or not row.is_isd_applicable
@@ -517,7 +511,6 @@ def _validate_isd_invoice_for_bulk_generation(isd_invoice):
         filters={"name": ("in", pi_names)},
         fields=["name", "docstatus", "is_isd_applicable", "posting_date", "company"],
     )
-    _validate_source_invoices_exist(pi_rows)
     _validate_purchase_invoice_is_distributable(pi_rows)
     _validate_source_invoice_dates(pi_rows, isd_invoice.posting_date)
     _validate_source_invoices_with_inter_company_reference(
@@ -680,19 +673,6 @@ def get_isd_autofill_values(changed_field: str, doc: str | dict):
 @frappe.whitelist()
 def get_input_gst_accounts(company: str):
     return get_gst_accounts_by_type(company, "Input", throw=False)
-
-
-@frappe.whitelist()
-def search_purchase_invoice(txt: str, company: str, billing_address: str | None = None):
-    filters = [
-        ["docstatus", "=", 1],
-        ["company", "=", company],
-        ["name", "like", f"%{txt}%"],
-    ]
-    if billing_address:
-        filters.append(["billing_address", "=", billing_address])
-
-    return frappe.get_list("Purchase Invoice", filters=filters, pluck="name", limit=20)
 
 
 def _map_isd_invoice(source_name, target_doc, field_map, post_process, map_accounting_dimensions=False):

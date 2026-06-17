@@ -302,15 +302,18 @@ class ISDInvoiceController {
         });
 
         this.frm.set_query("purchase_invoice", "source_invoices", () => {
+            let filters = {
+                docstatus: 1,
+                is_isd_applicable: 1,
+            };
             if (this.frm.doc.is_against_party && this.frm.doc.credit_flow == CREDIT_FLOW.RECEIPT) {
-                return {};
+                filters.company_gstin = this.frm.doc.party_gstin;
+            } else {
+                filters.company_gstin = this.frm.doc.company_gstin;
+                filters.company = this.frm.doc.company;
             }
             return {
-                query: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.search_purchase_invoice",
-                params: {
-                    company: this.frm.doc.company,
-                    billing_address: this.frm.doc.company_address,
-                },
+                filters: filters,
             };
         });
 
