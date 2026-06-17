@@ -1918,10 +1918,6 @@ def sync_gst_details_from_address(doc, changed_address_fields):
             doc.set(category_field, gst_category or "")
 
 
-def get_applicable_taxes(gst_details):
-    return frozenset(row.get("account_head") for row in (gst_details.get("taxes") or []))
-
-
 def set_ecommerce_supply_type(doc):
     """
     - Set GSTR-1 E-commerce section for virtual field ecommerce_supply_type
