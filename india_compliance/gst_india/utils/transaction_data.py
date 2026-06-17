@@ -215,7 +215,7 @@ class GSTTransactionData:
                     "lr_date": (format_date(self.doc.lr_date, self.DATE_FORMAT) if self.doc.lr_no else ""),
                     "gst_transporter_id": self.doc.gst_transporter_id or "",
                     "transporter_name": (
-                        self.sanitize_value(self.doc.transporter_name, regex=3, max_length=25)
+                        self.sanitize_value(self.doc.transporter_name, regex=3, max_length=100)
                         if self.doc.transporter_name
                         else ""
                     ),

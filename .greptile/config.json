@@ -1,0 +1,12 @@
+{
+    "disabledLabels": [
+        "conflicts"
+    ],
+    "context": {
+        "repos": [
+            "frappe/frappe",
+            "frappe/erpnext",
+            "resilient-tech/india-compliance-docs"
+        ]
+    }
+}

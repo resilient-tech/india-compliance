@@ -518,6 +518,23 @@
             ]
         },
         {
+            "name": "_Test Registered Supplier-Billing-3",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 7",
+            "city": "Test City",
+            "state": "Karnataka",
+            "pincode": "560001",
+            "country": "India",
+            "gstin": "29AAACI1195H2ZH",
+            "gst_category": "Registered Regular",
+            "links": [
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test Registered Supplier"
+                }
+            ]
+        },
+        {
             "name": "_Test Registered Composition Supplier-Billing",
             "address_type": "Billing",
             "address_line1": "Test Address - 8",

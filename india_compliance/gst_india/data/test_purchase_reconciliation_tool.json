@@ -27,7 +27,14 @@
                     "tax_difference": 0.0,
                     "taxable_value_difference": 0.0,
                     "project": "",
-                    "cost_center": ""
+                    "cost_center": "",
+                    "gstr_1_filled": 0,
+                    "gstr_3b_filled": 0,
+                    "irn_gen_date": "",
+                    "irn_number": null,
+                    "irn_source": null,
+                    "itc_availability": "Yes",
+                    "reason_itc_unavailability": null
                 }
             },
             {
@@ -74,7 +81,14 @@
                     "tax_difference": 0.0,
                     "taxable_value_difference": 0.0,
                     "project": "",
-                    "cost_center": ""
+                    "cost_center": "",
+                    "gstr_1_filled": 0,
+                    "gstr_3b_filled": 0,
+                    "irn_gen_date": "",
+                    "irn_number": null,
+                    "irn_source": null,
+                    "itc_availability": "Yes",
+                    "reason_itc_unavailability": null
                 }
             },
             {
@@ -115,7 +129,14 @@
                     "tax_difference": 0.0,
                     "taxable_value_difference": 0.0,
                     "project": "",
-                    "cost_center": ""
+                    "cost_center": "",
+                    "gstr_1_filled": 0,
+                    "gstr_3b_filled": 0,
+                    "irn_gen_date": "",
+                    "irn_number": null,
+                    "irn_source": null,
+                    "itc_availability": "Yes",
+                    "reason_itc_unavailability": null
                 }
             }
         ],
@@ -148,7 +169,14 @@
                     "tax_difference": 0.0,
                     "taxable_value_difference": 0.0,
                     "project": "",
-                    "cost_center": ""
+                    "cost_center": "",
+                    "gstr_1_filled": 0,
+                    "gstr_3b_filled": 0,
+                    "irn_gen_date": "",
+                    "irn_number": null,
+                    "irn_source": null,
+                    "itc_availability": "Yes",
+                    "reason_itc_unavailability": null
                 }
             }
         ],
@@ -188,7 +216,14 @@
                     "tax_difference": 0.09,
                     "taxable_value_difference": 0.5,
                     "project": "",
-                    "cost_center": ""
+                    "cost_center": "",
+                    "gstr_1_filled": 0,
+                    "gstr_3b_filled": 0,
+                    "irn_gen_date": "",
+                    "irn_number": null,
+                    "irn_source": null,
+                    "itc_availability": "Yes",
+                    "reason_itc_unavailability": null
                 }
             }
         ],
@@ -219,7 +254,14 @@
                     "tax_difference": 0.0,
                     "taxable_value_difference": 0.0,
                     "project": "",
-                    "cost_center": ""
+                    "cost_center": "",
+                    "gstr_1_filled": 0,
+                    "gstr_3b_filled": 0,
+                    "irn_gen_date": "",
+                    "irn_number": null,
+                    "irn_source": null,
+                    "itc_availability": "Yes",
+                    "reason_itc_unavailability": null
                 }
             }
         ],
@@ -252,7 +294,14 @@
                     "tax_difference": 0.0,
                     "taxable_value_difference": 0.0,
                     "project": "",
-                    "cost_center": ""
+                    "cost_center": "",
+                    "gstr_1_filled": 0,
+                    "gstr_3b_filled": 0,
+                    "irn_gen_date": "",
+                    "irn_number": null,
+                    "irn_source": null,
+                    "itc_availability": "Yes",
+                    "reason_itc_unavailability": null
                 }
             }
         ],
@@ -285,7 +334,14 @@
                     "tax_difference": 0.0,
                     "taxable_value_difference": 0.0,
                     "project": "",
-                    "cost_center": ""
+                    "cost_center": "",
+                    "gstr_1_filled": 0,
+                    "gstr_3b_filled": 0,
+                    "irn_gen_date": "",
+                    "irn_number": null,
+                    "irn_source": null,
+                    "itc_availability": "Yes",
+                    "reason_itc_unavailability": null
                 }
             }
         ],
@@ -319,7 +375,14 @@
                     "tax_difference": 0.0,
                     "taxable_value_difference": 0.0,
                     "project": "",
-                    "cost_center": ""
+                    "cost_center": "",
+                    "gstr_1_filled": 0,
+                    "gstr_3b_filled": 0,
+                    "irn_gen_date": "",
+                    "irn_number": null,
+                    "irn_source": null,
+                    "itc_availability": "Yes",
+                    "reason_itc_unavailability": null
                 }
             }
         ],
@@ -373,7 +436,14 @@
                     "tax_difference": 0.0,
                     "taxable_value_difference": 0.0,
                     "project": "",
-                    "cost_center": ""
+                    "cost_center": "",
+                    "gstr_1_filled": 0,
+                    "gstr_3b_filled": 0,
+                    "irn_gen_date": "",
+                    "irn_number": null,
+                    "irn_source": null,
+                    "itc_availability": "Yes",
+                    "reason_itc_unavailability": null
                 }
             }
         ]
