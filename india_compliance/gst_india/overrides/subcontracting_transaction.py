@@ -119,6 +119,7 @@ def update_address_fields(doc, source_doc):
 
 
 def set_address_for_subcontracting_inward(doc):
+    """Set bill_from/bill_to addresses and re-derive their GSTIN and gst_category for Subcontracting Inward Stock Entries."""
     if doc.purpose not in SUBCONTRACTING_INWARD_PURPOSES or not doc.get("subcontracting_inward_order"):
         return
 
@@ -633,9 +634,8 @@ def is_e_waybill_applicable(doc):
     if doc.doctype != "Stock Entry":
         return True
 
-    # Job-work challans for Subcontracting Inward purposes are reported in
-    # ITC-04 / GSTR-1 by the customer (principal), not by the company (job worker).
-    # Hence, only e-Waybill is applicable for such Stock Entries.
+    # Inward purposes (Delivery, RM Return) carry only an e-Waybill; the
+    # principal reports them in ITC-04 / GSTR-1, not the company (job worker).
     if doc.purpose not in E_WAYBILL_STOCK_ENTRY_PURPOSES:
         return False
 

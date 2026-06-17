@@ -13,7 +13,7 @@ from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order im
     make_subcontracting_receipt,
 )
 from frappe.contacts.doctype.address.address import get_default_address
-from frappe.tests import IntegrationTestCase
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import flt
 
 from india_compliance.gst_india.overrides.subcontracting_transaction import (
@@ -691,13 +691,27 @@ class TestSubcontractingInwardTaxableValue(IntegrationTestCase):
 
     def test_e_waybill_applicable_for_inward_purposes(self):
         """e-Waybill is applicable for the inward purposes, not for Receive from Customer."""
-        for purpose in ("Subcontracting Delivery", "Return Raw Material to Customer"):
+        applicable_purposes = (
+            "Material Transfer",
+            "Material Issue",
+            "Send to Subcontractor",
+            "Subcontracting Delivery",
+            "Return Raw Material to Customer",
+        )
+        for purpose in applicable_purposes:
             doc = frappe.new_doc("Stock Entry")
             doc.purpose = purpose
             self.assertTrue(is_e_waybill_applicable(doc), purpose)
 
         doc = frappe.new_doc("Stock Entry")
         doc.purpose = "Receive from Customer"
+        self.assertFalse(is_e_waybill_applicable(doc))
+
+    @change_settings("GST Settings", {"enable_e_waybill_for_sc": 0})
+    def test_e_waybill_not_applicable_when_sc_disabled(self):
+        """Disabling e-Waybill for Subcontracting makes inward purposes non-applicable."""
+        doc = frappe.new_doc("Stock Entry")
+        doc.purpose = "Subcontracting Delivery"
         self.assertFalse(is_e_waybill_applicable(doc))
 
     def test_subcontracting_delivery_multi_rate_receipts(self):
@@ -733,6 +747,46 @@ class TestSubcontractingInwardTaxableValue(IntegrationTestCase):
             priced_rows += 1
 
         self.assertTrue(priced_rows, "No finished-good rows were priced")
+
+    def test_subcontracting_delivery_partial_no_double_count(self):
+        """Material value splits across partial deliveries and sums to the full consumed cost."""
+        scio = create_subcontracting_inward_order()
+        receive_customer_materials(scio, basic_rate=10)
+        manufacture_for_subcontracting_inward(scio)
+
+        # First delivery: 2 of the 5 produced units.
+        first = make_subcontracting_inward_delivery(scio=scio, do_not_save=True)
+        for item in first.items:
+            if item.get("scio_detail"):
+                item.qty = item.transfer_qty = 2
+        first.insert()
+        first.submit()
+
+        # Second delivery auto-sizes to the remaining 3 units.
+        second = make_subcontracting_inward_delivery(scio=scio, do_not_submit=True)
+
+        scio_details = [item.scio_detail for item in second.items if item.get("scio_detail")]
+        consumed_value = sum(
+            flt(row.rate) * flt(row.consumed_qty)
+            for row in frappe.get_all(
+                "Subcontracting Inward Order Received Item",
+                filters={"reference_name": ["in", scio_details], "is_customer_provided_item": 1},
+                fields=["rate", "consumed_qty"],
+            )
+        )
+
+        first_value = sum(
+            flt(item.additional_taxable_value) for item in first.items if item.get("scio_detail")
+        )
+        second_value = sum(
+            flt(item.additional_taxable_value) for item in second.items if item.get("scio_detail")
+        )
+
+        # The two partial deliveries together carry exactly the full consumed value.
+        precision = second.precision("additional_taxable_value", "items")
+        self.assertEqual(flt(first_value + second_value, precision), flt(consumed_value, precision))
+        self.assertGreater(first_value, 0)
+        self.assertGreater(second_value, 0)
 
 
 class TestSubcontractingInwardAddressMapping(IntegrationTestCase):

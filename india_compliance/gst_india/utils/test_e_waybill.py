@@ -2081,7 +2081,7 @@ class TestSubcontractingInwardEWaybill(IntegrationTestCase):
         # e-Waybill data builder reads (mirrors the form-load context).
         stock_entry.run_method("onload")
 
-    def _assert_outward_to_customer(self, data, sub_supply_desc):
+    def _assert_outward_to_customer(self, data, sub_supply_desc, stock_entry):
         # Outward Delivery Challan with sub supply type "Others" + description.
         self.assertEqual(data["supplyType"], "O")
         self.assertEqual(data["subSupplyType"], SUB_SUPPLY_TYPES["Others"])
@@ -2094,6 +2094,13 @@ class TestSubcontractingInwardEWaybill(IntegrationTestCase):
         self.assertTrue(data["fromGstin"])
         self.assertTrue(data["toGstin"])
         self.assertNotEqual(data["fromGstin"], data["toGstin"])
+        # Trade names are not rewritten in sandbox: consignor is the company
+        # (job worker), consignee is the customer (principal).
+        customer_name = frappe.db.get_value(
+            "Subcontracting Inward Order", stock_entry.subcontracting_inward_order, "customer_name"
+        )
+        self.assertEqual(data["fromTrdName"], stock_entry.company)
+        self.assertEqual(data["toTrdName"], customer_name)
 
     def test_e_waybill_data_for_subcontracting_delivery(self):
         delivery = make_subcontracting_inward_delivery()
@@ -2101,7 +2108,7 @@ class TestSubcontractingInwardEWaybill(IntegrationTestCase):
 
         data = EWaybillData(delivery).get_data()
 
-        self._assert_outward_to_customer(data, "Job Work Delivery")
+        self._assert_outward_to_customer(data, "Job Work Delivery", delivery)
 
         # Taxable value carries the customer-provided material value, so the
         # e-Waybill total exceeds the bare Stock Entry amount.
@@ -2119,7 +2126,7 @@ class TestSubcontractingInwardEWaybill(IntegrationTestCase):
 
         data = EWaybillData(rm_return).get_data()
 
-        self._assert_outward_to_customer(data, "Return Raw Material")
+        self._assert_outward_to_customer(data, "Return Raw Material", rm_return)
 
         # e-Waybill value equals the customer's declared material value.
         ewb_taxable = sum(flt(item["taxableAmount"]) for item in data["itemList"])

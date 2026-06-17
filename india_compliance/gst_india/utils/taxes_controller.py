@@ -374,7 +374,7 @@ def _set_return_raw_material_additional_value(doc):
 
     additional = rate * qty - amount, and may be negative to correct the SE
     amount. A return moves on-hand material, so the SCIO Received Item rate
-    (on-hand weighted average) is used; self-procured items (no rate) are skipped.
+    (weighted average of receipts) is used; self-procured items (no rate) are skipped.
     """
     scio_details = {item.scio_detail for item in doc.items if item.get("scio_detail")}
     if not scio_details:
