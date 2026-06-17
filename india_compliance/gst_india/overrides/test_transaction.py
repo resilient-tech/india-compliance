@@ -34,12 +34,8 @@ from india_compliance.gst_india.overrides.transaction import (
     ADDRESS_DEPENDENT_FIELDS,
     DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
-<<<<<<< HEAD
-=======
-    _is_multicurrency_doc,
     sync_address_dependent_fields_on_submit,
     sync_gst_details_from_address,
->>>>>>> a40dc37e (fix: allow editing address/GSTIN fields on submitted doctypes (#4300))
     validate_gst_refund_accounts,
 )
 from india_compliance.gst_india.setup.property_setters import (
