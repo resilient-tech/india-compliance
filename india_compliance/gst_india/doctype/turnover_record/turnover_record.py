@@ -21,11 +21,30 @@ class TurnoverRecord(Document):
 
     def validate(self):
         validate_gstin(self.gstin)
+        self.validate_gstin_matches_state()
+        self.validate_no_duplicate_record()
+
+    def validate_gstin_matches_state(self):
         if self.gstin and get_state(self.gstin[:2]) != self.gst_state:
-            # for registered company, gstin and gst gst_state are compulsory and validated
             frappe.throw(_("GSTIN does not match selected gst_state"))
 
-        # TODO: validate one state should have only one turnover
+    def validate_no_duplicate_record(self):
+        duplicate = frappe.get_list(
+            "Turnover Record",
+            filters={
+                "from_date": [">=", self.from_date],
+                "to_date": ["<=", self.to_date],
+                "gst_state": self.gst_state,
+            },
+            pluck="name",
+            limit=1,
+        )
+        if duplicate:
+            frappe.throw(
+                _("Turnover record for this state is already created  {0}").format(
+                    frappe.utils.get_link_to_form("Turnover Record", duplicate[0])
+                )
+            )
 
 
 def upsert_turnover_record(

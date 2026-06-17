@@ -9,6 +9,7 @@ frappe.ui.form.on("Turnover Record", {
     },
 
     onload(frm) {
+        // TODO: ux update (isd phase 2)
         frm.get_field("gst_state").set_data(frappe.boot.india_state_options || []);
     },
 

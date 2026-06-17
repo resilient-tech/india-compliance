@@ -7,12 +7,12 @@
  "engine": "InnoDB",
  "field_order": [
   "from_date",
-  "to_date",
-  "column_break_xbsm",
-  "amount",
-  "section_break_kryb",
   "gstin",
+  "column_break_xbsm",
+  "to_date",
   "gst_state",
+  "section_break_kryb",
+  "amount",
   "column_break_stmn"
  ],
  "fields": [
@@ -20,21 +20,19 @@
    "fieldname": "from_date",
    "fieldtype": "Date",
    "label": "From Date",
-   "reqd": 1,
-   "search_index": 1
+   "reqd": 1
   },
   {
    "fieldname": "to_date",
    "fieldtype": "Date",
    "label": "To Date",
-   "reqd": 1,
-   "search_index": 1
+   "reqd": 1
   },
   {
    "fieldname": "amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Turnover",
+   "label": "Turnover Amount",
    "reqd": 1
   },
   {
@@ -51,20 +49,22 @@
   },
   {
    "fieldname": "gstin",
-   "fieldtype": "Data",
-   "label": "GSTIN"
+   "fieldtype": "Autocomplete",
+   "label": "GSTIN",
+   "search_index": 1
   },
   {
    "fieldname": "gst_state",
    "fieldtype": "Autocomplete",
    "label": "GST State",
-   "mandatory_depends_on": "eval: doc.gst_category == 'Unregistered'"
+   "mandatory_depends_on": "eval: doc.gst_category == 'Unregistered'",
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-15 16:58:05.372624",
+ "modified": "2026-06-17 11:56:18.768491",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Turnover Record",
