@@ -294,6 +294,36 @@ def before_save(doc, method=None):
             )
 
 
+def update_taxable_value_after_submit(doc, method=None):
+    """
+    On submit, ERPNext recalculates basic_rate / amount using the actual FIFO/batch
+    valuation (update_rate_on_stock_entry / update_rate_on_subcontracting_receipt.
+    """
+    # ERPNext only recalculates the rate for source-warehouse rows (actual_qty < 0); a Stock
+    # Entry with no outgoing row (e.g. a pure Material Receipt) cannot drift -- skip it.
+    if doc.doctype == "Stock Entry" and not any(item.s_warehouse for item in doc.items):
+        return
+
+    field_map = (
+        STOCK_ENTRY_FIELD_MAP if doc.doctype == "Stock Entry" else SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
+    )
+
+    reloaded = frappe.get_lazy_doc(doc.doctype, doc.name, for_update=True)
+    rate_field = "basic_rate" if doc.doctype == "Stock Entry" else "rate"
+    draft_rate = {item.name: item.get(rate_field) for item in doc.items}
+    rate_changed = any(flt(row.get(rate_field)) != flt(draft_rate.get(row.name)) for row in reloaded.items)
+    if not rate_changed:
+        return
+
+    CustomTaxController(reloaded, field_map).set_taxes_and_totals()
+
+    reloaded.db_update()
+    for row in reloaded.items:
+        row.db_update()
+    for tax in reloaded.taxes:
+        tax.db_update()
+
+
 def validate_doc_references(doc, method=None):
     if ignore_gst_validations(doc):
         return

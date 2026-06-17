@@ -337,6 +337,146 @@ class TestSubcontractingTransaction(IntegrationTestCase):
 
         se.save()
 
+    def test_taxable_value_resync_after_submit(self):
+        from india_compliance.gst_india.overrides.subcontracting_transaction import (
+            update_taxable_value_after_submit,
+        )
+
+        se = make_subcontracting_stock_entry()
+        self.assertEqual(se.docstatus, 1)
+
+        for row in se.items:
+            self.assertEqual(row.taxable_value, row.amount)
+
+        # Reproduce the bug's mechanism: at submit/repost ERPNext recalculates the
+        # valuation and db_sets a new basic_amount/amount (update_rate_on_stock_entry)
+        # WITHOUT firing the validate doc_event, leaving taxable_value / base_grand_total
+        # frozen at the draft-time estimate.
+        new_amount = {}
+        for row in se.items:
+            new_amount[row.name] = row.amount + 50
+            frappe.db.set_value(
+                "Stock Entry Detail",
+                row.name,
+                {
+                    "basic_rate": row.basic_rate + 50,
+                    "basic_amount": new_amount[row.name],
+                    "amount": new_amount[row.name],
+                },
+            )
+
+        update_taxable_value_after_submit(se)
+
+        se.reload()
+        for row in se.items:
+            self.assertEqual(row.amount, new_amount[row.name])
+            self.assertEqual(row.taxable_value, new_amount[row.name])
+
+        self.assertEqual(
+            se.base_grand_total,
+            sum(row.taxable_value for row in se.items) + se.total_taxes,
+        )
+
+    def test_taxable_value_resync_after_submit_for_subcontracting_receipt(self):
+        from india_compliance.gst_india.overrides.subcontracting_transaction import (
+            update_taxable_value_after_submit,
+        )
+
+        sco = make_sco()
+        make_stock_transfer_entry(sco_no=sco.name, rm_items=get_rm_items(sco.supplied_items))
+
+        scr = make_subcontracting_receipt(sco.name)
+        scr.submit()
+        self.assertEqual(scr.docstatus, 1)
+
+        for row in scr.items:
+            self.assertEqual(row.taxable_value, row.amount)
+
+        # Reproduce the bug's mechanism: update_rate_on_subcontracting_receipt db_sets a
+        # recalculated rate/amount at submit/repost without firing the validate doc_event,
+        # leaving taxable_value / base_grand_total stale.
+        new_amount = {}
+        for row in scr.items:
+            new_amount[row.name] = row.amount + 50
+            frappe.db.set_value(
+                "Subcontracting Receipt Item",
+                row.name,
+                {"rate": row.rate + 50, "amount": new_amount[row.name]},
+            )
+
+        update_taxable_value_after_submit(scr)
+
+        scr.reload()
+        for row in scr.items:
+            self.assertEqual(row.amount, new_amount[row.name])
+            self.assertEqual(row.taxable_value, new_amount[row.name])
+
+        self.assertEqual(
+            scr.base_grand_total,
+            sum(row.taxable_value for row in scr.items) + scr.total_taxes,
+        )
+
+    def test_taxable_value_resync_skips_inward_only_entry(self):
+        from india_compliance.gst_india.overrides.subcontracting_transaction import (
+            update_taxable_value_after_submit,
+        )
+
+        # Inward-only Material Receipt: no source warehouse, so ERPNext never recalculates
+        # the outgoing valuation and the handler must skip without touching taxable_value.
+        se = make_stock_entry(
+            purpose="Material Receipt",
+            items=[
+                {
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1,
+                    "t_warehouse": "Stores - _TIRC",
+                    "basic_rate": 100,
+                    "amount": 100,
+                }
+            ],
+        )
+        se.submit()
+        self.assertFalse(any(item.s_warehouse for item in se.items))
+
+        # A stale stored value must be left untouched by the skip path.
+        frappe.db.set_value("Stock Entry Detail", se.items[0].name, "taxable_value", 999)
+
+        update_taxable_value_after_submit(se)
+
+        self.assertEqual(frappe.db.get_value("Stock Entry Detail", se.items[0].name, "taxable_value"), 999)
+
+    def test_taxable_value_resync_skips_when_rate_unchanged(self):
+        from india_compliance.gst_india.overrides.subcontracting_transaction import (
+            update_taxable_value_after_submit,
+        )
+
+        se = make_subcontracting_stock_entry()
+        self.assertEqual(se.docstatus, 1)
+        self.assertTrue(any(item.s_warehouse for item in se.items))
+
+        # Force the stored rate to equal the in-memory (draft) rate so nothing drifted, then
+        # corrupt taxable_value: the rate-unchanged check must skip the rewrite.
+        for row in se.items:
+            frappe.db.set_value("Stock Entry Detail", row.name, "basic_rate", row.basic_rate)
+        frappe.db.set_value("Stock Entry Detail", se.items[0].name, "taxable_value", 999)
+
+        update_taxable_value_after_submit(se)
+
+        self.assertEqual(frappe.db.get_value("Stock Entry Detail", se.items[0].name, "taxable_value"), 999)
+
+    def test_taxable_value_consistent_after_real_submit(self):
+        se = make_subcontracting_stock_entry()
+        self.assertEqual(se.docstatus, 1)
+
+        se.reload()
+        for row in se.items:
+            self.assertEqual(row.taxable_value, row.amount)
+
+        self.assertEqual(
+            se.base_grand_total,
+            sum(row.taxable_value for row in se.items) + se.total_taxes,
+        )
+
     def test_validation_for_doc_references(self):
         from india_compliance.gst_india.overrides.subcontracting_transaction import (
             get_stock_entry_references,
