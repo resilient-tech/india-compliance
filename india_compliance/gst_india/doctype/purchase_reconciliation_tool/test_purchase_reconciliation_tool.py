@@ -385,11 +385,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         )
         data = prt.reconcile_and_generate_data()
 
-        matched = {
-            r.purchase_invoice_name: r.inward_supply_name
-            for r in data
-            if r.purchase_invoice_name
-        }
+        matched = {r.purchase_invoice_name: r.inward_supply_name for r in data if r.purchase_invoice_name}
 
         self.assertNotEqual(matched.get(pi_b.name), is_a.name)
         self.assertEqual(matched.get(pi_a.name), is_a.name)
