@@ -1882,6 +1882,9 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
             title=_("Cannot Update After Submit"),
         )
 
+    if doc.doctype == "Sales Invoice":
+        validate_backdated_transaction(doc, action="update")
+
     if changed_address_fields:
         sync_gst_details_from_address(doc, changed_address_fields)
 
@@ -1896,9 +1899,6 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
 
     validate_gst_category(doc.gst_category, gstin)
     GSTAccounts().validate(doc, is_sales_transaction)
-
-    if doc.doctype == "Sales Invoice":
-        validate_backdated_transaction(doc, action="update")
 
 
 def sync_gst_details_from_address(doc, changed_address_fields):
