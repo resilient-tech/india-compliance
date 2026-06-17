@@ -176,6 +176,8 @@ frappe.ui.form.on("ISD Invoice", {
     },
 });
 
+const ISD_GST_CATEGORY = "Input Service Distributor";
+
 const CREDIT_FLOW = {
     DISTRIBUTION: "Credit Distribution",
     RECEIPT: "Credit Receipt",
@@ -252,7 +254,9 @@ class ISDInvoiceController {
             }
             const is_company_recipient =
                 this.frm.doc.is_against_party && this.frm.doc.credit_flow === CREDIT_FLOW.RECEIPT;
-            const extra = is_company_recipient ? {} : { gst_category: "Input Service Distributor" };
+            const extra = [
+                ["gst_category", is_company_recipient ? "!=" : "=", india_compliance.ISD_GST_CATEGORY],
+            ];
             return india_compliance.get_address_query("Company", this.frm.doc.company, extra);
         });
 
@@ -272,9 +276,13 @@ class ISDInvoiceController {
         });
 
         this.frm.set_query("party_address", () => {
+            // Party is the ISD side only when the company is the recipient; otherwise non-ISD.
+            const non_isd = [["gst_category", "!=", india_compliance.ISD_GST_CATEGORY]];
+            const isd = [["gst_category", "=", india_compliance.ISD_GST_CATEGORY]];
+
             // for single company setup
             if (!this.frm.doc.is_against_party) {
-                return india_compliance.get_address_query("Company", this.frm.doc.company);
+                return india_compliance.get_address_query("Company", this.frm.doc.company, non_isd);
             }
 
             // for multi company setup
@@ -288,7 +296,7 @@ class ISDInvoiceController {
 
             const is_company_recipient =
                 this.frm.doc.is_against_party && this.frm.doc.credit_flow === CREDIT_FLOW.RECEIPT;
-            const extra = is_company_recipient ? { gst_category: "Input Service Distributor" } : {};
+            const extra = is_company_recipient ? isd : non_isd;
             return india_compliance.get_address_query(this.frm.doc.party_type, this.frm.doc.party, extra);
         });
 

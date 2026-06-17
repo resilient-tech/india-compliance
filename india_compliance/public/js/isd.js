@@ -1,7 +1,12 @@
-india_compliance.get_address_query = function (link_doctype, link_name, extra_filters = {}) {
+india_compliance.ISD_GST_CATEGORY = "Input Service Distributor";
+
+india_compliance.get_address_query = function (link_doctype, link_name, extra_filters = []) {
     return {
-        query: "frappe.contacts.doctype.address.address.address_query",
-        filters: { link_doctype, link_name, ...extra_filters },
+        filters: [
+            ["Dynamic Link", "link_doctype", "=", link_doctype],
+            ["Dynamic Link", "link_name", "=", link_name],
+            ...extra_filters,
+        ],
     };
 };
 

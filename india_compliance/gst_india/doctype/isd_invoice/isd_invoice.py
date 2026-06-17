@@ -13,6 +13,7 @@ from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_ent
 from erpnext.accounts.party import get_party_account
 from erpnext.controllers.accounts_controller import AccountsController
 from frappe import _
+from frappe.contacts.doctype.address.address import get_address_display
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.model.meta import get_field_precision
@@ -45,12 +46,15 @@ class ISDInvoice(Document):
     def before_validate(self):
         self.set_taxes_and_totals()
         self.set_pos_from_gstin()
+        self.set_address_display()
         # TODO: yes set address display in backend too
         self.clear_fields_when_is_against_party_not_set()
 
     def validate(self):
         self.validate_isd_party()
         self.validate_gstin_and_pos()
+        self.validate_addresses()
+
         if self.is_external_invoice:
             return
         self.validate_purchase_invoices()
@@ -124,6 +128,10 @@ class ISDInvoice(Document):
         )
         self.company_pos = f"{gst_state_number}-{gst_state}"
 
+    def set_address_display(self):
+        self.company_address_display = get_address_display(self.company_address)
+        self.party_address_display = get_address_display(self.party_address)
+
     def clear_fields_when_is_against_party_not_set(self):
         if self.is_against_party:
             return
@@ -168,8 +176,9 @@ class ISDInvoice(Document):
             if gstin:
                 validate_gstin_status(gstin, self)
 
+        # TODO: if not company gstin and distributing throw error
+
         if not self.party_gstin or not self.company_gstin:
-            # TODO: if not company gstin throw error
             return
 
         company_pan = self.company_gstin[2:12]
@@ -179,6 +188,47 @@ class ISDInvoice(Document):
             frappe.throw(
                 _("PAN of Company GSTIN {0} and Party GSTIN {1} must be the same.").format(
                     frappe.bold(self.company_gstin), frappe.bold(self.party_gstin)
+                )
+            )
+
+    def validate_addresses(self):
+        common_filters = [["disabled", "=", 0]]
+
+        company_filters = [
+            *common_filters,
+            ["name", "=", self.company_address],
+            ["Dynamic Link", "link_doctype", "=", "Company"],
+            ["Dynamic Link", "link_name", "=", self.company],
+        ]
+
+        party_type = ("Company" if not self.is_against_party else self.party_type,)
+        party = self.company if not self.is_against_party else self.party
+        party_filters = [
+            *common_filters,
+            ["name", "=", self.party_address],
+            ["Dynamic Link", "link_doctype", "=", party_type],
+            ["Dynamic Link", "link_name", "=", party],
+        ]
+
+        if not self.is_against_party or self.credit_flow == CREDIT_FLOW.DISTRIBUTION:
+            company_filters.append(["gst_category", "=", ISD_GST_CATEGORY])
+            party_filters.append(["gst_category", "!=", ISD_GST_CATEGORY])
+        else:
+            # recipient case
+            company_filters.append(["gst_category", "!=", ISD_GST_CATEGORY])
+            party_filters.append(["gst_category", "=", ISD_GST_CATEGORY])
+
+        if self.company_address and not frappe.db.get_all("Address", company_filters, limit=1):
+            frappe.throw(
+                _("Company Address {0} is not valid for this ISD distribution.").format(
+                    get_link_to_form("Address", self.company_address)
+                )
+            )
+
+        if self.party_address and not frappe.db.get_all("Address", party_filters, limit=1):
+            frappe.throw(
+                _("Party Address {0} is not valid for this ISD distribution.").format(
+                    get_link_to_form("Address", self.party_address)
                 )
             )
 
