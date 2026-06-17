@@ -88,7 +88,7 @@ frappe.ui.form.on("ISD Invoice", {
         }
     },
 
-    async default_distribution_ratio(frm) {
+    default_distribution_ratio(frm) {
         if (frm.doc.default_distribution_ratio < 0 || frm.doc.default_distribution_ratio > 100) {
             frappe.show_alert({
                 message: __("Distribution ratio must be between 0 and 100"),
@@ -96,20 +96,18 @@ frappe.ui.form.on("ISD Invoice", {
             });
             return;
         }
-
-        await frm.isd_controller.recalculate();
     },
 
     async company_address(frm) {
         frm.isd_controller.set_address_display("company_address", "company_address_display");
         await frm.isd_controller.set_pos("company_address", "company_pos");
-        await frm.isd_controller.recalculate();
+        await frm.isd_controller.recalculate({ address_change: true });
     },
 
     async party_address(frm) {
         frm.isd_controller.set_address_display("party_address", "party_address_display");
         await frm.isd_controller.set_pos("party_address", "party_pos");
-        await frm.isd_controller.recalculate();
+        await frm.isd_controller.recalculate({ address_change: true });
     },
 
     get_purchase_invoices(frm) {
@@ -186,24 +184,25 @@ const CREDIT_FLOW = {
 frappe.ui.form.on("ISD Invoice Source Item", {
     async source_invoices_add(frm, cdt, cdn) {
         frappe.model.set_value(cdt, cdn, "distribution_ratio", frm.doc.default_distribution_ratio || 0);
-        await frm.isd_controller.recalculate();
+        const row = frappe.get_doc(cdt, cdn);
+        await frm.isd_controller.recalculate({ row });
     },
 
     async source_invoices_remove(frm) {
         await frm.isd_controller.recalculate();
     },
     purchase_invoice(frm, cdt, cdn) {
-        if (!(frm.is_against_party && frm.doc.credit_flow == CREDIT_FLOW.RECEIPT)) {
+        if (!(frm.doc.is_against_party && frm.doc.credit_flow == CREDIT_FLOW.RECEIPT)) {
             frm.isd_controller.autofill_source_item(cdt, cdn);
         }
     },
     async is_ineligible_for_itc(frm, cdt, cdn) {
         frm.isd_controller.autofill_source_item(cdt, cdn);
-        await frm.isd_controller.recalculate();
     },
 
-    async distribution_ratio(frm) {
-        await frm.isd_controller.recalculate();
+    async distribution_ratio(frm, cdt, cdn) {
+        const row = frappe.get_doc(cdt, cdn);
+        await frm.isd_controller.recalculate({ row });
     },
 });
 
@@ -355,6 +354,7 @@ class ISDInvoiceController {
     }
 
     autofill_source_item(cdt, cdn) {
+        // does not work for credit receipt
         const row = locals[cdt][cdn];
         if (!row.purchase_invoice) return;
 
@@ -384,7 +384,7 @@ class ISDInvoiceController {
                         {},
                     ),
                 );
-                this.recalculate();
+                this.recalculate({ row: locals[cdt][cdn] });
             },
         });
     }
@@ -441,35 +441,63 @@ class ISDInvoiceController {
 
         return false;
     }
-    //TODO: pass ratio here, if ratio is passed we are using this for whole calculation
-    // if not then just change of is inter state is there and we have to just shift values from igst to cgst + sgst
-    // keep seperate function of row wise and whole table recalculate, pass row to differentiate. for addition and removal fo
 
-    async calculate_distribution() {
-        const is_inter_state = await this.is_inter_state_distribution();
-        // credit notes store distributed amounts as negative (reverse of the original)
+    _calculate_distribution_row(row, is_inter_state) {
         const sign = this.frm.doc.is_credit_note ? -1 : 1;
-        for (const row of this.frm.doc.source_invoices || []) {
-            const ratio = (sign * (row.distribution_ratio || 0)) / 100;
+        const ratio = (sign * (row.distribution_ratio || 0)) / 100;
+        const prec = precision("distributed_igst", row);
 
-            if (is_inter_state) {
-                row.distributed_igst = flt(
-                    ((row.total_cgst || 0) + (row.total_sgst || 0) + (row.total_igst || 0)) * ratio,
-                    precision("distributed_igst", row),
-                );
-                row.distributed_cgst = 0;
-                row.distributed_sgst = 0;
-            } else {
-                row.distributed_igst = flt((row.total_igst || 0) * ratio, precision("distributed_igst", row));
-                row.distributed_cgst = flt((row.total_cgst || 0) * ratio, precision("distributed_cgst", row));
-                row.distributed_sgst = flt((row.total_sgst || 0) * ratio, precision("distributed_sgst", row));
-            }
-
-            row.distributed_cess = flt((row.total_cess || 0) * ratio, precision("distributed_cess", row));
-            row.distributed_cess_non_advol = flt(
-                (row.total_cess_non_advol || 0) * ratio,
-                precision("distributed_cess_non_advol", row),
+        if (is_inter_state) {
+            row.distributed_igst = flt(
+                ((row.total_cgst || 0) + (row.total_sgst || 0) + (row.total_igst || 0)) * ratio,
+                prec,
             );
+            row.distributed_cgst = 0;
+            row.distributed_sgst = 0;
+        } else {
+            row.distributed_igst = flt((row.total_igst || 0) * ratio, prec);
+            row.distributed_cgst = flt((row.total_cgst || 0) * ratio, prec);
+            row.distributed_sgst = flt((row.total_sgst || 0) * ratio, prec);
+        }
+
+        row.distributed_cess = flt((row.total_cess || 0) * ratio, prec);
+        row.distributed_cess_non_advol = flt((row.total_cess_non_advol || 0) * ratio, prec);
+    }
+
+    // Shifts already-distributed amounts between igst and cgst/sgst
+    _shift_distributed_taxes_for_state(row, is_inter_state) {
+        const prec = precision("distributed_igst", row);
+
+        // row already in target layout (igst present ⇔ inter-state) — nothing to shift
+        if (is_inter_state === Boolean(row.distributed_igst)) return;
+
+        if (is_inter_state) {
+            row.distributed_igst = flt((row.distributed_cgst || 0) + (row.distributed_sgst || 0), prec);
+            row.distributed_cgst = 0;
+            row.distributed_sgst = 0;
+        } else {
+            row.distributed_cgst = flt(row.distributed_igst / 2, prec);
+            row.distributed_sgst = flt(row.distributed_igst / 2, prec);
+            row.distributed_igst = 0;
+        }
+    }
+
+    async recalculate({ row = null, address_change = false } = {}) {
+        console.log("row", row, "address", address_change);
+        if (!(this.frm.doc.source_invoices || []).length) return;
+
+        const is_inter_state = await this.is_inter_state_distribution();
+
+        if (row) {
+            this._calculate_distribution_row(row, is_inter_state);
+        } else if (address_change) {
+            for (const r of this.frm.doc.source_invoices || []) {
+                this._shift_distributed_taxes_for_state(r, is_inter_state);
+            }
+        } else {
+            for (const r of this.frm.doc.source_invoices || []) {
+                this._calculate_distribution_row(r, is_inter_state);
+            }
         }
 
         this.frm.refresh_field("source_invoices");
@@ -516,10 +544,5 @@ class ISDInvoiceController {
         this.frm.doc.total_ineligible = flt(total_ineligible, precision("total_ineligible"));
 
         this.frm.refresh_fields(["taxes", "total_eligible", "total_ineligible"]);
-    }
-
-    async recalculate() {
-        if (!(this.frm.doc.source_invoices || []).length) return;
-        await this.calculate_distribution();
     }
 }
