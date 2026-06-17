@@ -431,12 +431,12 @@ class TestGSTR3BReport(IntegrationTestCase):
         # GST taxes on PI → is_boe_applicable auto-set to 0 (no BOE needed)
         pi = create_purchase_invoice(
             supplier="_Test Registered Supplier",
+            supplier_address="_Test Registered Supplier-Billing-2",
             update_stock=1,
             is_out_state=True,
             do_not_save=1,
             do_not_submit=1,
         )
-        pi.gst_category = "SEZ"
         pi.insert()
         pi.submit()
 
