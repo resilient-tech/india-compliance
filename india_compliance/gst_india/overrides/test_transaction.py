@@ -24,11 +24,17 @@ from parameterized import parameterized_class
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
+    ADDRESS_DEPENDENT_FIELDS,
     DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
     _is_multicurrency_doc,
+    sync_address_dependent_fields_on_submit,
+    sync_gst_details_from_address,
     validate_gst_refund_accounts,
     validate_item_tax_template,
+)
+from india_compliance.gst_india.setup.property_setters import (
+    ADDRESS_FIELDS_BY_DOCTYPE,
 )
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
@@ -85,11 +91,10 @@ class TestTransaction(IntegrationTestCase):
         doc = create_transaction(
             **self.transaction_details,
             company="_Test Indian Unregistered Company",
-            gst_category="Unregistered",
         )
 
-        # No validation error should occur for unregistered customers
-        self.assertDocumentEqual({"gst_category": "Unregistered", "taxes": []}, doc)
+        # No validation error should occur for unregistered company
+        self.assertDocumentEqual({"gst_category": "Registered Regular", "taxes": []}, doc)
 
     def test_transaction_for_foreign_company(self):
         if self.is_sales_doctype:
@@ -100,12 +105,11 @@ class TestTransaction(IntegrationTestCase):
         doc = create_transaction(
             **self.transaction_details,
             company="_Test Foreign Company",
-            gst_category="Unregistered",
             currency="USD",
         )
 
-        # No validation error should occur for unregistered customers
-        self.assertDocumentEqual({"gst_category": "Unregistered", "taxes": []}, doc)
+        # No validation error should occur for foreign company
+        self.assertDocumentEqual({"gst_category": "Registered Regular", "taxes": []}, doc)
 
     def test_transaction_with_gst_and_non_gst_items(self):
         # allowing taxable items with non-taxable items
@@ -252,6 +256,221 @@ class TestTransaction(IntegrationTestCase):
         unset_company_gstin()
         doc.flags.ignore_mandatory = True
         doc.save()
+
+    def test_address_fields_allow_on_submit(self):
+        """Party / GST / POS fields are editable after submit; company address stays locked."""
+        meta = frappe.get_meta(self.doctype)
+
+        gst_fields = (
+            ("billing_address_gstin", "gst_category")
+            if self.is_sales_doctype
+            else ("supplier_gstin", "gst_category")
+        )
+        editable = (*ADDRESS_FIELDS_BY_DOCTYPE.get(self.doctype, ()), *gst_fields, "place_of_supply")
+
+        for fieldname in editable:
+            field = meta.get_field(fieldname)
+            if field:
+                self.assertTrue(
+                    field.allow_on_submit,
+                    msg=f"{self.doctype}.{fieldname} must have allow_on_submit=1",
+                )
+
+        company_address_field = "company_address" if self.is_sales_doctype else "billing_address"
+        field = meta.get_field(company_address_field)
+        if field:
+            self.assertFalse(
+                field.allow_on_submit,
+                msg=f"{self.doctype}.{company_address_field} must stay locked so company_gstin can't change",
+            )
+
+    def test_sync_address_dependent_fields_on_submit(self):
+        """Tax-neutral address change is allowed; party GSTIN/category re-sync."""
+        doc = create_transaction(**self.transaction_details)
+
+        if self.is_sales_doctype:
+            # same state, different party
+            address_field = "customer_address"
+            gstin_field = "billing_address_gstin"
+            new_address = "_Test Registered Customer-Billing-2"
+            expected_gstin = "24AANCA4892J1Z8"
+            expected_category = "Deemed Export"
+        else:
+            address_field = "supplier_address"
+            gstin_field = "supplier_gstin"
+            new_address = "_Test Registered Supplier-Billing-3"
+            expected_gstin = "29AAACI1195H2ZH"
+            expected_category = "Registered Regular"
+
+        doc.reload()
+        self.assertNotEqual(doc.get(address_field), new_address)
+
+        doc.load_doc_before_save()
+        doc.set(address_field, new_address)
+        sync_address_dependent_fields_on_submit(doc)
+
+        self.assertEqual(doc.get(gstin_field), expected_gstin)
+        self.assertEqual(doc.get("gst_category"), expected_category)
+        # company GSTIN must never change after submission
+        self.assertEqual(doc.company_gstin, doc.get_doc_before_save().company_gstin)
+
+    def test_sync_defaults_gst_category_to_unregistered(self):
+        """Re-syncing from an address with no GST Category defaults the party
+        category to Unregistered, not blank."""
+        doc = create_transaction(**self.transaction_details)
+
+        if self.is_sales_doctype:
+            address_field = "customer_address"
+            new_address = "_Test Registered Customer-Billing-2"
+        else:
+            address_field = "supplier_address"
+            new_address = "_Test Registered Supplier-Billing-3"
+
+        original_category = frappe.db.get_value("Address", new_address, "gst_category")
+        frappe.db.set_value("Address", new_address, "gst_category", "")
+
+        try:
+            doc.set(address_field, new_address)
+            sync_gst_details_from_address(doc, [address_field])
+
+            self.assertEqual(doc.get("gst_category"), "Unregistered")
+        finally:
+            frappe.db.set_value("Address", new_address, "gst_category", original_category)
+
+    def test_sync_persists_on_save_after_submit(self):
+        """A party-address edit on a submitted doc re-syncs GSTIN/category through
+        the before_update_after_submit hook (per-doctype wiring) and persists."""
+        doc = create_transaction(**self.transaction_details)
+
+        address_field = "customer_address" if self.is_sales_doctype else "supplier_address"
+        gstin_field, category_field = ADDRESS_DEPENDENT_FIELDS[address_field]
+
+        new_address = (
+            "_Test Registered Customer-Billing-2"
+            if self.is_sales_doctype
+            else "_Test Registered Supplier-Billing-3"
+        )
+
+        # the synced values must match whatever the new address actually holds
+        expected_gstin, expected_category = frappe.db.get_value(
+            "Address", new_address, ("gstin", category_field)
+        )
+
+        doc.reload()
+        self.assertEqual(doc.docstatus, 1)
+        doc.set(address_field, new_address)
+        doc.save()
+
+        doc.reload()
+        self.assertEqual(doc.get(gstin_field), expected_gstin)
+        self.assertEqual(doc.get(category_field), expected_category)
+
+    def test_block_tax_changing_address_after_submit(self):
+        """Address change to another state is blocked once it turns intra -> inter-state.
+
+        Source state differs by side: sales = company (so POS must follow the address),
+        purchase = supplier (re-synced here, so the supplier change alone flips it)."""
+        doc = create_transaction(**self.transaction_details, is_in_state=True)
+        doc.reload()
+        doc.load_doc_before_save()
+
+        if self.is_sales_doctype:
+            doc.customer_address = "_Test Registered Customer-Billing-3"  # Karnataka (29)
+            doc.place_of_supply = "29-Karnataka"
+        else:
+            doc.supplier_address = "_Test Registered Supplier-Billing-3"  # Karnataka (29)
+
+        self.assertRaises(
+            frappe.exceptions.ValidationError,
+            sync_address_dependent_fields_on_submit,
+            doc,
+        )
+
+    def test_block_pos_change_to_different_state_after_submit(self):
+        """POS edit that flips intra <-> inter-state is blocked."""
+        doc = create_transaction(**self.transaction_details, is_in_state=True)
+        doc.reload()
+
+        # Gujarat company; a different-state POS makes it inter-state
+        if doc.place_of_supply == "27-Maharashtra":
+            return
+
+        doc.load_doc_before_save()
+        doc.place_of_supply = "27-Maharashtra"
+
+        self.assertRaises(
+            frappe.exceptions.ValidationError,
+            sync_address_dependent_fields_on_submit,
+            doc,
+        )
+
+    def test_allow_tax_neutral_pos_change_after_submit(self):
+        """POS edit between two inter-state values (IGST stays valid) is allowed."""
+        if self.doctype not in ADDRESS_FIELDS_BY_DOCTYPE:
+            return
+
+        details = dict(self.transaction_details)
+        if self.is_sales_doctype:
+            # Karnataka customer -> inter-state vs Gujarat company
+            details["customer_address"] = "_Test Registered Customer-Billing-3"
+            new_pos = "27-Maharashtra"
+        else:
+            # force an inter-state POS so IGST applies
+            details["supplier_address"] = "_Test Registered Supplier-Billing"
+            details["place_of_supply"] = "29-Karnataka"
+            new_pos = "27-Maharashtra"
+
+        doc = create_transaction(**details, is_out_state=True)
+        doc.reload()
+
+        doc.place_of_supply = new_pos
+        doc.save()
+
+        doc.reload()
+        self.assertEqual(doc.place_of_supply, new_pos)
+
+    def test_block_gst_category_change_after_submit(self):
+        """Address change to SEZ (inter-state) is blocked even within the same state."""
+        doc = create_transaction(**self.transaction_details, is_in_state=True)
+        doc.reload()
+
+        if self.is_sales_doctype:
+            # same state but SEZ = inter-state
+            address_field = "customer_address"
+            new_address = "_Test Registered Customer-Billing-1"
+        else:
+            address_field = "supplier_address"
+            new_address = "_Test Registered Supplier-Billing-2"
+
+        doc.load_doc_before_save()
+        doc.set(address_field, new_address)
+
+        self.assertRaises(
+            frappe.exceptions.ValidationError,
+            sync_address_dependent_fields_on_submit,
+            doc,
+        )
+
+    def test_block_address_or_pos_change_when_ewaybill_or_irn_exists(self):
+        """Once an e-Waybill / IRN exists, any address/POS change is blocked."""
+        meta = frappe.get_meta(self.doctype)
+        ewb_field = "ewaybill" if meta.has_field("ewaybill") else ("irn" if meta.has_field("irn") else None)
+        if not ewb_field:
+            return
+
+        doc = create_transaction(**self.transaction_details)
+        doc.reload()
+        doc.load_doc_before_save()
+
+        # fake an e-Waybill / IRN, then a tax-neutral POS edit
+        doc.set(ewb_field, "123456789012" if ewb_field == "ewaybill" else "a" * 64)
+        doc.place_of_supply = "27-Maharashtra" if doc.place_of_supply != "27-Maharashtra" else "29-Karnataka"
+
+        self.assertRaises(
+            frappe.exceptions.ValidationError,
+            sync_address_dependent_fields_on_submit,
+            doc,
+        )
 
     def test_validate_mandatory_gst_category(self):
         doc = create_transaction(**self.transaction_details, do_not_submit=True)
@@ -1404,6 +1623,84 @@ class TestSpecificTransactions(IntegrationTestCase):
             ["content"],
         )
         self.assertTrue(si.name in comment)
+
+    def test_post_submit_edit_flags_gstr1_for_refresh(self):
+        """A successful post-submit SI edit flags the period's GST Return Log for refresh."""
+        si = create_transaction(
+            doctype="Sales Invoice",
+            is_out_state=True,
+            customer_address="_Test Registered Customer-Billing-3",
+        )
+
+        posting_date = getdate(si.posting_date)
+        log = frappe.new_doc(
+            "GST Return Log",
+            return_period=f"{posting_date.month:02d}{posting_date.year}",
+            gstin=si.company_gstin,
+            return_type="GSTR1",
+        )
+        log.insert(ignore_permissions=True)
+        frappe.db.set_value("GST Return Log", log.name, "is_latest_data", 1)
+
+        si.reload()
+        si.place_of_supply = "27-Maharashtra"  # tax-neutral (inter -> inter)
+        si.save()
+
+        self.assertEqual(frappe.db.get_value("GST Return Log", log.name, "is_latest_data"), 0)
+
+    @change_settings("GST Settings", {"restrict_changes_after_gstr_1": 1})
+    def test_block_post_submit_edit_after_gstr1_filed(self):
+        """Post-submit SI edits are blocked once that period's GSTR-1 is filed."""
+        si = create_transaction(
+            doctype="Sales Invoice",
+            is_out_state=True,
+            customer_address="_Test Registered Customer-Billing-3",
+        )
+
+        # mark the invoice's GSTR-1 period as filed
+        if not frappe.db.exists("GSTIN", si.company_gstin):
+            frappe.new_doc("GSTIN", gstin=si.company_gstin, status="Active").save(ignore_permissions=True)
+        frappe.db.set_value("GSTIN", si.company_gstin, "gstr_1_filed_upto", add_days(today(), 1))
+
+        test_user = frappe.get_doc("User", {"email": "test@example.com"})
+        test_user.add_roles("Accounts User")
+
+        si.reload()
+        si.place_of_supply = "27-Maharashtra"  # tax-neutral, so the edit reaches the GSTR-1 check
+        with self.set_user(test_user.name):
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"You are not allowed to update Sales Invoice"),
+                si.save,
+            )
+
+    @change_settings("GST Settings", {"restrict_changes_after_gstr_1": 1})
+    def test_restriction_precedes_tax_change_validation_after_gstr1_filed(self):
+        """The GSTR-1 restriction must fire before the tax-change validation:
+        a tax-changing post-submit address edit on a filed period reports the
+        restriction error, not the tax-change error."""
+        si = create_transaction(doctype="Sales Invoice", is_in_state=True)
+
+        if not frappe.db.exists("GSTIN", si.company_gstin):
+            frappe.new_doc("GSTIN", gstin=si.company_gstin, status="Active").save(ignore_permissions=True)
+        frappe.db.set_value("GSTIN", si.company_gstin, "gstr_1_filed_upto", add_days(today(), 1))
+
+        test_user = frappe.get_doc("User", {"email": "test@example.com"})
+        test_user.add_roles("Accounts User")
+
+        si.reload()
+        si.load_doc_before_save()
+        # intra -> inter-state edit that would otherwise raise a tax-change error
+        si.customer_address = "_Test Registered Customer-Billing-3"  # Karnataka (29)
+        si.place_of_supply = "29-Karnataka"
+
+        with self.set_user(test_user.name):
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"You are not allowed to update Sales Invoice"),
+                sync_address_dependent_fields_on_submit,
+                si,
+            )
 
 
 def create_cess_accounts():
