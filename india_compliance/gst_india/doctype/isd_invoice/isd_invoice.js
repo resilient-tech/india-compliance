@@ -72,7 +72,6 @@ frappe.ui.form.on("ISD Invoice", {
     },
 
     async party_type(frm) {
-        if (frm.doc.is_against_party) frm.isd_controller.update_party_label();
         if (frm.__updating_isd_autofill || !frm.doc.is_against_party) return;
         await fetch_isd_autofill(frm, "party_type");
     },
@@ -103,11 +102,13 @@ frappe.ui.form.on("ISD Invoice", {
 
     async company_address(frm) {
         frm.isd_controller.set_address_display("company_address", "company_address_display");
+        await frm.isd_controller.set_pos("company_address", "company_pos");
         await frm.isd_controller.recalculate();
     },
 
     async party_address(frm) {
         frm.isd_controller.set_address_display("party_address", "party_address_display");
+        await frm.isd_controller.set_pos("party_address", "party_pos");
         await frm.isd_controller.recalculate();
     },
 
@@ -329,12 +330,6 @@ class ISDInvoiceController {
         });
     }
 
-    update_party_label() {
-        const party_type = this.frm.doc.party_type;
-        this.frm.set_df_property("party", "label", party_type);
-        this.frm.refresh_field("party");
-    }
-
     update_address_labels() {
         const LABELS = {
             default: {
@@ -409,6 +404,18 @@ class ISDInvoiceController {
             this.frm.set_value(display_field, "");
         }
     }
+    async set_pos(address_field, pos_field) {
+        const address = this.frm.doc[address_field];
+        if (!address) {
+            this.frm.set_value(pos_field, "");
+            return;
+        }
+
+        const { message } = await frappe.db.get_value("Address", address, ["gst_state_number", "gst_state"]);
+        if (message) {
+            this.frm.set_value(pos_field, `${message.gst_state_number}-${message.gst_state}`);
+        }
+    }
     fetch_gst_accounts() {
         if (!this.frm.doc.company) return;
         frappe
@@ -434,6 +441,9 @@ class ISDInvoiceController {
 
         return false;
     }
+    //TODO: pass ratio here, if ratio is passed we are using this for whole calculation
+    // if not then just change of is inter state is there and we have to just shift values from igst to cgst + sgst
+    // keep seperate function of row wise and whole table recalculate, pass row to differentiate. for addition and removal fo
 
     async calculate_distribution() {
         const is_inter_state = await this.is_inter_state_distribution();
@@ -443,18 +453,23 @@ class ISDInvoiceController {
             const ratio = (sign * (row.distribution_ratio || 0)) / 100;
 
             if (is_inter_state) {
-                row.distributed_igst =
-                    ((row.total_cgst || 0) + (row.total_sgst || 0) + (row.total_igst || 0)) * ratio;
+                row.distributed_igst = flt(
+                    ((row.total_cgst || 0) + (row.total_sgst || 0) + (row.total_igst || 0)) * ratio,
+                    precision("distributed_igst", row),
+                );
                 row.distributed_cgst = 0;
                 row.distributed_sgst = 0;
             } else {
-                row.distributed_igst = (row.total_igst || 0) * ratio;
-                row.distributed_cgst = (row.total_cgst || 0) * ratio;
-                row.distributed_sgst = (row.total_sgst || 0) * ratio;
+                row.distributed_igst = flt((row.total_igst || 0) * ratio, precision("distributed_igst", row));
+                row.distributed_cgst = flt((row.total_cgst || 0) * ratio, precision("distributed_cgst", row));
+                row.distributed_sgst = flt((row.total_sgst || 0) * ratio, precision("distributed_sgst", row));
             }
 
-            row.distributed_cess = (row.total_cess || 0) * ratio;
-            row.distributed_cess_non_advol = (row.total_cess_non_advol || 0) * ratio;
+            row.distributed_cess = flt((row.total_cess || 0) * ratio, precision("distributed_cess", row));
+            row.distributed_cess_non_advol = flt(
+                (row.total_cess_non_advol || 0) * ratio,
+                precision("distributed_cess_non_advol", row),
+            );
         }
 
         this.frm.refresh_field("source_invoices");
@@ -494,12 +509,11 @@ class ISDInvoiceController {
                 frappe.model.add_child(this.frm.doc, "ISD Invoice Tax Item", "taxes");
             row.account_head = account_head;
             row.gst_tax_type = gst_tax_type;
-            row.tax_amount = totals[gst_tax_type];
+            row.tax_amount = flt(totals[gst_tax_type], precision("tax_amount", row));
         }
 
-        this.frm.doc.taxes = (this.frm.doc.taxes || []).filter((tax) => tax.tax_amount);
-        this.frm.doc.total_eligible = total_eligible;
-        this.frm.doc.total_ineligible = total_ineligible;
+        this.frm.doc.total_eligible = flt(total_eligible, precision("total_eligible"));
+        this.frm.doc.total_ineligible = flt(total_ineligible, precision("total_ineligible"));
 
         this.frm.refresh_fields(["taxes", "total_eligible", "total_ineligible"]);
     }

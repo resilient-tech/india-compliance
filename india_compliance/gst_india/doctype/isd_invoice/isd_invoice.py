@@ -45,7 +45,7 @@ class ISDInvoice(Document):
     def before_validate(self):
         self.set_taxes_and_totals()
         self.set_pos_from_gstin()
-        # TODO: should i shift the set address display in backend
+        # TODO: yes set address display in backend too
         self.clear_fields_when_is_against_party_not_set()
 
     def validate(self):
@@ -57,6 +57,10 @@ class ISDInvoice(Document):
         # TODO: verify gl entries should reduce/increase values in gl report
         self.validate_inter_company_transaction()
         self.validate_distribution_limits()
+        # TODO: add validation to validate the addresses are correct,
+        # TODO: use validate_transaction_name , for gstin limits
+        # TODO: see transaction.py, validate gst account types (based on the interstate or not -> igst or cgst/sgst)
+        # TODO: keep seperate class for this
 
     def set_taxes_and_totals(self):
         # will be reusing this precision at many places
@@ -71,7 +75,7 @@ class ISDInvoice(Document):
             self.taxes = []
             return
 
-        accounts = get_gst_accounts_by_type(self.company, "Input", throw=False) or {}
+        accounts = get_input_gst_accounts(self.company) or {}
         existing_taxes = {tax.gst_tax_type: tax for tax in self.taxes}
 
         for gst_tax_type in GST_TAX_TYPES:
@@ -100,8 +104,8 @@ class ISDInvoice(Document):
                         "tax_amount": tax_amount,
                     },
                 )
-        # remove rows with zero tax amount, keeping existing sequence
-        self.taxes = [tax for tax in self.taxes if tax.tax_amount]
+        # remove rows with zero tax amount or non gst types, keeping existing sequence
+        self.taxes = [tax for tax in self.taxes if tax.tax_amount or gst_tax_type not in GST_TAX_TYPES]
 
     def set_distribution_totals(self):
         totals = {"eligible": 0, "ineligible": 0}
@@ -165,6 +169,7 @@ class ISDInvoice(Document):
                 validate_gstin_status(gstin, self)
 
         if not self.party_gstin or not self.company_gstin:
+            # TODO: if not company gstin throw error
             return
 
         company_pan = self.company_gstin[2:12]
@@ -313,18 +318,23 @@ class ISDInvoice(Document):
         frappe.msgprint(table, title=title, as_table=True, raise_exception=frappe.ValidationError)
 
     def on_submit(self):
-        self._sync_purchase_invoice_distribution()
         make_gl_entries(self.get_gl_entries(), merge_entries=False)
+        self._sync_purchase_invoice_distribution()
 
     def on_cancel(self):
-        self._sync_purchase_invoice_distribution()
         self.ignore_linked_doctypes = ("GL Entry", "Payment Ledger Entry")
         make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
+        self._sync_purchase_invoice_distribution()
 
     def get_gl_entries(self):
         gl_entries = []
         party_id = self.party_gstin or self.party
         company_id = self.company_gstin or self.company_pos
+
+        # TODO: simplify the get gl entries
+        # first add company gl entries
+        # then add party gl entries
+        # use is against party and credit flow to determine the field as credit/debit
 
         def add_gl_entry(account, debit=0, credit=0, remarks=None, company_gstin=None, **attributes):
             gl_dict = {
@@ -398,14 +408,10 @@ class ISDInvoice(Document):
         return gl_entries
 
     def _sync_purchase_invoice_distribution(self):
-
-        # on_cancel does not run validate(), so set_taxes_and_totals() never sets this
-        if not hasattr(self, "_source_item_precision"):
-            self._source_item_precision = self.precision("distributed_igst", "source_invoices")
-        if not hasattr(self, "_pi_names"):
-            self._pi_names = list(
-                {row.purchase_invoice for row in self.source_invoices}
-            )  # list of unique purchase invoices
+        self._source_item_precision = self.precision("distributed_igst", "source_invoices")
+        self._pi_names = list(
+            {row.purchase_invoice for row in self.source_invoices}
+        )  # list of unique purchase invoices
 
         total_tax_map = defaultdict(float)
         dist_map = defaultdict(float)
@@ -432,6 +438,7 @@ class ISDInvoice(Document):
             total_tax = flt(total_tax_map.get(name, 0), self._source_item_precision)
             total_distributed = flt(dist_map.get(name, 0), self._source_item_precision)
             percent = flt(total_distributed / total_tax * 100 if total_tax else 0, _percentage_precision)
+            # TODO: check if there is a difference between rounded values and acutal percentage when the rounded percentage is 100, if that is the case then floor the values - 99.99...
             doc_updates[name] = {"isd_credit_distributed_percent": percent}
 
         frappe.db.bulk_update("Purchase Invoice", doc_updates, update_modified=False)
@@ -483,6 +490,7 @@ def _validate_source_invoice_dates(pi_rows, posting_date):
         )
 
 
+# TODO: check for all the tax values being same too
 def _validate_source_invoices_with_inter_company_reference(
     pi_names, is_against_party, credit_flow, inter_company_invoice_reference
 ):
@@ -521,6 +529,7 @@ def _validate_isd_invoice_for_bulk_generation(isd_invoice):
     )
 
 
+# TODO: do this in validate distribution limits and make the totals read only
 def _validate_tax_totals(pi_names, source_invoices):
     """Ensure total_{t} on each source invoice row matches actual PI tax amounts."""
     summary_map = {
@@ -672,7 +681,7 @@ def get_isd_autofill_values(changed_field: str, doc: str | dict):
 
 @frappe.whitelist()
 def get_input_gst_accounts(company: str):
-    return get_gst_accounts_by_type(company, "Input", throw=False)
+    return get_gst_accounts_by_type(company, "Input")
 
 
 def _map_isd_invoice(source_name, target_doc, field_map, post_process, map_accounting_dimensions=False):

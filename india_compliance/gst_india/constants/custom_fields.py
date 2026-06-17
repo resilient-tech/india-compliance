@@ -1054,7 +1054,7 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "isd_credit_distributed_percent",
             "label": "ISD Credit Distributed (%)",
-            "fieldtype": "Percent",
+            "fieldtype": "Float",
             "insert_after": "is_isd_applicable",
             "print_hide": 1,
             "read_only": 1,

@@ -37,22 +37,6 @@ def sum_row_tax_by_type(row, prefix):
     return sum(flt(getattr(row, f"{prefix}_{tax_type}")) for tax_type in GST_TAX_TYPES)
 
 
-# TODO: at many places this can be replaced with, see if that breaks at any place
-# isd_invoice = frappe.qb.DocType("ISD Invoice")
-
-# query = (
-#     frappe.qb.from_(isd_source_item)
-#     .select(
-#         isd_source_item.purchase_invoice,
-#         Sum(reduce(add, (isd_source_item[f"distributed_{t}"] for t in GST_TAX_TYPES))).as_(
-#             "total_distributed"
-#         ),
-#     )
-#     .where(isd_invoice.docstatus == 1)
-#     .groupby(isd_source_item.purchase_invoice)
-# )
-
-
 def get_isd_source_item_query(purchase_invoices=None):
     isd_source_item = frappe.qb.DocType("ISD Invoice Source Item")
 

@@ -25,6 +25,8 @@ class TurnoverRecord(Document):
             # for registered company, gstin and gst gst_state are compulsory and validated
             frappe.throw(_("GSTIN does not match selected gst_state"))
 
+        # TODO: validate one state should have only one turnover
+
 
 def upsert_turnover_record(
     gstin,
@@ -55,7 +57,7 @@ def upsert_turnover_record(
             doc.gst_state = gst_state
             doc.amount = amount
             doc.insert(ignore_permissions=True)
-    except (frappe.ValidationError, frappe.DuplicateEntryError):
+    except Exception:
         frappe.log_error(
             title=_("Turnover Record upsert failed"),
             message=_(

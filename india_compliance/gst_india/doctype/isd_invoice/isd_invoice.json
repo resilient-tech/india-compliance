@@ -82,6 +82,7 @@
   {
    "fieldname": "taxes",
    "fieldtype": "Table",
+   "read_only": 1,
    "options": "ISD Invoice Tax Item"
   },
   {

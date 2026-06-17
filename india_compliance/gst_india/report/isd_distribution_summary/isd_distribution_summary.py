@@ -84,6 +84,8 @@ def get_data(filters):
 
     dist_map = _get_distributed_map([row.purchase_invoice for row in rows])
 
+    # TODO: remove the useless field of is_ineligible_for_itc
+    # keep it per purchase invoice
     result = []
     for row in rows:
         key1 = (row.purchase_invoice, 0)
