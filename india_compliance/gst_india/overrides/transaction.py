@@ -1915,7 +1915,7 @@ def sync_gst_details_from_address(doc, changed_address_fields):
             doc.set(gstin_field, gstin or "")
 
         if category_field and doc.meta.has_field(category_field):
-            doc.set(category_field, gst_category or "")
+            doc.set(category_field, gst_category or "Unregistered")
 
 
 def set_ecommerce_supply_type(doc):
