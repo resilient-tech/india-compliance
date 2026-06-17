@@ -359,11 +359,11 @@ class TestBillofEntry(FrappeTestCase):
         """
         pi = create_purchase_invoice(
             supplier="_Test Registered Supplier",
+            supplier_address="_Test Registered Supplier-Billing-2",
             update_stock=1,
             do_not_submit=True,
             do_not_save=True,
         )
-        pi.gst_category = "SEZ"
         pi.insert()
         pi.submit()
 
@@ -380,11 +380,11 @@ class TestBillofEntry(FrappeTestCase):
         """
         pi = create_purchase_invoice(
             supplier="_Test Registered Supplier",
+            supplier_address="_Test Registered Supplier-Billing-2",
             item_code="_Test Service Item",
             do_not_submit=True,
             do_not_save=True,
         )
-        pi.gst_category = "SEZ"
         pi.insert()
         pi.submit()
 
@@ -398,12 +398,12 @@ class TestBillofEntry(FrappeTestCase):
         """
         pi = create_purchase_invoice(
             supplier="_Test Registered Supplier",
+            supplier_address="_Test Registered Supplier-Billing-2",
             update_stock=1,
             qty=2,
             do_not_submit=True,
             do_not_save=True,
         )
-        pi.gst_category = "SEZ"
         pi.insert()
         pi.submit()
 
@@ -441,12 +441,12 @@ class TestBillofEntry(FrappeTestCase):
         # SEZ Invoice with GST taxes - not BOE eligible
         pi2 = create_purchase_invoice(
             supplier="_Test Registered Supplier",
+            supplier_address="_Test Registered Supplier-Billing-2",
             update_stock=1,
             is_out_state=True,
             do_not_save=True,
             do_not_submit=True,
         )
-        pi2.gst_category = "SEZ"
         pi2.save()
         pi2.submit()
         self.assertEqual(pi2.is_boe_applicable, 0)
