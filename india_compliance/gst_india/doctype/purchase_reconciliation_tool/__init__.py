@@ -40,6 +40,7 @@ class Fields(Enum):
 class Rule(Enum):
     EXACT_MATCH = "Exact Match"
     FUZZY_MATCH = "Fuzzy Match"
+    FUZZY_MATCH_WITHOUT_DATE = "Fuzzy Match Without Date"
     MISMATCH = "Mismatch"
     ROUNDING_DIFFERENCE = "Rounding Difference"  # <= 1 hardcoded
 
@@ -62,6 +63,7 @@ class MatchStatus(Enum):
 #     {"Suggested Match": ["E", "E", "F", "E", "E", 1, 1, 1, 1, 2]},
 #     {"Mismatch": ["E", "E", "E", "N", "N", "N", "N", "N", "N", "N"]},
 #     {"Mismatch": ["E", "E", "F", "N", "N", "N", "N", "N", "N", "N"]},
+#     {"Mismatch": ["E", "E", "FD", "N", "N", "N", "N", "N", "N", "N"]},  # FD = fuzzy bill_no, ignores date
 #     {"Residual Match": ["E", "E", "N", "E", "E", 1, 1, 1, 1, 2]},
 # ]
 
@@ -167,6 +169,14 @@ GSTIN_RULES = (
             # Fields.SGST: Rule.MISMATCH,
             # Fields.IGST: Rule.MISMATCH,
             # Fields.CESS: Rule.MISMATCH,
+        },
+    },
+    {
+        "match_status": MatchStatus.MISMATCH,
+        "rule": {
+            Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
+            Fields.SUPPLIER_GSTIN: Rule.EXACT_MATCH,
+            Fields.BILL_NO: Rule.FUZZY_MATCH_WITHOUT_DATE,
         },
     },
     {
@@ -846,10 +856,12 @@ class Reconciler(BaseReconciliation):
             return purchase[field] == inward_supply[field]
         elif rule == Rule.FUZZY_MATCH:
             return self.fuzzy_match(purchase, inward_supply)
+        elif rule == Rule.FUZZY_MATCH_WITHOUT_DATE:
+            return self.fuzzy_match(purchase, inward_supply, check_date=False)
         elif rule == Rule.ROUNDING_DIFFERENCE:
             return self.get_amount_difference(purchase, inward_supply, field) <= 1
 
-    def fuzzy_match(self, purchase, inward_supply):
+    def fuzzy_match(self, purchase, inward_supply, check_date=True):
         """
         Returns true if the (cleaned) bill_no approximately match.
         - For a fuzzy match, month of invoice and inward supply should be same.
@@ -859,7 +871,7 @@ class Reconciler(BaseReconciliation):
         if not purchase.bill_no or not inward_supply.bill_no:
             return False
 
-        if abs((purchase.bill_date - inward_supply.bill_date).days) > 10:
+        if check_date and abs((purchase.bill_date - inward_supply.bill_date).days) > 10:
             return False
 
         if not purchase._bill_no:

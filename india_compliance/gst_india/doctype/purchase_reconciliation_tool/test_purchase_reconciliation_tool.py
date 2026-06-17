@@ -339,6 +339,62 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             status="Not Filed",
         )
 
+    def test_same_bill_no_takes_preference_over_amount_match(self):
+        """
+        Two invoices of the same supplier with the same GST amount. Each bill
+        number is recorded in a slightly different format in 2A vs ERP, and the
+        same invoice's bill date differs by more than 10 days.
+
+        Without bill-number preference, the amount-only residual rule cross
+        matches QKI/053612 (ERP) with QKI 055190 (2A). Each invoice must
+        instead be matched to its own bill number.
+        """
+        pi_a = create_purchase_invoice(
+            bill_no="QKI/055190/23-24",
+            bill_date="2023-09-01",
+            posting_date="2023-09-01",
+        )
+        pi_b = create_purchase_invoice(
+            bill_no="QKI/053612/23-24",
+            bill_date="2023-09-20",
+            posting_date="2023-09-20",
+        )
+        is_a = create_gst_inward_supply(
+            bill_no="QKI 055190 2023-24",
+            bill_date="2023-09-22",  # within 10 days of pi_b (the wrong cross-match)
+            return_period_2b="092023",
+        )
+        is_b = create_gst_inward_supply(
+            bill_no="QKI 053612 2023-24",
+            bill_date="2023-08-05",  # > 10 days from both purchases
+            return_period_2b="082023",
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "purchase_period": "Custom",
+                "purchase_from_date": "2023-09-01",
+                "purchase_to_date": "2023-09-30",
+                "inward_supply_period": "Custom",
+                "inward_supply_from_date": "2023-08-01",
+                "inward_supply_to_date": "2023-09-30",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        data = prt.reconcile_and_generate_data()
+
+        matched = {
+            r.purchase_invoice_name: r.inward_supply_name
+            for r in data
+            if r.purchase_invoice_name
+        }
+
+        self.assertNotEqual(matched.get(pi_b.name), is_a.name)
+        self.assertEqual(matched.get(pi_a.name), is_a.name)
+        self.assertEqual(matched.get(pi_b.name), is_b.name)
+
     def test_get_invoice_details_with_none_inward_supply_name(self):
         """
         get_invoice_details with inward_supply_name=None must not raise FrappeTypeError.
