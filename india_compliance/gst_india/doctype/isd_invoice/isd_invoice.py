@@ -256,7 +256,6 @@ class ISDInvoice(Document):
         self._validate_pi_with_company()
         _validate_purchase_invoice_is_distributable(self._pi_rows)
         _validate_source_invoice_dates(self._pi_rows, self.posting_date)
-        _validate_tax_totals(self._pi_names, self.source_invoices)
         _validate_source_invoices_with_inter_company_reference(
             self._pi_names,
             self.is_against_party,
@@ -320,19 +319,35 @@ class ISDInvoice(Document):
         if self.is_against_party and self.credit_flow == CREDIT_FLOW.RECEIPT:
             return
 
-        already_distributed = self.get_already_distributed_amounts()
-        self._already_distributed_map = already_distributed
+        # single source of truth for both totals (authoritative from the PI) and amounts
+        # already distributed by other submitted ISD invoices
+        summary_map = {
+            (row.purchase_invoice, cint(row.is_ineligible_for_itc)): row
+            for row in get_purchase_invoices_distribution_summary(self._pi_names)
+        }
+        self._already_distributed_map = {
+            key: flt(row.total_tax - row.available_tax, self._source_item_precision)
+            for key, row in summary_map.items()
+        }
+
         invalid_distributions = []
         for row in self.source_invoices:
             key = (row.purchase_invoice, cint(row.is_ineligible_for_itc))
-            distributed = flt(sum_row_tax_by_type(row, "distributed"), self._source_item_precision)
-            prior = already_distributed.get(key, 0)
+            pi_row = summary_map.get(key)
+            if not pi_row:
+                continue
 
-            if self.is_credit_note:
-                if prior + distributed < 0:
-                    invalid_distributions.append((*key, prior, abs(distributed)))
+            # totals are read-only and set directly from the purchase invoice
+            for t in GST_TAX_TYPES:
+                row.set(f"total_{t}", flt(pi_row[f"total_{t}"], self._source_item_precision))
+
+            prior = self._already_distributed_map[key]
+            distributed = flt(sum_row_tax_by_type(row, "distributed"), self._source_item_precision)
+
+            if self.is_credit_note and (prior + distributed < 0):
+                invalid_distributions.append((*key, prior, abs(distributed)))
             else:
-                available = flt(sum_row_tax_by_type(row, "total") - prior, self._source_item_precision)
+                available = flt(pi_row.available_tax, self._source_item_precision)
                 if distributed > available:
                     invalid_distributions.append((*key, available, distributed))
 
@@ -563,44 +578,6 @@ def _validate_isd_invoice_for_bulk_generation(isd_invoice):
         isd_invoice.credit_flow,
         isd_invoice.inter_company_invoice_reference,
     )
-
-
-# TODO: do this in validate distribution limits and make the totals read only
-def _validate_tax_totals(pi_names, source_invoices):
-    """Ensure total_{t} on each source invoice row matches actual PI tax amounts."""
-    summary_map = {
-        (row.purchase_invoice, cint(row.is_ineligible_for_itc)): row
-        for row in get_purchase_invoices_distribution_summary(pi_names)
-    }
-
-    mismatches = []
-    for row in source_invoices:
-        pi_row = summary_map.get((row.purchase_invoice, cint(row.is_ineligible_for_itc)))
-        if not pi_row:
-            continue
-        for t in GST_TAX_TYPES:
-            if flt(row.get(f"total_{t}"), 2) != flt(pi_row[f"total_{t}"], 2):
-                mismatches.append(
-                    [
-                        row.purchase_invoice,
-                        _("Ineligible") if row.is_ineligible_for_itc else _("Eligible"),
-                        t.upper(),
-                        flt(pi_row[f"total_{t}"], 2),
-                        flt(row.get(f"total_{t}"), 2),
-                    ]
-                )
-                break
-
-    if mismatches:
-        frappe.msgprint(
-            [
-                [_("Purchase Invoice"), _("Type"), _("Tax"), _("Expected"), _("Found")],
-                *mismatches,
-            ],
-            title=_("Tax Total Mismatch"),
-            as_table=True,
-            raise_exception=frappe.ValidationError,
-        )
 
 
 @frappe.whitelist()
