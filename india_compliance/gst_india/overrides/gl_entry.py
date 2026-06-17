@@ -24,5 +24,5 @@ def validate(doc, method=None):
 
 
 def update_gl_dict_with_regional_fields(doc, gl_dict):
-    if doc.get("company_gstin"):
+    if doc.get("company_gstin") and not gl_dict.get("company_gstin"):
         gl_dict["company_gstin"] = doc.company_gstin

@@ -52,7 +52,7 @@ def upsert_turnover_record(
     gst_state,
     amount,
 ):
-    _, from_date, to_date = get_fiscal_year(nowdate())
+    _fiscal_year, from_date, to_date = get_fiscal_year(nowdate())
 
     amount_precision = get_field_precision(frappe.get_meta("Turnover Record").get_field("amount"))
     amount = flt(amount, amount_precision)

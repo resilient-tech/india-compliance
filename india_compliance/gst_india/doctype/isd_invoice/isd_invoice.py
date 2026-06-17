@@ -391,81 +391,51 @@ class ISDInvoice(Document):
 
     def get_gl_entries(self):
         gl_entries = []
-        party_id = self.party_gstin or self.party
-        company_id = self.company_gstin or self.company_pos
 
-        # TODO: simplify the get gl entries
-        # first add company gl entries
-        # then add party gl entries
-        # use is against party and credit flow to determine the field as credit/debit
-
-        def add_gl_entry(account, debit=0, credit=0, remarks=None, company_gstin=None, **attributes):
+        def add_gl_entry(account, leg, amount, company_gstin, **attributes):
             gl_dict = {
                 "account": account,
-                "debit": debit,
-                "credit": credit,
-                "remarks": remarks,
+                "debit": 0,
+                "credit": 0,
+                leg: amount,  # "debit" or "credit"
+                "cost_center": self.cost_center,
                 **attributes,
             }
-            # company_gstin only when available
             if company_gstin:
                 gl_dict["company_gstin"] = company_gstin
             gl_entries.append(self.get_gl_dict(gl_dict))
 
-        if not self.is_against_party:
-            # credit the tax accounts (reduce), debit same accounts (restore at receiving end)
-            for tax in self.taxes:
-                if not tax.tax_amount:
-                    continue
-                add_gl_entry(
-                    account=tax.account_head,
-                    credit=tax.tax_amount,
-                    remarks=f"ITC Distribution by {company_id}",
-                    cost_center=self.cost_center,
-                    company_gstin=self.company_gstin,
-                )
-                add_gl_entry(
-                    account=tax.account_head,
-                    debit=tax.tax_amount,
-                    remarks=f"ITC Received by {party_id}",
-                    cost_center=self.cost_center,
-                    company_gstin=self.party_gstin,
-                )
+        total_tax = sum(tax.tax_amount for tax in self.taxes)
+        party_attributes = {"party_type": self.party_type, "party": self.party}
+        is_party_recipient = (not self.is_against_party) or (
+            self.is_against_party and self.credit_flow == CREDIT_FLOW.DISTRIBUTION
+        )
 
-            return gl_entries
-
-        is_distribution = self.credit_flow == CREDIT_FLOW.DISTRIBUTION
-        total_tax = flt(sum(flt(tax.tax_amount) for tax in self.taxes))
-
+        # company gl entries
         for tax in self.taxes:
-            amount = flt(tax.tax_amount)
-            if not amount:
-                continue
             add_gl_entry(
-                account=tax.account_head,
-                debit=0 if is_distribution else amount,
-                credit=amount if is_distribution else 0,
-                cost_center=self.cost_center,
-                # Distribution: tax leaves ISD; Receipt: tax enters company
-                remarks=f"ITC Distribution to {party_id}"
-                if is_distribution
-                else f"ITC Received from {company_id}",
-                company_gstin=self.company_gstin if is_distribution else self.party_gstin,
+                tax.account_head,
+                "credit" if is_party_recipient else "debit",
+                tax.tax_amount,
+                company_gstin=self.company_gstin,
             )
 
-        if self.party_account and total_tax:
+        # party gl entries
+        if not self.is_against_party:
+            for tax in self.taxes:
+                add_gl_entry(
+                    tax.account_head,
+                    "debit" if is_party_recipient else "credit",
+                    tax.tax_amount,
+                    company_gstin=self.party_gstin,
+                )
+        else:
             add_gl_entry(
-                account=self.party_account,
-                party_type=self.party_type,
-                party=self.party,
-                debit=total_tax if is_distribution else 0,
-                credit=0 if is_distribution else total_tax,
-                cost_center=self.cost_center,
-                # Distribution: Customer account (receivable); Receipt: Supplier account (payable)
-                remarks=f"ITC Receivable from {party_id}"
-                if is_distribution
-                else f"ITC Payable to {company_id}",
-                company_gstin=self.party_gstin if is_distribution else self.company_gstin,
+                self.party_account,
+                "debit" if is_party_recipient else "credit",
+                total_tax,
+                company_gstin=self.party_gstin,
+                **party_attributes,
             )
 
         return gl_entries

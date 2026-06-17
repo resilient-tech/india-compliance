@@ -397,6 +397,12 @@ def bulk_create_isd_invoices(
         isd_doc.save()
 
     for row in distribution_table:
-        upsert_turnover_record(row["gstin"], row["gst_state"], row["turnover_amount"])
+        frappe.enqueue(
+            upsert_turnover_record,
+            queue="short",
+            gstin=row["gstin"],
+            gst_state=row["gst_state"],
+            amount=row["turnover_amount"],
+        )
 
     return invoices, invalid_invoices
