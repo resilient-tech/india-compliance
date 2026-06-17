@@ -385,11 +385,51 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         )
         data = prt.reconcile_and_generate_data()
 
+        rows = {r.purchase_invoice_name: r for r in data if r.purchase_invoice_name}
+
+        # each invoice matched to its own bill number, not cross-matched
+        self.assertEqual(rows[pi_a.name].inward_supply_name, is_a.name)
+        self.assertEqual(rows[pi_b.name].inward_supply_name, is_b.name)
+        # same bill number with a > 10 day date gap is flagged as Mismatch
+        self.assertEqual(rows[pi_a.name].match_status, "Mismatch")
+        self.assertEqual(rows[pi_b.name].match_status, "Mismatch")
+
+    def test_prefix_bill_no_not_matched_across_date_gap(self):
+        """
+        Different invoices whose bill numbers are prefixes of each other
+        (INV-1 vs INV-100) must not be matched, even with the same amount,
+        when the bill dates are more than 10 days apart.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="INV/1/23-24",
+            bill_date="2023-09-01",
+            posting_date="2023-09-01",
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="INV/100/23-24",
+            bill_date="2023-09-25",  # > 10 days apart
+            return_period_2b="092023",
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "purchase_period": "Custom",
+                "purchase_from_date": "2023-09-01",
+                "purchase_to_date": "2023-09-30",
+                "inward_supply_period": "Custom",
+                "inward_supply_from_date": "2023-09-01",
+                "inward_supply_to_date": "2023-09-30",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        data = prt.reconcile_and_generate_data()
+
         matched = {r.purchase_invoice_name: r.inward_supply_name for r in data if r.purchase_invoice_name}
 
-        self.assertNotEqual(matched.get(pi_b.name), is_a.name)
-        self.assertEqual(matched.get(pi_a.name), is_a.name)
-        self.assertEqual(matched.get(pi_b.name), is_b.name)
+        self.assertIsNone(matched.get(pinv.name))
+        self.assertIn(gst_is.name, {r.inward_supply_name for r in data if not r.purchase_invoice_name})
 
     def test_get_invoice_details_with_none_inward_supply_name(self):
         """

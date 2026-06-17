@@ -40,7 +40,7 @@ class Fields(Enum):
 class Rule(Enum):
     EXACT_MATCH = "Exact Match"
     FUZZY_MATCH = "Fuzzy Match"
-    FUZZY_MATCH_WITHOUT_DATE = "Fuzzy Match Without Date"
+    SAME_BILL_NO = "Same Bill No"  # cleaned bill_no equal, ignores bill date
     MISMATCH = "Mismatch"
     ROUNDING_DIFFERENCE = "Rounding Difference"  # <= 1 hardcoded
 
@@ -63,7 +63,7 @@ class MatchStatus(Enum):
 #     {"Suggested Match": ["E", "E", "F", "E", "E", 1, 1, 1, 1, 2]},
 #     {"Mismatch": ["E", "E", "E", "N", "N", "N", "N", "N", "N", "N"]},
 #     {"Mismatch": ["E", "E", "F", "N", "N", "N", "N", "N", "N", "N"]},
-#     {"Mismatch": ["E", "E", "FD", "N", "N", "N", "N", "N", "N", "N"]},  # FD = fuzzy bill_no, ignores date
+#     {"Mismatch": ["E", "E", "S", "N", "N", "N", "N", "N", "N", "N"]},  # S = same cleaned bill_no, ignores date
 #     {"Residual Match": ["E", "E", "N", "E", "E", 1, 1, 1, 1, 2]},
 # ]
 
@@ -71,6 +71,7 @@ class MatchStatus(Enum):
 #     {"Mismatch": ["E", "N", "E", "E", "E", 1, 1, 1, 1, 2]},
 #     {"Mismatch": ["E", "N", "F", "E", "E", 1, 1, 1, 1, 2]},
 #     {"Mismatch": ["E", "N", "F", "N", "N", "N", "N", "N", "N", "N"]},
+#     {"Mismatch": ["E", "N", "S", "N", "N", "N", "N", "N", "N", "N"]},  # S = same cleaned bill_no, ignores date
 #     {"Residual Match": ["E", "N", "N", "E", "E", 1, 1, 1, 1, 2]},
 # ]
 
@@ -176,7 +177,7 @@ GSTIN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             Fields.SUPPLIER_GSTIN: Rule.EXACT_MATCH,
-            Fields.BILL_NO: Rule.FUZZY_MATCH_WITHOUT_DATE,
+            Fields.BILL_NO: Rule.SAME_BILL_NO,
         },
     },
     {
@@ -241,6 +242,15 @@ PAN_RULES = (
             # Fields.SGST: Rule.MISMATCH,
             # Fields.IGST: Rule.MISMATCH,
             # Fields.CESS: Rule.MISMATCH,
+        },
+    },
+    {
+        "match_status": MatchStatus.MISMATCH,
+        "rule": {
+            Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
+            # Fields.SUPPLIER_GSTIN: Rule.MISMATCH,
+            Fields.COMPANY_GSTIN: Rule.EXACT_MATCH,
+            Fields.BILL_NO: Rule.SAME_BILL_NO,
         },
     },
     {
@@ -856,12 +866,12 @@ class Reconciler(BaseReconciliation):
             return purchase[field] == inward_supply[field]
         elif rule == Rule.FUZZY_MATCH:
             return self.fuzzy_match(purchase, inward_supply)
-        elif rule == Rule.FUZZY_MATCH_WITHOUT_DATE:
-            return self.fuzzy_match(purchase, inward_supply, check_date=False)
+        elif rule == Rule.SAME_BILL_NO:
+            return self.same_bill_no(purchase, inward_supply)
         elif rule == Rule.ROUNDING_DIFFERENCE:
             return self.get_amount_difference(purchase, inward_supply, field) <= 1
 
-    def fuzzy_match(self, purchase, inward_supply, check_date=True):
+    def fuzzy_match(self, purchase, inward_supply):
         """
         Returns true if the (cleaned) bill_no approximately match.
         - For a fuzzy match, month of invoice and inward supply should be same.
@@ -871,20 +881,38 @@ class Reconciler(BaseReconciliation):
         if not purchase.bill_no or not inward_supply.bill_no:
             return False
 
-        if check_date and abs((purchase.bill_date - inward_supply.bill_date).days) > 10:
+        if abs((purchase.bill_date - inward_supply.bill_date).days) > 10:
             return False
 
-        if not purchase._bill_no:
-            purchase._bill_no = BaseUtil.get_cleaner_bill_no(purchase.bill_no, purchase.fy)
-
-        if not inward_supply._bill_no:
-            inward_supply._bill_no = BaseUtil.get_cleaner_bill_no(inward_supply.bill_no, inward_supply.fy)
+        self.set_cleaned_bill_no(purchase, inward_supply)
 
         partial_ratio = fuzz.partial_ratio(purchase._bill_no, inward_supply._bill_no)
         if float(partial_ratio) == 100:
             return True
 
         return float(process.extractOne(purchase._bill_no, [inward_supply._bill_no])[1]) >= 90.0
+
+    def same_bill_no(self, purchase, inward_supply):
+        """
+        Returns true if the cleaned bill numbers are identical, regardless of
+        bill date. A bill number is unique per supplier per fiscal year, so an
+        exact (not fuzzy) match is the same invoice. Exact comparison avoids
+        matching different invoices whose numbers are prefixes (e.g. INV-1 / INV-100).
+        """
+        if not purchase.bill_no or not inward_supply.bill_no:
+            return False
+
+        self.set_cleaned_bill_no(purchase, inward_supply)
+
+        return purchase._bill_no == inward_supply._bill_no
+
+    @staticmethod
+    def set_cleaned_bill_no(purchase, inward_supply):
+        if not purchase._bill_no:
+            purchase._bill_no = BaseUtil.get_cleaner_bill_no(purchase.bill_no, purchase.fy)
+
+        if not inward_supply._bill_no:
+            inward_supply._bill_no = BaseUtil.get_cleaner_bill_no(inward_supply.bill_no, inward_supply.fy)
 
     def get_amount_difference(self, purchase, inward_supply, field):
         if field == "cess":
