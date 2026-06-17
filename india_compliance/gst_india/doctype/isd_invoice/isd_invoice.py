@@ -27,11 +27,15 @@ from india_compliance.gst_india.overrides.transaction import validate_gstin_stat
 from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
 )
+from india_compliance.gst_india.utils import (
+    validate_invoice_number as validate_transaction_name,
+)
 from india_compliance.gst_india.utils.isd import (
     CREDIT_FLOW,
     ISD_GST_CATEGORY,
     get_isd_source_item_query,
     get_purchase_invoices_distribution_summary,
+    is_inter_state_distribution,
     sum_row_tax_by_type,
 )
 
@@ -51,9 +55,11 @@ class ISDInvoice(Document):
         self.clear_fields_when_is_against_party_not_set()
 
     def validate(self):
+        validate_transaction_name(self)
         self.validate_isd_party()
         self.validate_gstin_and_pos()
         self.validate_addresses()
+        self.validate_gst_account_types()
 
         if self.is_external_invoice:
             return
@@ -62,8 +68,6 @@ class ISDInvoice(Document):
         self.validate_inter_company_transaction()
         self.validate_distribution_limits()
         # TODO: add validation to validate the addresses are correct,
-        # TODO: use validate_transaction_name , for gstin limits
-        # TODO: see transaction.py, validate gst account types (based on the interstate or not -> igst or cgst/sgst)
         # TODO: keep seperate class for this
 
     def set_taxes_and_totals(self):
@@ -176,8 +180,6 @@ class ISDInvoice(Document):
             if gstin:
                 validate_gstin_status(gstin, self)
 
-        # TODO: if not company gstin and distributing throw error
-
         if not self.party_gstin or not self.company_gstin:
             return
 
@@ -231,6 +233,17 @@ class ISDInvoice(Document):
                     get_link_to_form("Address", self.party_address)
                 )
             )
+
+    def validate_gst_account_types(self):
+        """Inter-state distribution may only use IGST; intra-state may only use CGST/SGST."""
+        forbidden = ("cgst", "sgst") if is_inter_state_distribution(self) else ("igst",)
+        for tax in self.taxes:
+            if tax.tax_amount and tax.gst_tax_type in forbidden:
+                frappe.throw(
+                    _("Row #{0}: {1} cannot be distributed for this place of supply.").format(
+                        tax.idx, tax.gst_tax_type.upper()
+                    )
+                )
 
     def validate_purchase_invoices(self):
         self._pi_names = list({row.purchase_invoice for row in self.source_invoices})
@@ -487,8 +500,11 @@ class ISDInvoice(Document):
         for name in self._pi_names:
             total_tax = flt(total_tax_map.get(name, 0), self._source_item_precision)
             total_distributed = flt(dist_map.get(name, 0), self._source_item_precision)
-            percent = flt(total_distributed / total_tax * 100 if total_tax else 0, _percentage_precision)
-            # TODO: check if there is a difference between rounded values and acutal percentage when the rounded percentage is 100, if that is the case then floor the values - 99.99...
+            raw_percent = total_distributed / total_tax * 100 if total_tax else 0
+            percent = flt(raw_percent, _percentage_precision)
+            # rounding can read 100% while slightly under-distributed; never overstate full distribution
+            if percent >= 100 and raw_percent < 100:
+                percent = flt(100 - 10**-_percentage_precision, _percentage_precision)
             doc_updates[name] = {"isd_credit_distributed_percent": percent}
 
         frappe.db.bulk_update("Purchase Invoice", doc_updates, update_modified=False)
