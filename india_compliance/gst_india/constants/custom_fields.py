@@ -442,7 +442,6 @@ CUSTOM_FIELDS = {
             "fetch_from": "supplier_address.gstin",
             "print_hide": 1,
             "read_only": 1,
-            "allow_on_submit": 1,
             "translatable": 0,
         },
         {
@@ -451,7 +450,6 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "supplier_gstin",
             "read_only": 1,
-            "allow_on_submit": 1,
             "print_hide": 1,
             # values set to None to remove them from earlier installations
             "options": None,
@@ -478,7 +476,6 @@ CUSTOM_FIELDS = {
             "insert_after": "company_gstin",
             "print_hide": 1,
             "read_only": 0,
-            "allow_on_submit": 1,
             "translatable": 0,
             "fetch_from": "",
         },
@@ -558,7 +555,6 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "address_display",
             "read_only": 1,
-            "allow_on_submit": 1,
             "fetch_from": "customer_address.gstin",
             "print_hide": 1,
             "length": 15,
@@ -570,7 +566,6 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "billing_address_gstin",
             "read_only": 1,
-            "allow_on_submit": 1,
             "print_hide": 1,
             # values set to None to remove them from earlier installations
             "options": None,
@@ -587,7 +582,6 @@ CUSTOM_FIELDS = {
             "insert_after": "gst_category",
             "print_hide": 1,
             "read_only": 0,
-            "allow_on_submit": 1,
             "length": 50,
             "translatable": 0,
             "fetch_from": "",

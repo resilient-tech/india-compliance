@@ -205,6 +205,9 @@ SALES_ADDRESS_FIELDS = (
     "address_display",
     "shipping_address_name",
     "shipping_address",
+    "billing_address_gstin",
+    "gst_category",
+    "place_of_supply",
 )
 
 PURCHASE_ADDRESS_FIELDS = (
@@ -212,6 +215,9 @@ PURCHASE_ADDRESS_FIELDS = (
     "address_display",
     "shipping_address",
     "shipping_address_display",
+    "supplier_gstin",
+    "gst_category",
+    "place_of_supply",
 )
 
 ADDRESS_FIELDS_BY_DOCTYPE = {
