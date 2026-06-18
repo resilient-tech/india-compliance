@@ -17,8 +17,10 @@ from india_compliance.gst_india.utils.isd import (
 
 
 def execute(filters=None):
-    validate_common_report_filters(filters)
     filters = frappe._dict(filters or {})
+    if filters.get("date_range"):
+        filters.from_date, filters.to_date = filters.date_range
+    validate_common_report_filters(filters)
     columns = get_columns(filters)
     data = get_data(filters)
     return columns, data
@@ -99,6 +101,12 @@ def get_purchase_invoice_data(filters):
     if filters.get("supplier"):
         query = query.where(pi.supplier == filters.supplier)
 
+    if filters.get("purchase_invoice"):
+        query = query.where(pi.name == filters.purchase_invoice)
+
+    if filters.get("is_return"):
+        query = query.where(pi.is_return == 1)
+
     return query.run(as_dict=True)
 
 
@@ -109,14 +117,13 @@ def get_isd_invoice_data(filters):
     isd = frappe.qb.DocType("ISD Invoice")
     isd_src_items = frappe.qb.DocType("ISD Invoice Source Item")
 
-    # credit_flow='Credit Distribution' → company is distributor, party is recipient
-    # credit_flow='Credit Receipt'  → party is distributor, company is recipient
-    distributor_gstin = (
-        Case().when(isd.credit_flow == CREDIT_FLOW.DISTRIBUTION, isd.company_gstin).else_(isd.party_gstin)
-    )
-    recipient_gstin = (
-        Case().when(isd.credit_flow == CREDIT_FLOW.DISTRIBUTION, isd.party_gstin).else_(isd.company_gstin)
-    )
+    # Company is the distributor for a simple invoice (no party) or 'Credit Distribution';
+    # the party is the distributor only in the 'Credit Receipt' flow.
+    company_is_distributor = (isd.is_against_party == 0) | (isd.credit_flow == CREDIT_FLOW.DISTRIBUTION)
+
+    distributor_gstin = Case().when(company_is_distributor, isd.company_gstin).else_(isd.party_gstin)
+    recipient_gstin = Case().when(company_is_distributor, isd.party_gstin).else_(isd.company_gstin)
+    recipient_pos = Case().when(company_is_distributor, isd.party_pos).else_(isd.company_pos)
 
     query = (
         frappe.qb.from_(isd)
@@ -127,7 +134,7 @@ def get_isd_invoice_data(filters):
             isd.posting_date,
             distributor_gstin.as_("distributor_gstin"),
             recipient_gstin.as_("recipient_gstin"),
-            isd.party_pos.as_("recipient_pos"),
+            recipient_pos.as_("recipient_pos"),
             isd.is_credit_note,
             Case()
             .when(isd_src_items.is_ineligible_for_itc == 0, "Eligible")
@@ -156,9 +163,9 @@ def get_isd_invoice_data(filters):
         query = query.where(recipient_gstin == filters.recipient_gstin)
 
     if filters.get("recipient_state"):
-        query = query.where(isd.party_pos == filters.recipient_state)
+        query = query.where(recipient_pos == filters.recipient_state)
 
-    if filters.get("is_credit_note_only"):
+    if filters.get("is_credit_note"):
         query = query.where(isd.is_credit_note == 1)
 
     return query.run(as_dict=True)

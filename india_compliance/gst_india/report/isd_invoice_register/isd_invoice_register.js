@@ -21,11 +21,33 @@ frappe.query_reports["ISD Invoice Register"] = {
             options: "Company",
             default: frappe.defaults.get_user_default("Company"),
             on_change: function () {
-                frappe.query_report.set_filter_value("company_gstin", "");
+                frappe.query_report.set_filter_value({
+                    company_gstin: "",
+                    distributor_gstin: "",
+                    recipient_gstin: "",
+                    purchase_invoice: "",
+                });
             },
             get_query: function () {
                 return { filters: { country: "India" } };
             },
+        },
+        {
+            fieldname: "date_range",
+            label: __("Date Range"),
+            fieldtype: "DateRange",
+            default: (function () {
+                // current fiscal year if available, else last month
+                const fy =
+                    typeof erpnext !== "undefined" &&
+                    erpnext.utils &&
+                    erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true);
+                return fy
+                    ? [fy[1], fy[2]]
+                    : [india_compliance.last_month_start(), india_compliance.last_month_end()];
+            })(),
+            reqd: 1,
+            width: "80",
         },
         {
             fieldname: "company_gstin",
@@ -40,28 +62,45 @@ frappe.query_reports["ISD Invoice Register"] = {
         {
             fieldname: "distributor_gstin",
             label: __("Distributor GSTIN"),
-            fieldtype: "Data",
+            fieldtype: "Autocomplete",
             depends_on: 'eval:doc.report_view === "ISD Invoice"',
+            get_query() {
+                const company = frappe.query_report.get_filter_value("company");
+                return india_compliance.get_gstin_query(company);
+            },
         },
         {
             fieldname: "recipient_gstin",
             label: __("Recipient GSTIN"),
-            fieldtype: "Data",
+            fieldtype: "Autocomplete",
             depends_on: 'eval:doc.report_view === "ISD Invoice"',
+            get_query() {
+                const company = frappe.query_report.get_filter_value("company");
+                return india_compliance.get_gstin_query(company, "Company", true);
+            },
         },
         {
-            fieldname: "from_date",
-            label: __("From Date"),
-            fieldtype: "Date",
-            default: frappe.datetime.add_months(frappe.datetime.get_today(), -1),
-            reqd: 1,
+            fieldname: "purchase_invoice",
+            label: __("Purchase Invoice"),
+            fieldtype: "Link",
+            options: "Purchase Invoice",
+            depends_on: 'eval:doc.report_view === "Purchase Invoice"',
+            get_query() {
+                const company = frappe.query_report.get_filter_value("company");
+                return { filters: { company, is_isd_applicable: 1, docstatus: 1 } };
+            },
         },
         {
-            fieldname: "to_date",
-            label: __("To Date"),
-            fieldtype: "Date",
-            default: frappe.datetime.get_today(),
-            reqd: 1,
+            fieldname: "is_return",
+            label: __("Is Return"),
+            fieldtype: "Check",
+            depends_on: 'eval:doc.report_view === "Purchase Invoice"',
+        },
+        {
+            fieldname: "is_credit_note",
+            label: __("Is Credit Note"),
+            fieldtype: "Check",
+            depends_on: 'eval:doc.report_view === "ISD Invoice"',
         },
         {
             fieldname: "recipient_state",
@@ -69,18 +108,6 @@ frappe.query_reports["ISD Invoice Register"] = {
             fieldtype: "Autocomplete",
             depends_on: 'eval:doc.report_view === "ISD Invoice"',
             options: frappe.boot.india_state_options,
-        },
-        {
-            fieldname: "is_return_only",
-            label: __("Is Return Only"),
-            fieldtype: "Check",
-            depends_on: 'eval:doc.report_view === "Purchase Invoice"',
-        },
-        {
-            fieldname: "is_credit_note_only",
-            label: __("Is Credit Note Only"),
-            fieldtype: "Check",
-            depends_on: 'eval:doc.report_view === "ISD Invoice"',
         },
     ],
 };
