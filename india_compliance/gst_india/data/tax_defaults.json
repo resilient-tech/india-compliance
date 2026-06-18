@@ -3,24 +3,28 @@
         {
             "title": "In-State",
             "is_inter_state": 0,
-            "gst_state": ""
+            "gst_state": "",
+            "is_india_compliance_default": 1
         },
         {
             "title": "Out-State",
             "is_inter_state": 1,
-            "gst_state": ""
+            "gst_state": "",
+            "is_india_compliance_default": 1
         },
         {
             "title": "Reverse Charge In-State",
             "is_inter_state": 0,
             "is_reverse_charge": 1,
-            "gst_state": ""
+            "gst_state": "",
+            "is_india_compliance_default": 1
         },
         {
             "title": "Reverse Charge Out-State",
             "is_inter_state": 1,
             "is_reverse_charge": 1,
-            "gst_state": ""
+            "gst_state": "",
+            "is_india_compliance_default": 1
         },
         {
             "title": "Registered Composition",
