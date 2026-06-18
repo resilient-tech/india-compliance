@@ -218,27 +218,25 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row, via_reconcili
 
         return gl_dicts
 
-    if not frappe.flags.gst_excess_allocation_validated:
-        outstanding_amount = reference_row.outstanding_amount
-        if via_reconciliation:
-            # add back allocated_amount to outstanding_amount for comparison
-            outstanding_amount += reference_row.allocated_amount
+    outstanding_amount = reference_row.outstanding_amount
+    if via_reconciliation:
+        # add back allocated_amount to outstanding_amount for comparison
+        outstanding_amount += reference_row.allocated_amount
 
-        total_allocation = total_amount + reference_row.allocated_amount
-        excess_allocation = total_allocation - outstanding_amount
+    total_allocation = total_amount + reference_row.allocated_amount
+    excess_allocation = total_allocation - outstanding_amount
 
-        if excess_allocation > 1:
-            frappe.throw(
-                _(
-                    "Outstanding amount {0} is less than the total allocated amount"
-                    " with taxes {1} for {2} {3}"
-                ).format(
-                    outstanding_amount,
-                    total_allocation,
-                    reference_row.reference_doctype,
-                    reference_row.reference_name,
-                )
+    if excess_allocation > 1:
+        frappe.throw(
+            _(
+                "Outstanding amount {0} is less than the total allocated amount with taxes {1} for {2} {3}"
+            ).format(
+                outstanding_amount,
+                total_allocation,
+                reference_row.reference_doctype,
+                reference_row.reference_name,
             )
+        )
 
     gl_dicts.append(gl_entry)
 
