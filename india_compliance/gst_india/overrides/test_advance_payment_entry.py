@@ -17,7 +17,12 @@ from erpnext.controllers.accounts_controller import (
     get_advance_payment_entries_for_regional,
 )
 from erpnext.controllers.stock_controller import show_accounting_ledger_preview
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+from frappe.utils import flt
+>>>>>>> 2005d26c (test: pe allocation for inclusive tax)
 
 from india_compliance.gst_india.utils.tests import create_transaction
 
@@ -203,7 +208,8 @@ class TestAdvancePaymentEntry(FrappeTestCase):
         )
         self.assertEqual(out_str, expected_str)
 
-    def validate_payment_entry_allocation(self):
+    def test_over_allocated_advance_payment_raises(self):
+        # allocating more than the invoice outstanding (incl. the GST reversal) must raise
         invoice_doc = self._create_sales_invoice()
         payment_doc = self._create_payment_entry(do_not_submit=True)
 
@@ -334,6 +340,38 @@ class TestAdvancePaymentEntry(FrappeTestCase):
                 {"amount": -440.68, "against_voucher_no": payment_doc.name},
             ],
         )
+
+    def test_payment_entry_allocation_with_inclusive_tax_invoice(self):
+        """
+        Reconcile an advance payment (with GST) against a tax-inclusive
+        Sales Invoice.
+        """
+        payment_doc = self._create_payment_entry()
+        invoice_doc = self._create_inclusive_sales_invoice()
+
+        # invoice: rate 100 inclusive of 18% GST => net 84.75, tax 15.25, grand total 100
+        self.assertEqual(invoice_doc.grand_total, 100)
+        self.assertEqual(invoice_doc.outstanding_amount, 100)
+
+        # Should reconcile without raising.
+        make_payment_reconciliation(payment_doc, invoice_doc, 100)
+
+        # Fully reconciled apart from a 1-paisa residual
+        outstanding_amount = frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount")
+        self.assertEqual(flt(outstanding_amount, 2), -0.01)
+
+    def _create_inclusive_sales_invoice(self):
+        invoice_doc = create_transaction(
+            doctype="Sales Invoice",
+            is_in_state=1,
+            do_not_save=True,
+        )
+        for tax in invoice_doc.taxes:
+            tax.included_in_print_rate = 1
+
+        invoice_doc.submit()
+
+        return invoice_doc
 
     def _create_sales_invoice(self, payment_doc=None):
         invoice_doc = create_transaction(
