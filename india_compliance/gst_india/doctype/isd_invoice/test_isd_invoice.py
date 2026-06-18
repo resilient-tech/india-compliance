@@ -51,6 +51,7 @@ _TAX_FIELDS = [
 ]
 
 
+# TODO: add test for gl entry checking
 class TestISDInvoice(IntegrationTestCase):
     """
     ISD Invoice tests, grouped by concern.

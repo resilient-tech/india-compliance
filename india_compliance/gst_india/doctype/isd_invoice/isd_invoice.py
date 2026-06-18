@@ -257,7 +257,7 @@ class ISDInvoice(Document):
         _validate_purchase_invoice_is_distributable(self._pi_rows)
         _validate_source_invoice_dates(self._pi_rows, self.posting_date)
         _validate_source_invoices_with_inter_company_reference(
-            self._pi_names,
+            self.source_invoices,
             self.is_against_party,
             self.credit_flow,
             self.inter_company_invoice_reference,
@@ -541,24 +541,31 @@ def _validate_source_invoice_dates(pi_rows, posting_date):
         )
 
 
-# TODO: check for all the tax values being same too
 def _validate_source_invoices_with_inter_company_reference(
-    pi_names, is_against_party, credit_flow, inter_company_invoice_reference
+    source_invoices, is_against_party, credit_flow, inter_company_invoice_reference
 ):
     if not (is_against_party and credit_flow == CREDIT_FLOW.RECEIPT and inter_company_invoice_reference):
         return
 
-    reference_invoices = frappe.get_all(
+    tax_fields = [f"{prefix}_{t}" for prefix in ("total", "distributed") for t in GST_TAX_TYPES]
+    reference_items = frappe.get_all(
         "ISD Invoice Source Item",
-        pluck="purchase_invoice",
         filters={"parent": inter_company_invoice_reference},
+        fields=["purchase_invoice", "is_ineligible_for_itc", *tax_fields],
     )
 
-    missing_invoices = set(reference_invoices) - set(pi_names)
-    if missing_invoices:
+    def row_keys(items):
+        return {
+            (row.purchase_invoice, cint(row.is_ineligible_for_itc), *(flt(row.get(f)) for f in tax_fields))
+            for row in items
+        }
+
+    # source invoices must be identical to the inter company reference
+    mismatched_invoices = {key[0] for key in row_keys(reference_items) ^ row_keys(source_invoices)}
+    if mismatched_invoices:
         frappe.throw(
-            _("Following Purchase Invoices from the inter company ISD Invoice are missing: {0}").format(
-                ", ".join(missing_invoices)
+            _("Following Purchase Invoices do not match the inter company ISD Invoice: {0}").format(
+                ", ".join(mismatched_invoices)
             )
         )
 
@@ -573,7 +580,7 @@ def _validate_isd_invoice_for_bulk_generation(isd_invoice):
     _validate_purchase_invoice_is_distributable(pi_rows)
     _validate_source_invoice_dates(pi_rows, isd_invoice.posting_date)
     _validate_source_invoices_with_inter_company_reference(
-        pi_names,
+        isd_invoice.source_invoices,
         isd_invoice.is_against_party,
         isd_invoice.credit_flow,
         isd_invoice.inter_company_invoice_reference,
@@ -727,6 +734,7 @@ def _map_isd_invoice(source_name, target_doc, field_map, post_process, map_accou
                 "doctype": "ISD Invoice Source Item",
                 "field_map": item_fields,
             },
+            "ISD Invoice Tax Item": {"doctype": "ISD Invoice Tax Item", "ignore": True},
         },
         target_doc,
         post_process,

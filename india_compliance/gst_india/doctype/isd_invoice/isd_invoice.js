@@ -1,9 +1,7 @@
 frappe.ui.form.on("ISD Invoice", {
-    setup(frm) {
-        frm.isd_controller = new ISDInvoiceController(frm);
-    },
-
     onload(frm) {
+        frm.isd_controller = new ISDInvoiceController(frm);
+        frm.isd_controller.calculate_taxes_and_totals();
         if (frm.is_new() && !frm.doc.company) {
             frm.set_value("company", frappe.defaults.get_user_default("Company"));
         }
@@ -55,7 +53,7 @@ frappe.ui.form.on("ISD Invoice", {
     },
 
     async company(frm) {
-        frm.isd_controller.fetch_gst_accounts();
+        await frm.isd_controller.fetch_gst_accounts();
         await fetch_isd_autofill(frm, "company");
     },
 
@@ -424,7 +422,7 @@ class ISDInvoiceController {
             this.frm.set_value(pos_field, `${message.gst_state_number}-${message.gst_state}`);
         }
     }
-    fetch_gst_accounts() {
+    async fetch_gst_accounts() {
         if (!this.frm.doc.company) return;
         frappe
             .call({
@@ -491,7 +489,6 @@ class ISDInvoiceController {
     }
 
     async recalculate({ row = null, address_change = false } = {}) {
-        console.log("row", row, "address", address_change);
         if (!(this.frm.doc.source_invoices || []).length) return;
 
         const is_inter_state = await this.is_inter_state_distribution();
