@@ -153,6 +153,7 @@ frappe.ui.form.on("ISD Invoice", {
                 }).then(() => {
                     d.dialog.hide();
                     frm.set_value("default_distribution_ratio", data.distribution_ratio || 0.0);
+                    frm.isd_controller.recalculate();
                 });
             },
         });

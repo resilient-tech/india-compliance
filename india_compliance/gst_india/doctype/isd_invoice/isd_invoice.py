@@ -51,7 +51,6 @@ class ISDInvoice(Document):
         self.set_taxes_and_totals()
         self.set_pos_from_gstin()
         self.set_address_display()
-        # TODO: yes set address display in backend too
         self.clear_fields_when_is_against_party_not_set()
 
     def validate(self):
@@ -64,11 +63,9 @@ class ISDInvoice(Document):
         if self.is_external_invoice:
             return
         self.validate_purchase_invoices()
-        # TODO: verify gl entries should reduce/increase values in gl report
         self.validate_inter_company_transaction()
         self.validate_distribution_limits()
-        # TODO: add validation to validate the addresses are correct,
-        # TODO: keep seperate class for this
+        # TODO: keep seperate class for validations
 
     def set_taxes_and_totals(self):
         # will be reusing this precision at many places
