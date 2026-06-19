@@ -1066,6 +1066,9 @@ def validate_gst_refund_accounts(doc):
 
     for tax in doc.taxes:
         tax_amount = flt(tax.base_tax_amount_after_discount_amount)
+        if tax.gst_tax_type not in TAX_TYPES:
+            continue
+
         if tax.gst_tax_type not in GST_REFUND_TAX_TYPES:
             net_amount += tax_amount
             continue
@@ -1086,7 +1089,8 @@ def validate_gst_refund_accounts(doc):
         net_amount += tax_amount
 
     # Validate if refund amount is same as total gst amount
-    if has_refund and net_amount != 0:
+    tax_precision = doc.precision("base_tax_amount_after_discount_amount", "taxes")
+    if has_refund and flt(net_amount, tax_precision) != 0:
         frappe.throw(_("Total GST amount should be equal to Refund amount."))
 
 

@@ -1320,6 +1320,27 @@ class TestTransaction(IntegrationTestCase):
             return_doc.save,
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_validate_gst_refund_accounts_with_other_charges(self):
+        """
+        Non-GST charges (e.g. freight) must not be counted when checking that
+        the refund amount offsets the GST amount.
+        """
+        doc = create_refund_transaction()
+
+        doc.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Freight and Forwarding Charges - _TIRC",
+                "description": "Freight",
+                "tax_amount": 20,
+                "cost_center": "Main - _TIRC",
+            },
+        )
+
+        doc.save()
+
     def test_item_gst_details_for_non_gst_transactions(self):
         """
         Test Non-GST Transactions can be processed without errors.
