@@ -485,8 +485,8 @@ class ISDInvoice(Document):
         return gl_entries
 
     def _sync_purchase_invoice_distribution(self):
-        self._source_item_precision = self.precision("distributed_igst", "source_invoices")
-        self._pi_names = list(
+        source_item_precision = self.precision("distributed_igst", "source_invoices")
+        pi_names = list(
             {row.purchase_invoice for row in self.source_invoices}
         )  # list of unique purchase invoices
 
@@ -500,20 +500,21 @@ class ISDInvoice(Document):
                     dist_map[row.purchase_invoice] += sum_row_tax_by_type(row, "distributed")
 
         # reuse the map cached during validate(); on_cancel skips validate(), so rebuild it there.
-        if not hasattr(self, "_already_distributed_map"):
-            self._already_distributed_map = self.get_already_distributed_amounts()
+        already_distributed_map = (
+            getattr(self, "_already_distributed_map", None) or self.get_already_distributed_amounts()
+        )
 
         # merge its (pi, eligible) and (pi, ineligible) entries into a single per-PI total
-        for (name, _is_ineligible), amount in self._already_distributed_map.items():
+        for (name, _is_ineligible), amount in already_distributed_map.items():
             dist_map[name] += amount
 
         doc_updates = {}
         _percentage_precision = get_field_precision(
             frappe.get_meta("Purchase Invoice").get_field("isd_credit_distributed_percent")
         )
-        for name in self._pi_names:
-            total_tax = flt(total_tax_map.get(name, 0), self._source_item_precision)
-            total_distributed = flt(dist_map.get(name, 0), self._source_item_precision)
+        for name in pi_names:
+            total_tax = flt(total_tax_map.get(name, 0), source_item_precision)
+            total_distributed = flt(dist_map.get(name, 0), source_item_precision)
             raw_percent = total_distributed / total_tax * 100 if total_tax else 0
             percent = flt(raw_percent, _percentage_precision)
             # rounding can read 100% while slightly under-distributed; never overstate full distribution
