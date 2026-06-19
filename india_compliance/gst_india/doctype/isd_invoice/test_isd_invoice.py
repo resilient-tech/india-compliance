@@ -51,7 +51,6 @@ _TAX_FIELDS = [
 ]
 
 
-# TODO: add test for gl entry checking
 class TestISDInvoice(IntegrationTestCase):
     """
     ISD Invoice tests, grouped by concern.
@@ -77,6 +76,9 @@ class TestISDInvoice(IntegrationTestCase):
         test_inter_company_allows_whitelisted_customer         allowed internal customer passes
         test_inter_company_rejects_unlisted_supplier           internal supplier not whitelisted rejected
         test_inter_company_rejects_unlisted_customer           internal customer not whitelisted rejected
+
+    GL entries
+        test_gl_entries_for_intra_company_distribution         intra-state: CGST/SGST credited at ISD GSTIN, debited at recipient
     """
 
     @classmethod
@@ -330,6 +332,33 @@ class TestISDInvoice(IntegrationTestCase):
                 self.assertEqual(row.distributed_sgst, 0)
                 self.assertGreater(row.distributed_igst, 0)
 
+    def test_igst_input_distributed_intra_state_as_cgst_sgst(self):
+        """An IGST-input PI distributed intra-state is re-laid-out as equal CGST + SGST, no IGST."""
+        from india_compliance.gst_india.utils.isd import calculate_distribution
+
+        # intra-state: company (ISD) and party both in Gujarat
+        doc = self._isd()
+        doc.company_pos = "24-Gujarat"
+        doc.party_pos = "24-Gujarat"
+        doc.append(
+            "source_invoices",
+            {
+                "purchase_invoice": self.pi.name,
+                "is_ineligible_for_itc": 0,
+                "total_igst": 18000,
+                "total_cgst": 0,
+                "total_sgst": 0,
+                "distribution_ratio": 100,
+            },
+        )
+
+        calculate_distribution(doc)
+
+        row = doc.source_invoices[0]
+        self.assertEqual(row.distributed_igst, 0)
+        self.assertEqual(row.distributed_cgst, 9000)
+        self.assertEqual(row.distributed_sgst, 9000)
+
     def test_only_service_item_taxes_in_get_purchase_invoices(self):
         """is_isd_applicable set to 1 on PI with mixed service + goods items at ISD billing address.
 
@@ -420,6 +449,47 @@ class TestISDInvoice(IntegrationTestCase):
         )
 
     # TODO: party being overseas
+
+    def test_gl_entries_for_intra_company_distribution(self):
+        """Intra-state: CGST/SGST credited at ISD GSTIN, debited at recipient GSTIN; debits == credits."""
+        from india_compliance.gst_india.doctype.isd_invoice.isd_invoice import get_input_gst_accounts
+
+        pi = _std_service_pi(self.company.name, self.company_isd_address.name, qty=10, rate=1000)
+        # Gujarat ISD -> Gujarat registered: only CGST + SGST (no IGST for intra-state)
+        isd = self._isd(source_item=_make_source_item(pi, 100))
+        isd.insert(ignore_permissions=True)
+        isd.submit()
+
+        accounts = frappe._dict(get_input_gst_accounts(self.company.name))
+        src = isd.source_invoices[0]
+
+        gl_entries = frappe.get_all(
+            "GL Entry",
+            filters={"voucher_type": "ISD Invoice", "voucher_no": isd.name, "is_cancelled": 0},
+            fields=["account", "debit", "credit", "company_gstin"],
+        )
+        self.assertTrue(gl_entries, "No GL entries created on submit")
+
+        for gle in gl_entries:
+            if gle.account == accounts.cgst_account:
+                if gle.credit:
+                    self.assertEqual(gle.credit, src.distributed_cgst)
+                    self.assertEqual(gle.company_gstin, _COMPANY_1_GSTIN)
+                else:
+                    self.assertEqual(gle.debit, src.distributed_cgst)
+                    self.assertEqual(gle.company_gstin, _COMPANY_2_GSTIN)
+            elif gle.account == accounts.sgst_account:
+                if gle.credit:
+                    self.assertEqual(gle.credit, src.distributed_sgst)
+                    self.assertEqual(gle.company_gstin, _COMPANY_1_GSTIN)
+                else:
+                    self.assertEqual(gle.debit, src.distributed_sgst)
+                    self.assertEqual(gle.company_gstin, _COMPANY_2_GSTIN)
+
+        self.assertEqual(
+            sum(e.debit for e in gl_entries),
+            sum(e.credit for e in gl_entries),
+        )
 
 
 # ---------------------------------------------------------------------------

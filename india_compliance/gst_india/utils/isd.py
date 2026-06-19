@@ -58,7 +58,7 @@ def get_isd_source_item_query(purchase_invoices=None):
 
 
 def get_pi_total_tax_map(purchase_invoices):
-    pi_item = frappe.qb.from_("Purchase Invoice Item")
+    pi_item = frappe.qb.DocType("Purchase Invoice Item")
     return (
         frappe.qb.from_(pi_item)
         .where(pi_item.docstatus == 1)
@@ -80,22 +80,31 @@ def calculate_distribution(doc):
     for row in doc.source_invoices or []:
         ratio = sign * flt(row.distribution_ratio) / 100
 
+        # inter-state -> all IGST; intra-state -> CGST + SGST (equal halves, since the rates are equal)
+        pool = flt((flt(row.total_cgst) + flt(row.total_sgst) + flt(row.total_igst)) * ratio, precision)
+
         if inter_state:
-            row.distributed_igst = flt(
-                (flt(row.total_cgst) + flt(row.total_sgst) + flt(row.total_igst)) * ratio, precision
-            )
+            row.distributed_igst = pool
             row.distributed_cgst = 0.0
             row.distributed_sgst = 0.0
         else:
-            row.distributed_igst = flt(flt(row.total_igst) * ratio, precision)
-            row.distributed_cgst = flt(flt(row.total_cgst) * ratio, precision)
-            row.distributed_sgst = flt(flt(row.total_sgst) * ratio, precision)
+            cgst = flt(pool / 2, precision)
+            row.distributed_cgst = cgst
+            row.distributed_sgst = flt(pool - cgst, precision)
+            row.distributed_igst = 0.0
 
         row.distributed_cess = flt(flt(row.total_cess) * ratio, precision)
         row.distributed_cess_non_advol = flt(flt(row.total_cess_non_advol) * ratio, precision)
 
 
 def is_inter_state_distribution(doc):
+    party_gst_category = (
+        frappe.db.get_value("Address", doc.party_address, "gst_category") if doc.party_address else None
+    )
+
+    # SEZ / overseas recipients are always inter-state (IGST), regardless of place of supply
+    if party_gst_category in IMPORT_GST_CATEGORIES:
+        return True
 
     if doc.company_pos and doc.party_pos:
         return doc.company_pos != doc.party_pos
@@ -103,13 +112,10 @@ def is_inter_state_distribution(doc):
     company_state = (
         frappe.db.get_value("Address", doc.company_address, "gst_state") if doc.company_address else None
     )
-    party_state, party_gst_category = (
-        frappe.db.get_value("Address", doc.party_address, ["gst_state", "gst_category"])
-        if doc.party_address
-        else (None, None)
+    party_state = (
+        frappe.db.get_value("Address", doc.party_address, "gst_state") if doc.party_address else None
     )
-
-    return company_state != party_state or party_gst_category in IMPORT_GST_CATEGORIES
+    return company_state != party_state
 
 
 @frappe.whitelist()
@@ -156,11 +162,6 @@ def get_report_company_currency(filters):
         return frappe.get_cached_value("Company", filters.company, "default_currency")
 
     return frappe.db.get_default("currency") or "INR"
-
-
-def _calculate_distribution(doc):
-    calculate_distribution(doc)
-    doc.set_taxes_and_totals()
 
 
 @frappe.whitelist()
@@ -235,10 +236,21 @@ def make_isd_invoice(
     doc.party_address = party_address
     doc.default_distribution_ratio = turnover_ratio * 100
 
+    for prefix, address in (("company", company_address), ("party", party_address)):
+        if not address:
+            continue
+        gstin, state_number, state = frappe.db.get_value(
+            "Address", address, ["gstin", "gst_state_number", "gst_state"]
+        )
+        doc.set(f"{prefix}_gstin", gstin)
+        doc.set(f"{prefix}_pos", f"{state_number}-{state}")
+
     if party_type and party:
         doc.is_against_party = is_against_party
         doc.party_type = party_type
         doc.party = party
+        if is_against_party:
+            doc.credit_flow = CREDIT_FLOW.DISTRIBUTION
 
     for pi in source_purchase_invoices:
         total_tax = flt(pi.total_tax)
@@ -255,7 +267,8 @@ def make_isd_invoice(
             },
         )
 
-    _calculate_distribution(doc)
+    calculate_distribution(doc)
+    doc.set_taxes_and_totals()
     return doc
 
 
@@ -419,13 +432,21 @@ def bulk_create_isd_invoices(
             total_turnover=total_turnover,
             posting_date=posting_date,
         )
-        _validate_isd_invoice_for_bulk_generation(isd_doc)
+        is_invalid_invoice = False
+        messages_before = len(frappe.message_log)
+        try:
+            _validate_isd_invoice_for_bulk_generation(isd_doc)
+        except frappe.ValidationError:
+            del frappe.message_log[messages_before:]
+            is_invalid_invoice = True
 
         isd_doc.flags.ignore_validate = True
         isd_doc.save()
 
+        if is_invalid_invoice:
+            invalid_invoices.append(isd_doc.name)
         invoices.append(isd_doc.name)
-        total_distributed += sum(sum_row_tax_by_type(row, "distributed") for row in isd_doc.source_invoices)
+        total_distributed += sum(sum_row_tax_by_type(src, "distributed") for src in isd_doc.source_invoices)
 
     if isd_doc and (rounding_difference := total_available_for_distribution - total_distributed):
         item_to_adjust_rounding = isd_doc.source_invoices[0]

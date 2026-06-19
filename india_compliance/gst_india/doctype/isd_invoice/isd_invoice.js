@@ -454,37 +454,45 @@ class ISDInvoiceController {
         const ratio = (sign * (row.distribution_ratio || 0)) / 100;
         const prec = precision("distributed_igst", row);
 
+        // the whole input credit pool is re-laid-out to match the ISD -> recipient supply:
+        // inter-state -> all IGST; intra-state -> CGST + SGST (equal halves, since the rates are equal)
+        const pool = flt(
+            ((row.total_cgst || 0) + (row.total_sgst || 0) + (row.total_igst || 0)) * ratio,
+            prec,
+        );
+
         if (is_inter_state) {
-            row.distributed_igst = flt(
-                ((row.total_cgst || 0) + (row.total_sgst || 0) + (row.total_igst || 0)) * ratio,
-                prec,
-            );
+            row.distributed_igst = pool;
             row.distributed_cgst = 0;
             row.distributed_sgst = 0;
         } else {
-            row.distributed_igst = flt((row.total_igst || 0) * ratio, prec);
-            row.distributed_cgst = flt((row.total_cgst || 0) * ratio, prec);
-            row.distributed_sgst = flt((row.total_sgst || 0) * ratio, prec);
+            const cgst = flt(pool / 2, prec);
+            row.distributed_cgst = cgst;
+            row.distributed_sgst = flt(pool - cgst, prec);
+            row.distributed_igst = 0;
         }
 
         row.distributed_cess = flt((row.total_cess || 0) * ratio, prec);
         row.distributed_cess_non_advol = flt((row.total_cess_non_advol || 0) * ratio, prec);
     }
 
-    // Shifts already-distributed amounts between igst and cgst/sgst
+    // Re-lay-out already-distributed amounts when the supply flips inter/intra (address change).
+    // The total distributed credit (pool) is preserved; only its CGST/SGST/IGST layout changes.
     _shift_distributed_taxes_for_state(row, is_inter_state) {
         const prec = precision("distributed_igst", row);
-
-        // row already in target layout (igst present ⇔ inter-state) — nothing to shift
-        if (is_inter_state === Boolean(row.distributed_igst)) return;
+        const pool = flt(
+            (row.distributed_igst || 0) + (row.distributed_cgst || 0) + (row.distributed_sgst || 0),
+            prec,
+        );
 
         if (is_inter_state) {
-            row.distributed_igst = flt((row.distributed_cgst || 0) + (row.distributed_sgst || 0), prec);
+            row.distributed_igst = pool;
             row.distributed_cgst = 0;
             row.distributed_sgst = 0;
         } else {
-            row.distributed_cgst = flt(row.distributed_igst / 2, prec);
-            row.distributed_sgst = flt(row.distributed_igst / 2, prec);
+            const cgst = flt(pool / 2, prec);
+            row.distributed_cgst = cgst;
+            row.distributed_sgst = flt(pool - cgst, prec);
             row.distributed_igst = 0;
         }
     }
