@@ -194,6 +194,9 @@ def _get_pi_distribution(filters):
     )
     query = _apply_company_filter(query, isd, filters)
 
+    if filters.get("company_gstin"):
+        query = query.where(isd.company_gstin == filters.company_gstin)
+
     purchase_invoices = filters.get("purchase_invoice")
     if purchase_invoices:
         if isinstance(purchase_invoices, str):

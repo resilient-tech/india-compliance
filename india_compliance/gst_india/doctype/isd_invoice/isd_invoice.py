@@ -56,8 +56,7 @@ class ISDInvoice(Document):
     def validate(self):
         validate_transaction_name(self)
         self.validate_isd_party()
-        self.validate_gstin_and_pos()
-        self.validate_addresses()
+        _validate_addresses(self)
         self.validate_gst_account_types()
 
         if self.is_external_invoice:
@@ -109,8 +108,8 @@ class ISDInvoice(Document):
                         "tax_amount": tax_amount,
                     },
                 )
-        # remove rows with zero tax amount or non gst types, keeping existing sequence
-        self.taxes = [tax for tax in self.taxes if tax.tax_amount or gst_tax_type not in GST_TAX_TYPES]
+        # remove rows with zero tax amount and non gst types, while keeping existing sequence
+        self.taxes = [tax for tax in self.taxes if (tax.tax_amount or gst_tax_type not in GST_TAX_TYPES)]
 
     def set_distribution_totals(self):
         totals = {"eligible": 0, "ineligible": 0}
@@ -172,65 +171,6 @@ class ISDInvoice(Document):
                 )
             )
 
-    def validate_gstin_and_pos(self):
-        for gstin in (self.company_gstin, self.party_gstin):
-            if gstin:
-                validate_gstin_status(gstin, self)
-
-        if not self.party_gstin or not self.company_gstin:
-            return
-
-        company_pan = self.company_gstin[2:12]
-        party_pan = self.party_gstin[2:12]
-
-        if company_pan != party_pan:
-            frappe.throw(
-                _("PAN of Company GSTIN {0} and Party GSTIN {1} must be the same.").format(
-                    frappe.bold(self.company_gstin), frappe.bold(self.party_gstin)
-                )
-            )
-
-    def validate_addresses(self):
-        common_filters = [["disabled", "=", 0]]
-
-        company_filters = [
-            *common_filters,
-            ["name", "=", self.company_address],
-            ["Dynamic Link", "link_doctype", "=", "Company"],
-            ["Dynamic Link", "link_name", "=", self.company],
-        ]
-
-        party_type = ("Company" if not self.is_against_party else self.party_type,)
-        party = self.company if not self.is_against_party else self.party
-        party_filters = [
-            *common_filters,
-            ["name", "=", self.party_address],
-            ["Dynamic Link", "link_doctype", "=", party_type],
-            ["Dynamic Link", "link_name", "=", party],
-        ]
-
-        if not self.is_against_party or self.credit_flow == CREDIT_FLOW.DISTRIBUTION:
-            company_filters.append(["gst_category", "=", ISD_GST_CATEGORY])
-            party_filters.append(["gst_category", "!=", ISD_GST_CATEGORY])
-        else:
-            # recipient case
-            company_filters.append(["gst_category", "!=", ISD_GST_CATEGORY])
-            party_filters.append(["gst_category", "=", ISD_GST_CATEGORY])
-
-        if self.company_address and not frappe.db.get_all("Address", company_filters, limit=1):
-            frappe.throw(
-                _("Company Address {0} is not valid for this ISD distribution.").format(
-                    get_link_to_form("Address", self.company_address)
-                )
-            )
-
-        if self.party_address and not frappe.db.get_all("Address", party_filters, limit=1):
-            frappe.throw(
-                _("Party Address {0} is not valid for this ISD distribution.").format(
-                    get_link_to_form("Address", self.party_address)
-                )
-            )
-
     def validate_gst_account_types(self):
         """Inter-state distribution may only use IGST; intra-state may only use CGST/SGST."""
         forbidden = ("cgst", "sgst") if is_inter_state_distribution(self) else ("igst",)
@@ -253,12 +193,7 @@ class ISDInvoice(Document):
         self._validate_pi_with_company()
         _validate_purchase_invoice_is_distributable(self._pi_rows)
         _validate_source_invoice_dates(self._pi_rows, self.posting_date)
-        _validate_source_invoices_with_inter_company_reference(
-            self.source_invoices,
-            self.is_against_party,
-            self.credit_flow,
-            self.inter_company_invoice_reference,
-        )
+        _validate_source_invoices_with_inter_company_reference(self)
         self._warn_if_goods_items_in_source_invoices()
 
     def _validate_duplication(self):
@@ -303,7 +238,7 @@ class ISDInvoice(Document):
 
     def _warn_if_goods_items_in_source_invoices(self):
         pi_item = frappe.qb.DocType("Purchase Invoice Item")
-        has_goods = (
+        rows = (
             frappe.qb.from_(pi_item)
             .select(pi_item.parent)
             .where(pi_item.parent.isin(self._pi_names))
@@ -313,11 +248,8 @@ class ISDInvoice(Document):
             .limit(1)
             .run()
         )
-        if has_goods:
-            frappe.msgprint(
-                _("Non-service items found in ISD applicable invoice"),
-                alert=True,
-            )
+        if rows:
+            frappe.msgprint(_("Non-service items found in ISD applicable invoice"), alert=True)
 
     def validate_inter_company_transaction(self):
         if not self.is_against_party or not self.party:
@@ -325,7 +257,7 @@ class ISDInvoice(Document):
 
         # check if your party internal
         internal = "is_internal_supplier" if self.party_type == "Supplier" else "is_internal_customer"
-        if frappe.db.get_value(self.party_type, {"name": self.party, internal: 1}, "name") != self.party:
+        if not frappe.db.exists(self.party_type, {"name": self.party, internal: 1}):
             return
 
         allowed_companies = frappe.get_all(
@@ -571,16 +503,18 @@ def _validate_source_invoice_dates(pi_rows, posting_date):
         )
 
 
-def _validate_source_invoices_with_inter_company_reference(
-    source_invoices, is_against_party, credit_flow, inter_company_invoice_reference
-):
-    if not (is_against_party and credit_flow == CREDIT_FLOW.RECEIPT and inter_company_invoice_reference):
+def _validate_source_invoices_with_inter_company_reference(isd_invoice):
+    if not (
+        isd_invoice.is_against_party
+        and isd_invoice.credit_flow == CREDIT_FLOW.RECEIPT
+        and isd_invoice.inter_company_invoice_reference
+    ):
         return
 
     tax_fields = [f"{prefix}_{t}" for prefix in ("total", "distributed") for t in GST_TAX_TYPES]
     reference_items = frappe.get_all(
         "ISD Invoice Source Item",
-        filters={"parent": inter_company_invoice_reference},
+        filters={"parent": isd_invoice.inter_company_invoice_reference},
         fields=["purchase_invoice", "is_ineligible_for_itc", *tax_fields],
     )
 
@@ -591,13 +525,71 @@ def _validate_source_invoices_with_inter_company_reference(
         }
 
     # source invoices must be identical to the inter company reference
-    mismatched_invoices = {key[0] for key in row_keys(reference_items) ^ row_keys(source_invoices)}
+    mismatched_invoices = {
+        key[0] for key in row_keys(reference_items) ^ row_keys(isd_invoice.source_invoices)
+    }
     if mismatched_invoices:
         frappe.throw(
             _("Following Purchase Invoices do not match the inter company ISD Invoice: {0}").format(
                 ", ".join(mismatched_invoices)
             )
         )
+
+
+def _validate_addresses(isd_invoice):
+    common_filters = [["disabled", "=", 0]]
+
+    company_filters = [
+        *common_filters,
+        ["name", "=", isd_invoice.company_address],
+        ["Dynamic Link", "link_doctype", "=", "Company"],
+        ["Dynamic Link", "link_name", "=", isd_invoice.company],
+    ]
+
+    party_type = "Company" if not isd_invoice.is_against_party else isd_invoice.party_type
+    party = isd_invoice.company if not isd_invoice.is_against_party else isd_invoice.party
+    party_filters = [
+        *common_filters,
+        ["name", "=", isd_invoice.party_address],
+        ["Dynamic Link", "link_doctype", "=", party_type],
+        ["Dynamic Link", "link_name", "=", party],
+    ]
+
+    if not isd_invoice.is_against_party or isd_invoice.credit_flow == CREDIT_FLOW.DISTRIBUTION:
+        company_filters.append(["gst_category", "=", ISD_GST_CATEGORY])
+        party_filters.append(["gst_category", "!=", ISD_GST_CATEGORY])
+    else:
+        # recipient case
+        company_filters.append(["gst_category", "!=", ISD_GST_CATEGORY])
+        party_filters.append(["gst_category", "=", ISD_GST_CATEGORY])
+
+    if isd_invoice.company_address and not frappe.db.get_all("Address", company_filters, limit=1):
+        frappe.throw(
+            _("Company Address {0} is not valid for this ISD distribution.").format(
+                get_link_to_form("Address", isd_invoice.company_address)
+            )
+        )
+
+    if isd_invoice.party_address and not frappe.db.get_all("Address", party_filters, limit=1):
+        frappe.throw(
+            _("Party Address {0} is not valid for this ISD distribution.").format(
+                get_link_to_form("Address", isd_invoice.party_address)
+            )
+        )
+
+    for gstin in (isd_invoice.company_gstin, isd_invoice.party_gstin):
+        if gstin:
+            validate_gstin_status(gstin, isd_invoice)
+
+    if isd_invoice.company_gstin and isd_invoice.party_gstin:
+        company_pan = isd_invoice.company_gstin[2:12]
+        party_pan = isd_invoice.party_gstin[2:12]
+        if company_pan != party_pan:
+            frappe.throw(
+                _("PAN of Company GSTIN {0} and Party GSTIN {1} must be the same.").format(
+                    frappe.bold(isd_invoice.company_gstin), frappe.bold(isd_invoice.party_gstin)
+                )
+            )
 
 
 def _validate_isd_invoice_for_bulk_generation(isd_invoice):
@@ -609,12 +601,8 @@ def _validate_isd_invoice_for_bulk_generation(isd_invoice):
     )
     _validate_purchase_invoice_is_distributable(pi_rows)
     _validate_source_invoice_dates(pi_rows, isd_invoice.posting_date)
-    _validate_source_invoices_with_inter_company_reference(
-        isd_invoice.source_invoices,
-        isd_invoice.is_against_party,
-        isd_invoice.credit_flow,
-        isd_invoice.inter_company_invoice_reference,
-    )
+    _validate_source_invoices_with_inter_company_reference(isd_invoice)
+    _validate_addresses(isd_invoice)
 
 
 @frappe.whitelist()

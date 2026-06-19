@@ -12,8 +12,6 @@ from frappe.utils import flt, nowdate
 from india_compliance.gst_india.utils import get_state, validate_gstin
 
 
-# TODO: index gstin and gst_state in turnover record
-#
 class TurnoverRecord(Document):
     def autoname(self):
         fy_prefix = f"{str(self.from_date)[2:4]}-{str(self.to_date)[2:4]}"
@@ -41,7 +39,7 @@ class TurnoverRecord(Document):
         )
         if duplicate:
             frappe.throw(
-                _("Turnover record for this state is already created  {0}").format(
+                _("Turnover record for this state is already created {0}").format(
                     frappe.utils.get_link_to_form("Turnover Record", duplicate[0])
                 )
             )
