@@ -239,8 +239,10 @@ def make_isd_invoice(
 
 
 @frappe.whitelist()
-def get_purchase_invoices_distribution_summary(purchase_invoices: list | str):
-    """Per purchase invoice: posting date, supplier, total tax and tax still available to distribute."""
+def get_purchase_invoices_distribution_summary(
+    purchase_invoices: list | str, extra_fields: list | str | None = None
+):
+    """Per purchase invoice: posting date, supplier, total tax and tax still available to distribute"""
     frappe.has_permission("Purchase Invoice", "read", throw=True)
     if isinstance(purchase_invoices, str):
         purchase_invoices = frappe.parse_json(purchase_invoices)
@@ -248,25 +250,44 @@ def get_purchase_invoices_distribution_summary(purchase_invoices: list | str):
     if not purchase_invoices:
         return []
 
+    if isinstance(extra_fields, str):
+        extra_fields = frappe.parse_json(extra_fields)
+
+    valid_pi_columns = set(frappe.get_meta("Purchase Invoice").get_valid_columns())
+    extra_fields = [f for f in (extra_fields or []) if f in valid_pi_columns]
+
     pi = frappe.qb.DocType("Purchase Invoice")
     pi_item = frappe.qb.DocType("Purchase Invoice Item")
     isd_source_item = frappe.qb.DocType("ISD Invoice Source Item")
+    isd_invoice = frappe.qb.DocType("ISD Invoice")
 
-    # tax already distributed by submitted ISD invoices, pre-aggregated to one row per
-    # (purchase_invoice, is_ineligible_for_itc) so joining it does not inflate the pi_item totals.
     distributed = (
         frappe.qb.from_(isd_source_item)
+        .join(isd_invoice)
+        .on(isd_source_item.parent == isd_invoice.name)
         .where(isd_source_item.docstatus == 1)
         .where(isd_source_item.purchase_invoice.isin(purchase_invoices))
+        .where(
+            (isd_invoice.is_against_party == 0)
+            | (
+                (isd_invoice.is_against_party == 1)
+                & (isd_invoice.credit_flow == CREDIT_FLOW.DISTRIBUTION.value)
+            )
+        )
         .select(
             isd_source_item.purchase_invoice,
             isd_source_item.is_ineligible_for_itc,
+            isd_invoice.company_gstin,
             *[
                 Sum(getattr(isd_source_item, f"distributed_{t}")).as_(f"distributed_{t}")
                 for t in GST_TAX_TYPES
             ],
         )
-        .groupby(isd_source_item.purchase_invoice, isd_source_item.is_ineligible_for_itc)
+        .groupby(
+            isd_source_item.purchase_invoice,
+            isd_source_item.is_ineligible_for_itc,
+            isd_invoice.company_gstin,
+        )
     ).as_("distributed")
 
     # list of dicts, one per (purchase_invoice, is_ineligible_for_itc):
@@ -279,6 +300,7 @@ def get_purchase_invoices_distribution_summary(purchase_invoices: list | str):
         .on(
             (distributed.purchase_invoice == pi_item.parent)
             & (distributed.is_ineligible_for_itc == pi_item.is_ineligible_for_itc)
+            & (distributed.company_gstin == pi.company_gstin)
         )
         .where(pi_item.docstatus == 1)
         .where(pi_item.parent.isin(purchase_invoices))
@@ -288,6 +310,7 @@ def get_purchase_invoices_distribution_summary(purchase_invoices: list | str):
             pi.posting_date,
             pi.billing_address,
             pi_item.is_ineligible_for_itc,
+            *[getattr(pi, f) for f in extra_fields],
             *[Coalesce(Sum(getattr(pi_item, f"{t}_amount")), 0).as_(f"total_{t}") for t in GST_TAX_TYPES],
             *[
                 (
