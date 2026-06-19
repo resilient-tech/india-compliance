@@ -356,7 +356,8 @@ class TestAdvancePaymentEntry(FrappeTestCase):
         # Should reconcile without raising.
         make_payment_reconciliation(payment_doc, invoice_doc, 100)
 
-        # Fully reconciled apart from a 1-paisa residual
+        # A clean fix needs ERPNext to derive the net allocation/tax split together so this rounding
+        # difference is absorbed into the net amount instead of being left in outstanding.
         outstanding_amount = frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount")
         self.assertEqual(flt(outstanding_amount, 2), -0.01)
 
@@ -767,10 +768,6 @@ class TestPaymentReconciliationMatrix(IntegrationTestCase):
         if inclusive:
             for tax in payment_doc.taxes:
                 tax.included_in_paid_amount = 1
-                # mirror the client: set computed tax so get_included_taxes (runs before
-                # apply_taxes) doesn't hit a None base_tax_amount; apply_taxes re-derives it
-                tax.tax_amount = 45
-                tax.base_tax_amount = 45
 
         payment_doc.setup_party_account_field()
         payment_doc.set_missing_values()
