@@ -259,6 +259,7 @@ class ISDInvoice(Document):
             self.credit_flow,
             self.inter_company_invoice_reference,
         )
+        self._warn_if_goods_items_in_source_invoices()
 
     def _validate_duplication(self):
         keys = [(row.purchase_invoice, cint(row.is_ineligible_for_itc)) for row in self.source_invoices]
@@ -298,6 +299,24 @@ class ISDInvoice(Document):
                 _("Following Purchase Invoices do not belong to Company GSTIN {0}: {1}").format(
                     self.company_gstin, ", ".join(invalid_gstin_invoices)
                 )
+            )
+
+    def _warn_if_goods_items_in_source_invoices(self):
+        pi_item = frappe.qb.DocType("Purchase Invoice Item")
+        has_goods = (
+            frappe.qb.from_(pi_item)
+            .select(pi_item.parent)
+            .where(pi_item.parent.isin(self._pi_names))
+            .where(pi_item.gst_hsn_code.isnotnull())
+            .where(pi_item.gst_hsn_code != "")
+            .where(pi_item.gst_hsn_code.not_like("99%"))
+            .limit(1)
+            .run()
+        )
+        if has_goods:
+            frappe.msgprint(
+                _("Non-service items found in ISD applicable invoice"),
+                alert=True,
             )
 
     def validate_inter_company_transaction(self):
