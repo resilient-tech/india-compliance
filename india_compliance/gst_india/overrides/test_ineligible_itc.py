@@ -3,7 +3,7 @@ from contextlib import contextmanager
 
 import frappe
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
-from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
+from erpnext.stock.doctype.purchase_receipt.mapper import (
     make_purchase_invoice,
 )
 from erpnext.stock.doctype.repost_item_valuation.repost_item_valuation import (

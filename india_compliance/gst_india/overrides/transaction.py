@@ -33,6 +33,7 @@ from india_compliance.gst_india.utils import (
     get_place_of_supply,
     get_place_of_supply_options,
     has_gst_taxes,
+    is_import_transaction,
     is_overseas_doc,
     join_list_with_custom_separators,
     validate_gst_category,
@@ -710,11 +711,15 @@ def validate_overseas_gst_category(doc):
         frappe.throw(_("Cannot set GST Category to SEZ / Overseas in POS Invoice"))
 
 
-def get_regional_round_off_accounts(company, account_list):
+def get_regional_round_off_accounts(company, account_list, doc=None):
     country = frappe.get_cached_value("Company", company, "country")
     if country != "India" or not frappe.get_cached_value(
         "GST Settings", "GST Settings", "round_off_gst_values"
     ):
+        return account_list
+
+    # skip gst rounding for multicurrency transactions
+    if doc and _is_multicurrency_doc(doc):
         return account_list
 
     if isinstance(account_list, str):
@@ -723,6 +728,14 @@ def get_regional_round_off_accounts(company, account_list):
     account_list.extend(get_all_gst_accounts(company))
 
     return account_list
+
+
+def _is_multicurrency_doc(doc):
+    if isinstance(doc, str):
+        doc = json.loads(doc)
+
+    conversion_rate = flt(doc.get("conversion_rate"))
+    return bool(conversion_rate and conversion_rate != 1)
 
 
 def update_party_details(party_details, doctype, company):
@@ -1378,10 +1391,7 @@ class ItemGSTTreatment:
             self.set_for_overseas()
             return
 
-        if self.doc.get("itc_classification") in (
-            "Import Of Goods",
-            "Import Of Service",
-        ):
+        if is_import_transaction(self.doc):
             # NOTE: Import transactions are treated as "Taxable" since the supply is taxable
             # under GST even when no GST is charged directly (e.g. Import Of Goods settled
             # via BOE) But there is one more possibliity of classifying import transactions
@@ -1703,10 +1713,7 @@ def validate_item_tax_template(doc):
     if not doc.items or not doc.taxes:
         return
 
-    is_import_transaction = doc.get("itc_classification") in (
-        "Import Of Goods",
-        "Import Of Service",
-    )
+    is_import = is_import_transaction(doc)
     non_taxable_items_with_tax = []
     taxable_items_with_no_tax = []
 
@@ -1723,7 +1730,7 @@ def validate_item_tax_template(doc):
             non_taxable_items_with_tax.append(item.idx)
 
         if not is_gst_applied and item.gst_treatment in TAXABLE_GST_TREATMENTS:
-            if is_import_transaction:
+            if is_import:
                 continue
             taxable_items_with_no_tax.append(item.idx)
 
@@ -1770,13 +1777,14 @@ def reset_gst_details_on_cross_mapping(target_doc, source_doc):
     When mapping between sales and purchase doctypes (e.g. Purchase Order
     from Sales Order), reset GST details.
     """
-    if ignore_gst_validations(target_doc):
-        return
 
     is_source_sales = source_doc.doctype in SALES_DOCTYPES
     is_target_sales = target_doc.doctype in SALES_DOCTYPES
 
     if is_source_sales == is_target_sales:
+        return
+
+    if ignore_gst_validations(target_doc):
         return
 
     # Re-fetch address-based fields (gst_category, party_gstin) from the
@@ -1829,10 +1837,11 @@ def on_change_item(doc, method=None):
 
 
 def before_update_after_submit(doc, method=None):
-    if not frappe.flags.through_update_item:
+    if ignore_gst_validations(doc):
         return
 
-    if ignore_gst_validations(doc):
+    if not frappe.flags.through_update_item:
+        sync_address_dependent_fields_on_submit(doc)
         return
 
     validate_items(doc)
@@ -1844,6 +1853,69 @@ def before_update_after_submit(doc, method=None):
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
     update_gst_details(doc)
+
+
+ADDRESS_DEPENDENT_FIELDS = {
+    "customer_address": ("billing_address_gstin", "gst_category"),
+    "supplier_address": ("supplier_gstin", "gst_category"),
+}
+
+
+def sync_address_dependent_fields_on_submit(doc, method=None):
+    if doc.docstatus != 1 or ignore_gst_validations(doc):
+        return
+
+    def has_changed(field):
+        return doc.meta.has_field(field) and doc.has_value_changed(field)
+
+    changed_address_fields = [field for field in ADDRESS_DEPENDENT_FIELDS if has_changed(field)]
+
+    if not changed_address_fields and not has_changed("place_of_supply"):
+        return
+
+    if doc.get("ewaybill") or doc.get("irn"):
+        frappe.throw(
+            _(
+                "Cannot change the Place of Supply or address after the e-Waybill or"
+                " e-Invoice has been generated. Cancel it first."
+            ),
+            title=_("Cannot Update After Submit"),
+        )
+
+    if doc.doctype == "Sales Invoice":
+        validate_backdated_transaction(doc, action="update")
+
+    if changed_address_fields:
+        sync_gst_details_from_address(doc, changed_address_fields)
+
+    is_sales_transaction = doc.doctype in SALES_DOCTYPES
+    gstin = doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin
+
+    validate_place_of_supply(doc)
+    validate_overseas_gst_category(doc)
+
+    if gstin:
+        validate_gstin_status(gstin, doc)
+
+    validate_gst_category(doc.gst_category, gstin)
+    GSTAccounts().validate(doc, is_sales_transaction)
+
+
+def sync_gst_details_from_address(doc, changed_address_fields):
+    for address_field, (gstin_field, category_field) in ADDRESS_DEPENDENT_FIELDS.items():
+        if address_field not in changed_address_fields:
+            continue
+
+        address = doc.get(address_field)
+        gstin, gst_category = (
+            frappe.db.get_value("Address", address, ("gstin", "gst_category")) if address else (None, None)
+        )
+
+        if doc.meta.has_field(gstin_field):
+            doc.set(gstin_field, gstin or "")
+
+        if category_field and doc.meta.has_field(category_field):
+            doc.set(category_field, gst_category or "Unregistered")
 
 
 def set_ecommerce_supply_type(doc):

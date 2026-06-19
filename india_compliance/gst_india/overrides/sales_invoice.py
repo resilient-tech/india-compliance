@@ -1,4 +1,5 @@
 import frappe
+from erpnext.accounts.services.payment_schedule import PaymentScheduleService
 from frappe import _, bold
 from frappe.desk.form.load import run_onload
 from frappe.utils import flt, fmt_money
@@ -366,6 +367,7 @@ def set_and_validate_advances_with_gst(doc):
         frappe.throw(message, title=_("Invalid Allocated Amount"))
 
     doc.total_advance = allocated_amount_with_taxes
-    doc.set_payment_schedule()
+
+    PaymentScheduleService(doc).set_payment_schedule()
     doc.outstanding_amount -= tax_amount
     frappe.flags.gst_excess_allocation_validated = True
