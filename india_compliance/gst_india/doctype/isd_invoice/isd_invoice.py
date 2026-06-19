@@ -247,7 +247,7 @@ class ISDInvoice(Document):
         self._pi_rows = frappe.db.get_all(
             "Purchase Invoice",
             filters={"name": ("in", self._pi_names)},
-            fields=["name", "docstatus", "is_isd_applicable", "posting_date", "company"],
+            fields=["name", "docstatus", "is_isd_applicable", "posting_date", "company", "company_gstin"],
         )
         self._validate_duplication()
         self._validate_pi_with_company()
@@ -286,6 +286,17 @@ class ISDInvoice(Document):
             frappe.throw(
                 _("Following Purchase Invoices do not belong to company {0}: {1}").format(
                     self.company, ", ".join(invalid_invoices)
+                )
+            )
+
+        # PI may only be distributed by the same GSTIN for which it was booked
+        invalid_gstin_invoices = [
+            row.name for row in self._pi_rows if row.company_gstin != self.company_gstin
+        ]
+        if invalid_gstin_invoices:
+            frappe.throw(
+                _("Following Purchase Invoices do not belong to Company GSTIN {0}: {1}").format(
+                    self.company_gstin, ", ".join(invalid_gstin_invoices)
                 )
             )
 
@@ -403,6 +414,8 @@ class ISDInvoice(Document):
 
     def get_gl_entries(self):
         gl_entries = []
+
+        # TODO: issue with having credit reciept for unregistered branch
 
         def add_gl_entry(account, leg, amount, company_gstin, **attributes):
             gl_dict = {

@@ -36,16 +36,7 @@ frappe.query_reports["ISD Invoice Register"] = {
             fieldname: "date_range",
             label: __("Date Range"),
             fieldtype: "DateRange",
-            default: (function () {
-                // current fiscal year if available, else last month
-                const fy =
-                    typeof erpnext !== "undefined" &&
-                    erpnext.utils &&
-                    erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true);
-                return fy
-                    ? [fy[1], fy[2]]
-                    : [india_compliance.last_month_start(), india_compliance.last_month_end()];
-            })(),
+            default: [india_compliance.last_month_start(), india_compliance.last_month_end()],
             reqd: 1,
             width: "80",
         },

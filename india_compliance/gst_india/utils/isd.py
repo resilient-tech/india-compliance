@@ -112,6 +112,27 @@ def is_inter_state_distribution(doc):
     return company_state != party_state or party_gst_category in IMPORT_GST_CATEGORIES
 
 
+@frappe.whitelist()
+def get_company_isd_gstin(company: str):
+    """GSTIN of the first ISD-category address linked to the company (primary address first)."""
+    if not company:
+        return
+
+    gstins = frappe.get_list(
+        "Address",
+        filters=[
+            ["disabled", "=", 0],
+            ["Dynamic Link", "link_doctype", "=", "Company"],
+            ["Dynamic Link", "link_name", "=", company],
+            ["gst_category", "=", ISD_GST_CATEGORY],
+        ],
+        pluck="gstin",
+        order_by="is_primary_address DESC",
+        limit=1,
+    )
+    return gstins[0] if gstins else None
+
+
 def validate_common_report_filters(filters):
 
     filters = frappe._dict(filters or {})
