@@ -292,11 +292,19 @@ def get_taxable_base_amount(payment_entry):
     return flt(payment_entry.base_paid_amount) - flt(payment_entry.get_included_taxes())
 
 
+def get_proportionate_tax(amount, base_allocated_amount, base_amount):
+    # base_amount is 0 only when paid amount is fully tax (no taxable base) -> nothing to reverse
+    if not base_amount:
+        return 0
+
+    return flt(amount * base_allocated_amount / base_amount, 2)
+
+
 def get_proportionate_taxes_for_row(payment_entry, reference_row, taxes):
     base_allocated_amount = payment_entry.calculate_base_allocated_amount_for_reference(reference_row)
     base_amount = get_taxable_base_amount(payment_entry)
     for account, amount in taxes.items():
-        taxes[account] = flt(amount * base_allocated_amount / base_amount, 2)
+        taxes[account] = get_proportionate_tax(amount, base_allocated_amount, base_amount)
 
     return taxes
 
@@ -308,11 +316,10 @@ def balance_taxes(payment_entry, reference_row, taxes):
             if allocation_row.reference_name == reference_row.reference_name:
                 continue
 
-            taxes[account] = taxes[account] - flt(
-                amount
-                * payment_entry.calculate_base_allocated_amount_for_reference(allocation_row)
-                / base_amount,
-                2,
+            taxes[account] = taxes[account] - get_proportionate_tax(
+                amount,
+                payment_entry.calculate_base_allocated_amount_for_reference(allocation_row),
+                base_amount,
             )
 
     return taxes

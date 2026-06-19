@@ -5,7 +5,10 @@ from frappe.desk.form.load import run_onload
 from frappe.utils import flt, fmt_money
 
 from india_compliance.gst_india.constants import VALID_HSN_LENGTHS
-from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
+from india_compliance.gst_india.overrides.payment_entry import (
+    get_proportionate_tax,
+    get_taxes_summary,
+)
 from india_compliance.gst_india.overrides.transaction import (
     _validate_hsn_codes,
     ignore_gst_validations,
@@ -345,7 +348,9 @@ def set_and_validate_advances_with_gst(doc):
         tax_row = taxes.get(advance.reference_name, frappe._dict(taxable_amount=1, tax_amount=0))
 
         # proportion off net base so inclusive (paid_amount = gross) reverses like exclusive
-        _tax_amount = flt(advance.allocated_amount / tax_row.taxable_amount * tax_row.tax_amount, 2)
+        _tax_amount = get_proportionate_tax(
+            tax_row.tax_amount, advance.allocated_amount, tax_row.taxable_amount
+        )
         tax_amount += _tax_amount
         allocated_amount_with_taxes += _tax_amount
         allocated_amount_with_taxes += advance.allocated_amount
