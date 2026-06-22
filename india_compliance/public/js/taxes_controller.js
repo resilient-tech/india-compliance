@@ -21,6 +21,7 @@ india_compliance.taxes_controller = class TaxesController {
             args: {
                 company: this.frm.doc.company,
                 account_list: [],
+                doc: this.frm.doc,
             },
             callback(r) {
                 if (r.message) {
