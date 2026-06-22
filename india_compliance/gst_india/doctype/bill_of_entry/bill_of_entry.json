@@ -169,6 +169,7 @@
    "fieldname": "total_taxable_value",
    "fieldtype": "Currency",
    "label": "Total Taxable Value (Net Total)",
+   "options": "Company:company:default_currency",
    "read_only": 1
   },
   {
@@ -200,6 +201,7 @@
    "fieldname": "total_customs_duty",
    "fieldtype": "Currency",
    "label": "Total Customs Duty",
+   "options": "Company:company:default_currency",
    "read_only": 1
   },
   {
@@ -214,6 +216,7 @@
    "fieldname": "total_taxes",
    "fieldtype": "Currency",
    "label": "Total Taxes",
+   "options": "Company:company:default_currency",
    "read_only": 1
   },
   {
@@ -243,6 +246,7 @@
    "fieldname": "total_amount_payable",
    "fieldtype": "Currency",
    "label": "Total Amount Payable",
+   "options": "Company:company:default_currency",
    "read_only": 1
   },
   {
@@ -315,7 +319,7 @@
    "link_fieldname": "link_name"
   }
  ],
- "modified": "2025-02-06 18:45:23.478878",
+ "modified": "2026-06-22 13:35:29.615063",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",
@@ -367,6 +371,7 @@
    "role": "Auditor"
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
