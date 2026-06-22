@@ -63,6 +63,18 @@ frappe.ui.form.on("ISD Invoice", {
         frm.isd_controller.update_address_labels();
     },
 
+    party_gstin(frm) {
+        // unset any stale values
+        if (frm.doc.expense_account && (frm.doc.is_against_party || frm.doc.party_gstin)) {
+            frm.set_value("expense_account", null);
+            return;
+        }
+
+        if (!frm.doc.party_gstin && !frm.doc.is_against_party) {
+            frm.set_value("expense_account", frm.isd_controller.default_expense_account, true);
+        }
+    },
+
     async credit_flow(frm) {
         if (frm.__updating_isd_autofill || !frm.doc.is_against_party) return;
         await fetch_isd_autofill(frm, "credit_flow");
@@ -334,6 +346,15 @@ class ISDInvoiceController {
                 },
             };
         });
+
+        this.frm.set_query("expense_account", () => {
+            return {
+                filters: {
+                    company: this.frm.doc.company,
+                    is_group: 0,
+                },
+            };
+        });
     }
 
     update_address_labels() {
@@ -432,6 +453,7 @@ class ISDInvoiceController {
             })
             .then((result) => {
                 this.gst_accounts = result.message || {};
+                this.default_expense_account = result.message?.default_gst_expense_account || null;
             });
     }
 

@@ -64,7 +64,7 @@ class ISDInvoice(Document):
         self.validate_purchase_invoices()
         self.validate_inter_company_transaction()
         self.validate_distribution_limits()
-        # TODO: keep seperate class for validations
+        # TODO: keep separate class for validations
 
     def set_taxes_and_totals(self):
         # will be reusing this precision at many places
@@ -366,8 +366,6 @@ class ISDInvoice(Document):
     def get_gl_entries(self):
         gl_entries = []
 
-        # TODO: issue with having credit reciept for unregistered branch
-
         def add_gl_entry(account, leg, amount, company_gstin, **attributes):
             gl_dict = {
                 "account": account,
@@ -397,7 +395,7 @@ class ISDInvoice(Document):
             )
 
         # party gl entries
-        if not self.is_against_party:
+        if not self.is_against_party and self.party_gstin:
             for tax in self.taxes:
                 add_gl_entry(
                     tax.account_head,
@@ -405,6 +403,14 @@ class ISDInvoice(Document):
                     tax.tax_amount,
                     company_gstin=self.party_gstin,
                 )
+        elif not self.is_against_party and not self.party_gstin:
+            # unregistered party address for same company
+            add_gl_entry(
+                self.expense_account,
+                "debit" if is_party_recipient else "credit",
+                total_tax,
+                company_gstin=None,
+            )
         else:
             add_gl_entry(
                 self.party_account,
@@ -719,7 +725,11 @@ def get_isd_autofill_values(changed_field: str, doc: str | dict):
 
 @frappe.whitelist()
 def get_input_gst_accounts(company: str):
-    return get_gst_accounts_by_type(company, "Input")
+    accounts = get_gst_accounts_by_type(company, "Input")
+    accounts.default_gst_expense_account = frappe.db.get_value(
+        "Company", company, "default_gst_expense_account"
+    )
+    return accounts
 
 
 def _map_isd_invoice(source_name, target_doc, field_map, post_process, map_accounting_dimensions=False):
