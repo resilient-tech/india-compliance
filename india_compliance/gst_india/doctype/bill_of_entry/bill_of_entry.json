@@ -371,12 +371,7 @@
    "role": "Auditor"
   }
  ],
-<<<<<<< HEAD
  "sort_field": "modified",
-=======
- "row_format": "Dynamic",
- "sort_field": "creation",
->>>>>>> a3784d81 (fix: update currency options to use default currency for Bill of Entry and Bill of Entry Item)
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1
