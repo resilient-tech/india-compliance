@@ -773,7 +773,6 @@ def validate_overseas_gst_category(doc):
         frappe.throw(_("Cannot set GST Category to SEZ / Overseas in POS Invoice"))
 
 
-<<<<<<< HEAD
 # DEPRECATED IN v16
 def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
     if is_hsn_wise_breakup_needed(item_doctype):
@@ -843,10 +842,7 @@ def is_hsn_wise_breakup_needed(doctype):
         return True
 
 
-def get_regional_round_off_accounts(company, account_list):
-=======
 def get_regional_round_off_accounts(company, account_list, doc=None):
->>>>>>> bb5076b7 (fix: skip gst rounding for multicurrency transactions)
     country = frappe.get_cached_value("Company", company, "country")
     if country != "India" or not frappe.get_cached_value(
         "GST Settings", "GST Settings", "round_off_gst_values"
