@@ -168,6 +168,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Currency",
             "insert_after": "section_break_total",
             "read_only": 1,
+            "options": "Company:company:default_currency",
         },
         {
             "fieldtype": "Column Break",
@@ -180,7 +181,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Currency",
             "insert_after": "cb_grand_total",
             "read_only": 1,
-            "options": "currency",
+            "options": "Company:company:default_currency",
         },
     ],
     # Stock Entry: Address and Tax Fields
