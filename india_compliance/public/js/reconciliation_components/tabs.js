@@ -5,7 +5,7 @@ function get_gstin_status_at_invoice_date(row) {
         row.gstin_status === "Cancelled" &&
         row.gstin_cancelled_date &&
         row.bill_date &&
-        row.bill_date < row.gstin_cancelled_date
+        frappe.datetime.str_to_obj(row.bill_date) < frappe.datetime.str_to_obj(row.gstin_cancelled_date)
     ) {
         return "Active";
     }
@@ -155,22 +155,13 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
     }
 
     get_supplier_name_gstin(row) {
-        let gstin_link;
-        if (row.gstin_status) {
-            const status = get_gstin_status_at_invoice_date(row);
-            gstin_link = $(
-                `<a href="#" style="font-size: 0.9em;" class="supplier-gstin">${
-                    row.supplier_gstin || ""
-                }</a>`,
-            )
-                .addClass(`indicator ${get_gstin_indicator_color(status)}`)
-                .attr("title", status)
-                .prop("outerHTML");
-        } else {
-            gstin_link = `<a href="#" style="font-size: 0.9em;" class="supplier-gstin">${
-                row.supplier_gstin || ""
-            }</a>`;
-        }
+        const status = get_gstin_status_at_invoice_date(row);
+        const gstin_link = $(
+            `<a href="#" style="font-size: 0.9em;" class="supplier-gstin">${row.supplier_gstin || ""}</a>`,
+        )
+            .addClass(`indicator ${get_gstin_indicator_color(status)}`)
+            .attr("title", status || "Unknown")
+            .prop("outerHTML");
         return `${row.supplier_name}<br />${gstin_link}`;
     }
 
@@ -254,26 +245,21 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     init_dialog() {
         let gstin_text = "";
         if (this.row.supplier_gstin) {
-            let status_html = "";
-            if (this.row.gstin_status) {
-                const status = get_gstin_status_at_invoice_date(this.row);
-                const color = get_gstin_indicator_color(status);
-                let note = "";
-                if (
-                    status === "Active" &&
-                    this.row.gstin_status === "Cancelled" &&
-                    this.row.gstin_cancelled_date
-                ) {
-                    note = ` <span> — Currently Cancelled since ${frappe.datetime.str_to_user(
-                        this.row.gstin_cancelled_date,
-                    )}</span>`;
-                } else if (status === "Cancelled" && this.row.gstin_cancelled_date) {
-                    note = ` <span>since ${frappe.datetime.str_to_user(
-                        this.row.gstin_cancelled_date,
-                    )}</span>`;
-                }
-                status_html = ` — <span class="indicator ${color}">${status}</span>${note}`;
+            const status = get_gstin_status_at_invoice_date(this.row);
+            const color = get_gstin_indicator_color(status);
+            let note = "";
+            if (
+                status === "Active" &&
+                this.row.gstin_status === "Cancelled" &&
+                this.row.gstin_cancelled_date
+            ) {
+                note = ` <span> — Currently Cancelled since ${frappe.datetime.str_to_user(
+                    this.row.gstin_cancelled_date,
+                )}</span>`;
+            } else if (status === "Cancelled" && this.row.gstin_cancelled_date) {
+                note = ` <span>since ${frappe.datetime.str_to_user(this.row.gstin_cancelled_date)}</span>`;
             }
+            const status_html = ` — <span class="indicator ${color}">${status || "Unknown"}</span>${note}`;
             gstin_text = ` (${this.row.supplier_gstin}${status_html})`;
         }
         const supplier_details = `<h5>${this.row.supplier_name}${gstin_text}</h5>`;
