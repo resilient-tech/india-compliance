@@ -13,7 +13,11 @@ jobs:
     name: linters
     runs-on: ubuntu-latest
     steps:
+<<<<<<< HEAD
       - uses: actions/checkout@v4
+=======
+      - uses: actions/checkout@v7
+>>>>>>> 0290260a (chore(deps): bump actions/checkout from 6 to 7)
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5

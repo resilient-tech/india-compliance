@@ -11,7 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Entire Repository
+<<<<<<< HEAD
         uses: actions/checkout@v4
+=======
+        uses: actions/checkout@v7
+>>>>>>> 0290260a (chore(deps): bump actions/checkout from 6 to 7)
         with:
           fetch-depth: 0
           persist-credentials: false

@@ -13,8 +13,13 @@ jobs:
       - name: 'Setup Environment'
         uses: actions/setup-python@v5
         with:
+<<<<<<< HEAD
           python-version: '3.11'
       - uses: actions/checkout@v4
+=======
+          python-version: "3.11"
+      - uses: actions/checkout@v7
+>>>>>>> 0290260a (chore(deps): bump actions/checkout from 6 to 7)
 
       - name: Validate Docs
         env:
