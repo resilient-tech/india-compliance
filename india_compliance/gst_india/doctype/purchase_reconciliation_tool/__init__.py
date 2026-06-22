@@ -1197,13 +1197,12 @@ class ReconciledData(BaseReconciliation):
         if not supplier_gstins:
             return frappe._dict()
 
-        return frappe._dict(
-            {
-                gstin: frappe.db.get_value("GSTIN", gstin, ["status", "cancelled_date"], as_dict=True)
-                or frappe._dict()
-                for gstin in supplier_gstins
-            }
+        records = frappe.get_all(
+            "GSTIN",
+            filters={"name": ("in", list(supplier_gstins))},
+            fields=["name", "status", "cancelled_date"],
         )
+        return frappe._dict({r.name: r for r in records})
 
     def update_amount_difference(self, data, purchase, inward_supply):
         data.taxable_value_difference = rounded(
