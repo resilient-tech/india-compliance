@@ -446,7 +446,7 @@ class ISDInvoiceController {
     }
     async fetch_gst_accounts() {
         if (!this.frm.doc.company) return;
-        frappe
+        return frappe
             .call({
                 method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_input_gst_accounts",
                 args: { company: this.frm.doc.company },
