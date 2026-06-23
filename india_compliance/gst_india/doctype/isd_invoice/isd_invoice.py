@@ -32,7 +32,6 @@ from india_compliance.gst_india.utils import validate_invoice_number as validate
 from india_compliance.gst_india.utils.isd import (
     CREDIT_FLOW,
     ISD_GST_CATEGORY,
-    get_isd_source_item_query,
     get_purchase_invoices_distribution_summary,
     is_inter_state_distribution,
     sum_row_tax_by_type,
@@ -316,26 +315,6 @@ class ISDInvoice(Document):
         if invalid_distributions:
             self.throw_invalid_distributions(invalid_distributions)
 
-    def get_already_distributed_amounts(self):
-        """returns {(purchase_invoice, is_ineligible_for_itc): net distributed} from other submitted ISD invoices."""
-        isd_source_item = frappe.qb.DocType("ISD Invoice Source Item")
-        rows = (
-            get_isd_source_item_query(
-                purchase_invoices=list({row.purchase_invoice for row in self.source_invoices})
-            )
-            .select(isd_source_item.is_ineligible_for_itc)
-            .groupby(isd_source_item.purchase_invoice, isd_source_item.is_ineligible_for_itc)
-            .where(isd_source_item.parent != (self.name or ""))
-            .run(as_dict=True)
-        )
-
-        return {
-            (row.purchase_invoice, cint(row.is_ineligible_for_itc)): flt(
-                row.total_distributed, self._source_item_precision
-            )
-            for row in rows
-        }
-
     def throw_invalid_distributions(self, invalid_distributions):
         if self.is_credit_note:
             title, left_label, right_label = (
@@ -426,30 +405,21 @@ class ISDInvoice(Document):
         return gl_entries
 
     def _sync_purchase_invoice_distribution(self):
-        source_item_precision = self.precision("distributed_igst", "source_invoices")
-        if not hasattr(self, "_source_item_precision"):
-            self._source_item_precision = source_item_precision
-        pi_names = list(
-            {row.purchase_invoice for row in self.source_invoices}
-        )  # list of unique purchase invoices
+        # recipient ISD invoices do not affect the PI's of distribution company
+        if self.is_against_party and self.credit_flow == CREDIT_FLOW.RECEIPT:
+            return
 
+        source_item_precision = self.precision("distributed_igst", "source_invoices")
+        pi_names = list({row.purchase_invoice for row in self.source_invoices if row.purchase_invoice})
+        if not pi_names:
+            return
+
+        # Pull figures from the DB. on_submit/on_cancel run after the submit/cancel is persisted.
         total_tax_map = defaultdict(float)
         dist_map = defaultdict(float)
-
-        for row in self.source_invoices:
-            if row.purchase_invoice:
-                total_tax_map[row.purchase_invoice] += sum_row_tax_by_type(row, "total")
-                if self.docstatus == 1:
-                    dist_map[row.purchase_invoice] += sum_row_tax_by_type(row, "distributed")
-
-        # reuse the map cached during validate(); on_cancel skips validate(), so rebuild it there.
-        already_distributed_map = (
-            getattr(self, "_already_distributed_map", None) or self.get_already_distributed_amounts()
-        )
-
-        # merge its (pi, eligible) and (pi, ineligible) entries into a single per-PI total
-        for (name, _is_ineligible), amount in already_distributed_map.items():
-            dist_map[name] += amount
+        for row in get_purchase_invoices_distribution_summary(pi_names):
+            total_tax_map[row.purchase_invoice] += flt(row.total_tax, source_item_precision)
+            dist_map[row.purchase_invoice] += flt(row.total_tax - row.available_tax, source_item_precision)
 
         doc_updates = {}
         _percentage_precision = get_field_precision(
