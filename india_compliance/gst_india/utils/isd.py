@@ -37,26 +37,6 @@ def sum_row_tax_by_type(row, prefix):
     return sum(flt(getattr(row, f"{prefix}_{tax_type}")) for tax_type in GST_TAX_TYPES)
 
 
-def get_isd_source_item_query(purchase_invoices=None):
-    isd_source_item = frappe.qb.DocType("ISD Invoice Source Item")
-
-    query = (
-        frappe.qb.from_(isd_source_item)
-        .select(
-            isd_source_item.purchase_invoice,
-            Sum(reduce(add, (isd_source_item[f"distributed_{t}"] for t in GST_TAX_TYPES))).as_(
-                "total_distributed"
-            ),
-        )
-        .where(isd_source_item.docstatus == 1)
-    )
-
-    if purchase_invoices is not None:
-        query = query.where(isd_source_item.purchase_invoice.isin(purchase_invoices))
-
-    return query
-
-
 def get_pi_total_tax_map(purchase_invoices):
     pi_item = frappe.qb.DocType("Purchase Invoice Item")
     return (
@@ -356,21 +336,25 @@ def get_purchase_invoices_distribution_summary(
             pi_item.is_ineligible_for_itc,
             *[getattr(pi, f) for f in extra_fields],
             *[Coalesce(Sum(getattr(pi_item, f"{t}_amount")), 0).as_(f"total_{t}") for t in GST_TAX_TYPES],
-            *[
+            reduce(
+                add,
                 (
                     Coalesce(Sum(getattr(pi_item, f"{t}_amount")), 0)
                     - Coalesce(getattr(distributed, f"distributed_{t}"), 0)
-                ).as_(f"available_{t}")
-                for t in GST_TAX_TYPES
-            ],
+                    for t in GST_TAX_TYPES
+                ),
+            ).as_("available_tax"),
         )
         .groupby(pi_item.parent, pi_item.is_ineligible_for_itc)
         .run(as_dict=True)
     )
 
+    # in case available tax amounts are needed in future
+    # don't blindly do pi's total_{tax_type} - distributed_{tax_type}
+    # you may end up with negative available values
+
     for row in source_purchase_invoices:
         row["total_tax"] = sum(row[f"total_{t}"] for t in GST_TAX_TYPES)
-        row["available_tax"] = sum(row[f"available_{t}"] for t in GST_TAX_TYPES)
 
     return source_purchase_invoices
 
