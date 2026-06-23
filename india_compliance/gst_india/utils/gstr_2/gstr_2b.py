@@ -1,7 +1,11 @@
 import frappe
 
 from india_compliance.gst_india.utils import parse_datetime
-from india_compliance.gst_india.utils.gstr_2.gstr import GSTR, get_mapped_value
+from india_compliance.gst_india.utils.gstr_2.gstr import (
+    GSTR,
+    get_mapped_value,
+    get_unique_key,
+)
 
 
 class GSTR2b(GSTR):
@@ -14,12 +18,7 @@ class GSTR2b(GSTR):
             .where(gst_is.classification == self.category)
         ).run(as_dict=True)
 
-        return {
-            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
-                "name"
-            )
-            for transaction in existing_transactions
-        }
+        return {get_unique_key(transaction): transaction.get("name") for transaction in existing_transactions}
 
     def handle_missing_transactions(self):
         """

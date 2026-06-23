@@ -3,7 +3,11 @@ from datetime import datetime
 import frappe
 
 from india_compliance.gst_india.utils import get_datetime, parse_datetime
-from india_compliance.gst_india.utils.gstr_2.gstr import GSTR, get_mapped_value
+from india_compliance.gst_india.utils.gstr_2.gstr import (
+    GSTR,
+    get_mapped_value,
+    get_unique_key,
+)
 
 
 def map_date_format(date_str, source_format, target_format):
@@ -26,12 +30,7 @@ class GSTR2a(GSTR):
             .where(gst_is.gstr_1_filled == 0)
         ).run(as_dict=True)
 
-        return {
-            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
-                "name"
-            )
-            for transaction in existing_transactions
-        }
+        return {get_unique_key(transaction): transaction.get("name") for transaction in existing_transactions}
 
     def handle_missing_transactions(self):
         """
