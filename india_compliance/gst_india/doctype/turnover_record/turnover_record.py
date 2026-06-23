@@ -25,6 +25,8 @@ class TurnoverRecord(Document):
     def validate_gstin_matches_state(self):
         if self.gstin and get_state(self.gstin[:2]) != self.gst_state:
             frappe.throw(_("GSTIN does not match selected gst_state"))
+        if not self.gstin and not self.gst_state:
+            frappe.throw(_("Either GSTIN or GST State is required"))
 
     def validate_no_duplicate_record(self):
         duplicate = frappe.get_list(
@@ -50,8 +52,9 @@ def upsert_turnover_record(
     gstin,
     gst_state,
     amount,
+    posting_date,
 ):
-    _fiscal_year, from_date, to_date = get_fiscal_year(nowdate())
+    _fiscal_year, from_date, to_date = get_fiscal_year(posting_date or nowdate())
 
     amount_precision = get_field_precision(frappe.get_meta("Turnover Record").get_field("amount"))
     amount = flt(amount, amount_precision)

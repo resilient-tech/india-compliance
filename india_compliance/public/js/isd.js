@@ -14,7 +14,6 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
     // { purchase invoice name: { total_tax, available } } from the distribution summary
     let summary_by_pi = {};
     const company = purchase_invoice.company;
-    const posting_date = purchase_invoice.posting_date;
 
     // last column will be too narrow, frappe issue #38228
     const dialog = new frappe.ui.Dialog({
@@ -59,7 +58,8 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                 fieldtype: "Date",
                 fieldname: "posting_date",
                 label: __("Posting Date"),
-                default: "Today",
+                default: frappe.datetime.get_today(),
+                reqd: 1,
             },
             {
                 fieldtype: "Section Break",
@@ -115,10 +115,11 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                         async change() {
                             const { address, party_type, party } = this.doc;
                             if (!address) return;
+                            const { posting_date: posting_date } = dialog.get_values();
 
                             frappe.call({
                                 method: "india_compliance.gst_india.utils.isd.get_distribution_addresses",
-                                args: { party_type, party, posting_date, address },
+                                args: { party_type, party, posting_date: posting_date, address },
                                 callback: ({ message: [row] = [] }) => {
                                     if (!row) return;
                                     const { gstin, gst_category, gst_state, turnover_amount } = row;
@@ -183,12 +184,18 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
         ],
         primary_action_label: __("Create ISD Invoices"),
         primary_action() {
-            const { distribution_table = [], is_against_party, posting_date } = dialog.get_values();
+            const {
+                distribution_table = [],
+                is_against_party,
+                posting_date: posting_date,
+            } = dialog.get_values();
             const rows_with_turnover = distribution_table.filter((row) => row.turnover_amount);
+
+            console.log("posting date for primary action", posting_date);
 
             dialog.hide();
 
-            const fiscal_year = erpnext.utils.get_fiscal_year(posting_date);
+            const fiscal_year = erpnext.utils.get_fiscal_year(posting_date, company);
             const payload = rows_with_turnover.map((row) => ({
                 ...row,
                 fiscal_year: fiscal_year.name,
@@ -315,6 +322,9 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
     });
 
     function fetch_and_prefill_grid() {
+        // runs synchronously right after dialog.show(), before the async default-setting
+        // promise resolves, so read the single value with a fallback instead of get_values()
+        const posting_date = dialog.get_value("posting_date") || frappe.datetime.get_today();
         frappe.call({
             method: "india_compliance.gst_india.utils.isd.get_distribution_addresses",
             args: { party_type: "Company", party: company, posting_date: posting_date },

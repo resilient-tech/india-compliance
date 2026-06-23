@@ -57,7 +57,7 @@
    "fieldname": "gst_state",
    "fieldtype": "Autocomplete",
    "label": "GST State",
-   "mandatory_depends_on": "eval: doc.gst_category == 'Unregistered'",
+   "mandatory_depends_on": "eval: !doc.gstin",
    "search_index": 1
   }
  ],

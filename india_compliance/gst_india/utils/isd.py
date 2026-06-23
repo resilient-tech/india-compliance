@@ -17,7 +17,7 @@ import frappe
 from frappe import _
 from frappe.model.meta import get_field_precision
 from frappe.query_builder.functions import Coalesce, Date, IfNull, Sum
-from frappe.utils import flt, getdate, today
+from frappe.utils import add_months, flt, getdate, today
 
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
@@ -71,14 +71,14 @@ def get_pi_total_tax_map(purchase_invoices):
     )
 
 
-def calculate_distribution(doc):
+def calculate_distribution(doc, raw_distribution_ratio):
     """Set distributed_* fields on each source_invoices row from its distribution_ratio."""
     sign = -1 if doc.is_credit_note else 1
     inter_state = is_inter_state_distribution(doc)
     precision = get_field_precision(frappe.get_meta("ISD Invoice Source Item").get_field("distributed_igst"))
 
     for row in doc.source_invoices or []:
-        ratio = sign * flt(row.distribution_ratio) / 100
+        ratio = sign * flt(raw_distribution_ratio) / 100
 
         # inter-state -> all IGST; intra-state -> CGST + SGST (equal halves, since the rates are equal)
         pool = flt((flt(row.total_cgst) + flt(row.total_sgst) + flt(row.total_igst)) * ratio, precision)
@@ -89,8 +89,9 @@ def calculate_distribution(doc):
             row.distributed_sgst = 0.0
         else:
             cgst = flt(pool / 2, precision)
+            sgst = flt(pool / 2, precision)
             row.distributed_cgst = cgst
-            row.distributed_sgst = flt(pool - cgst, precision)
+            row.distributed_sgst = sgst
             row.distributed_igst = 0.0
 
         row.distributed_cess = flt(flt(row.total_cess) * ratio, precision)
@@ -199,7 +200,7 @@ def get_distribution_addresses(party_type: str, party: str, posting_date: str, a
         )
         .where(
             (turnover_record.from_date.isnull())
-            | (Date(posting_date).between(turnover_record.from_date, turnover_record.to_date))
+            | (Date(add_months(posting_date, -1))).between(turnover_record.from_date, turnover_record.to_date)
         )
     )
 
@@ -251,7 +252,7 @@ def make_isd_invoice(
         doc.set(f"{prefix}_gstin", gstin)
         doc.set(f"{prefix}_pos", f"{state_number}-{state}")
         if prefix == "party" and not gstin:
-            doc.expense_account = frappe.db.get_value("Company", company, "default_gst_expense_account")
+            doc.expense_account = frappe.get_cached_value("Company", company, "default_gst_expense_account")
             doc.cost_center = frappe.db.get_value("Company", company, "cost_center")
 
     if party_type and party:
@@ -276,7 +277,7 @@ def make_isd_invoice(
             },
         )
 
-    calculate_distribution(doc)
+    calculate_distribution(doc, turnover_ratio * scale * 100)
     doc.set_taxes_and_totals()
     return doc
 
@@ -479,6 +480,7 @@ def bulk_create_isd_invoices(
             gstin=row["gstin"],
             gst_state=row["gst_state"],
             amount=row["turnover_amount"],
+            posting_date=posting_date,
         )
 
     return invoices, invalid_invoices
