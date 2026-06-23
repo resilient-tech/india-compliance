@@ -13,7 +13,7 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
     update_previous_ims_action as _update_previous_ims_action,
 )
 from india_compliance.gst_india.utils import parse_datetime
-from india_compliance.gst_india.utils.gstr_2.gstr import get_mapped_value
+from india_compliance.gst_india.utils.gstr_2.gstr import get_mapped_value, get_unique_key
 
 CLASSIFICATION_MAP = {
     "B2B": ["B2B", "Invoice"],
@@ -91,9 +91,7 @@ class IMS:
             **self.get_invoice_details(invoice),
         )
 
-        transaction["unique_key"] = (
-            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
-        )
+        transaction["unique_key"] = get_unique_key(transaction)
 
         return transaction
 
@@ -156,12 +154,7 @@ class IMS:
             .run(as_dict=True)
         )
 
-        return {
-            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
-                "name"
-            )
-            for transaction in existing_transactions
-        }
+        return {get_unique_key(transaction): transaction.get("name") for transaction in existing_transactions}
 
     def handle_missing_transactions(self):
         if not self.existing_transactions:
