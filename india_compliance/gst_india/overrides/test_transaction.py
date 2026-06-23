@@ -972,33 +972,35 @@ class TestTransaction(IntegrationTestCase):
         )
 
     def test_gst_details_reset_when_transaction_becomes_ineligible(self):
-        doc = create_transaction(**self.transaction_details, rate=200, is_in_state=True, do_not_submit=True)
-        self.assertDocumentEqual(
-            {
-                "cgst_rate": 9,
-                "sgst_rate": 9,
-                "cgst_amount": 18,
-                "sgst_amount": 18,
-                "gst_treatment": "Taxable",
-            },
-            doc.items[0],
-        )
+        taxable_gst_details = {
+            "cgst_rate": 9,
+            "sgst_rate": 9,
+            "cgst_amount": 18,
+            "sgst_amount": 18,
+            "gst_treatment": "Taxable",
+        }
+        ineligible_gst_details = {
+            "igst_rate": 0,
+            "cgst_rate": 0,
+            "sgst_rate": 0,
+            "igst_amount": 0,
+            "cgst_amount": 0,
+            "sgst_amount": 0,
+            "gst_treatment": "Nil-Rated",
+        }
 
+        doc = create_transaction(**self.transaction_details, rate=200, is_in_state=True, do_not_submit=True)
+        self.assertDocumentEqual(taxable_gst_details, doc.items[0])
+
+        # eligible -> ineligible: GST columns must reset
         doc.is_opening = "Yes"
         doc.save()
+        self.assertDocumentEqual(ineligible_gst_details, doc.items[0])
 
-        self.assertDocumentEqual(
-            {
-                "igst_rate": 0,
-                "cgst_rate": 0,
-                "sgst_rate": 0,
-                "igst_amount": 0,
-                "cgst_amount": 0,
-                "sgst_amount": 0,
-                "gst_treatment": "Nil-Rated",
-            },
-            doc.items[0],
-        )
+        # ineligible -> eligible: GST columns must recompute
+        doc.is_opening = "No"
+        doc.save()
+        self.assertDocumentEqual(taxable_gst_details, doc.items[0])
 
     def test_invalid_item_gst_details(self):
         doc = create_transaction(**self.transaction_details, rate=200, is_out_state=True, do_not_save=True)
