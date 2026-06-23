@@ -352,7 +352,7 @@ class TestISDInvoice(IntegrationTestCase):
             },
         )
 
-        calculate_distribution(doc)
+        calculate_distribution(doc, 100)
 
         row = doc.source_invoices[0]
         self.assertEqual(row.distributed_igst, 0)
