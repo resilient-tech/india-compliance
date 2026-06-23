@@ -509,7 +509,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         self.assertIsInstance(result, list)
 
 
-class TestCategoryPreference(IntegrationTestCase):
+class TestCategoryPreference(FrappeTestCase):
     """Tests for the GSTR-2A download category user-preference (set_category_preference)."""
 
     def tearDown(self):
