@@ -25,11 +25,10 @@ from india_compliance.gst_india.constants import (
 )
 from india_compliance.gst_india.overrides.transaction import validate_gstin_status
 from india_compliance.gst_india.utils import (
+    STATE_NUMBERS,
     get_gst_accounts_by_type,
 )
-from india_compliance.gst_india.utils import (
-    validate_invoice_number as validate_transaction_name,
-)
+from india_compliance.gst_india.utils import validate_invoice_number as validate_transaction_name
 from india_compliance.gst_india.utils.isd import (
     CREDIT_FLOW,
     ISD_GST_CATEGORY,
@@ -49,7 +48,7 @@ class ISDInvoice(Document):
 
     def before_validate(self):
         self.set_taxes_and_totals()
-        self.set_pos_from_gstin()
+        self.set_pos_from_address()
         self.set_address_display()
         self.clear_fields_when_is_against_party_not_set()
 
@@ -109,7 +108,7 @@ class ISDInvoice(Document):
                     },
                 )
         # remove rows with zero tax amount and non gst types, while keeping existing sequence
-        self.taxes = [tax for tax in self.taxes if (tax.tax_amount or gst_tax_type not in GST_TAX_TYPES)]
+        self.taxes = [tax for tax in self.taxes if (tax.tax_amount and tax.gst_tax_type in GST_TAX_TYPES)]
 
     def set_distribution_totals(self):
         totals = {"eligible": 0, "ineligible": 0}
@@ -122,11 +121,15 @@ class ISDInvoice(Document):
         self.total_eligible = flt(totals["eligible"], total_precision)
         self.total_ineligible = flt(totals["ineligible"], total_precision)
 
-    def set_pos_from_gstin(self):
-        gst_state_number, gst_state = frappe.get_value(
-            "Address", self.company_address, ["gst_state_number", "gst_state"]
-        )
-        self.company_pos = f"{gst_state_number}-{gst_state}"
+    def set_pos_from_address(self):
+
+        def get_pos(address):
+            # need to have a new function that works without gstin
+            gst_state = frappe.get_value("Address", address, "gst_state")
+            return f"{STATE_NUMBERS[gst_state]}-{gst_state}"
+
+        self.company_pos = get_pos(self.company_address)
+        self.party_pos = get_pos(self.party_address)
 
     def set_address_display(self):
         self.company_address_display = get_address_display(self.company_address)
@@ -652,7 +655,9 @@ def _resolve_party(doc):
         return None
 
     internal_field = "is_internal_customer" if doc.party_type == "Customer" else "is_internal_supplier"
-    parties = frappe.get_list(doc.party_type, filters={internal_field: 1}, pluck="name", limit=1)
+    parties = frappe.get_list(
+        doc.party_type, filters={internal_field: 1, "disabled": 0}, pluck="name", limit=1
+    )
     return parties[0] if parties else None
 
 
@@ -665,7 +670,7 @@ PARTY_RESOLVERS = {
 
 
 def _resolve_party_account(doc):
-    if not (doc.is_against_party and doc.company and doc.party_type):
+    if not (doc.is_against_party and doc.company and doc.party_type and doc.party):
         return None
     return get_party_account(doc.party_type, doc.party, doc.company)
 

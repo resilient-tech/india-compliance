@@ -2,14 +2,11 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Turnover Record", {
-    setup(frm) {
-        if (frm.is_new()) {
-            _set_default_fiscal_year_dates(frm);
-        }
-    },
-
-    onload(frm) {
+    async onload(frm) {
         // TODO: ux update (isd phase 2)
+        if (frm.is_new()) {
+            await _set_default_fiscal_year_dates(frm);
+        }
         frm.get_field("gst_state").set_data(frappe.boot.india_state_options || []);
     },
 
@@ -32,8 +29,8 @@ frappe.ui.form.on("Turnover Record", {
     },
 });
 
-function _set_default_fiscal_year_dates(frm) {
-    const fy = erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true);
+async function _set_default_fiscal_year_dates(frm) {
+    const fy = await erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true);
     if (!fy) return;
     frm.set_value("from_date", fy[1]);
 }

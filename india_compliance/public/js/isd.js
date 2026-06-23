@@ -166,18 +166,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                         columns: 2,
                         required: 1,
                         change() {
-                            const total_turnover = dialog
-                                .get_values()
-                                .distribution_table.reduce(
-                                    (sum, row) => sum + (parseFloat(row.turnover_amount) || 0),
-                                    0,
-                                );
-                            dialog.get_values().distribution_table.forEach((row) => {
-                                row.distribution_ratio = total_turnover
-                                    ? ((parseFloat(row.turnover_amount) || 0) / total_turnover) * 100
-                                    : 0;
-                            });
-                            distribution_grid.refresh();
+                            calculate_distribution_ratios();
                         },
                     },
                     {
@@ -250,6 +239,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
 
     function render_summary(summary) {
         const currency = erpnext.get_currency(company);
+        const escape_html = (value) => frappe.utils.escape_html(String(value ?? ""));
         let total_tax = 0;
         let total_available = 0;
 
@@ -262,9 +252,9 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                 total_tax += tt;
                 total_available += available;
                 return `<tr>
-                    <td>${pi.name}</td>
+                    <td>${escape_html(pi.name)}</td>
                     <td>${frappe.datetime.str_to_user(pi.posting_date)}</td>
-                    <td>${pi.supplier || ""}</td>
+                    <td>${escape_html(pi.supplier)}</td>
                     <td style="text-align:right">${format_currency(tt, currency)}</td>
                     <td style="text-align:right">${format_currency(available, currency)}</td>
                     <td style="text-align:right">${pct.toFixed(2)}%</td>
@@ -301,6 +291,13 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
     dialog.show();
     render_summary({});
 
+    // fix needed in frappe, grid does not have remove row trigger
+    distribution_grid.wrapper.on("click", ".grid-remove-rows", () => {
+        setTimeout(() => {
+            calculate_distribution_ratios();
+        }, 1000); //1 sec taken by frappe to remove the rows
+    });
+
     frappe.call({
         method: "india_compliance.gst_india.utils.isd.get_purchase_invoices_distribution_summary",
         args: { purchase_invoices: [purchase_invoice.name] },
@@ -330,9 +327,23 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     ...r,
                 }));
                 distribution_grid.refresh();
-                distribution_grid.fields_map.turnover_amount.change();
+                calculate_distribution_ratios();
             },
         });
+    }
+
+    function calculate_distribution_ratios() {
+        const values = dialog.get_values();
+        const total_turnover = values?.distribution_table.reduce(
+            (sum, row) => sum + (parseFloat(row.turnover_amount) || 0),
+            0,
+        );
+        values?.distribution_table.forEach((row) => {
+            row.distribution_ratio = total_turnover
+                ? ((parseFloat(row.turnover_amount) || 0) / total_turnover) * 100
+                : 0;
+        });
+        distribution_grid.refresh();
     }
 
     fetch_and_prefill_grid();

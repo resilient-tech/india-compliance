@@ -33,6 +33,7 @@ class TurnoverRecord(Document):
                 "from_date": [">=", self.from_date],
                 "to_date": ["<=", self.to_date],
                 "gst_state": self.gst_state,
+                "name": ["!=", self.name],
             },
             pluck="name",
             limit=1,

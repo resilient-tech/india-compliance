@@ -166,6 +166,12 @@ def get_report_company_currency(filters):
 
 @frappe.whitelist()
 def get_distribution_addresses(party_type: str, party: str, posting_date: str, address: str | None = None):
+    if not party_type or not party:
+        frappe.throw(_("Party Type and Party are mandatory"))
+
+    frappe.has_permission(party_type, doc=party, ptype="read", throw=True)
+    frappe.has_permission("Address", ptype="read", throw=True)
+
     addr = frappe.qb.DocType("Address")
     dynamic_link = frappe.qb.DocType("Dynamic Link")
     turnover_record = frappe.qb.DocType("Turnover Record")
@@ -244,6 +250,9 @@ def make_isd_invoice(
         )
         doc.set(f"{prefix}_gstin", gstin)
         doc.set(f"{prefix}_pos", f"{state_number}-{state}")
+        if prefix == "party" and not gstin:
+            doc.expense_account = frappe.db.get_value("Company", company, "default_gst_expense_account")
+            doc.cost_center = frappe.db.get_value("Company", company, "cost_center")
 
     if party_type and party:
         doc.is_against_party = is_against_party
@@ -395,7 +404,7 @@ def bulk_create_isd_invoices(
 
     _tax_precision = get_field_precision(
         frappe.get_meta("ISD Invoice Source Item").get_field("distributed_igst")
-    )
+    )  # assuming every tax row have same precision
 
     # drop addresses with no turnover - they would distribute nothing
     distribution_table = [row for row in distribution_table if flt(row["turnover_amount"] or 0)]
@@ -448,7 +457,9 @@ def bulk_create_isd_invoices(
         invoices.append(isd_doc.name)
         total_distributed += sum(sum_row_tax_by_type(src, "distributed") for src in isd_doc.source_invoices)
 
-    if isd_doc and (rounding_difference := total_available_for_distribution - total_distributed):
+    if isd_doc and (
+        rounding_difference := flt(total_available_for_distribution - total_distributed, _tax_precision)
+    ):
         item_to_adjust_rounding = isd_doc.source_invoices[0]
         valid_distributed_fields = [
             f"distributed_{t}" for t in GST_TAX_TYPES if item_to_adjust_rounding.get(f"distributed_{t}")
