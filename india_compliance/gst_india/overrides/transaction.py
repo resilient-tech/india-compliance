@@ -1864,6 +1864,7 @@ def before_update_after_submit(doc, method=None):
         sync_address_dependent_fields_on_submit(doc)
         return
 
+    update_item_gst_treatment(doc)  # normalize before validate_items reads it
     validate_items(doc)
 
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
@@ -1871,7 +1872,6 @@ def before_update_after_submit(doc, method=None):
 
     GSTAccounts().validate(doc, is_sales_transaction)
     validate_item_wise_tax_detail(doc)
-    update_item_gst_treatment(doc)
     update_taxable_values(doc)
     update_item_gst_details(doc)
     validate_item_tax_template(doc)
