@@ -3110,12 +3110,7 @@ const GSTR1_SECTION_OPTIONS = [
 const GSTR1_SECTIONS_KEY = "gstr1_download_sections";
 
 function _get_saved_sections() {
-    const raw = frappe.defaults.get_user_default(GSTR1_SECTIONS_KEY);
-    try {
-        return raw ? JSON.parse(raw) : null;
-    } catch {
-        return null;
-    }
+    return india_compliance.get_user_default_json(GSTR1_SECTIONS_KEY);
 }
 
 function _save_sections(sections_or_null) {

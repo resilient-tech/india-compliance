@@ -1159,12 +1159,7 @@ async function download_gstr(
 }
 
 function get_saved_2a_categories() {
-    const raw = frappe.defaults.get_user_default(RECO_2A_CATEGORIES_KEY);
-    try {
-        return raw ? JSON.parse(raw) : null;
-    } catch {
-        return null;
-    }
+    return india_compliance.get_user_default_json(RECO_2A_CATEGORIES_KEY);
 }
 
 function save_2a_categories(categories) {
