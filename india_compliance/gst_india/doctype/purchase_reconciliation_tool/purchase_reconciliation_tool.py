@@ -1,7 +1,6 @@
 # Copyright (c) 2022, Resilient Tech and contributors
 # For license information, please see license.txt
 
-import json
 import re
 from collections import defaultdict
 
@@ -576,13 +575,13 @@ def set_category_preference(categories: str | list | None = None):
     frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
     if isinstance(categories, str):
-        categories = frappe.parse_json(categories)
+        categories = frappe.parse_json(categories) if categories else None
 
     if not categories:
         categories = []
 
     categories = [c for c in categories if c in VALID_2A_CATEGORIES]
-    frappe.defaults.set_user_default(RECO_2A_CATEGORIES_KEY, json.dumps(categories))
+    frappe.defaults.set_user_default(RECO_2A_CATEGORIES_KEY, frappe.as_json(categories))
 
 
 def parse_params(fun):
