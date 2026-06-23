@@ -25,6 +25,7 @@ from frappe.utils import add_days, flt, getdate, today
 from parameterized import parameterized_class
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
+from india_compliance.gst_india.overrides.taxable_value import get_item_taxable_value
 from india_compliance.gst_india.overrides.transaction import (
     ADDRESS_DEPENDENT_FIELDS,
     DOCTYPES_WITH_GST_DETAIL,
@@ -1602,6 +1603,55 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertFalse(_is_multicurrency_doc({"conversion_rate": 0}))
         self.assertFalse(_is_multicurrency_doc({}))
         self.assertFalse(_is_multicurrency_doc('{"conversion_rate": 1}'))
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    @change_settings(
+        "Accounts Settings",
+        {"allow_multi_currency_invoices_against_single_party_account": 1},
+    )
+    def test_multicurrency_taxable_value_on_mrp(self):
+        """GST on MRP on a USD export invoice. taxable_value is company currency, so the
+        transaction-currency resolver base is scaled by conversion_rate — else
+        update_gst_details' validate throws an IGST amount mismatch."""
+        _create_currency_exchange("USD", "INR", 80)
+
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            customer="_Test Foreign Customer",
+            party_name="_Test Foreign Customer",
+            currency="USD",
+            is_export_with_gst=1,
+            is_out_state=1,  # IGST 18%
+            rate=100,
+            do_not_save=True,
+        )
+        doc.items[0].price_list_rate = 120  # MRP in transaction currency
+        for tax in doc.taxes:
+            tax.charge_type = "On MRP"
+
+        doc.insert()  # runs update_taxable_values + update_gst_details + validate
+
+        item = doc.items[0]
+        self.assertEqual(flt(doc.conversion_rate), 80)
+        self.assertEqual(item.taxable_value, flt(item.price_list_rate * item.qty * doc.conversion_rate))
+        self.assertEqual(item.igst_amount, flt(item.taxable_value * 18 / 100))
+
+    def test_get_item_taxable_value_scales_resolver_base(self):
+        # Resolver base is transaction currency; scaled to company currency by conversion_rate.
+        tax = frappe._dict(gst_tax_type="igst", charge_type="On MRP")
+        item = frappe._dict(price_list_rate=120, qty=1)
+
+        single = frappe._dict(conversion_rate=1, taxes=[tax])
+        self.assertEqual(get_item_taxable_value(single, item, 0), 120)
+
+        multi = frappe._dict(conversion_rate=80, taxes=[tax])
+        self.assertEqual(get_item_taxable_value(multi, item, 0), 9600)
+
+        # No resolver charge_type -> default
+        plain = frappe._dict(
+            conversion_rate=80, taxes=[frappe._dict(gst_tax_type="igst", charge_type="On Net Total")]
+        )
+        self.assertEqual(get_item_taxable_value(plain, item, 555), 555)
 
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"

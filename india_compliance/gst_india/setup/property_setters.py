@@ -73,6 +73,8 @@ def get_property_setters(*, include_defaults=False):
             "property": "mandatory_depends_on",
             "value": "eval: gst_settings.require_supplier_invoice_no === 1 && doc.company_gstin",
         },
+        get_options_property_setter("Sales Taxes and Charges", "charge_type", ["On MRP"], prepend=False),
+        get_options_property_setter("Purchase Taxes and Charges", "charge_type", ["On MRP"], prepend=False),
         *PURCHASE_RECEIPT_PROPERTIES,
         *SUBCONTRACTING_RECEIPT_PROPERTIES,
         *ADDRESS_ALLOW_ON_SUBMIT_PROPERTIES,
