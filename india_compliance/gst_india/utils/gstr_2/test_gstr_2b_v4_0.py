@@ -279,7 +279,7 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
         self.assertEqual(doc.is_downloaded_from_2b, 1)
 
 
-class TestGetUniqueKey(IntegrationTestCase):
+class TestGetUniqueKey(FrappeTestCase):
     def test_null_gstin_matches_empty_gstin(self):
         # DB row with NULL supplier_gstin -> None, vs incoming with field absent
         existing = frappe._dict(supplier_gstin=None, bill_no="2566282")
