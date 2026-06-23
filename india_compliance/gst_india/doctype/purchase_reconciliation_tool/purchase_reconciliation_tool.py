@@ -72,6 +72,10 @@ STATUS_MAP = {
     "Ignore": "Ignored",
 }
 
+RECO_2A_CATEGORIES_KEY = "purchase_reco_2a_categories"
+
+VALID_2A_CATEGORIES = {cat.value for cat in GSTR_2A_ACTIONS.values()}
+
 
 class PurchaseReconciliationTool(Document):
     def __init__(self, *args, **kwargs):
@@ -564,6 +568,20 @@ def download_excel_report(
 
     build_data = BuildExcel(doc, data, is_supplier_specific)
     build_data.export_data()
+
+
+@frappe.whitelist()
+def set_category_preference(categories: str | list | None = None):
+    frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
+    if isinstance(categories, str):
+        categories = frappe.parse_json(categories) if categories else None
+
+    if not categories:
+        categories = []
+
+    categories = [c for c in categories if c in VALID_2A_CATEGORIES]
+    frappe.defaults.set_user_default(RECO_2A_CATEGORIES_KEY, frappe.as_json(categories))
 
 
 def parse_params(fun):

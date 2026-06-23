@@ -469,6 +469,17 @@ Object.assign(india_compliance, {
         }, 0);
     },
 
+    get_user_default_json(key) {
+        // Read a user default that stores a JSON value (e.g. a saved list of
+        // download sections/categories). Returns null when unset or malformed.
+        const raw = frappe.defaults.get_user_default(key);
+        try {
+            return raw ? JSON.parse(raw) : null;
+        } catch {
+            return null;
+        }
+    },
+
     set_last_month_as_default_period(report) {
         report.filters.forEach((filter) => {
             if (filter.fieldname === "from_date") {
