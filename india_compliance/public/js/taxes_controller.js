@@ -145,7 +145,14 @@ india_compliance.taxes_controller = class TaxesController {
             amount = calculateAmount(row.qty, row.rate, "amount");
         }
 
-        row.taxable_value = amount;
+        // custom charge_type (mirrored from server side)
+        const resolvers = (typeof erpnext !== "undefined" && erpnext.taxable_base_resolvers) || {};
+        const gst_tax = (this.frm.doc.taxes || []).find((tax) => tax.gst_tax_type);
+        const resolver = gst_tax && resolvers[gst_tax.charge_type];
+        // taxable_value is company currency
+        row.taxable_value = resolver
+            ? flt(resolver(this, row, gst_tax)) * flt(this.frm.doc.conversion_rate || 1)
+            : amount;
         this.frm.refresh_field("items");
     }
 
