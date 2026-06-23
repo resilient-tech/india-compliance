@@ -10,6 +10,11 @@ from frappe.tests.utils import make_test_objects
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
 )
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
+    RECO_2A_CATEGORIES_KEY,
+    VALID_2A_CATEGORIES,
+    set_category_preference,
+)
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     format_period,
@@ -504,6 +509,69 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             link_doctype=None,
         )
         self.assertIsInstance(result, list)
+
+
+class TestCategoryPreference(IntegrationTestCase):
+    """Tests for the GSTR-2A download category user-preference (set_category_preference)."""
+
+    def tearDown(self):
+        # set_category_preference writes a user default; reset it between tests so
+        # one test's stored value cannot leak into another.
+        frappe.defaults.clear_user_default(RECO_2A_CATEGORIES_KEY)
+
+    def get_saved_categories(self):
+        raw = frappe.defaults.get_user_default(RECO_2A_CATEGORIES_KEY)
+        return frappe.parse_json(raw) if raw else None
+
+    def test_stores_valid_categories(self):
+        set_category_preference(["B2B", "ISD"])
+        self.assertEqual(self.get_saved_categories(), ["B2B", "ISD"])
+
+    def test_drops_invalid_categories(self):
+        # "GARBAGE" is not a real category; "ISDA" is a GSTR-2B-only category and so
+        # is not a valid GSTR-2A download category. Both must be filtered out while the
+        # valid entries are kept in the original order.
+        set_category_preference(["B2B", "GARBAGE", "ISD", "ISDA"])
+        self.assertEqual(self.get_saved_categories(), ["B2B", "ISD"])
+
+    def test_accepts_json_string(self):
+        # This is the real call path: the JS client sends a JSON-serialised string.
+        set_category_preference(frappe.as_json(["B2B", "CDNR"]))
+        self.assertEqual(self.get_saved_categories(), ["B2B", "CDNR"])
+
+    def test_accepts_python_list(self):
+        set_category_preference(["B2BA", "CDNRA"])
+        self.assertEqual(self.get_saved_categories(), ["B2BA", "CDNRA"])
+
+    def test_all_valid_categories_round_trip(self):
+        all_categories = sorted(VALID_2A_CATEGORIES)
+        set_category_preference(all_categories)
+        self.assertEqual(sorted(self.get_saved_categories()), all_categories)
+
+    def test_none_stores_empty_list(self):
+        set_category_preference(None)
+        self.assertEqual(self.get_saved_categories(), [])
+
+    def test_empty_string_stores_empty_list(self):
+        set_category_preference("")
+        self.assertEqual(self.get_saved_categories(), [])
+
+    def test_empty_list_stores_empty_list(self):
+        set_category_preference([])
+        self.assertEqual(self.get_saved_categories(), [])
+
+    def test_all_invalid_stores_empty_list(self):
+        set_category_preference(["GARBAGE", "ISDA"])
+        self.assertEqual(self.get_saved_categories(), [])
+
+    def test_overwrites_previous_preference(self):
+        set_category_preference(["B2B", "ISD"])
+        set_category_preference(["CDNR"])
+        self.assertEqual(self.get_saved_categories(), ["CDNR"])
+
+    def test_requires_write_permission(self):
+        with self.set_user("Guest"):
+            self.assertRaises(frappe.PermissionError, set_category_preference, ["B2B"])
 
 
 def create_purchase_invoice(**kwargs):
