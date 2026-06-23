@@ -1,10 +1,12 @@
 from datetime import date
 
+import frappe
 from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
+from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
 
 
@@ -261,3 +263,30 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
             },
             doc,
         )
+
+    def test_impg_return_period_persists_on_redownload(self):
+        """
+        A 2B re-download must not clear return_period_2b for IMPG rows.
+        """
+        doc = self.get_doc(GSTRCategory.IMPG)
+        self.assertEqual(doc.return_period_2b, self.return_period)
+        self.assertEqual(doc.is_downloaded_from_2b, 1)
+
+        save_gstr_2b(self.gstin, self.return_period, self.test_data)
+
+        doc.reload()
+        self.assertEqual(doc.return_period_2b, self.return_period)
+        self.assertEqual(doc.is_downloaded_from_2b, 1)
+
+
+class TestGetUniqueKey(IntegrationTestCase):
+    def test_null_gstin_matches_empty_gstin(self):
+        # DB row with NULL supplier_gstin -> None, vs incoming with field absent
+        existing = frappe._dict(supplier_gstin=None, bill_no="2566282")
+        incoming = frappe._dict(bill_no="2566282")
+        self.assertEqual(get_unique_key(existing), get_unique_key(incoming))
+        self.assertEqual(get_unique_key(existing), "-2566282")
+
+    def test_normal_gstin(self):
+        t = frappe._dict(supplier_gstin="01AABCE2207R1Z5", bill_no="INV-1")
+        self.assertEqual(get_unique_key(t), "01AABCE2207R1Z5-INV-1")
