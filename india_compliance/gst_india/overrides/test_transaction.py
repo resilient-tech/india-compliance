@@ -26,7 +26,7 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
 )
 from frappe.model.mapper import get_mapped_doc
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import add_days, getdate, today
+from frappe.utils import add_days, flt, getdate, today
 from parameterized import parameterized_class
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
@@ -34,6 +34,7 @@ from india_compliance.gst_india.overrides.transaction import (
     ADDRESS_DEPENDENT_FIELDS,
     DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
+    _is_multicurrency_doc,
     sync_address_dependent_fields_on_submit,
     sync_gst_details_from_address,
     validate_gst_refund_accounts,
@@ -117,15 +118,17 @@ class TestTransaction(FrappeTestCase):
         self.assertDocumentEqual({"gst_category": "Registered Regular", "taxes": []}, doc)
 
     def test_transaction_with_gst_and_non_gst_items(self):
+        error_message = re.compile(r"^(Items not covered under GST cannot be clubbed.*)$")
+
+        # on insert
         doc = create_transaction(**self.transaction_details, do_not_save=True)
-
         append_item(doc, frappe._dict(item_code="_Test Non GST Item"))
+        self.assertRaisesRegex(frappe.exceptions.ValidationError, error_message, doc.insert)
 
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(Items not covered under GST cannot be clubbed.*)$"),
-            doc.insert,
-        )
+        # on re-save: a domestic doc must still raise when a Non-GST item is added
+        doc = create_transaction(**self.transaction_details, do_not_submit=True)
+        append_item(doc, frappe._dict(item_code="_Test Non GST Item"))
+        self.assertRaisesRegex(frappe.exceptions.ValidationError, error_message, doc.save)
 
     @change_settings(
         "GST Settings",
@@ -1303,6 +1306,27 @@ class TestTransaction(FrappeTestCase):
             return_doc.save,
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_validate_gst_refund_accounts_with_other_charges(self):
+        """
+        Non-GST charges (e.g. freight) must not be counted when checking that
+        the refund amount offsets the GST amount.
+        """
+        doc = create_refund_transaction()
+
+        doc.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Freight and Forwarding Charges - _TIRC",
+                "description": "Freight",
+                "tax_amount": 20,
+                "cost_center": "Main - _TIRC",
+            },
+        )
+
+        doc.save()
+
     def test_item_gst_details_for_non_gst_transactions(self):
         """
         Test Non-GST Transactions can be processed without errors.
@@ -1362,6 +1386,56 @@ class TestTransaction(FrappeTestCase):
             tax.base_tax_amount_after_discount_amount = None
 
         ItemGSTDetails().update(doc)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_overseas_resave_with_non_gst_item_does_not_raise(self):
+        """
+        On a SEZ/overseas sales doc, gst_treatment is forced to "Zero-Rated" for
+        all items. Adding a Non-GST item after the doc is already saved must not
+        raise "Invalid Items" — gst_treatment is normalized in validate (before
+        validate_items), so the new item also becomes "Zero-Rated".
+        """
+        if not self.is_sales_doctype:
+            return
+
+        doc = create_transaction(**self.transaction_details, do_not_submit=True)
+        doc.customer_address = "_Test Registered Customer-Billing-1"  # SEZ, gst_category="SEZ"
+        doc.gst_category = "SEZ"
+        doc.save()
+        self.assertEqual(doc.items[0].gst_treatment, "Zero-Rated")
+
+        # Add a Non-GST item after the first save and re-save
+        append_item(doc, frappe._dict(item_code="_Test Non GST Item"))
+        doc.save()
+
+        for item in doc.items:
+            self.assertEqual(item.gst_treatment, "Zero-Rated")
+            # Zero-Rated items carry no GST amount
+            for tax in GST_TAX_TYPES:
+                self.assertEqual(item.get(f"{tax}_amount"), 0)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_import_resave_with_non_gst_item_does_not_raise(self):
+        """
+        On an import purchase, gst_treatment is forced to "Taxable" for all items.
+        Adding an item with a Non-GST item_tax_template after the doc is saved
+        must not raise — gst_treatment is normalized in validate.
+        """
+        if self.is_sales_doctype:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            supplier="_Test Foreign Supplier",
+            do_not_submit=True,
+        )
+        self.assertEqual(doc.items[0].gst_treatment, "Taxable")
+
+        append_item(doc, frappe._dict(item_tax_template="Non-GST - _TIRC"))
+        doc.save()
+
+        for item in doc.items:
+            self.assertEqual(item.gst_treatment, "Taxable")
 
 
 def create_refund_transaction():
@@ -1423,6 +1497,20 @@ class TestQuotationTransaction(FrappeTestCase):
         self.assertEqual(doc.gst_category, "Unregistered")
 
 
+def _create_currency_exchange(from_currency, to_currency, exchange_rate):
+    frappe.get_doc(
+        {
+            "doctype": "Currency Exchange",
+            "from_currency": from_currency,
+            "to_currency": to_currency,
+            "date": today(),
+            "exchange_rate": exchange_rate,
+            "for_buying": 1,
+            "for_selling": 1,
+        }
+    ).insert(ignore_permissions=True)
+
+
 def get_lead(first_name):
     if name := frappe.db.exists("Lead", {"first_name": first_name}):
         return name
@@ -1442,6 +1530,84 @@ class TestSpecificTransactions(FrappeTestCase):
     @classmethod
     def tearDown(cls):
         frappe.db.rollback()
+
+    @change_settings(
+        "GST Settings",
+        {"enable_overseas_transactions": 1, "round_off_gst_values": 1},
+    )
+    @change_settings(
+        "Accounts Settings",
+        {"allow_multi_currency_invoices_against_single_party_account": 1},
+    )
+    def test_multicurrency_invoice_skips_gst_round_off(self):
+        """
+        With round_off_gst_values enabled, ERPNext whole-rounds the txn-currency
+        GST. On a multicurrency doc that 0.5-foreign-unit shift is amplified by
+        conversion_rate on the base (INR) side, exceeding ERPNext's 0.5 INR
+        per-item-tax tolerance -> "Item Wise Tax Details do not match with Taxes
+        and Charges".
+        """
+        _create_currency_exchange("USD", "INR", 95.99)
+
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            customer="_Test Foreign Customer",
+            party_name="_Test Foreign Customer",
+            currency="USD",  # conversion_rate intentionally NOT passed
+            is_export_with_gst=1,
+            is_out_state=1,  # IGST 18%
+            qty=9,
+            rate=5932.20,
+            do_not_submit=True,
+        )
+
+        self.assertEqual(flt(doc.conversion_rate), 95.99)
+
+        igst_row = next(row for row in doc.taxes if row.gst_tax_type == "igst")
+
+        self.assertNotEqual(igst_row.tax_amount, flt(round(igst_row.tax_amount, 0)))
+
+        # The IGST tax row was NOT added to the round-off accounts for this doc.
+        self.assertNotIn(
+            igst_row.account_head,
+            get_regional_round_off_accounts(doc.company, [], doc),
+        )
+
+    @change_settings("GST Settings", {"round_off_gst_values": 1})
+    def test_single_currency_invoice_still_rounds_off_gst(self):
+        """
+        Negative control: a single-currency (INR) doc must STILL whole-round GST
+        when round_off_gst_values is enabled. The multicurrency skip must not
+        leak into the default single-currency behavior.
+        """
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            is_in_state=1,  # CGST + SGST 9% each
+            qty=9,
+            rate=5932.20,
+            do_not_submit=True,
+        )
+
+        self.assertEqual(flt(doc.conversion_rate), 1)
+
+        cgst_row = next(row for row in doc.taxes if row.gst_tax_type == "cgst")
+
+        self.assertEqual(cgst_row.tax_amount, flt(round(cgst_row.tax_amount, 0)))
+
+        self.assertIn(
+            cgst_row.account_head,
+            get_regional_round_off_accounts(doc.company, [], doc),
+        )
+
+    def test_is_multicurrency_doc(self):
+        self.assertTrue(_is_multicurrency_doc(frappe._dict(conversion_rate=95.99)))
+        self.assertTrue(_is_multicurrency_doc({"conversion_rate": 80}))
+        self.assertTrue(_is_multicurrency_doc('{"conversion_rate": 95.99}'))
+
+        self.assertFalse(_is_multicurrency_doc(frappe._dict(conversion_rate=1)))
+        self.assertFalse(_is_multicurrency_doc({"conversion_rate": 0}))
+        self.assertFalse(_is_multicurrency_doc({}))
+        self.assertFalse(_is_multicurrency_doc('{"conversion_rate": 1}'))
 
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
@@ -1790,6 +1956,41 @@ class TestItemUpdate(FrappeTestCase):
                 },
                 doc.items[1],
             )
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_overseas_order_add_non_gst_item_after_submit(self):
+        """
+        Adding a Non-GST item to a submitted SEZ/overseas Sales Order via the
+        Update Items dialog must not raise. before_update_after_submit normalizes
+        gst_treatment (to "Zero-Rated") before validating the Non-GST/GST mix.
+        """
+        so = create_transaction(
+            doctype="Sales Order",
+            customer="_Test Foreign Customer",
+            item_code="_Test Trading Goods 1",
+            qty=1,
+            rate=100,
+        )
+        self.assertEqual(so.items[0].gst_treatment, "Zero-Rated")
+
+        item = so.items[0]
+        items = [
+            {
+                "item_code": item.item_code,
+                "qty": item.qty,
+                "rate": item.rate,
+                "docname": item.name,
+                "name": item.name,
+                "idx": item.idx,
+            },
+            {"item_code": "_Test Non GST Item", "qty": 1, "rate": 50, "idx": 2},
+        ]
+
+        update_child_qty_rate("Sales Order", json.dumps(items), so.name)
+        so = frappe.get_doc("Sales Order", so.name)
+
+        for so_item in so.items:
+            self.assertEqual(so_item.gst_treatment, "Zero-Rated")
 
 
 class TestPlaceOfSupply(FrappeTestCase):
