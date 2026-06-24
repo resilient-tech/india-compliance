@@ -21,7 +21,7 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
 )
 from frappe.model.mapper import get_mapped_doc
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import add_days, getdate, today
+from frappe.utils import add_days, flt, getdate, today
 from parameterized import parameterized_class
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
@@ -29,6 +29,7 @@ from india_compliance.gst_india.overrides.transaction import (
     ADDRESS_DEPENDENT_FIELDS,
     DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
+    _is_multicurrency_doc,
     sync_address_dependent_fields_on_submit,
     sync_gst_details_from_address,
     validate_gst_refund_accounts,
@@ -972,6 +973,37 @@ class TestTransaction(IntegrationTestCase):
             doc.items[0],
         )
 
+    def test_gst_details_reset_when_transaction_becomes_ineligible(self):
+        taxable_gst_details = {
+            "cgst_rate": 9,
+            "sgst_rate": 9,
+            "cgst_amount": 18,
+            "sgst_amount": 18,
+            "gst_treatment": "Taxable",
+        }
+        ineligible_gst_details = {
+            "igst_rate": 0,
+            "cgst_rate": 0,
+            "sgst_rate": 0,
+            "igst_amount": 0,
+            "cgst_amount": 0,
+            "sgst_amount": 0,
+            "gst_treatment": "Nil-Rated",
+        }
+
+        doc = create_transaction(**self.transaction_details, rate=200, is_in_state=True, do_not_submit=True)
+        self.assertDocumentEqual(taxable_gst_details, doc.items[0])
+
+        # eligible -> ineligible: GST columns must reset
+        doc.is_opening = "Yes"
+        doc.save()
+        self.assertDocumentEqual(ineligible_gst_details, doc.items[0])
+
+        # ineligible -> eligible: GST columns must recompute
+        doc.is_opening = "No"
+        doc.save()
+        self.assertDocumentEqual(taxable_gst_details, doc.items[0])
+
     def test_invalid_item_gst_details(self):
         doc = create_transaction(**self.transaction_details, rate=200, is_out_state=True, do_not_save=True)
         # Address is required to avoid auto update of place of supply and taxes
@@ -1321,6 +1353,27 @@ class TestTransaction(IntegrationTestCase):
             return_doc.save,
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_validate_gst_refund_accounts_with_other_charges(self):
+        """
+        Non-GST charges (e.g. freight) must not be counted when checking that
+        the refund amount offsets the GST amount.
+        """
+        doc = create_refund_transaction()
+
+        doc.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Freight and Forwarding Charges - _TIRC",
+                "description": "Freight",
+                "tax_amount": 20,
+                "cost_center": "Main - _TIRC",
+            },
+        )
+
+        doc.save()
+
     def test_item_gst_details_for_non_gst_transactions(self):
         """
         Test Non-GST Transactions can be processed without errors.
@@ -1441,6 +1494,20 @@ class TestQuotationTransaction(IntegrationTestCase):
         self.assertEqual(doc.gst_category, "Unregistered")
 
 
+def _create_currency_exchange(from_currency, to_currency, exchange_rate):
+    frappe.get_doc(
+        {
+            "doctype": "Currency Exchange",
+            "from_currency": from_currency,
+            "to_currency": to_currency,
+            "date": today(),
+            "exchange_rate": exchange_rate,
+            "for_buying": 1,
+            "for_selling": 1,
+        }
+    ).insert(ignore_permissions=True)
+
+
 def get_lead(first_name):
     if name := frappe.db.exists("Lead", {"first_name": first_name}):
         return name
@@ -1460,6 +1527,84 @@ class TestSpecificTransactions(IntegrationTestCase):
     @classmethod
     def tearDown(cls):
         frappe.db.rollback()
+
+    @change_settings(
+        "GST Settings",
+        {"enable_overseas_transactions": 1, "round_off_gst_values": 1},
+    )
+    @change_settings(
+        "Accounts Settings",
+        {"allow_multi_currency_invoices_against_single_party_account": 1},
+    )
+    def test_multicurrency_invoice_skips_gst_round_off(self):
+        """
+        With round_off_gst_values enabled, ERPNext whole-rounds the txn-currency
+        GST. On a multicurrency doc that 0.5-foreign-unit shift is amplified by
+        conversion_rate on the base (INR) side, exceeding ERPNext's 0.5 INR
+        per-item-tax tolerance -> "Item Wise Tax Details do not match with Taxes
+        and Charges".
+        """
+        _create_currency_exchange("USD", "INR", 95.99)
+
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            customer="_Test Foreign Customer",
+            party_name="_Test Foreign Customer",
+            currency="USD",  # conversion_rate intentionally NOT passed
+            is_export_with_gst=1,
+            is_out_state=1,  # IGST 18%
+            qty=9,
+            rate=5932.20,
+            do_not_submit=True,
+        )
+
+        self.assertEqual(flt(doc.conversion_rate), 95.99)
+
+        igst_row = next(row for row in doc.taxes if row.gst_tax_type == "igst")
+
+        self.assertNotEqual(igst_row.tax_amount, flt(round(igst_row.tax_amount, 0)))
+
+        # The IGST tax row was NOT added to the round-off accounts for this doc.
+        self.assertNotIn(
+            igst_row.account_head,
+            get_regional_round_off_accounts(doc.company, [], doc),
+        )
+
+    @change_settings("GST Settings", {"round_off_gst_values": 1})
+    def test_single_currency_invoice_still_rounds_off_gst(self):
+        """
+        Negative control: a single-currency (INR) doc must STILL whole-round GST
+        when round_off_gst_values is enabled. The multicurrency skip must not
+        leak into the default single-currency behavior.
+        """
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            is_in_state=1,  # CGST + SGST 9% each
+            qty=9,
+            rate=5932.20,
+            do_not_submit=True,
+        )
+
+        self.assertEqual(flt(doc.conversion_rate), 1)
+
+        cgst_row = next(row for row in doc.taxes if row.gst_tax_type == "cgst")
+
+        self.assertEqual(cgst_row.tax_amount, flt(round(cgst_row.tax_amount, 0)))
+
+        self.assertIn(
+            cgst_row.account_head,
+            get_regional_round_off_accounts(doc.company, [], doc),
+        )
+
+    def test_is_multicurrency_doc(self):
+        self.assertTrue(_is_multicurrency_doc(frappe._dict(conversion_rate=95.99)))
+        self.assertTrue(_is_multicurrency_doc({"conversion_rate": 80}))
+        self.assertTrue(_is_multicurrency_doc('{"conversion_rate": 95.99}'))
+
+        self.assertFalse(_is_multicurrency_doc(frappe._dict(conversion_rate=1)))
+        self.assertFalse(_is_multicurrency_doc({"conversion_rate": 0}))
+        self.assertFalse(_is_multicurrency_doc({}))
+        self.assertFalse(_is_multicurrency_doc('{"conversion_rate": 1}'))
 
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
