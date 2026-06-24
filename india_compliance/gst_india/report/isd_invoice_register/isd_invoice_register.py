@@ -27,10 +27,11 @@ def execute(filters=None):
 
 
 def get_data(filters):
-    if filters.report_view == "Purchase Invoice":
+    report_view = filters.get("report_view", "Purchase Invoice")
+    if report_view == "Purchase Invoice":
         return get_purchase_invoice_data(filters)
-    else:
-        return get_isd_invoice_data(filters)
+
+    return get_isd_invoice_data(filters)
 
 
 # ── View A: Purchase Invoice ──────────────────────────────────────────────────

@@ -1280,9 +1280,8 @@ def has_gst_taxes(doc):
 
 
 @frappe.whitelist()
-def get_party_for_isd(filters: str | dict | frappe._dict):
-    if isinstance(filters, str):
-        filters = frappe.parse_json(filters)
+def get_party_for_isd(filters: str):
+    filters = frappe.parse_json(filters)
 
     doctype = filters.get("doctype")
     if doctype not in GST_PARTY_TYPES:
