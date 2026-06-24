@@ -17,7 +17,12 @@ VERSIONS_TO_COMPARE = [
     {
         "app_name": "ERPNext",
         "current_version": version.parse(erpnext.__version__),
-        "required_versions": {"version-14": "14.70.7", "version-15": "15.60.0"},
+        "required_versions": {
+            "version-14": "14.70.7",
+            # ERPNext #55758
+            "version-15": "15.113.0",
+            "version-16": "16.24.0",
+        },
     },
 ]
 
@@ -37,7 +42,7 @@ def execute():
                 f" version {app_version.major} to match your {app_name} version.\n"
             )
 
-        if IC_VERSION.major == 16:
+        if IC_VERSION.major == 17:
             continue
 
         app_branch = get_app_branch(app_name.lower())
