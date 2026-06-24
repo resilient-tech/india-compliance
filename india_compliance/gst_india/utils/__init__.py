@@ -129,7 +129,7 @@ def get_gstin_list(
     )
 
     if only_isd:
-        #default value may not be isd
+        # default value may not be isd
         return gstin_list
 
     default_gstin = frappe.db.get_value(party_type, party, "gstin")

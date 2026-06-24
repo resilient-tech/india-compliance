@@ -185,12 +185,8 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
         primary_action_label: __("Create ISD Invoices"),
         primary_action() {
             const values = dialog.get_values();
-            if(!values) return;
-            const {
-                distribution_table = [],
-                is_against_party,
-                posting_date: posting_date,
-            } = values;
+            if (!values) return;
+            const { distribution_table = [], is_against_party, posting_date: posting_date } = values;
             const rows_with_turnover = distribution_table.filter((row) => row.turnover_amount);
 
             console.log("posting date for primary action", posting_date);
