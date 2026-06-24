@@ -54,9 +54,11 @@ def on_mrp(calc, item, tax):
     """Tobacco RSP, Rule 31D. RSP is tax-inclusive: tax = RSP*rate/(100+rate), deemed
     assessable = RSP*100/(100+rate). Tax adds on top of the net sale value, which is what's
     reported — so flag report-as-net and hand validation the deemed base.
+
+    RSP from the user-entered `gst_retail_sale_price`; no fallback.
     """
     rate = _inclusive_rate(calc.doc, tax)
-    rsp = flt(item.price_list_rate) * flt(item.qty)
+    rsp = flt(item.get("gst_retail_sale_price")) * flt(item.qty)
     deemed = rsp * 100 / (100 + rate) if rate else rsp
 
     item._dont_update_taxable_value = True
@@ -68,13 +70,12 @@ def on_mrp(calc, item, tax):
 def on_margin(calc, item, tax):
     """Second-hand margin scheme, Rule 32(5), GST inclusive in margin. Only the margin
     (selling - cost) is taxable; deemed = margin*100/(100+rate), reported as taxable value
-    (tax == rate*taxable holds), balance becomes other charges. Negative margin -> 0.
+    (tax == rate*taxable holds). Negative margin -> 0 (no GST).
 
-    Cost from valuation_rate (Delivery Note) / incoming_rate (Sales Invoice); swap for a
-    dedicated field if that isn't the acquisition cost.
+    Cost from the user-entered `gst_purchase_price`; no fallback.
     """
     rate = _inclusive_rate(calc.doc, tax)
-    cost = flt(item.get("valuation_rate") or item.get("incoming_rate")) * flt(item.qty)
+    cost = flt(item.get("gst_purchase_price")) * flt(item.qty)
     margin = flt(item.amount) - cost
     if margin < 0:
         margin = 0

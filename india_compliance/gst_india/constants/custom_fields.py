@@ -1427,6 +1427,41 @@ PURCHASE_REVERSE_CHARGE_FIELDS = {
     "Supplier Quotation": {**reverse_charge_field, "insert_after": "has_unit_price_items"},
 }
 
+# User-entered (transaction currency), no fallback. Hidden until the GST Setting enables it.
+SALES_ITEM_DOCTYPES = (
+    "Quotation Item",
+    "Sales Order Item",
+    "Delivery Note Item",
+    "Sales Invoice Item",
+    "POS Invoice Item",
+)
+
+RSP_FIELDS = {
+    SALES_ITEM_DOCTYPES: {
+        "fieldname": "gst_retail_sale_price",
+        "label": "Retail Sale Price (MRP)",
+        "fieldtype": "Currency",
+        "options": "currency",
+        "insert_after": "price_list_rate",
+        "hidden": 1,
+        "print_hide": 1,
+        "translatable": 0,
+    }
+}
+
+MARGIN_FIELDS = {
+    SALES_ITEM_DOCTYPES: {
+        "fieldname": "gst_purchase_price",
+        "label": "Purchase Price",
+        "fieldtype": "Currency",
+        "options": "currency",
+        "insert_after": "gst_retail_sale_price",
+        "hidden": 1,
+        "print_hide": 1,
+        "translatable": 0,
+    }
+}
+
 E_INVOICE_FIELDS = {
     "Sales Invoice": [
         {

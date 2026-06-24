@@ -25,6 +25,14 @@ SUBCONTRACTING_INWARD_TEST_SERVICE_ITEM = "Subcontracted Inward Service Item"
 SUBCONTRACTING_INWARD_TEST_CUSTOMER_WAREHOUSE = "_Test Registered Customer Warehouse - _TIRC"
 
 
+def enable_custom_gst_charge_types():
+    """Apply the GST Settings-gated property setter so 'On MRP'/'On Margin' are valid
+    charge_type options (tests set these programmatically)."""
+    from india_compliance.gst_india.setup.property_setters import toggle_charge_type_options
+
+    toggle_charge_type_options(frappe._dict(enable_taxes_on_mrp=1, enable_margin_scheme=1))
+
+
 def create_sales_invoice(**data):
     data["doctype"] = "Sales Invoice"
     return create_transaction(**data)
