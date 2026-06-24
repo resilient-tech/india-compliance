@@ -1,9 +1,11 @@
-"""Per-item GST taxable value — the base GST is charged on.
+"""Per-item GST taxable value (assessable value reported in returns).
 
-Defaults to the item net amount. A custom ``charge_type`` whose resolver is registered
-under ERPNext's ``erpnext_taxable_base_resolvers`` overrides it (e.g. GST on MRP); IC reads
-the same hook, so every GST figure (per-item CGST/SGST/IGST, e-Invoice, e-Waybill, GSTR)
-follows that base.
+Defaults to net amount. A custom charge_type with a resolver registered under ERPNext's
+``erpnext_taxable_base_resolvers`` can decouple the *tax base* (what the rate applies to)
+from the *reported taxable value*. The resolver returns the base and stamps transient flags:
+
+  RSP (Rule 31D, "On MRP"): tax on RSP-deemed value, report the net sale value.
+  Margin (Rule 32(5), "On Margin"): tax on margin, balance reported as other charges.
 """
 
 import frappe
@@ -13,10 +15,10 @@ from india_compliance.gst_india.constants import TAX_TYPES
 
 
 def get_item_taxable_value(doc, item, default):
-    """Resolved base for the first GST row whose charge_type has a resolver, else default.
+    """Resolved base of the first GST resolver row, else default.
 
-    One assessable value per item, so the first resolver row wins; a qty-based
-    cess_non_advol row has no resolver and is skipped.
+    Honours ``_dont_update_taxable_value`` (resolver wants the net default, e.g. RSP).
+    First resolver row wins; qty-based cess_non_advol has no resolver.
     """
     resolvers = frappe.get_hooks("erpnext_taxable_base_resolvers") or {}
     if not resolvers:
@@ -32,12 +34,49 @@ def get_item_taxable_value(doc, item, default):
 
         method = path[-1] if isinstance(path, list | tuple) else path
         base = flt(frappe.get_attr(method)(frappe._dict(doc=doc), item, tax))
-        # taxable_value is company currency
+
+        if getattr(item, "_dont_update_taxable_value", None):
+            return default
+
         return base * flt(doc.get("conversion_rate") or 1)
 
     return default
 
 
+def _inclusive_rate(doc, tax):
+    """Total ad-valorem rate the base is inclusive of. CGST+SGST split into two rows is one
+    base inclusive of their sum, so add up rates across rows sharing this charge_type."""
+    rates = [flt(t.rate) for t in doc.get("taxes") or [] if t.charge_type == tax.charge_type]
+    return sum(rates) or flt(tax.rate)
+
+
 def on_mrp(calc, item, tax):
-    """Example resolver: GST on MRP (price list rate), not the net amount."""
-    return flt(item.price_list_rate) * flt(item.qty)
+    """Tobacco RSP, Rule 31D. RSP is tax-inclusive: tax = RSP*rate/(100+rate), deemed
+    assessable = RSP*100/(100+rate). Tax adds on top of the net sale value, which is what's
+    reported — so flag report-as-net and hand validation the deemed base.
+    """
+    rate = _inclusive_rate(calc.doc, tax)
+    rsp = flt(item.price_list_rate) * flt(item.qty)
+    deemed = rsp * 100 / (100 + rate) if rate else rsp
+
+    item._dont_update_taxable_value = True
+    item._deemed_taxable_value = deemed * (flt(calc.doc.get("conversion_rate")) or 1)
+
+    return deemed
+
+
+def on_margin(calc, item, tax):
+    """Second-hand margin scheme, Rule 32(5), GST inclusive in margin. Only the margin
+    (selling - cost) is taxable; deemed = margin*100/(100+rate), reported as taxable value
+    (tax == rate*taxable holds), balance becomes other charges. Negative margin -> 0.
+
+    Cost from valuation_rate (Delivery Note) / incoming_rate (Sales Invoice); swap for a
+    dedicated field if that isn't the acquisition cost.
+    """
+    rate = _inclusive_rate(calc.doc, tax)
+    cost = flt(item.get("valuation_rate") or item.get("incoming_rate")) * flt(item.qty)
+    margin = flt(item.amount) - cost
+    if margin < 0:
+        margin = 0
+
+    return margin * 100 / (100 + rate) if rate else margin
