@@ -47,7 +47,7 @@ frappe.query_reports["ISD Invoice Register"] = {
             depends_on: 'eval:doc.report_view === "Purchase Invoice"',
             get_query() {
                 const company = frappe.query_report.get_filter_value("company");
-                return india_compliance.get_gstin_query(company);
+                return india_compliance.get_gstin_query(company, "Company", false, true);
             },
         },
         {
@@ -57,7 +57,7 @@ frappe.query_reports["ISD Invoice Register"] = {
             depends_on: 'eval:doc.report_view === "ISD Invoice"',
             get_query() {
                 const company = frappe.query_report.get_filter_value("company");
-                return india_compliance.get_gstin_query(company);
+                return india_compliance.get_gstin_query(company, "Company", false, true);
             },
         },
         {

@@ -112,7 +112,7 @@ Object.assign(india_compliance, {
         });
     },
 
-    get_gstin_query(party, party_type = "Company", exclude_isd = false) {
+    get_gstin_query(party, party_type = "Company", exclude_isd = false, only_isd = false) {
         if (!party) {
             frappe.show_alert({
                 message: __("Please select {0} to get GSTIN options", [__(party_type)]),
@@ -123,7 +123,7 @@ Object.assign(india_compliance, {
 
         return {
             query: "india_compliance.gst_india.utils.get_gstin_list",
-            params: { party, party_type, exclude_isd },
+            params: { party, party_type, exclude_isd, only_isd },
         };
     },
 
