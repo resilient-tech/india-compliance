@@ -174,8 +174,10 @@ class ISDInvoice(Document):
             )
 
     def validate_gst_account_types(self):
-        """Inter-state distribution may only use IGST; intra-state may only use CGST/SGST."""
-        forbidden = ("cgst", "sgst") if is_inter_state_distribution(self) else ("igst",)
+        """Inter-state distribution collapses all credit to IGST, so CGST/SGST are forbidden.
+        Intra-state keeps each credit's type (IGST credit stays IGST, CGST/SGST stay CGST/SGST
+        per Rule 39(1)(e), (f)), so no tax type is forbidden."""
+        forbidden = ("cgst", "sgst") if is_inter_state_distribution(self) else ()
         for tax in self.taxes:
             if tax.tax_amount and tax.gst_tax_type in forbidden:
                 frappe.throw(

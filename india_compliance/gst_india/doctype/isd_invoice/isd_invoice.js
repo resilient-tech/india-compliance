@@ -474,48 +474,42 @@ class ISDInvoiceController {
     _calculate_distribution_row(row, is_inter_state) {
         const sign = this.frm.doc.is_credit_note ? -1 : 1;
         const ratio = (sign * (row.distribution_ratio || 0)) / 100;
-        const prec = precision("distributed_igst", row);
+        const _precision = precision("distributed_igst", row);
 
-        // the whole input credit pool is re-laid-out to match the ISD -> recipient supply:
-        // inter-state -> all IGST; intra-state -> CGST + SGST (equal halves, since the rates are equal)
-        const pool = flt(
-            ((row.total_cgst || 0) + (row.total_sgst || 0) + (row.total_igst || 0)) * ratio,
-            prec,
-        );
-
+        // inter-state -> all credit collapses to IGST; intra-state -> IGST stays IGST, CGST/SGST stay CGST/SGST
         if (is_inter_state) {
+            const pool = flt(
+                ((row.total_cgst || 0) + (row.total_sgst || 0) + (row.total_igst || 0)) * ratio,
+                _precision,
+            );
             row.distributed_igst = pool;
             row.distributed_cgst = 0;
             row.distributed_sgst = 0;
         } else {
-            const cgst = flt(pool / 2, prec);
-            row.distributed_cgst = cgst;
-            row.distributed_sgst = flt(pool - cgst, prec);
-            row.distributed_igst = 0;
+            row.distributed_igst = flt((row.total_igst || 0) * ratio, _precision);
+            row.distributed_cgst = flt((row.total_cgst || 0) * ratio, _precision);
+            row.distributed_sgst = flt((row.total_sgst || 0) * ratio, _precision);
         }
 
-        row.distributed_cess = flt((row.total_cess || 0) * ratio, prec);
-        row.distributed_cess_non_advol = flt((row.total_cess_non_advol || 0) * ratio, prec);
+        row.distributed_cess = flt((row.total_cess || 0) * ratio, _precision);
+        row.distributed_cess_non_advol = flt((row.total_cess_non_advol || 0) * ratio, _precision);
     }
 
     // Re-lay-out already-distributed amounts when the supply flips inter/intra (address change).
-    // The total distributed credit (pool) is preserved; only its CGST/SGST/IGST layout changes.
     _shift_distributed_taxes_for_state(row, is_inter_state) {
-        const prec = precision("distributed_igst", row);
-        const pool = flt(
-            (row.distributed_igst || 0) + (row.distributed_cgst || 0) + (row.distributed_sgst || 0),
-            prec,
-        );
-
+        const tax_precision = precision("distributed_igst", row);
         if (is_inter_state) {
-            row.distributed_igst = pool;
+            // all credit collapses to IGST (Rule 39(1)(g)); pool the existing distributed amounts
+            row.distributed_igst = flt(
+                (row.distributed_igst || 0) + (row.distributed_cgst || 0) + (row.distributed_sgst || 0),
+                tax_precision,
+            );
             row.distributed_cgst = 0;
             row.distributed_sgst = 0;
         } else {
-            const cgst = flt(pool / 2, prec);
-            row.distributed_cgst = cgst;
-            row.distributed_sgst = flt(pool - cgst, prec);
-            row.distributed_igst = 0;
+            // each credit keeps its type (Rule 39(1)(e), (f)); the per-type split can only be
+            // recovered from total_*, so recompute the row from the source PI proportions
+            this._calculate_distribution_row(row, is_inter_state);
         }
     }
 

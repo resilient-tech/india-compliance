@@ -6,6 +6,7 @@ import re
 import frappe
 from erpnext.accounts.utils import get_fiscal_year
 from frappe.tests import IntegrationTestCase
+from frappe.utils import flt
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.company import create_company_fixtures
@@ -332,8 +333,9 @@ class TestISDInvoice(IntegrationTestCase):
                 self.assertEqual(row.distributed_sgst, 0)
                 self.assertGreater(row.distributed_igst, 0)
 
-    def test_igst_input_distributed_intra_state_as_cgst_sgst(self):
-        """An IGST-input PI distributed intra-state is re-laid-out as equal CGST + SGST, no IGST."""
+    def test_igst_input_distributed_intra_state_stays_igst(self):
+        """An IGST-input PI distributed intra-state retains its IGST credit (Rule 39(1)(e)),
+        it is NOT re-laid-out as CGST/SGST."""
         from india_compliance.gst_india.utils.isd import calculate_distribution
 
         # intra-state: company (ISD) and party both in Gujarat
@@ -352,12 +354,12 @@ class TestISDInvoice(IntegrationTestCase):
             },
         )
 
-        calculate_distribution(doc, 100)
+        calculate_distribution(doc, {})
 
         row = doc.source_invoices[0]
-        self.assertEqual(row.distributed_igst, 0)
-        self.assertEqual(row.distributed_cgst, 9000)
-        self.assertEqual(row.distributed_sgst, 9000)
+        self.assertEqual(flt(row.distributed_igst), 18000)
+        self.assertEqual(flt(row.distributed_cgst), 0)
+        self.assertEqual(flt(row.distributed_sgst), 0)
 
     def test_only_service_item_taxes_in_get_purchase_invoices(self):
         """is_isd_applicable set to 1 on PI with mixed service + goods items at ISD billing address.
