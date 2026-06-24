@@ -25,7 +25,11 @@ from frappe.utils import add_days, flt, getdate, today
 from parameterized import parameterized_class
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
-from india_compliance.gst_india.overrides.taxable_value import get_item_taxable_value
+from india_compliance.gst_india.overrides.taxable_value import (
+    get_item_taxable_value,
+    on_margin,
+    on_mrp,
+)
 from india_compliance.gst_india.overrides.transaction import (
     ADDRESS_DEPENDENT_FIELDS,
     DOCTYPES_WITH_GST_DETAIL,
@@ -1610,9 +1614,9 @@ class TestSpecificTransactions(IntegrationTestCase):
         {"allow_multi_currency_invoices_against_single_party_account": 1},
     )
     def test_multicurrency_taxable_value_on_mrp(self):
-        """GST on MRP on a USD export invoice. taxable_value is company currency, so the
-        transaction-currency resolver base is scaled by conversion_rate — else
-        update_gst_details' validate throws an IGST amount mismatch."""
+        """Tobacco RSP ("On MRP") on a USD export invoice. The reported taxable value is the
+        net sale value (company currency), while IGST is computed on the RSP-deemed base —
+        decoupled, and validated against the deemed base (else update_gst_details throws)."""
         _create_currency_exchange("USD", "INR", 80)
 
         doc = create_transaction(
@@ -1621,37 +1625,69 @@ class TestSpecificTransactions(IntegrationTestCase):
             party_name="_Test Foreign Customer",
             currency="USD",
             is_export_with_gst=1,
-            is_out_state=1,  # IGST 18%
+            is_out_state=1,
             rate=100,
             do_not_save=True,
         )
-        doc.items[0].price_list_rate = 120  # MRP in transaction currency
+        doc.items[0].price_list_rate = 120
         for tax in doc.taxes:
             tax.charge_type = "On MRP"
 
-        doc.insert()  # runs update_taxable_values + update_gst_details + validate
+        doc.insert()
 
         item = doc.items[0]
         self.assertEqual(flt(doc.conversion_rate), 80)
-        self.assertEqual(item.taxable_value, flt(item.price_list_rate * item.qty * doc.conversion_rate))
-        self.assertEqual(item.igst_amount, flt(item.taxable_value * 18 / 100))
+        self.assertEqual(item.taxable_value, flt(item.base_net_amount))
+        self.assertTrue(getattr(item, "_deemed_taxable_value", None))
+        self.assertAlmostEqual(item.igst_amount, flt(item._deemed_taxable_value) * 18 / 100, delta=1)
+        self.assertGreater(item.igst_amount, flt(item.taxable_value * 18 / 100))
 
-    def test_get_item_taxable_value_scales_resolver_base(self):
-        # Resolver base is transaction currency; scaled to company currency by conversion_rate.
-        tax = frappe._dict(gst_tax_type="igst", charge_type="On MRP")
+    def test_on_mrp_resolver_rsp_deemed_value_and_flags(self):
+        # RSP 500 @ 40% (inclusive): tax = 500*40/140 = 142.86, deemed = 500*100/140 = 357.14.
+        calc = frappe._dict(doc=frappe._dict(conversion_rate=1))
+        tax = frappe._dict(charge_type="On MRP", rate=40)
+        item = frappe._dict(price_list_rate=500, qty=1)
+
+        self.assertAlmostEqual(on_mrp(calc, item, tax), 500 * 100 / 140, places=4)
+        # resolver flags: report net (not the deemed base), and hand validation the deemed base
+        self.assertTrue(item._dont_update_taxable_value)
+        self.assertAlmostEqual(item._deemed_taxable_value, 500 * 100 / 140, places=4)
+
+    def test_on_margin_resolver_inclusive_deemed_margin(self):
+        calc = frappe._dict(doc=frappe._dict(conversion_rate=1))
+        tax = frappe._dict(charge_type="On Margin", rate=18)
+
+        # margin 50000 (300000 - 250000) inclusive of 18% -> deemed = 50000*100/118
+        item = frappe._dict(amount=300000, valuation_rate=250000, qty=1)
+        self.assertAlmostEqual(on_margin(calc, item, tax), 50000 * 100 / 118, places=4)
+
+        # negative margin is ignored
+        loss = frappe._dict(amount=100000, valuation_rate=250000, qty=1)
+        self.assertEqual(on_margin(calc, loss, tax), 0)
+
+    def test_get_item_taxable_value_respects_dont_update_flag(self):
+        # RSP resolver sets _dont_update_taxable_value -> reported value is the default (net).
+        tax = frappe._dict(gst_tax_type="igst", charge_type="On MRP", rate=18)
         item = frappe._dict(price_list_rate=120, qty=1)
+        doc = frappe._dict(conversion_rate=80, taxes=[tax])
 
-        single = frappe._dict(conversion_rate=1, taxes=[tax])
-        self.assertEqual(get_item_taxable_value(single, item, 0), 120)
+        self.assertEqual(get_item_taxable_value(doc, item, 8000), 8000)
+        self.assertTrue(item._dont_update_taxable_value)
+        self.assertAlmostEqual(item._deemed_taxable_value, 120 * 100 / 118 * 80, places=4)
 
-        multi = frappe._dict(conversion_rate=80, taxes=[tax])
-        self.assertEqual(get_item_taxable_value(multi, item, 0), 9600)
+        # Margin resolver has no flag -> reported value is the resolved (deemed margin) base.
+        margin_tax = frappe._dict(gst_tax_type="igst", charge_type="On Margin", rate=18)
+        margin_item = frappe._dict(amount=300000, valuation_rate=250000, qty=1)
+        margin_doc = frappe._dict(conversion_rate=1, taxes=[margin_tax])
+        self.assertAlmostEqual(
+            get_item_taxable_value(margin_doc, margin_item, 0), 50000 * 100 / 118, places=4
+        )
 
         # No resolver charge_type -> default
         plain = frappe._dict(
             conversion_rate=80, taxes=[frappe._dict(gst_tax_type="igst", charge_type="On Net Total")]
         )
-        self.assertEqual(get_item_taxable_value(plain, item, 555), 555)
+        self.assertEqual(get_item_taxable_value(plain, frappe._dict(price_list_rate=120, qty=1), 555), 555)
 
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
