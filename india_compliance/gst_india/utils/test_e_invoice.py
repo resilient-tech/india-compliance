@@ -29,6 +29,7 @@ from india_compliance.gst_india.utils.e_waybill import EWaybillData
 from india_compliance.gst_india.utils.tests import (
     append_item,
     create_sales_invoice,
+    enable_custom_gst_charge_types,
 )
 
 
@@ -58,6 +59,7 @@ class EInvoiceTestMixin:
             )
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
+        enable_custom_gst_charge_types()
 
     def _mock_e_invoice_response(self, data, api="ei/api/invoice"):
         """Mock response for e-Invoice API"""
@@ -741,7 +743,7 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
             do_not_save=True,
         )
-        si.items[0].price_list_rate = 118
+        si.items[0].gst_retail_sale_price = 118
         for tax in si.taxes:
             tax.charge_type = "On MRP"
         si.insert()
@@ -776,7 +778,7 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
             do_not_save=True,
         )
-        si.items[0].incoming_rate = 182
+        si.items[0].gst_purchase_price = 182
         si.items[0].allow_zero_valuation_rate = 1
         for tax in si.taxes:
             tax.charge_type = "On Margin"
@@ -812,7 +814,7 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
             do_not_save=True,
         )
-        si.items[0].incoming_rate = 182
+        si.items[0].gst_purchase_price = 182
         si.items[0].allow_zero_valuation_rate = 1
         for tax in si.taxes:
             tax.charge_type = "On Margin"
@@ -848,7 +850,7 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
             do_not_save=True,
         )
-        si.items[0].incoming_rate = 182
+        si.items[0].gst_purchase_price = 182
         si.items[0].allow_zero_valuation_rate = 1
         for tax in si.taxes:
             tax.charge_type = "On Margin"

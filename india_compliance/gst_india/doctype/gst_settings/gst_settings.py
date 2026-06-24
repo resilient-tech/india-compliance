@@ -15,6 +15,8 @@ from india_compliance.gst_india.constants import (
 from india_compliance.gst_india.constants.custom_fields import (
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
+    MARGIN_FIELDS,
+    RSP_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
@@ -216,6 +218,19 @@ class GSTSettings(Document):
 
         if self.has_value_changed("enable_reverse_charge_in_sales"):
             toggle_custom_fields(SALES_REVERSE_CHARGE_FIELDS, self.enable_reverse_charge_in_sales)
+
+        if self.has_value_changed("enable_taxes_on_mrp"):
+            toggle_custom_fields(RSP_FIELDS, self.enable_taxes_on_mrp)
+
+        if self.has_value_changed("enable_margin_scheme"):
+            toggle_custom_fields(MARGIN_FIELDS, self.enable_margin_scheme)
+
+        if self.has_value_changed("enable_taxes_on_mrp") or self.has_value_changed("enable_margin_scheme"):
+            from india_compliance.gst_india.setup.property_setters import (
+                toggle_charge_type_options,
+            )
+
+            toggle_charge_type_options(self)
 
     def validate_e_invoice_applicability_date(self):
         if not self.enable_api or not self.enable_e_invoice:

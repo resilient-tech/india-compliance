@@ -1,6 +1,6 @@
 {
  "actions": [],
- "creation": "2022-06-29 07:45:13.261573",
+ "creation": "2026-06-24 21:01:16.863121",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -9,6 +9,8 @@
   "hsn_wise_tax_breakup",
   "enable_reverse_charge_in_sales",
   "enable_overseas_transactions",
+  "enable_taxes_on_mrp",
+  "enable_margin_scheme",
   "enable_sales_through_ecommerce_operators",
   "round_off_gst_values",
   "require_supplier_invoice_no",
@@ -253,6 +255,20 @@
    "fieldname": "enable_reverse_charge_in_sales",
    "fieldtype": "Check",
    "label": "Enable Reverse Charge in Sales Transactions"
+  },
+  {
+   "default": "0",
+   "description": "Adds the 'On MRP' charge type for RSP-based valuation (e.g. tobacco, Rule 31D). Enter the Retail Sale Price (MRP) per item row.",
+   "fieldname": "enable_taxes_on_mrp",
+   "fieldtype": "Check",
+   "label": "Enable Taxes on MRP"
+  },
+  {
+   "default": "0",
+   "description": "Adds the 'On Margin' charge type for the margin scheme (Rule 32(5)). Enter the Purchase Price per item row.",
+   "fieldname": "enable_margin_scheme",
+   "fieldtype": "Check",
+   "label": "Enable Margin Scheme"
   },
   {
    "default": "0",
@@ -654,7 +670,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-05-15 18:15:50.948178",
+ "modified": "2026-06-24 21:09:47.741833",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

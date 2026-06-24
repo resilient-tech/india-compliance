@@ -73,12 +73,6 @@ def get_property_setters(*, include_defaults=False):
             "property": "mandatory_depends_on",
             "value": "eval: gst_settings.require_supplier_invoice_no === 1 && doc.company_gstin",
         },
-        get_options_property_setter(
-            "Sales Taxes and Charges", "charge_type", ["On MRP", "On Margin"], prepend=False
-        ),
-        get_options_property_setter(
-            "Purchase Taxes and Charges", "charge_type", ["On MRP", "On Margin"], prepend=False
-        ),
         *PURCHASE_RECEIPT_PROPERTIES,
         *SUBCONTRACTING_RECEIPT_PROPERTIES,
         *ADDRESS_ALLOW_ON_SUBMIT_PROPERTIES,
@@ -89,6 +83,48 @@ def get_property_setters(*, include_defaults=False):
         properties.extend(DEFAULT_PROPERTIES)
 
     return properties
+
+
+GST_CHARGE_TYPE_SETTINGS = {
+    "On MRP": "enable_taxes_on_mrp",
+    "On Margin": "enable_margin_scheme",
+}
+
+
+def toggle_charge_type_options(settings):
+    doctype = "Sales Taxes and Charges"
+    enabled = [ct for ct, field in GST_CHARGE_TYPE_SETTINGS.items() if settings.get(field)]
+
+    # current effective options minus our managed ones (keeps native + anything user-added)
+    current = [o for o in frappe.get_meta(doctype).get_options("charge_type").split("\n") if o]
+    target = list(dict.fromkeys([o for o in current if o not in GST_CHARGE_TYPE_SETTINGS] + enabled))
+
+    native = frappe.db.get_value("DocField", {"parent": doctype, "fieldname": "charge_type"}, "options")
+    native = [o for o in (native or "").split("\n") if o]
+
+    existing = frappe.db.exists(
+        "Property Setter",
+        {"doc_type": doctype, "field_name": "charge_type", "property": "options"},
+    )
+
+    if set(target) == set(native):
+        # only native options left — drop our override instead of pinning them
+        if existing:
+            frappe.delete_doc("Property Setter", existing)
+            frappe.clear_cache(doctype=doctype)
+        return
+
+    frappe.make_property_setter(
+        {
+            "doctype": doctype,
+            "fieldname": "charge_type",
+            "property": "options",
+            "value": "\n".join(target),
+        },
+        validate_fields_for_doctype=False,
+        is_system_generated=True,
+    )
+    frappe.clear_cache(doctype=doctype)
 
 
 def get_options_property_setter(doctype, fieldname, new_options, prepend=True):
