@@ -372,7 +372,6 @@ class TestTransaction(IntegrationTestCase):
         purchase = supplier (re-synced here, so the supplier change alone flips it)."""
         doc = create_transaction(**self.transaction_details, is_in_state=True)
         doc.reload()
-        doc.load_doc_before_save()
 
         if self.is_sales_doctype:
             doc.customer_address = "_Test Registered Customer-Billing-3"  # Karnataka (29)
@@ -380,10 +379,10 @@ class TestTransaction(IntegrationTestCase):
         else:
             doc.supplier_address = "_Test Registered Supplier-Billing-3"  # Karnataka (29)
 
-        self.assertRaises(
+        self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            sync_address_dependent_fields_on_submit,
-            doc,
+            "Cannot charge CGST/SGST for inter-state supplies",
+            doc.save,
         )
 
     def test_block_pos_change_to_different_state_after_submit(self):
@@ -395,13 +394,12 @@ class TestTransaction(IntegrationTestCase):
         if doc.place_of_supply == "27-Maharashtra":
             return
 
-        doc.load_doc_before_save()
         doc.place_of_supply = "27-Maharashtra"
 
-        self.assertRaises(
+        self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            sync_address_dependent_fields_on_submit,
-            doc,
+            "Cannot charge CGST/SGST for inter-state supplies",
+            doc.save,
         )
 
     def test_allow_tax_neutral_pos_change_after_submit(self):
@@ -442,13 +440,12 @@ class TestTransaction(IntegrationTestCase):
             address_field = "supplier_address"
             new_address = "_Test Registered Supplier-Billing-2"
 
-        doc.load_doc_before_save()
         doc.set(address_field, new_address)
 
-        self.assertRaises(
+        self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            sync_address_dependent_fields_on_submit,
-            doc,
+            "GST Category cannot be set to",
+            doc.save,
         )
 
     def test_block_address_or_pos_change_when_ewaybill_or_irn_exists(self):
@@ -460,16 +457,15 @@ class TestTransaction(IntegrationTestCase):
 
         doc = create_transaction(**self.transaction_details)
         doc.reload()
-        doc.load_doc_before_save()
 
         # fake an e-Waybill / IRN, then a tax-neutral POS edit
         doc.set(ewb_field, "123456789012" if ewb_field == "ewaybill" else "a" * 64)
         doc.place_of_supply = "27-Maharashtra" if doc.place_of_supply != "27-Maharashtra" else "29-Karnataka"
 
-        self.assertRaises(
+        self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            sync_address_dependent_fields_on_submit,
-            doc,
+            "Cannot change the Place of Supply or address after the e-Waybill",
+            doc.save,
         )
 
     def test_validate_mandatory_gst_category(self):
@@ -971,6 +967,37 @@ class TestTransaction(IntegrationTestCase):
             doc.items[0],
         )
 
+    def test_gst_details_reset_when_transaction_becomes_ineligible(self):
+        taxable_gst_details = {
+            "cgst_rate": 9,
+            "sgst_rate": 9,
+            "cgst_amount": 18,
+            "sgst_amount": 18,
+            "gst_treatment": "Taxable",
+        }
+        ineligible_gst_details = {
+            "igst_rate": 0,
+            "cgst_rate": 0,
+            "sgst_rate": 0,
+            "igst_amount": 0,
+            "cgst_amount": 0,
+            "sgst_amount": 0,
+            "gst_treatment": "Nil-Rated",
+        }
+
+        doc = create_transaction(**self.transaction_details, rate=200, is_in_state=True, do_not_submit=True)
+        self.assertDocumentEqual(taxable_gst_details, doc.items[0])
+
+        # eligible -> ineligible: GST columns must reset
+        doc.is_opening = "Yes"
+        doc.save()
+        self.assertDocumentEqual(ineligible_gst_details, doc.items[0])
+
+        # ineligible -> eligible: GST columns must recompute
+        doc.is_opening = "No"
+        doc.save()
+        self.assertDocumentEqual(taxable_gst_details, doc.items[0])
+
     def test_invalid_item_gst_details(self):
         doc = create_transaction(**self.transaction_details, rate=200, is_out_state=True, do_not_save=True)
         # Address is required to avoid auto update of place of supply and taxes
@@ -1319,6 +1346,27 @@ class TestTransaction(IntegrationTestCase):
             re.compile(r"^(.*Tax amount should be positive for GST Account.*)$"),
             return_doc.save,
         )
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_validate_gst_refund_accounts_with_other_charges(self):
+        """
+        Non-GST charges (e.g. freight) must not be counted when checking that
+        the refund amount offsets the GST amount.
+        """
+        doc = create_refund_transaction()
+
+        doc.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Freight and Forwarding Charges - _TIRC",
+                "description": "Freight",
+                "tax_amount": 20,
+                "cost_center": "Main - _TIRC",
+            },
+        )
+
+        doc.save()
 
     def test_item_gst_details_for_non_gst_transactions(self):
         """

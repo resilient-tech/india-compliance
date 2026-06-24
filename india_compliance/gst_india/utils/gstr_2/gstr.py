@@ -10,6 +10,14 @@ def get_mapped_value(value, mapping):
     return mapping.get(value)
 
 
+def get_unique_key(transaction):
+    # Build the supplier_gstin-bill_no key used to match existing inward supplies.
+    supplier_gstin = transaction.get("supplier_gstin") or ""
+    bill_no = transaction.get("bill_no") or ""
+
+    return f"{supplier_gstin}-{bill_no}"
+
+
 class GSTR:
     # Maps of API keys to doctype fields
     KEY_MAPS = frappe._dict()
@@ -107,9 +115,7 @@ class GSTR:
         if transaction.get("items"):
             self.update_totals(transaction)
 
-        transaction["unique_key"] = (
-            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
-        )
+        transaction["unique_key"] = get_unique_key(transaction)
 
         return transaction
 

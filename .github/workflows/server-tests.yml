@@ -67,7 +67,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: dorny/paths-filter@v4
@@ -104,7 +104,7 @@ jobs:
 
     steps:
       - name: Clone
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -185,7 +185,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download artifacts
         uses: actions/download-artifact@v8
