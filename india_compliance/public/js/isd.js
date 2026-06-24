@@ -11,7 +11,7 @@ india_compliance.get_address_query = function (link_doctype, link_name, extra_fi
 };
 
 india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoice) {
-    // { purchase invoice name: { total_tax, available } } from the distribution summary
+    // { purchase invoice name: { supplier, posting_date, total_tax, available } } from the distribution summary
     let summary_by_pi = {};
     const company = purchase_invoice.company;
 
@@ -189,8 +189,6 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
             const { distribution_table = [], is_against_party, posting_date: posting_date } = values;
             const rows_with_turnover = distribution_table.filter((row) => row.turnover_amount);
 
-            console.log("posting date for primary action", posting_date);
-
             dialog.hide();
 
             const fiscal_year = erpnext.utils.get_fiscal_year(posting_date, company);
@@ -248,18 +246,17 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
         let total_tax = 0;
         let total_available = 0;
 
-        const rows_html = [purchase_invoice]
-            .map((pi) => {
-                const s = summary[pi.name] ?? {};
-                const tt = s.total_tax ?? pi.total_tax ?? 0;
+        const rows_html = Object.entries(summary)
+            .map(([pi_name, s]) => {
+                const tt = s.total_tax ?? 0;
                 const available = s.available ?? tt;
                 const pct = tt > 0 ? ((tt - available) / tt) * 100 : 0;
                 total_tax += tt;
                 total_available += available;
                 return `<tr>
-                    <td>${escape_html(pi.name)}</td>
-                    <td>${frappe.datetime.str_to_user(pi.posting_date)}</td>
-                    <td>${escape_html(pi.supplier)}</td>
+                    <td>${escape_html(pi_name)}</td>
+                    <td>${frappe.datetime.str_to_user(s.posting_date)}</td>
+                    <td>${escape_html(s.supplier)}</td>
                     <td style="text-align:right">${format_currency(tt, currency)}</td>
                     <td style="text-align:right">${format_currency(available, currency)}</td>
                     <td style="text-align:right">${pct.toFixed(2)}%</td>
@@ -305,13 +302,15 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
 
     frappe.call({
         method: "india_compliance.gst_india.utils.isd.get_purchase_invoices_distribution_summary",
-        args: { purchase_invoices: [purchase_invoice.name] },
+        args: { purchase_invoices: [purchase_invoice.name], extra_fields: ["supplier", "company"] },
         callback({ message: rows = [] }) {
-            const p = (v) => parseFloat(v) || 0;
+            const p = (v) => parseFloat(v) || 0; //common float parser
             summary_by_pi = {};
             rows.forEach((x) => {
                 const pi = x.purchase_invoice;
                 if (!summary_by_pi[pi]) summary_by_pi[pi] = { total_tax: 0, available: 0 };
+                summary_by_pi[pi].supplier = x.supplier;
+                summary_by_pi[pi].posting_date = x.posting_date;
                 summary_by_pi[pi].total_tax += p(x.total_tax);
                 summary_by_pi[pi].available += p(x.available_tax);
             });

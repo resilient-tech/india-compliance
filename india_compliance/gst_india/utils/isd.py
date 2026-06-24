@@ -405,10 +405,6 @@ def bulk_create_isd_invoices(
     if purchase_invoices and isinstance(purchase_invoices[0], dict):
         frappe.throw(_("Purchase Invoices must be passed as list of names, not full objects."))
 
-    _tax_precision = get_field_precision(
-        frappe.get_meta("ISD Invoice Source Item").get_field("distributed_igst")
-    )  # assuming every tax row have same precision
-
     # drop addresses with no turnover - they would distribute nothing
     distribution_table = [row for row in distribution_table if flt(row["turnover_amount"] or 0)]
 
