@@ -19,6 +19,7 @@ from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     IMSReconciler,
     InwardSupply,
     PurchaseInvoice,
+    apply_declared_overrides,
     defer_undeclarable_itc_reduction,
     set_declared_itc,
 )
@@ -146,7 +147,7 @@ class GSTInvoiceManagementSystem(Document):
         )
 
     @frappe.whitelist()
-    def update_action(self, invoice_names: str | list, action: str):
+    def update_action(self, invoice_names: str | list, action: str, declared_overrides=None):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         invoice_names = frappe.parse_json(invoice_names)
@@ -185,6 +186,12 @@ class GSTInvoiceManagementSystem(Document):
 
         # Store declared ITC reduction from books for specified records
         set_declared_itc(invoice_names, action)
+
+        # User corrections from the Phase 2 review dialog take precedence
+        if declared_overrides:
+            if isinstance(declared_overrides, str):
+                declared_overrides = frappe.parse_json(declared_overrides)
+            apply_declared_overrides(declared_overrides)
 
     @frappe.whitelist()
     def get_invoice_details(self, purchase_name: str | None, inward_supply_name: str | None):

@@ -256,6 +256,33 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual(cn.itc_reduction_required, 1)
         self.assertEqual(cn.declared_sgst, cn.declared_cgst)  # govt: CGST == SGST
 
+    def test_update_action_with_declared_overrides(self):
+        cn = create_gst_inward_supply(
+            bill_no="CN-IMS-OVERRIDE",
+            bill_date="2024-12-11",
+            classification="CDNR",
+            doc_type="Credit Note",
+            is_amended=0,
+            previous_ims_action="No Action",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-11",
+        )
+        self.addCleanup(self.delete_inward_supply, cn.name)
+        frappe.db.set_value(
+            "GST Inward Supply",
+            cn.name,
+            {"link_doctype": "Purchase Invoice", "link_name": self.pinv.name},
+        )
+
+        # document (supplier) tax is cgst = sgst = 900; override above supplier -> capped
+        overrides = {cn.name: {"igst": 0, "cgst": 5000, "sgst": 5000, "cess": 0}}
+        self.gst_ims.update_action((cn.name,), "Accepted", declared_overrides=overrides)
+
+        cn.reload()
+        self.assertEqual(cn.declared_cgst, 900)  # capped at document
+        self.assertEqual(cn.declared_sgst, cn.declared_cgst)  # govt: CGST == SGST
+        self.assertEqual(cn.itc_reduction_required, 1)
+
     def gov_invoice(self, **overrides):
         invoice = frappe._dict(
             {

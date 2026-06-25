@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.utils import flt
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
@@ -47,7 +48,19 @@ class InwardSupply:
         self.IMS = frappe.qb.DocType("GST Inward Supply")
 
     def get_all(self, company_gstin, names=None):
-        query = self.get_query(company_gstin, ["action", "doc_type"])
+        query = self.get_query(
+            company_gstin,
+            [
+                "action",
+                "doc_type",
+                "is_itc_reduction_blocked",
+                "itc_reduction_required",
+                "declared_igst",
+                "declared_cgst",
+                "declared_sgst",
+                "declared_cess",
+            ],
+        )
 
         if names:
             query = query.where(self.IMS.name.isin(names))
@@ -335,6 +348,38 @@ def _declared_from_books(document, book):
         "declared_cgst": declared["cgst"],
         "declared_sgst": declared["sgst"],
         "declared_cess": declared["cess"],
+    }
+
+
+def apply_declared_overrides(overrides):
+    """Store user-confirmed declared ITC from the Phase 2 review dialog."""
+    IMS = frappe.qb.DocType("GST Inward Supply")
+    rows = (
+        frappe.qb.from_(IMS)
+        .select(IMS.name, IMS.igst, IMS.cgst, IMS.sgst, IMS.cess)
+        .where(IMS.name.isin(list(overrides)))
+        .run(as_dict=True)
+    )
+    document = {row.name: row for row in rows}
+
+    for name, declared in overrides.items():
+        if doc := document.get(name):
+            frappe.db.set_value("GST Inward Supply", name, _clean_declared(doc, declared))
+
+
+def _clean_declared(document, declared):
+    values = {}
+    for head in ("igst", "cgst", "sgst", "cess"):
+        values[head] = min(flt(declared.get(head)), document.get(head) or 0)  # cap at document (usually less)
+
+    values["sgst"] = values["cgst"]  # govt: CGST must equal SGST
+
+    return {
+        "itc_reduction_required": 1 if any(values.values()) else 0,
+        "declared_igst": values["igst"],
+        "declared_cgst": values["cgst"],
+        "declared_sgst": values["sgst"],
+        "declared_cess": values["cess"],
     }
 
 

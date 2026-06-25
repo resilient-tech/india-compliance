@@ -914,31 +914,22 @@ function apply_bulk_action(frm, action) {
 }
 
 async function apply_action(frm, action, invoice_names) {
-    // Validate and Update JS
+    // Validate
     let pending_not_allowed = [];
     let accept_not_allowed = [];
     let supplier_return_not_filed = [];
-    let new_data = [];
 
     frm.reconciliation_tabs.data.forEach((row) => {
-        if (invoice_names.includes(row.inward_supply_name)) {
-            if (action === "Accepted" && !row.is_supplier_return_filed) {
-                supplier_return_not_filed.push(row.inward_supply_name);
-            }
-            if (!is_pending_allowed(row, action)) {
-                pending_not_allowed.push(row.inward_supply_name);
-            } else if (!is_accept_allowed(row, action)) {
-                accept_not_allowed.push(row.inward_supply_name);
-            } else {
-                row.ims_action = action;
+        if (!invoice_names.includes(row.inward_supply_name)) return;
 
-                // Update pending upload status
-                if (row.ims_action !== row.previous_ims_action) row.pending_upload = true;
-                else row.pending_upload = false;
-            }
+        if (action === "Accepted" && !row.is_supplier_return_filed) {
+            supplier_return_not_filed.push(row.inward_supply_name);
         }
-
-        new_data.push({ ...row });
+        if (!is_pending_allowed(row, action)) {
+            pending_not_allowed.push(row.inward_supply_name);
+        } else if (!is_accept_allowed(row, action)) {
+            accept_not_allowed.push(row.inward_supply_name);
+        }
     });
 
     invoice_names = invoice_names.filter(
@@ -974,9 +965,33 @@ async function apply_action(frm, action, invoice_names) {
         );
     }
 
-    // Update
-    frm._call("update_action", { invoice_names, action });
+    // Phase 2: review/correct declared ITC where books differ from supplier beyond rounding
+    if (action === "Accepted") {
+        const review_rows = frm.reconciliation_tabs.data.filter(
+            (row) => invoice_names.includes(row.inward_supply_name) && needs_itc_review(row),
+        );
+        if (review_rows.length) {
+            new ITCReductionDialog(frm, review_rows, (declared_overrides) =>
+                commit_action(frm, action, invoice_names, declared_overrides),
+            );
+            return;
+        }
+    }
 
+    commit_action(frm, action, invoice_names, null);
+}
+
+function commit_action(frm, action, invoice_names, declared_overrides) {
+    const new_data = [];
+    frm.reconciliation_tabs.data.forEach((row) => {
+        if (invoice_names.includes(row.inward_supply_name)) {
+            row.ims_action = action;
+            row.pending_upload = row.ims_action !== row.previous_ims_action;
+        }
+        new_data.push({ ...row });
+    });
+
+    frm._call("update_action", { invoice_names, action, declared_overrides });
     frm.reconciliation_tabs.refresh(new_data);
     frappe.show_alert({ message: "Action applied successfully", indicator: "green" });
 }
@@ -990,6 +1005,146 @@ function is_accept_allowed(row, action) {
     // "Accept" not allowed where Purchase is not linked
     if (action === "Accepted" && row.match_status === "Missing in PI") return false;
     return true;
+}
+
+const TAX_HEADS = ["igst", "cgst", "sgst", "cess"];
+
+function is_specified_row(row) {
+    // credit notes and downward amendments carry declared ITC
+    const classification = row._inward_supply.classification;
+    return row.doc_type === "Credit Note" || classification === "B2BA" || classification === "CDNRA";
+}
+
+function needs_itc_review(row) {
+    // matched specified record, govt allows declaration, books differ from supplier beyond rounding
+    if (!is_specified_row(row) || !row.purchase_invoice_name) return false;
+    if (row._inward_supply.is_itc_reduction_blocked) return false;
+
+    return TAX_HEADS.some(
+        (head) => Math.abs((row._purchase_invoice[head] || 0) - (row._inward_supply[head] || 0)) > 1,
+    );
+}
+
+function declared_default(row, head) {
+    // books value, capped at supplier (usually less only)
+    return Math.min(row._purchase_invoice[head] || 0, row._inward_supply[head] || 0);
+}
+
+class ITCReductionDialog {
+    constructor(frm, rows, on_confirm) {
+        this.frm = frm;
+        this.rows = rows;
+        this.on_confirm = on_confirm;
+        this.render();
+    }
+
+    render() {
+        this.dialog = new frappe.ui.Dialog({
+            title: __("Declare ITC Reduction"),
+            size: "extra-large",
+            fields: [
+                {
+                    fieldtype: "HTML",
+                    fieldname: "help",
+                    options: `<p class="text-muted">${__(
+                        "Books and supplier values differ for these records. Review the ITC to reduce. CGST and SGST are kept equal and values cannot exceed the supplier's tax.",
+                    )}</p>`,
+                },
+                { fieldtype: "HTML", fieldname: "itc_table" },
+            ],
+            primary_action_label: __("Confirm & Apply"),
+            primary_action: () => this.confirm(),
+        });
+
+        this.$table = this.dialog.fields_dict.itc_table.$wrapper;
+        this.$table.html(this.get_table_html());
+        this.setup_listeners();
+        this.dialog.show();
+    }
+
+    get_table_html() {
+        const label = { igst: "IGST", cgst: "CGST", sgst: "SGST", cess: "Cess" };
+        const head_cells = TAX_HEADS.map(
+            (head) => `<th class="text-right">${__("Declared")} ${label[head]}</th>`,
+        ).join("");
+
+        const body = this.rows
+            .map((row, index) => {
+                const cells = TAX_HEADS.map((head) => {
+                    const supplier = row._inward_supply[head] || 0;
+                    const books = row._purchase_invoice[head] || 0;
+                    return `<td class="text-right">
+                        <input type="number" class="form-control declared-input" data-row="${index}"
+                            data-head="${head}" min="0" max="${supplier}" value="${declared_default(row, head)}"
+                            style="text-align:right; min-width: 90px;">
+                        <small class="text-muted">${__("books")} ${format_number(books)} · ${__("doc")} ${format_number(supplier)}</small>
+                    </td>`;
+                }).join("");
+
+                return `<tr><td>${row.supplier_name || ""}<br><small>${row.bill_no || ""}</small></td>${cells}</tr>`;
+            })
+            .join("");
+
+        return `
+            <div class="mb-2">
+                <button class="btn btn-xs btn-default" data-fill="books">${__("Use books value (all)")}</button>
+                <button class="btn btn-xs btn-default" data-fill="document">${__("Use supplier value (all)")}</button>
+            </div>
+            <div style="max-height: 50vh; overflow: auto;">
+                <table class="table table-bordered">
+                    <thead><tr><th>${__("Supplier / Bill")}</th>${head_cells}</tr></thead>
+                    <tbody>${body}</tbody>
+                </table>
+            </div>`;
+    }
+
+    setup_listeners() {
+        // clamp to supplier value; keep CGST and SGST equal
+        this.$table.on("change", ".declared-input", (e) => {
+            const $input = $(e.currentTarget);
+            let value = Math.min(Math.max(flt($input.val()), 0), flt($input.attr("max")));
+            $input.val(value);
+
+            const head = $input.data("head");
+            if (head === "cgst" || head === "sgst") {
+                const mirror = head === "cgst" ? "sgst" : "cgst";
+                const $mirror = this.$input($input.data("row"), mirror);
+                $mirror.val(Math.min(value, flt($mirror.attr("max"))));
+            }
+        });
+
+        this.$table.on("click", "[data-fill]", (e) => {
+            e.preventDefault();
+            const source = $(e.currentTarget).data("fill");
+            this.rows.forEach((row, index) => {
+                TAX_HEADS.forEach((head) => {
+                    const supplier = row._inward_supply[head] || 0;
+                    const value = source === "books" ? declared_default(row, head) : supplier;
+                    this.$input(index, head).val(value);
+                });
+            });
+        });
+    }
+
+    $input(index, head) {
+        return this.$table.find(`.declared-input[data-row='${index}'][data-head='${head}']`);
+    }
+
+    confirm() {
+        const overrides = {};
+        this.rows.forEach((row, index) => {
+            const declared = {};
+            TAX_HEADS.forEach((head) => {
+                const supplier = row._inward_supply[head] || 0;
+                declared[head] = Math.min(flt(this.$input(index, head).val()), supplier);
+            });
+            declared.sgst = declared.cgst; // govt: CGST == SGST
+            overrides[row.inward_supply_name] = declared;
+        });
+
+        this.dialog.hide();
+        this.on_confirm(overrides);
+    }
 }
 
 function get_icon(value, column, data) {
