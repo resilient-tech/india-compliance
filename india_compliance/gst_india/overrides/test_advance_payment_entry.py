@@ -18,8 +18,10 @@ from erpnext.controllers.accounts_controller import (
 )
 from erpnext.controllers.stock_controller import show_accounting_ledger_preview
 from frappe.tests import IntegrationTestCase
-from frappe.utils import flt
+from frappe.utils import flt, getdate
 
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
+from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
 from india_compliance.gst_india.utils.tests import create_transaction
 
 
@@ -748,6 +750,12 @@ class TestPaymentReconciliationMatrix(IntegrationTestCase):
             {invoice_doc.name: inv_pl, payment_doc.name: pe_pl},
         )
 
+        # --- GSTR-1 advance reporting (11A received / 11B adjusted) ---
+        # taxable values must be NET of GST however inclusivity is entered:
+        # 11A = full advance base 500 @ 18%; 11B = net adjusted 100 @ 18% (negative).
+        # (gross paid 590 of an inclusive advance would wrongly report rate 15%.)
+        self._assert_advance_report(payment_doc, received=500.0, adjusted=-100.0)
+
         # --- unreconcile round-trip: ledgers return to the pure-advance snapshot ---
         self._unreconcile(payment_doc, invoice_doc)
         self.assertEqual(self._gl_net_by_account(payment_doc), advance_gl, "GL should revert on unreconcile")
@@ -757,6 +765,9 @@ class TestPaymentReconciliationMatrix(IntegrationTestCase):
             118.0,
             "invoice outstanding should be restored on unreconcile",
         )
+
+        # 11A still shows the (now partly adjusted) advance; the 11B adjustment is gone
+        self._assert_advance_report(payment_doc, received=500.0, adjusted=None)
 
     # ---- builders ----
 
@@ -828,6 +839,42 @@ class TestPaymentReconciliationMatrix(IntegrationTestCase):
                 ]
             )
         )
+
+    # ---- GSTR-1 advance reporting helpers (11A received / 11B adjusted) ----
+
+    def _assert_advance_report(self, payment_doc, received, adjusted):
+        books = GSTR1BooksData(
+            filters=frappe._dict(
+                company=payment_doc.company,
+                company_gstin=payment_doc.company_gstin,
+                from_date=getdate(),
+                to_date=getdate(),
+            )
+        )
+
+        # 11A Advances Received: full advance base, reported net of GST
+        self._assert_advance_row(books.prepare_advances_recevied_data(), payment_doc.name, received)
+        # 11B Advances Adjusted: net adjusted base, reported negative
+        self._assert_advance_row(books.prepare_advances_adjusted_data(), payment_doc.name, adjusted)
+
+    def _assert_advance_row(self, prepared, payment_name, taxable_value):
+        row = next(
+            (r for rows in prepared.values() for r in rows if r[inv_f.DOC_NUMBER] == payment_name),
+            None,
+        )
+
+        if taxable_value is None:
+            self.assertIsNone(row, f"no advance row expected for {payment_name}")
+            return
+
+        self.assertIsNotNone(row, f"advance row expected for {payment_name}")
+        self.assertEqual(row[inv_f.TAX_RATE], 18)
+        self.assertEqual(flt(row[inv_f.TAXABLE_VALUE], 2), taxable_value)
+        # intra-state @ 18% => CGST 9% + SGST 9%, no IGST/cess
+        self.assertEqual(flt(row[inv_f.CGST], 2), flt(taxable_value * 0.09, 2))
+        self.assertEqual(flt(row[inv_f.SGST], 2), flt(taxable_value * 0.09, 2))
+        self.assertEqual(flt(row[inv_f.IGST], 2), 0.0)
+        self.assertEqual(flt(row[inv_f.CESS], 2), 0.0)
 
     # ---- ledger helpers (net per account / per against-voucher, drops zero nets) ----
 
