@@ -51,10 +51,10 @@
    "fieldtype": "Column Break"
   },
   {
+   "columns": 2,
    "default": "0",
    "fetch_from": "item.is_ineligible_for_itc",
    "fetch_if_empty": 1,
-   "columns": 2,
    "fieldname": "is_ineligible_for_itc",
    "fieldtype": "Check",
    "in_list_view": 1,
@@ -168,7 +168,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-06-17 10:09:25.194720",
+ "modified": "2026-06-25 16:21:49.332410",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Invoice Source Item",

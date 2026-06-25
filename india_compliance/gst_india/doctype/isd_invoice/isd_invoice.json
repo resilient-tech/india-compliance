@@ -194,13 +194,13 @@
    "options": "Account"
   },
   {
-    "depends_on": "eval:(!doc.party_gstin && !doc.is_against_party)",
-    "fieldname": "expense_account",
-    "fieldtype": "Link",
-    "label": "Expense Account",
-    "mandatory_depends_on": "eval:(!doc.party_gstin && !doc.is_against_party)",
-    "options": "Account"
- },
+   "depends_on": "eval:(!doc.party_gstin && !doc.is_against_party)",
+   "fieldname": "expense_account",
+   "fieldtype": "Link",
+   "label": "Expense Account",
+   "mandatory_depends_on": "eval:(!doc.party_gstin && !doc.is_against_party)",
+   "options": "Account"
+  },
   {
    "fieldname": "column_break_glsb",
    "fieldtype": "Column Break"
@@ -393,7 +393,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-22 11:45:06.737106",
+ "modified": "2026-06-25 16:21:21.852683",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Invoice",
