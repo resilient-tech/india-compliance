@@ -332,6 +332,11 @@ class TestISDInvoice(IntegrationTestCase):
                 self.assertEqual(row.distributed_cgst, 0)
                 self.assertEqual(row.distributed_sgst, 0)
                 self.assertGreater(row.distributed_igst, 0)
+                # single recipient => 100%: CGST + SGST + IGST all collapse into IGST (Rule 39)
+                self.assertEqual(
+                    flt(row.distributed_igst),
+                    flt(row.total_cgst + row.total_sgst + row.total_igst),
+                )
 
     def test_igst_input_distributed_intra_state_stays_igst(self):
         """An IGST-input PI distributed intra-state retains its IGST credit (Rule 39(1)(e)),
@@ -630,7 +635,7 @@ class TestISDInvoice(IntegrationTestCase):
         return frappe.get_all(
             "GL Entry",
             filters={"voucher_type": "ISD Invoice", "voucher_no": isd_name, "is_cancelled": 0},
-            fields=["account", "debit", "credit", "company_gstin"],
+            fields=["account", "debit", "credit", "company_gstin", "cost_center"],
         )
 
     def test_gl_entries_reversed_on_cancel(self):
@@ -651,6 +656,55 @@ class TestISDInvoice(IntegrationTestCase):
         self.assertEqual(
             flt(frappe.db.get_value("Purchase Invoice", pi.name, "isd_credit_distributed_percent")), 0
         )
+
+    def test_partial_distribution_cancel_rolls_back_pi_percent(self):
+        """Cancelling one of several ISD invoices for a PI rolls its distributed % back to the rest,
+        and the cancelled invoice's GL is reversed (not left live)."""
+        pi = _std_service_pi(self.company.name, self.company_isd_address.name, qty=100, rate=1000)
+
+        isd1 = self._isd(source_item=_make_source_item(pi, 50))
+        isd1.insert(ignore_permissions=True)
+        isd1.submit()
+        isd2 = self._isd(source_item=_make_source_item(pi, 40))
+        isd2.insert(ignore_permissions=True)
+        isd2.submit()
+
+        percent = lambda: flt(  # noqa: E731
+            frappe.db.get_value("Purchase Invoice", pi.name, "isd_credit_distributed_percent")
+        )
+        self.assertEqual(percent(), 90)
+
+        isd2.cancel()
+
+        self.assertEqual(percent(), 50)  # only isd1's 50% remains
+        self.assertFalse(self._live_gl_entries(isd2.name), "GL entries not reversed on cancel")
+
+    def test_gl_entries_against_party_distribution_debits_party_account(self):
+        """Against-party distribution: input GST is credited under the ISD GSTIN and the party account
+        (Payable, for a Supplier) is debited under the party GSTIN; debits == credits."""
+        pi = _std_service_pi(self.company.name, self.company_isd_address.name, qty=100, rate=1000)
+        party_address = frappe.db.get_value("Supplier", self.supplier_branch.name, "supplier_primary_address")
+        isd = self._isd(
+            is_against_party=1,
+            party_type="Supplier",
+            party=self.supplier_branch.name,
+            party_address=party_address,
+            source_item=_make_source_item(pi, 100),
+        )
+        isd.credit_flow = "Credit Distribution"
+        isd.insert(ignore_permissions=True)
+        isd.submit()
+
+        gl = self._live_gl_entries(isd.name)
+        self.assertTrue(gl)
+        self.assertEqual(sum(g.debit for g in gl), sum(g.credit for g in gl))
+
+        party_debit = [g for g in gl if g.account == isd.party_account]
+        self.assertTrue(party_debit, "party account not booked")
+        self.assertTrue(all(g.debit and not g.credit for g in party_debit))
+        self.assertTrue(all(g.company_gstin == _SUPPLIER_2_GSTIN for g in party_debit))
+        # the Supplier party account must be a Payable account
+        self.assertEqual(frappe.db.get_value("Account", isd.party_account, "account_type"), "Payable")
 
     def test_gl_entries_unregistered_recipient_uses_expense_account(self):
         """Unregistered recipient: input GST credited at the ISD GSTIN, debited to GST Expense (no GSTIN)."""
@@ -700,6 +754,23 @@ class TestISDInvoice(IntegrationTestCase):
         self.assertRaisesRegex(
             frappe.ValidationError, "does not belong to Company", lambda: isd.insert(ignore_permissions=True)
         )
+
+    def test_unregistered_recipient_defaults_cost_center_in_gl(self):
+        """The unregistered-recipient credit books to a P&L GST Expense account; like Sales/Purchase
+        Invoice, its GL entry falls back to the company default cost center so submit doesn't fail
+        with a raw GL error."""
+        pi = _std_service_pi(self.company.name, self.company_isd_address.name, qty=10, rate=1000)
+        isd = self._isd(
+            party_address=self.company_unregistered_address.name,
+            source_item=_make_source_item(pi, 100),
+        )
+        isd.insert(ignore_permissions=True)
+        isd.submit()  # must not raise "Cost Center is mandatory for P&L account"
+
+        default_cc = frappe.db.get_value("Company", self.company.name, "cost_center")
+        expense_gl = [g for g in self._live_gl_entries(isd.name) if g.account == isd.expense_account]
+        self.assertTrue(expense_gl)
+        self.assertTrue(all(g.cost_center == default_cc for g in expense_gl))
 
     def test_party_account_must_match_party_type(self):
         """Party Account must be a Balance Sheet account of the matching type (like Sales/Purchase)."""
