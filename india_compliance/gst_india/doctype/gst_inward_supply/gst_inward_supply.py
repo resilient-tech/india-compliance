@@ -49,6 +49,7 @@ def create_inward_supply(transaction):
 
     if name := frappe.get_value("GST Inward Supply", filters):
         gst_inward_supply = frappe.get_doc("GST Inward Supply", name)
+        preserve_pending_itc_declaration(gst_inward_supply, transaction)
     else:
         gst_inward_supply = frappe.new_doc("GST Inward Supply")
 
@@ -56,6 +57,22 @@ def create_inward_supply(transaction):
 
     gst_inward_supply.update(transaction)
     return gst_inward_supply.save(ignore_permissions=True)
+
+
+def preserve_pending_itc_declaration(existing, transaction):
+    """Keep the user's un-uploaded declared ITC; portal returns stale values until upload."""
+    if not existing.ims_action or existing.ims_action == existing.previous_ims_action:
+        return
+
+    for field in (
+        "itc_reduction_required",
+        "declared_igst",
+        "declared_cgst",
+        "declared_sgst",
+        "declared_cess",
+        "remarks",
+    ):
+        transaction.pop(field, None)
 
 
 def update_reco_action(linked_doc, reco_action, transaction):

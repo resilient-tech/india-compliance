@@ -6,6 +6,7 @@ from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_to_date
 
 from india_compliance.gst_india.doctype.gst_invoice_management_system import (
+    PurchaseInvoice,
     _declared_from_books,
     defer_undeclarable_itc_reduction,
     set_declared_itc,
@@ -15,6 +16,9 @@ from india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoic
     get_data_for_upload,
     get_period_options,
     update_previous_ims_action,
+)
+from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
+    preserve_pending_itc_declaration,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.test_purchase_reconciliation_tool import (
     create_gst_inward_supply,
@@ -250,11 +254,34 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             {"link_doctype": "Purchase Invoice", "link_name": self.pinv.name},
         )
 
+        # expected declared = linked PI tax reconciled against the credit note's own tax
+        document = {head: cn.get(head) or 0 for head in ("igst", "cgst", "sgst", "cess")}
+        books = PurchaseInvoice().get_all(names=[self.pinv.name]).get(self.pinv.name) or {}
+        expected = _declared_from_books(document, books)
+
         set_declared_itc((cn.name,), "Accepted")
 
         cn.reload()
-        self.assertEqual(cn.itc_reduction_required, 1)
+        self.assertEqual(cn.itc_reduction_required, expected["itc_reduction_required"])
+        self.assertEqual(cn.declared_cgst, expected["declared_cgst"])
         self.assertEqual(cn.declared_sgst, cn.declared_cgst)  # govt: CGST == SGST
+
+    def test_preserve_pending_itc_declaration(self):
+        # re-download keeps the user's un-uploaded declared values; portal flags still refresh
+        pending = {"declared_cgst": 10, "itc_reduction_required": 1, "is_itc_reduction_blocked": 0}
+        preserve_pending_itc_declaration(
+            frappe._dict(ims_action="Accepted", previous_ims_action="No Action"), pending
+        )
+        self.assertNotIn("declared_cgst", pending)
+        self.assertNotIn("itc_reduction_required", pending)
+        self.assertIn("is_itc_reduction_blocked", pending)
+
+        # no pending action -> portal's declared values are kept
+        refreshed = {"declared_cgst": 10}
+        preserve_pending_itc_declaration(
+            frappe._dict(ims_action="Accepted", previous_ims_action="Accepted"), refreshed
+        )
+        self.assertIn("declared_cgst", refreshed)
 
     def test_update_action_with_declared_overrides(self):
         cn = create_gst_inward_supply(

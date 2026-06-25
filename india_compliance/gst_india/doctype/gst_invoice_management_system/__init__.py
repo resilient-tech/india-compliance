@@ -367,11 +367,12 @@ def apply_declared_overrides(overrides):
     IMS = frappe.qb.DocType("GST Inward Supply")
     rows = (
         frappe.qb.from_(IMS)
-        .select(IMS.name, IMS.igst, IMS.cgst, IMS.sgst, IMS.cess)
+        .select(IMS.name, IMS.is_itc_reduction_blocked, IMS.igst, IMS.cgst, IMS.sgst, IMS.cess)
         .where(IMS.name.isin(list(overrides)))
         .run(as_dict=True)
     )
-    document = {row.name: row for row in rows}
+    # skip GSTN-blocked records: their declaration is read-only
+    document = {row.name: row for row in rows if not row.is_itc_reduction_blocked}
 
     for name, declared in overrides.items():
         if doc := document.get(name):
