@@ -7,9 +7,6 @@ from erpnext.controllers.taxes_and_totals import (
 from frappe import _
 from frappe.utils.data import flt
 
-from india_compliance.gst_india.overrides.taxable_value import (
-    get_item_taxable_value,
-)
 from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     ItemGSTTreatment,

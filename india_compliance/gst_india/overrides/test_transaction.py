@@ -1655,6 +1655,19 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertTrue(item._dont_update_taxable_value)
         self.assertAlmostEqual(item._deemed_taxable_value, 500 * 100 / 140, places=4)
 
+    def test_get_item_tax_amount_preserves_zero_deemed_base(self):
+        # RSP not entered -> deemed base is an explicit 0; tax must be 0, not fall back
+        # to the reported (net) taxable_value.
+        calc = ItemGSTDetails()
+        calc.precision = frappe._dict(igst_amount=2)
+
+        zero_deemed = frappe._dict(_deemed_taxable_value=0, taxable_value=10000, qty=1)
+        self.assertEqual(calc.get_item_tax_amount(zero_deemed, 18, "igst"), 0)
+
+        # no deemed base set -> tax is on taxable_value as usual
+        plain = frappe._dict(taxable_value=10000, qty=1)
+        self.assertEqual(calc.get_item_tax_amount(plain, 18, "igst"), 1800)
+
     def test_on_margin_resolver_inclusive_deemed_margin(self):
         calc = frappe._dict(doc=frappe._dict(conversion_rate=1))
         tax = frappe._dict(charge_type="On Margin", rate=18)
