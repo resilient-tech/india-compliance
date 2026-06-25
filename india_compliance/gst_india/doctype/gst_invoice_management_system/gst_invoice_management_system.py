@@ -147,7 +147,9 @@ class GSTInvoiceManagementSystem(Document):
         )
 
     @frappe.whitelist()
-    def update_action(self, invoice_names: str | list, action: str, declared_overrides=None):
+    def update_action(
+        self, invoice_names: str | list, action: str, declared_overrides: str | dict | None = None
+    ):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         invoice_names = frappe.parse_json(invoice_names)
