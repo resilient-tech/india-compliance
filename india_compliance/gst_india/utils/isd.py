@@ -14,6 +14,7 @@ from functools import reduce
 from operator import add
 
 import frappe
+from erpnext.accounts.party import get_party_account
 from frappe import _
 from frappe.model.meta import get_field_precision
 from frappe.query_builder.functions import Coalesce, Date, IfNull, Sum
@@ -23,6 +24,7 @@ from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     IMPORT_GST_CATEGORIES,
 )
+from india_compliance.gst_india.doctype.turnover_record.turnover_record import upsert_turnover_record
 
 ISD_GST_CATEGORY = "Input Service Distributor"
 
@@ -212,7 +214,7 @@ def get_distribution_addresses(party_type: str, party: str, posting_date: str, a
 def make_isd_invoice(
     source_purchase_invoices: list,
     company_address: str,
-    party_address: str | None = None,
+    party_address: str,
     party_type: str | None = None,
     party: str | None = None,
     individual_turnover: float | None = None,
@@ -245,22 +247,23 @@ def make_isd_invoice(
 
     for prefix, address in (("company", company_address), ("party", party_address)):
         if not address:
-            continue
+            frappe.throw(_("Address is required"))
         gstin, state_number, state = frappe.db.get_value(
             "Address", address, ["gstin", "gst_state_number", "gst_state"]
         )
         doc.set(f"{prefix}_gstin", gstin)
         doc.set(f"{prefix}_pos", f"{state_number}-{state}")
-        if prefix == "party" and not gstin:
+        if prefix == "party" and not gstin and not is_against_party:
             doc.expense_account = frappe.get_cached_value("Company", company, "default_gst_expense_account")
             doc.cost_center = frappe.db.get_value("Company", company, "cost_center")
 
-    if party_type and party:
+    if party_type and party:  # party_type can be company or customer or supplier
         doc.is_against_party = is_against_party
         doc.party_type = party_type
         doc.party = party
         if is_against_party:
             doc.credit_flow = CREDIT_FLOW.DISTRIBUTION
+            doc.party_account = get_party_account(doc.party_type, doc.party, doc.company)
 
     for pi in source_purchase_invoices:
         total_tax = flt(pi.total_tax)
@@ -386,7 +389,6 @@ def bulk_create_isd_invoices(
     from india_compliance.gst_india.doctype.isd_invoice.isd_invoice import (
         _validate_isd_invoice_for_bulk_generation,
     )
-    from india_compliance.gst_india.doctype.turnover_record.turnover_record import upsert_turnover_record
 
     frappe.has_permission("ISD Invoice", "write", throw=True)
     frappe.has_permission("Purchase Invoice", "read", throw=True)
@@ -453,14 +455,23 @@ def bulk_create_isd_invoices(
             invalid_invoices.append(isd_doc.name)
         invoices.append(isd_doc.name)
 
+    frappe.enqueue(
+        _upsert_turnover_records,
+        queue="short",
+        distribution_table=distribution_table,
+        posting_date=posting_date,
+        enqueue_after_commit=True,
+    )
+
+    return invoices, invalid_invoices
+
+
+def _upsert_turnover_records(distribution_table, posting_date):
+
     for row in distribution_table:
-        frappe.enqueue(
-            upsert_turnover_record,
-            queue="short",
+        upsert_turnover_record(
             gstin=row["gstin"],
             gst_state=row["gst_state"],
             amount=row["turnover_amount"],
             posting_date=posting_date,
         )
-
-    return invoices, invalid_invoices

@@ -108,6 +108,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                         fieldname: "address",
                         label: __("Address"),
                         in_list_view: 1,
+                        reqd: 1,
                         columns: 2,
                         get_query(doc) {
                             return india_compliance.get_address_query(doc.party_type, doc.party);
