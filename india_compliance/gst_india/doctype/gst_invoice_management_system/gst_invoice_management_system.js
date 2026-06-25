@@ -1039,6 +1039,7 @@ class ITCReductionDialog {
     }
 
     render() {
+        this.confirmed = false;
         this.dialog = new frappe.ui.Dialog({
             title: __("Declare ITC Reduction"),
             size: "extra-large",
@@ -1056,6 +1057,15 @@ class ITCReductionDialog {
             primary_action: () => this.confirm(),
         });
 
+        // dismissing without confirming drops the action; tell the user
+        this.dialog.onhide = () => {
+            if (!this.confirmed)
+                frappe.show_alert({
+                    message: __("ITC reduction not saved; action not applied."),
+                    indicator: "orange",
+                });
+        };
+
         this.$table = this.dialog.fields_dict.itc_table.$wrapper;
         this.$table.html(this.get_table_html());
         this.setup_listeners();
@@ -1070,6 +1080,8 @@ class ITCReductionDialog {
 
         const body = this.rows
             .map((row, index) => {
+                const supplier_name = frappe.utils.escape_html(row.supplier_name || "");
+                const bill_no = frappe.utils.escape_html(row.bill_no || "");
                 const cells = TAX_HEADS.map((head) => {
                     const supplier = row._inward_supply[head] || 0;
                     const books = row._purchase_invoice[head] || 0;
@@ -1081,7 +1093,7 @@ class ITCReductionDialog {
                     </td>`;
                 }).join("");
 
-                return `<tr><td>${row.supplier_name || ""}<br><small>${row.bill_no || ""}</small></td>${cells}</tr>`;
+                return `<tr><td>${supplier_name}<br><small>${bill_no}</small></td>${cells}</tr>`;
             })
             .join("");
 
@@ -1131,17 +1143,18 @@ class ITCReductionDialog {
     }
 
     confirm() {
+        const clamp = (value, supplier) => Math.min(Math.max(flt(value), 0), flt(supplier));
         const overrides = {};
         this.rows.forEach((row, index) => {
             const declared = {};
             TAX_HEADS.forEach((head) => {
-                const supplier = row._inward_supply[head] || 0;
-                declared[head] = Math.min(flt(this.$input(index, head).val()), supplier);
+                declared[head] = clamp(this.$input(index, head).val(), row._inward_supply[head] || 0);
             });
-            declared.sgst = declared.cgst; // govt: CGST == SGST
+            declared.cgst = declared.sgst = Math.min(declared.cgst, declared.sgst); // govt: CGST == SGST
             overrides[row.inward_supply_name] = declared;
         });
 
+        this.confirmed = true;
         this.dialog.hide();
         this.on_confirm(overrides);
     }

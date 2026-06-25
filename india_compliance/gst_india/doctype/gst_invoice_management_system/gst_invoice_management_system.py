@@ -151,6 +151,16 @@ class GSTInvoiceManagementSystem(Document):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         invoice_names = frappe.parse_json(invoice_names)
+
+        # record-level isolation: only act on this company's invoices
+        invoice_names = frappe.get_all(
+            "GST Inward Supply",
+            filters={"name": ["in", invoice_names], "company_gstin": self.company_gstin},
+            pluck="name",
+        )
+        if not invoice_names:
+            return
+
         GSTR2 = frappe.qb.DocType("GST Inward Supply")
 
         # When invoice is rejected then mark action as "Ignore" and copy current action to previous action
@@ -191,7 +201,10 @@ class GSTInvoiceManagementSystem(Document):
         if declared_overrides:
             if isinstance(declared_overrides, str):
                 declared_overrides = frappe.parse_json(declared_overrides)
-            apply_declared_overrides(declared_overrides)
+            allowed = set(invoice_names)
+            declared_overrides = {name: values for name, values in declared_overrides.items() if name in allowed}
+            if declared_overrides:
+                apply_declared_overrides(declared_overrides)
 
     @frappe.whitelist()
     def get_invoice_details(self, purchase_name: str | None, inward_supply_name: str | None):

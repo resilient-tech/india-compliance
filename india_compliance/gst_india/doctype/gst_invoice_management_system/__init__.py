@@ -317,7 +317,12 @@ def set_declared_itc(invoice_names, action):
         .run(as_dict=True)
     )
 
-    specified = [row for row in rows if is_specified_record(row) and is_pi_matched(row)]
+    # skip GSTN-blocked records: declaration is read-only, don't overwrite stored values
+    specified = [
+        row
+        for row in rows
+        if is_specified_record(row) and is_pi_matched(row) and not row.is_itc_reduction_blocked
+    ]
     if not specified:
         return
 
@@ -328,19 +333,25 @@ def set_declared_itc(invoice_names, action):
             frappe.db.set_value("GST Inward Supply", row.name, _declared_from_books(row, book))
 
 
+def _cap_declared(value, cap):
+    return max(0, min(flt(value), flt(cap)))  # clamp to [0, document]
+
+
+def _equalize_state_tax(values):
+    values["cgst"] = values["sgst"] = min(values["cgst"], values["sgst"])  # govt: CGST must equal SGST
+
+
 def _declared_from_books(document, book):
     declared = {}
     for head in ("igst", "cgst", "sgst", "cess"):
-        doc_amount = document.get(head) or 0
-        book_amount = book.get(head) or 0
+        doc_amount = flt(document.get(head))
+        book_amount = flt(book.get(head))
 
         # books may carry rounding noise; trust supplier within tolerance, else cap (usually less)
-        if abs(book_amount - doc_amount) <= ITC_REDUCTION_TOLERANCE:
-            declared[head] = doc_amount
-        else:
-            declared[head] = min(book_amount, doc_amount)
+        value = doc_amount if abs(book_amount - doc_amount) <= ITC_REDUCTION_TOLERANCE else book_amount
+        declared[head] = _cap_declared(value, doc_amount)
 
-    declared["sgst"] = declared["cgst"]  # govt: CGST must equal SGST
+    _equalize_state_tax(declared)
 
     return {
         "itc_reduction_required": 1 if any(declared.values()) else 0,
@@ -370,9 +381,9 @@ def apply_declared_overrides(overrides):
 def _clean_declared(document, declared):
     values = {}
     for head in ("igst", "cgst", "sgst", "cess"):
-        values[head] = min(flt(declared.get(head)), document.get(head) or 0)  # cap at document (usually less)
+        values[head] = _cap_declared(declared.get(head), document.get(head))
 
-    values["sgst"] = values["cgst"]  # govt: CGST must equal SGST
+    _equalize_state_tax(values)
 
     return {
         "itc_reduction_required": 1 if any(values.values()) else 0,
