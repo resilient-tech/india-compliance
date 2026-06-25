@@ -1,12 +1,12 @@
 import frappe
-from frappe import _
-from frappe.utils import flt
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
+from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Sum
+from frappe.utils import flt
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
@@ -410,9 +410,9 @@ def defer_undeclarable_itc_reduction(invoices):
 
     if deferred:
         frappe.msgprint(
-            _("Skipped upload for records with no linked Purchase Invoice to declare ITC reduction: {0}").format(
-                ", ".join(deferred)
-            ),
+            _(
+                "Skipped upload for records with no linked Purchase Invoice to declare ITC reduction: {0}"
+            ).format(", ".join(deferred)),
             title=_("ITC Reduction Pending"),
             indicator="orange",
         )

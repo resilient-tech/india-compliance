@@ -153,11 +153,19 @@ class IMS:
 
     def set_itc_reduction(self, data, invoice):
         # remarks: optional, any section, reject/pending only
-        if invoice.ims_action in ("Rejected", "Pending") and invoice.remarks and not invoice.is_remarks_blocked:
+        if (
+            invoice.ims_action in ("Rejected", "Pending")
+            and invoice.remarks
+            and not invoice.is_remarks_blocked
+        ):
             data["remarks"] = invoice.remarks
 
         # declared ITC: specified records, accept only, when govt allows declaration
-        if not self.EMITS_ITC_REDUCTION or invoice.ims_action != "Accepted" or invoice.is_itc_reduction_blocked:
+        if (
+            not self.EMITS_ITC_REDUCTION
+            or invoice.ims_action != "Accepted"
+            or invoice.is_itc_reduction_blocked
+        ):
             return
 
         data["itcRedReq"] = "Y" if invoice.itc_reduction_required else "N"

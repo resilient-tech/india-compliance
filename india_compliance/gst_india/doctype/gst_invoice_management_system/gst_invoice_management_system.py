@@ -202,7 +202,9 @@ class GSTInvoiceManagementSystem(Document):
             if isinstance(declared_overrides, str):
                 declared_overrides = frappe.parse_json(declared_overrides)
             allowed = set(invoice_names)
-            declared_overrides = {name: values for name, values in declared_overrides.items() if name in allowed}
+            declared_overrides = {
+                name: values for name, values in declared_overrides.items() if name in allowed
+            }
             if declared_overrides:
                 apply_declared_overrides(declared_overrides)
 

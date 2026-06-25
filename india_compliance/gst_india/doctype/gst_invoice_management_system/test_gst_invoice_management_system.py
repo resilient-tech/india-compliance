@@ -16,11 +16,11 @@ from india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoic
     get_period_options,
     update_previous_ims_action,
 )
-from india_compliance.gst_india.utils.gstr_2.ims import IMSB2B, IMSB2BCN
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.test_purchase_reconciliation_tool import (
     create_gst_inward_supply,
 )
 from india_compliance.gst_india.utils.api import create_integration_request
+from india_compliance.gst_india.utils.gstr_2.ims import IMSB2B, IMSB2BCN
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     update_gstr3b_filing_status,

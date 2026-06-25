@@ -1087,9 +1087,14 @@ class ITCReductionDialog {
                     const books = row._purchase_invoice[head] || 0;
                     return `<td class="text-right">
                         <input type="number" class="form-control declared-input" data-row="${index}"
-                            data-head="${head}" min="0" max="${supplier}" value="${declared_default(row, head)}"
+                            data-head="${head}" min="0" max="${supplier}" value="${declared_default(
+                                row,
+                                head,
+                            )}"
                             style="text-align:right; min-width: 90px;">
-                        <small class="text-muted">${__("books")} ${format_number(books)} · ${__("doc")} ${format_number(supplier)}</small>
+                        <small class="text-muted">${__("books")} ${format_number(books)} · ${__(
+                            "doc",
+                        )} ${format_number(supplier)}</small>
                     </td>`;
                 }).join("");
 
@@ -1099,8 +1104,12 @@ class ITCReductionDialog {
 
         return `
             <div class="mb-2">
-                <button class="btn btn-xs btn-default" data-fill="books">${__("Use books value (all)")}</button>
-                <button class="btn btn-xs btn-default" data-fill="document">${__("Use supplier value (all)")}</button>
+                <button class="btn btn-xs btn-default" data-fill="books">${__(
+                    "Use books value (all)",
+                )}</button>
+                <button class="btn btn-xs btn-default" data-fill="document">${__(
+                    "Use supplier value (all)",
+                )}</button>
             </div>
             <div style="max-height: 50vh; overflow: auto;">
                 <table class="table table-bordered">
