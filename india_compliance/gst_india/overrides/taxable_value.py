@@ -20,6 +20,10 @@ def get_item_taxable_value(doc, item, default):
     Honours ``_dont_update_taxable_value`` (resolver wants the net default, e.g. RSP).
     First resolver row wins; qty-based cess_non_advol has no resolver.
     """
+    # clear up front so a stale value from a prior pass
+    item._dont_update_taxable_value = False
+    item._deemed_taxable_value = None
+
     resolvers = frappe.get_hooks("erpnext_taxable_base_resolvers") or {}
     if not resolvers:
         return default

@@ -1368,7 +1368,8 @@ class ItemGSTDetails:
             multiplier = item.qty
         else:
             # RSP etc.: tax is on a deemed base, not taxable_value
-            base = flt(getattr(item, "_deemed_taxable_value", None)) or item.taxable_value
+            deemed_base = getattr(item, "_deemed_taxable_value", None)
+            base = flt(deemed_base) if deemed_base is not None else item.taxable_value
             multiplier = base / 100
 
         return flt(tax_rate * multiplier, precision)
