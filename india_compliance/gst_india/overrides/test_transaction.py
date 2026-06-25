@@ -14,16 +14,11 @@ from erpnext.controllers.accounts_controller import (
 )
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.controllers.taxes_and_totals import get_regional_round_off_accounts
-<<<<<<< HEAD
-from erpnext.selling.doctype.sales_order.sales_order import make_purchase_order
-from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
-=======
-from erpnext.selling.doctype.sales_order.mapper import (
+from erpnext.selling.doctype.sales_order.sales_order import (
     make_delivery_note,
     make_purchase_order,
 )
-from erpnext.stock.doctype.delivery_note.mapper import make_sales_invoice
->>>>>>> 313b964d (test: added tests to ensure taxes computation is not reqd in before_save)
+from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     update_regional_gl_entries,
 )
