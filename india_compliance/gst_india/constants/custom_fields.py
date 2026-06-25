@@ -1386,7 +1386,7 @@ HEALTHCARE_CUSTOM_FIELDS = {
         {
             **HSN_CODE_FIELD,
             "insert_after": "item_group",
-            "reqd": 1,
+            "reqd": 0,
             "read_only_depends_on": "eval:doc.link_existing_item",
         }
     ],
