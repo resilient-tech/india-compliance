@@ -361,6 +361,105 @@ class TestISDInvoice(IntegrationTestCase):
         self.assertEqual(flt(row.distributed_cgst), 0)
         self.assertEqual(flt(row.distributed_sgst), 0)
 
+    def test_diffuse_returns_zero_not_none_for_zero_amount(self):
+        """_diffuse must return 0.0 (not None) so distributed_* never store None."""
+        from india_compliance.gst_india.utils.isd import _diffuse
+
+        self.assertEqual(_diffuse({}, ("pi", 0, "igst"), 0, 2), 0.0)
+
+    def test_non_gst_tax_row_is_rejected(self):
+        """A non-GST tax row added by the user must raise on save (not be silently dropped)."""
+        non_gst_account = frappe.db.get_value(
+            "Account", {"company": self.company.name, "account_type": "Payable", "is_group": 0}, "name"
+        )
+        doc = self._isd()
+        doc.append("taxes", {"account_head": non_gst_account, "tax_amount": 100})
+        self.assertRaises(frappe.ValidationError, lambda: doc.insert(ignore_permissions=True))
+
+    def test_invalid_tax_rows_are_collected_row_wise(self):
+        """Multiple non-input-GST tax rows surface together (row-wise), not one error at a time."""
+        non_gst_account = frappe.db.get_value(
+            "Account", {"company": self.company.name, "account_type": "Payable", "is_group": 0}, "name"
+        )
+        doc = self._isd()
+        doc.append("taxes", {"account_head": non_gst_account, "tax_amount": 100})
+        doc.append("taxes", {"account_head": non_gst_account, "tax_amount": 200})
+
+        with self.assertRaises(frappe.ValidationError) as cm:
+            doc.insert(ignore_permissions=True)
+
+        message = str(cm.exception)
+        self.assertIn("input GST accounts", message)
+        self.assertIn("Row #1", message)  # both offending rows reported
+        self.assertIn("Row #2", message)
+
+    def test_missing_input_gst_account_blocks_distribution(self):
+        """A distributed amount for a GST type with no configured input account is rejected
+        (the credit would otherwise be silently dropped)."""
+        from india_compliance.gst_india.doctype.isd_invoice.isd_invoice import get_input_gst_accounts
+
+        accounts = get_input_gst_accounts(self.company.name)
+        missing_type = next((t for t in GST_TAX_TYPES if not accounts.get(f"{t}_account")), None)
+        if not missing_type:
+            self.skipTest("company has every input GST account configured")
+
+        pi = _std_service_pi(self.company.name, self.company_isd_address.name, qty=10, rate=1000)
+        isd = self._isd(source_item=_make_source_item(pi, 100))
+        isd.source_invoices[0].set(f"total_{missing_type}", 100)
+        isd.source_invoices[0].set(f"distributed_{missing_type}", 100)
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "No input GST account is configured",
+            isd.insert,
+            ignore_permissions=True,
+        )
+
+    def test_manual_tax_row_resolves_gst_tax_type_from_account(self):
+        """A manually-added tax row (gst_tax_type is read-only) is typed from its account head, so a
+        valid GST account is accepted instead of being rejected as a non-GST row."""
+        from india_compliance.gst_india.doctype.isd_invoice.isd_invoice import get_input_gst_accounts
+
+        accounts = frappe._dict(get_input_gst_accounts(self.company.name))
+        pi = _std_service_pi(self.company.name, self.company_isd_address.name, qty=10, rate=1000)
+        isd = self._isd(source_item=_make_source_item(pi, 100))
+        isd.append("taxes", {"account_head": accounts.cgst_account, "tax_amount": 500})
+
+        isd.insert(ignore_permissions=True)
+        isd.submit()  # must not raise "Only GST tax types are allowed in Taxes"
+
+        cgst_rows = [t for t in isd.taxes if t.gst_tax_type == "cgst"]
+        self.assertEqual(len(cgst_rows), 1)
+        self.assertEqual(cgst_rows[0].account_head, accounts.cgst_account)
+
+    def test_set_pos_from_address_handles_missing_address(self):
+        """set_pos_from_address must not raise when an address (or its state) is missing — the
+        mandatory-field validation should surface the error instead of a raw KeyError."""
+        doc = frappe.new_doc("ISD Invoice")
+        doc.company = self.company.name
+
+        doc.set_pos_from_address()  # no addresses set -> must not raise
+
+        self.assertFalse(doc.company_pos)
+        self.assertFalse(doc.party_pos)
+
+    def test_same_company_and_party_gstin_rejected(self):
+        """Credit cannot be distributed to the same GSTIN (company_gstin == party_gstin)."""
+        doc = self._isd()
+        doc.company_gstin = doc.party_gstin = _COMPANY_1_GSTIN
+        self.assertRaises(frappe.ValidationError, doc.validate_gstins)
+
+    def test_receipt_flow_requires_isd_party_address(self):
+        """In the Credit Receipt flow the party (distributor) address must be ISD-category."""
+        doc = self._isd(
+            is_against_party=1,
+            party_type="Supplier",
+            party=self.supplier_branch.name,
+            party_address=self.company_registered_address_gujarat.name,  # non-ISD -> must raise
+        )
+        doc.credit_flow = "Credit Receipt"
+        self.assertRaises(frappe.ValidationError, doc.validate_isd_party)
+
     def test_only_service_item_taxes_in_get_purchase_invoices(self):
         """is_isd_applicable set to 1 on PI with mixed service + goods items at ISD billing address.
 
@@ -405,7 +504,41 @@ class TestISDInvoice(IntegrationTestCase):
         isd.flags.ignore_validate = True
         isd.insert(ignore_permissions=True)
         isd.flags.ignore_validate = False
-        self.assertRaisesRegex(frappe.ValidationError, "dated after this ISD invoice", isd.save)
+        self.assertRaisesRegex(frappe.ValidationError, "after this ISD invoice", isd.save)
+
+    def test_source_invoice_problems_are_collected_row_wise(self):
+        """Problems across multiple source rows surface together in one table, not one error at a
+        time (old code stopped at the first failing row)."""
+        pi1 = _std_service_pi(self.company.name, self.company_isd_address.name, qty=10, rate=1000)
+        pi2 = _std_service_pi(self.company.name, self.company_isd_address.name, qty=5, rate=1000)
+
+        # both PIs are dated after the ISD invoice
+        isd = self._isd(
+            posting_date=frappe.utils.add_months(pi1.posting_date, -1),
+            source_item=_make_source_item(pi1, 50),
+        )
+        isd.append("source_invoices", _make_source_item(pi2, 50))
+        isd.flags.ignore_validate = True
+        isd.insert(ignore_permissions=True)
+        isd.flags.ignore_validate = False
+
+        with self.assertRaises(frappe.ValidationError) as cm:
+            isd.save()
+
+        message = str(cm.exception)
+        self.assertIn("after this ISD invoice", message)
+        self.assertIn(pi1.name, message)  # both offending rows reported, not just the first
+        self.assertIn(pi2.name, message)
+
+    def test_duplicate_source_invoices_are_rejected(self):
+        """The same purchase invoice + eligibility appearing in two rows is rejected."""
+        pi = _std_service_pi(self.company.name, self.company_isd_address.name, qty=10, rate=1000)
+        isd = self._isd(source_item=_make_source_item(pi, 50))
+        isd.append("source_invoices", _make_source_item(pi, 50))
+        isd.flags.ignore_validate = True
+        isd.insert(ignore_permissions=True)
+        isd.flags.ignore_validate = False
+        self.assertRaisesRegex(frappe.ValidationError, "added more than once", isd.save)
 
     # --- Inter-company transaction validation ---
 
@@ -492,6 +625,120 @@ class TestISDInvoice(IntegrationTestCase):
             sum(e.debit for e in gl_entries),
             sum(e.credit for e in gl_entries),
         )
+
+    def _live_gl_entries(self, isd_name):
+        return frappe.get_all(
+            "GL Entry",
+            filters={"voucher_type": "ISD Invoice", "voucher_no": isd_name, "is_cancelled": 0},
+            fields=["account", "debit", "credit", "company_gstin"],
+        )
+
+    def test_gl_entries_reversed_on_cancel(self):
+        """On cancel, the ISD GL entries are reversed and the PI distribution % rolls back to 0."""
+        pi = _std_service_pi(self.company.name, self.company_isd_address.name, qty=10, rate=1000)
+        isd = self._isd(source_item=_make_source_item(pi, 100))
+        isd.insert(ignore_permissions=True)
+        isd.submit()
+
+        self.assertTrue(self._live_gl_entries(isd.name), "No GL entries on submit")
+        self.assertEqual(
+            flt(frappe.db.get_value("Purchase Invoice", pi.name, "isd_credit_distributed_percent")), 100
+        )
+
+        isd.cancel()
+
+        self.assertFalse(self._live_gl_entries(isd.name), "GL entries not reversed on cancel")
+        self.assertEqual(
+            flt(frappe.db.get_value("Purchase Invoice", pi.name, "isd_credit_distributed_percent")), 0
+        )
+
+    def test_gl_entries_unregistered_recipient_uses_expense_account(self):
+        """Unregistered recipient: input GST credited at the ISD GSTIN, debited to GST Expense (no GSTIN)."""
+        from india_compliance.gst_india.doctype.isd_invoice.isd_invoice import get_input_gst_accounts
+
+        pi = _std_service_pi(self.company.name, self.company_isd_address.name, qty=10, rate=1000)
+        isd = self._isd(
+            party_address=self.company_unregistered_address.name,
+            source_item=_make_source_item(pi, 100),
+        )
+        # GST Expense is a P&L account, so (as make_isd_invoice does) its GL leg needs a cost center
+        isd.expense_account = frappe.db.get_value("Company", self.company.name, "default_gst_expense_account")
+        isd.cost_center = (
+            frappe.db.get_value("Company", self.company.name, "cost_center") or f"Main - {self.company.abbr}"
+        )
+        self.assertTrue(isd.expense_account, "Company has no default GST expense account")
+        isd.insert(ignore_permissions=True)
+        isd.submit()
+
+        accounts = frappe._dict(get_input_gst_accounts(self.company.name))
+        input_accounts = {accounts.get(f"{t}_account") for t in GST_TAX_TYPES}
+        total_tax = sum(isd.source_invoices[0].get(f"distributed_{t}") for t in GST_TAX_TYPES)
+        gl_entries = self._live_gl_entries(isd.name)
+
+        expense_debit = sum(g.debit for g in gl_entries if g.account == isd.expense_account)
+        input_credit = sum(g.credit for g in gl_entries if g.account in input_accounts)
+        self.assertEqual(expense_debit, total_tax)
+        self.assertEqual(input_credit, total_tax)
+        # the unregistered share becomes the ISD company's expense -> all legs under the ISD GSTIN
+        self.assertTrue(all(g.company_gstin == _COMPANY_1_GSTIN for g in gl_entries))
+        self.assertEqual(sum(g.debit for g in gl_entries), sum(g.credit for g in gl_entries))
+
+    def test_expense_account_must_belong_to_company(self):
+        """An unregistered recipient's GST Expense account must belong to the ISD company."""
+        pi = _std_service_pi(self.company.name, self.company_isd_address.name, qty=10, rate=1000)
+        isd = self._isd(
+            party_address=self.company_unregistered_address.name,
+            source_item=_make_source_item(pi, 100),
+        )
+        # an account from another company is not valid
+        isd.expense_account = frappe.db.get_value(
+            "Account", {"company": self.branch_company, "is_group": 0}, "name"
+        )
+        isd.cost_center = (
+            frappe.db.get_value("Company", self.company.name, "cost_center") or f"Main - {self.company.abbr}"
+        )
+        self.assertRaisesRegex(
+            frappe.ValidationError, "does not belong to Company", lambda: isd.insert(ignore_permissions=True)
+        )
+
+    def test_party_account_must_match_party_type(self):
+        """Party Account must be a Balance Sheet account of the matching type (like Sales/Purchase)."""
+        doc = self._isd(is_against_party=1, party_type="Supplier", party=self.supplier_branch.name)
+        # a Receivable account is Balance Sheet but the wrong type for a Supplier (needs Payable)
+        doc.party_account = frappe.db.get_value(
+            "Account", {"company": self.company.name, "account_type": "Receivable", "is_group": 0}, "name"
+        )
+        self.assertRaisesRegex(frappe.ValidationError, "Payable account", doc.validate_party_account)
+
+    def test_distribution_summary_query_and_extension(self):
+        """The runner returns the core summary (with SQL total_tax); a caller can extend the query
+        with extra Purchase Invoice columns via .select() (the report's pattern)."""
+        from india_compliance.gst_india.utils.isd import (
+            _get_purchase_invoices_distribution_summary,
+            get_distribution_summary_query,
+        )
+
+        pi = _std_service_pi(self.company.name, self.company_isd_address.name, qty=10, rate=1000)
+        expected_total = sum(sum(flt(i.get(f"{t}_amount")) for i in pi.items) for t in GST_TAX_TYPES)
+
+        base = _get_purchase_invoices_distribution_summary([pi.name])
+        self.assertEqual(len(base), 1)
+        self.assertEqual(base[0].purchase_invoice, pi.name)
+        self.assertEqual(flt(base[0].total_tax), flt(expected_total))
+        self.assertEqual(flt(base[0].available_tax), flt(expected_total))  # nothing distributed yet
+        self.assertEqual(flt(base[0].distributed_tax), 0)
+
+        pi_dt = frappe.qb.DocType("Purchase Invoice")
+        pi_item = frappe.qb.DocType("Purchase Invoice Item")
+        extended = (
+            get_distribution_summary_query([pi.name])
+            .join(pi_dt)
+            .on(pi_dt.name == pi_item.parent)
+            .select(pi_dt.company_gstin, pi_dt.place_of_supply)
+            .run(as_dict=True)
+        )
+        self.assertEqual(extended[0].company_gstin, pi.company_gstin)
+        self.assertIn("place_of_supply", extended[0])
 
 
 # ---------------------------------------------------------------------------

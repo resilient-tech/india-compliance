@@ -39,6 +39,24 @@ def sum_row_tax_by_type(row, prefix):
     return sum(flt(getattr(row, f"{prefix}_{tax_type}")) for tax_type in GST_TAX_TYPES)
 
 
+def throw_row_table(title, header, rows):
+    """Raise a ValidationError rendering all offending rows as a table under one title."""
+    if not rows:
+        return
+    frappe.msgprint([header, *rows], title=title, as_table=True, raise_exception=frappe.ValidationError)
+
+
+def throw_invalid_rows(message, rows):
+    """Raise a ValidationError under a descriptive heading, listing the offending row number first
+    then the value (like overrides/transaction.py), e.g.
+    'Following purchase invoices are not submitted:<br>Row #1: PINV-0001'."""
+    if not rows:
+        return
+
+    listed = "<br>".join(f"Row #{idx}: {frappe.bold(value)}" for idx, value in rows)
+    frappe.throw(_("{0}:<br>{1}").format(message, listed))
+
+
 def get_pi_total_tax_map(purchase_invoices):
     pi_item = frappe.qb.DocType("Purchase Invoice Item")
     return (
@@ -55,7 +73,7 @@ def get_pi_total_tax_map(purchase_invoices):
 
 def _diffuse(cumulative, key, raw_amount, precision):
     if not raw_amount:
-        return
+        return 0.0
     running_raw, running_rounded = cumulative.get(key, (0.0, 0.0))
     new_raw = running_raw + raw_amount
     new_rounded = flt(new_raw, precision)
@@ -100,11 +118,14 @@ def calculate_distribution(doc, cumulative):
 
 
 def is_inter_state_distribution(doc):
+    # different place of supply -> inter-state outright (no category lookup needed)
+    if doc.company_pos and doc.party_pos and doc.company_pos != doc.party_pos:
+        return True
+
+    # same / missing POS: SEZ / overseas recipients are still inter-state (IGST)
     party_gst_category = (
         frappe.db.get_value("Address", doc.party_address, "gst_category") if doc.party_address else None
     )
-
-    # SEZ / overseas recipients are always inter-state (IGST), regardless of place of supply
     if party_gst_category in IMPORT_GST_CATEGORIES:
         return True
 
@@ -284,38 +305,22 @@ def make_isd_invoice(
 
     calculate_distribution(doc, cumulative)
     doc.set_taxes_and_totals()
+    doc.set_address_display()  # bulk save runs with ignore_validate, which skips validate()
     return doc
 
 
-@frappe.whitelist()
-def get_purchase_invoices_distribution_summary(
-    purchase_invoices: list | str, extra_fields: list | str | None = None
-):
-    """Per purchase invoice: posting date, supplier, total tax and tax still available to distribute"""
-    frappe.has_permission("Purchase Invoice", "read", throw=True)
-    if isinstance(purchase_invoices, str):
-        purchase_invoices = frappe.parse_json(purchase_invoices)
-
-    if not purchase_invoices:
-        return []
-
-    if isinstance(extra_fields, str):
-        extra_fields = frappe.parse_json(extra_fields)
-
-    valid_pi_columns = set(frappe.get_meta("Purchase Invoice").get_valid_columns())
-    extra_fields = [f for f in (extra_fields or []) if f in valid_pi_columns]
-
-    pi = frappe.qb.DocType("Purchase Invoice")
+def get_distribution_summary_query(purchase_invoices: list | str | None = None):
     pi_item = frappe.qb.DocType("Purchase Invoice Item")
     isd_source_item = frappe.qb.DocType("ISD Invoice Source Item")
     isd_invoice = frappe.qb.DocType("ISD Invoice")
 
+    # already-distributed tax per (purchase invoice, eligibility). A PI is only ever distributed under
+    # its own GSTIN (enforced on the ISD Invoice), so no company_gstin match is needed here.
     distributed = (
         frappe.qb.from_(isd_source_item)
         .join(isd_invoice)
         .on(isd_source_item.parent == isd_invoice.name)
         .where(isd_source_item.docstatus == 1)
-        .where(isd_source_item.purchase_invoice.isin(purchase_invoices))
         .where(
             (isd_invoice.is_against_party == 0)
             | (
@@ -326,41 +331,37 @@ def get_purchase_invoices_distribution_summary(
         .select(
             isd_source_item.purchase_invoice,
             isd_source_item.is_ineligible_for_itc,
-            isd_invoice.company_gstin,
             *[
                 Sum(getattr(isd_source_item, f"distributed_{t}")).as_(f"distributed_{t}")
                 for t in GST_TAX_TYPES
             ],
         )
-        .groupby(
-            isd_source_item.purchase_invoice,
-            isd_source_item.is_ineligible_for_itc,
-            isd_invoice.company_gstin,
-        )
-    ).as_("distributed")
+        .groupby(isd_source_item.purchase_invoice, isd_source_item.is_ineligible_for_itc)
+    )
+    if purchase_invoices:
+        distributed = distributed.where(isd_source_item.purchase_invoice.isin(purchase_invoices))
+    distributed = distributed.as_("distributed")
 
-    # list of dicts, one per (purchase_invoice, is_ineligible_for_itc):
-    # {purchase_invoice, supplier, posting_date, billing_address, is_ineligible_for_itc, *total_, *available_}
-    source_purchase_invoices = (
+    # one row per (purchase_invoice, is_ineligible_for_itc):
+    # {purchase_invoice, is_ineligible_for_itc, *total_, total_tax, available_tax}
+    query = (
         frappe.qb.from_(pi_item)
-        .join(pi)
-        .on(pi.name == pi_item.parent)
         .left_join(distributed)
         .on(
             (distributed.purchase_invoice == pi_item.parent)
             & (distributed.is_ineligible_for_itc == pi_item.is_ineligible_for_itc)
-            & (distributed.company_gstin == pi.company_gstin)
         )
         .where(pi_item.docstatus == 1)
-        .where(pi_item.parent.isin(purchase_invoices))
         .select(
-            pi.name.as_("purchase_invoice"),
-            pi.supplier,
-            pi.posting_date,
-            pi.billing_address,
+            pi_item.parent.as_("purchase_invoice"),
             pi_item.is_ineligible_for_itc,
-            *[getattr(pi, f) for f in extra_fields],
             *[Coalesce(Sum(getattr(pi_item, f"{t}_amount")), 0).as_(f"total_{t}") for t in GST_TAX_TYPES],
+            reduce(add, (Coalesce(Sum(getattr(pi_item, f"{t}_amount")), 0) for t in GST_TAX_TYPES)).as_(
+                "total_tax"
+            ),
+            reduce(add, (Coalesce(getattr(distributed, f"distributed_{t}"), 0) for t in GST_TAX_TYPES)).as_(
+                "distributed_tax"
+            ),
             reduce(
                 add,
                 (
@@ -371,13 +372,27 @@ def get_purchase_invoices_distribution_summary(
             ).as_("available_tax"),
         )
         .groupby(pi_item.parent, pi_item.is_ineligible_for_itc)
-        .run(as_dict=True)
     )
+    if purchase_invoices:
+        query = query.where(pi_item.parent.isin(purchase_invoices))
 
-    for row in source_purchase_invoices:
-        row["total_tax"] = sum(row[f"total_{t}"] for t in GST_TAX_TYPES)
+    return query
 
-    return source_purchase_invoices
+
+@frappe.whitelist()
+def get_purchase_invoices_distribution_summary(purchase_invoices: list | str):
+    frappe.has_permission("Purchase Invoice", "read", throw=True)
+    if isinstance(purchase_invoices, str):
+        purchase_invoices = frappe.parse_json(purchase_invoices)
+
+    return _get_purchase_invoices_distribution_summary(purchase_invoices)
+
+
+def _get_purchase_invoices_distribution_summary(purchase_invoices: list | str):
+    if not purchase_invoices:
+        return []
+
+    return get_distribution_summary_query(purchase_invoices).run(as_dict=True)
 
 
 @frappe.whitelist()
@@ -385,10 +400,6 @@ def bulk_create_isd_invoices(
     distribution_table: list | str, purchase_invoices: list | str, posting_date: str
 ):
     """Create ISD invoices distributing the given purchase invoices' tax across addresses."""
-    # local imports avoid a circular dependency on the ISD Invoice controller / turnover doctype
-    from india_compliance.gst_india.doctype.isd_invoice.isd_invoice import (
-        _validate_isd_invoice_for_bulk_generation,
-    )
 
     frappe.has_permission("ISD Invoice", "write", throw=True)
     frappe.has_permission("Purchase Invoice", "read", throw=True)
@@ -410,13 +421,22 @@ def bulk_create_isd_invoices(
     # drop addresses with no turnover - they would distribute nothing
     distribution_table = [row for row in distribution_table if flt(row["turnover_amount"] or 0)]
 
-    source_purchase_invoices = get_purchase_invoices_distribution_summary(purchase_invoices)
+    # bulk groups source invoices by billing address, so join Purchase Invoice for it
+    pi = frappe.qb.DocType("Purchase Invoice")
+    pi_item = frappe.qb.DocType("Purchase Invoice Item")
+    source_purchase_invoices = (
+        get_distribution_summary_query(purchase_invoices)
+        .join(pi)
+        .on(pi.name == pi_item.parent)
+        .select(pi.billing_address)
+        .run(as_dict=True)
+    )
 
     total_turnover = sum(flt(row.get("turnover_amount") or 0) for row in distribution_table)
 
     by_billing = defaultdict(list)
-    for pi in source_purchase_invoices:
-        by_billing[pi.billing_address].append(pi)
+    for pi_row in source_purchase_invoices:
+        by_billing[pi_row.billing_address].append(pi_row)
 
     invoice_tasks = []
     for pi_group in by_billing.values():
@@ -443,7 +463,8 @@ def bulk_create_isd_invoices(
         is_invalid_invoice = False
         messages_before = len(frappe.message_log)
         try:
-            _validate_isd_invoice_for_bulk_generation(isd_doc)
+            isd_doc.validate_purchase_invoices()
+            isd_doc.validate_addresses()
         except frappe.ValidationError:
             del frappe.message_log[messages_before:]
             is_invalid_invoice = True

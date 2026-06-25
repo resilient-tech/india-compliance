@@ -11,7 +11,7 @@ from pypika.terms import Case
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils.isd import (
     CREDIT_FLOW,
-    get_purchase_invoices_distribution_summary,
+    get_distribution_summary_query,
     get_report_company_currency,
     validate_common_report_filters,
 )
@@ -43,37 +43,26 @@ def _apply_company_filter(query, doctype, filters):
 # Purchase invoice view (show_distribution=0)
 
 
-def _get_candidate_pi_names(filters):
-    """Ordered names of submitted, ISD-applicable Purchase Invoices matching the filters."""
+def get_pi_data(filters):
     pi = frappe.qb.DocType("Purchase Invoice")
-
+    pi_item = frappe.qb.DocType("Purchase Invoice Item")
     query = (
-        frappe.qb.from_(pi)
-        .select(pi.name)
-        .where(pi.docstatus == 1)
+        get_distribution_summary_query()
+        .join(pi)
+        .on(pi.name == pi_item.parent)
+        .select(pi.company_gstin, pi.place_of_supply)
         .where(pi.is_isd_applicable == 1)
         .where(pi.posting_date[filters.from_date : filters.to_date])
         .orderby(pi.posting_date)
     )
     query = _apply_company_filter(query, pi, filters)
-
     if filters.get("company_gstin"):
         query = query.where(pi.company_gstin == filters.company_gstin)
 
-    return [row.name for row in query.run(as_dict=True)]
-
-
-def get_pi_data(filters):
-    pi_names = _get_candidate_pi_names(filters)
-    if not pi_names:
-        return []
-
-    # collapse the per-(pi, is_ineligible) summary into one row per purchase invoice
+    # collapse the per-(pi, is_ineligible) summary into one row per purchase invoice (posting-date order)
     rows = {}
-    for row in get_purchase_invoices_distribution_summary(
-        pi_names, extra_fields=["company_gstin", "place_of_supply"]
-    ):
-        pi = rows.setdefault(
+    for row in query.run(as_dict=True):
+        pi_row = rows.setdefault(
             row.purchase_invoice,
             frappe._dict(
                 purchase_invoice=row.purchase_invoice,
@@ -85,25 +74,21 @@ def get_pi_data(filters):
             ),
         )
 
-        pi.total_tax += flt(row.total_tax)
+        pi_row.total_tax += flt(row.total_tax)
         if cint(row.is_ineligible_for_itc):
-            pi.available_ineligible += flt(row.available_tax)
+            pi_row.available_ineligible += flt(row.available_tax)
         else:
-            pi.available_eligible += flt(row.available_tax)
+            pi_row.available_eligible += flt(row.available_tax)
 
     data = []
-    for pi_name in pi_names:
-        pi = rows.get(pi_name)
-        if not pi:
-            continue
-
-        pi.available_total = pi.available_eligible + pi.available_ineligible
+    for pi_row in rows.values():
+        pi_row.available_total = pi_row.available_eligible + pi_row.available_ineligible
 
         # pending_distribution: keep only PIs that still have credit to distribute
-        if filters.get("pending_distribution") and pi.available_total <= 0:
+        if filters.get("pending_distribution") and pi_row.available_total <= 0:
             continue
 
-        data.append(pi)
+        data.append(pi_row)
 
     return data
 
