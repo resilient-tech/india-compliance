@@ -969,7 +969,9 @@ class GSTR11A11BData:
             .left_join(included_taxes_query)
             .on(included_taxes_query.parent == self.pe.name)
             .select(
-                (self.pe.paid_amount - IfNull(included_taxes_query.included_taxes, 0)).as_("taxable_value")
+                (self.pe.base_paid_amount - IfNull(included_taxes_query.included_taxes, 0)).as_(
+                    "taxable_value"
+                )
             )
             .groupby(self.pe.name)
         )
