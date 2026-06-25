@@ -79,7 +79,17 @@
   "column_break_ppww",
   "supplier_return_form",
   "is_supplier_return_filed",
-  "is_downloaded_from_ims"
+  "is_downloaded_from_ims",
+  "ims_itc_reduction_section",
+  "itc_reduction_required",
+  "is_itc_reduction_blocked",
+  "declared_igst",
+  "declared_cgst",
+  "column_break_declared",
+  "declared_sgst",
+  "declared_cess",
+  "remarks",
+  "is_remarks_blocked"
  ],
  "fields": [
   {
@@ -479,12 +489,72 @@
    "label": "Previous Action",
    "options": "No Action\nAccept\nIgnore\nPending",
    "read_only": 1
+  },
+  {
+   "fieldname": "ims_itc_reduction_section",
+   "fieldtype": "Section Break",
+   "label": "ITC Reduction"
+  },
+  {
+   "default": "0",
+   "fieldname": "itc_reduction_required",
+   "fieldtype": "Check",
+   "label": "ITC Reduction Required",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_itc_reduction_blocked",
+   "fieldtype": "Check",
+   "label": "ITC Reduction Blocked",
+   "read_only": 1
+  },
+  {
+   "fieldname": "declared_igst",
+   "fieldtype": "Float",
+   "label": "Declared IGST",
+   "read_only": 1
+  },
+  {
+   "fieldname": "declared_cgst",
+   "fieldtype": "Float",
+   "label": "Declared CGST",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_declared",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "declared_sgst",
+   "fieldtype": "Float",
+   "label": "Declared SGST",
+   "read_only": 1
+  },
+  {
+   "fieldname": "declared_cess",
+   "fieldtype": "Float",
+   "label": "Declared CESS",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_remarks_blocked",
+   "fieldtype": "Check",
+   "label": "Remarks Blocked",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-04-14 08:40:00.100410",
+ "modified": "2025-08-01 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",

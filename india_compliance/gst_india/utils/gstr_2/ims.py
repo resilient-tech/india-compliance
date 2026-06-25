@@ -26,6 +26,9 @@ CLASSIFICATION_MAP = {
 
 
 class IMS:
+    # specified records (CR25787E) that carry the declared ITC reduction block
+    EMITS_ITC_REDUCTION = False
+
     VALUE_MAPS = frappe._dict(
         {
             "states": {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()},
@@ -114,6 +117,15 @@ class IMS:
             "igst": invoice.iamt,
             "cess": invoice.cess,
             "taxable_value": invoice.txval,
+            # ITC reduction (CR25787E) - present only for specified records
+            "itc_reduction_required": 1 if invoice.itcRedReq == "Y" else 0,
+            "is_itc_reduction_blocked": 1 if invoice.isItcRedReqBlocked == "Y" else 0,
+            "declared_igst": invoice.declIgst,
+            "declared_cgst": invoice.declCgst,
+            "declared_sgst": invoice.declSgst,
+            "declared_cess": invoice.declCess,
+            "remarks": invoice.remarks,
+            "is_remarks_blocked": 1 if invoice.isRemarksBlocked == "Y" else 0,
         }
 
     def convert_data_to_gov_format(self, invoice):
@@ -135,7 +147,30 @@ class IMS:
         if invoice.ims_action != "No Action":
             data["action"] = get_mapped_value(invoice.ims_action, self.VALUE_MAPS.reverse_action)
 
+        self.set_itc_reduction(data, invoice)
+
         return data
+
+    def set_itc_reduction(self, data, invoice):
+        # remarks: optional, any section, reject/pending only
+        if invoice.ims_action in ("Rejected", "Pending") and invoice.remarks and not invoice.is_remarks_blocked:
+            data["remarks"] = invoice.remarks
+
+        # declared ITC: specified records, accept only, when govt allows declaration
+        if not self.EMITS_ITC_REDUCTION or invoice.ims_action != "Accepted" or invoice.is_itc_reduction_blocked:
+            return
+
+        data["itcRedReq"] = "Y" if invoice.itc_reduction_required else "N"
+
+        if invoice.itc_reduction_required:
+            data.update(
+                {
+                    "declIgst": invoice.declared_igst,
+                    "declCgst": invoice.declared_cgst,
+                    "declSgst": invoice.declared_sgst,
+                    "declCess": invoice.declared_cess,
+                }
+            )
 
     def get_existing_transactions(self):
         category, doc_type = get_mapped_value(self.ims_category(), self.VALUE_MAPS.classification)
@@ -197,6 +232,8 @@ class IMSB2B(IMS):
 
 
 class IMSB2BA(IMSB2B):
+    EMITS_ITC_REDUCTION = True
+
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
@@ -237,6 +274,8 @@ class IMSB2BDN(IMSB2B):
 
 
 class IMSB2BDNA(IMSB2BDN):
+    EMITS_ITC_REDUCTION = True
+
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
@@ -262,6 +301,8 @@ class IMSB2BDNA(IMSB2BDN):
 
 
 class IMSB2BCN(IMSB2BDN):
+    EMITS_ITC_REDUCTION = True
+
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
@@ -273,6 +314,8 @@ class IMSB2BCN(IMSB2BDN):
 
 
 class IMSB2BCNA(IMSB2BDNA):
+    EMITS_ITC_REDUCTION = True
+
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(

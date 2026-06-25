@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
@@ -75,6 +76,14 @@ class InwardSupply:
                 "is_amended",
                 "sup_return_period",
                 "document_value",
+                "itc_reduction_required",
+                "is_itc_reduction_blocked",
+                "declared_igst",
+                "declared_cgst",
+                "declared_sgst",
+                "declared_cess",
+                "remarks",
+                "is_remarks_blocked",
             ],
         ).where(self.IMS.ims_action != self.IMS.previous_ims_action)
 
@@ -264,3 +273,101 @@ class PurchaseInvoice:
 
     def query_tax_amount(self, field):
         return Abs(Sum(getattr(self.PI_ITEM, field)))
+
+
+# CR25787E: ITC reduction declaration on specified records
+
+ITC_REDUCTION_TOLERANCE = 1  # books rounding noise; snap to supplier value within this
+
+
+def set_declared_itc(invoice_names, action):
+    """On accept, store declared ITC reduction from books for specified records."""
+    if action != "Accepted":
+        return
+
+    IMS = frappe.qb.DocType("GST Inward Supply")
+    rows = (
+        frappe.qb.from_(IMS)
+        .select(
+            IMS.name,
+            IMS.doc_type,
+            IMS.is_amended,
+            IMS.link_doctype,
+            IMS.link_name,
+            IMS.is_itc_reduction_blocked,
+            IMS.igst,
+            IMS.cgst,
+            IMS.sgst,
+            IMS.cess,
+        )
+        .where(IMS.name.isin(invoice_names))
+        .run(as_dict=True)
+    )
+
+    specified = [row for row in rows if is_specified_record(row) and is_pi_matched(row)]
+    if not specified:
+        return
+
+    books = PurchaseInvoice().get_all(names=[row.link_name for row in specified])
+
+    for row in specified:
+        if book := books.get(row.link_name):
+            frappe.db.set_value("GST Inward Supply", row.name, _declared_from_books(row, book))
+
+
+def _declared_from_books(document, book):
+    declared = {}
+    for head in ("igst", "cgst", "sgst", "cess"):
+        doc_amount = document.get(head) or 0
+        book_amount = book.get(head) or 0
+
+        # books may carry rounding noise; trust supplier within tolerance, else cap (usually less)
+        if abs(book_amount - doc_amount) <= ITC_REDUCTION_TOLERANCE:
+            declared[head] = doc_amount
+        else:
+            declared[head] = min(book_amount, doc_amount)
+
+    declared["sgst"] = declared["cgst"]  # govt: CGST must equal SGST
+
+    return {
+        "itc_reduction_required": 1 if any(declared.values()) else 0,
+        "declared_igst": declared["igst"],
+        "declared_cgst": declared["cgst"],
+        "declared_sgst": declared["sgst"],
+        "declared_cess": declared["cess"],
+    }
+
+
+def defer_undeclarable_itc_reduction(invoices):
+    """Specified accept needs a linked PI to declare ITC; skip the rest and defer to Phase 2."""
+    declarable, deferred = [], []
+    for invoice in invoices:
+        if (
+            invoice.ims_action == "Accepted"
+            and is_specified_record(invoice)
+            and not invoice.is_itc_reduction_blocked
+            and not is_pi_matched(invoice)
+        ):
+            deferred.append(invoice.bill_no)
+        else:
+            declarable.append(invoice)
+
+    if deferred:
+        frappe.msgprint(
+            _("Skipped upload for records with no linked Purchase Invoice to declare ITC reduction: {0}").format(
+                ", ".join(deferred)
+            ),
+            title=_("ITC Reduction Pending"),
+            indicator="orange",
+        )
+
+    return declarable
+
+
+def is_specified_record(invoice):
+    # CR25787E: credit notes and downward amendments (B2BA, B2BDNA) carry declared ITC
+    return invoice.doc_type == "Credit Note" or invoice.is_amended
+
+
+def is_pi_matched(invoice):
+    return invoice.link_doctype == "Purchase Invoice" and invoice.link_name

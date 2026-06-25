@@ -19,6 +19,8 @@ from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     IMSReconciler,
     InwardSupply,
     PurchaseInvoice,
+    defer_undeclarable_itc_reduction,
+    set_declared_itc,
 )
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     verify_request_in_progress,
@@ -180,6 +182,9 @@ class GSTInvoiceManagementSystem(Document):
         # Bulk update ITC claim periods for linked Purchase Invoices
 
         set_itc_claim_period_on_ims_action(invoice_names, action, ims_period=self.period)
+
+        # Store declared ITC reduction from books for specified records
+        set_declared_itc(invoice_names, action)
 
     @frappe.whitelist()
     def get_invoice_details(self, purchase_name: str | None, inward_supply_name: str | None):
@@ -440,7 +445,7 @@ def get_data_for_upload(company_gstin, request_type):
     key_invoice_map = {}
 
     if request_type == "save":
-        gst_inward_supply_list = InwardSupply().get_for_save(company_gstin)
+        gst_inward_supply_list = defer_undeclarable_itc_reduction(InwardSupply().get_for_save(company_gstin))
     else:
         gst_inward_supply_list = InwardSupply().get_for_reset(company_gstin)
 

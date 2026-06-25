@@ -5,12 +5,18 @@ import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_to_date
 
+from india_compliance.gst_india.doctype.gst_invoice_management_system import (
+    _declared_from_books,
+    defer_undeclarable_itc_reduction,
+    set_declared_itc,
+)
 from india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system import (
     IMSReconciler,
     get_data_for_upload,
     get_period_options,
     update_previous_ims_action,
 )
+from india_compliance.gst_india.utils.gstr_2.ims import IMSB2B, IMSB2BCN
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.test_purchase_reconciliation_tool import (
     create_gst_inward_supply,
 )
@@ -138,6 +144,150 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
 
         upload_data = get_data_for_upload("24AAQCA8719H1ZC", "reset")
         self.assertEqual("BILL-24-00002", upload_data["b2b"][0]["inum"])
+
+    def test_declared_from_books(self):
+        # CR25787E: snap to supplier within tolerance, else use books capped at document
+        document = {"igst": 100, "cgst": 900, "sgst": 900, "cess": 0}
+
+        # books within ₹1 -> trust supplier value
+        self.assertEqual(
+            _declared_from_books(document, {"igst": 100.5, "cgst": 900, "sgst": 900, "cess": 0}),
+            {
+                "itc_reduction_required": 1,
+                "declared_igst": 100,
+                "declared_cgst": 900,
+                "declared_sgst": 900,
+                "declared_cess": 0,
+            },
+        )
+
+        # books lower (>₹1) -> books value, sgst mirrors cgst
+        self.assertEqual(
+            _declared_from_books(document, {"igst": 80, "cgst": 850, "sgst": 850, "cess": 0}),
+            {
+                "itc_reduction_required": 1,
+                "declared_igst": 80,
+                "declared_cgst": 850,
+                "declared_sgst": 850,
+                "declared_cess": 0,
+            },
+        )
+
+        # books higher -> capped at document
+        capped = _declared_from_books(document, {"igst": 500, "cgst": 1000, "sgst": 1000, "cess": 0})
+        self.assertEqual(capped["declared_cgst"], 900)
+
+        # no tax -> reduction not required
+        zero = _declared_from_books(
+            {"igst": 0, "cgst": 0, "sgst": 0, "cess": 0},
+            {"igst": 0, "cgst": 0, "sgst": 0, "cess": 0},
+        )
+        self.assertEqual(zero["itc_reduction_required"], 0)
+
+    def test_gov_format_itc_reduction(self):
+        handler = IMSB2BCN(self.gst_ims.company, self.gst_ims.company_gstin)
+
+        # accept -> declared block emitted
+        data = handler.convert_data_to_gov_format(self.gov_invoice())
+        self.assertEqual(data["itcRedReq"], "Y")
+        self.assertEqual(data["declCgst"], 850)
+        self.assertEqual(data["declSgst"], 850)
+
+        # govt blocked -> suppressed
+        data = handler.convert_data_to_gov_format(self.gov_invoice(is_itc_reduction_blocked=1))
+        self.assertNotIn("itcRedReq", data)
+
+        # reject -> no declared block, remarks carried
+        data = handler.convert_data_to_gov_format(
+            self.gov_invoice(ims_action="Rejected", remarks="not our purchase")
+        )
+        self.assertNotIn("itcRedReq", data)
+        self.assertEqual(data["remarks"], "not our purchase")
+
+        # non-specified record -> never declares
+        data = IMSB2B(self.gst_ims.company, self.gst_ims.company_gstin).convert_data_to_gov_format(
+            self.gov_invoice()
+        )
+        self.assertNotIn("itcRedReq", data)
+
+    def test_defer_undeclarable_itc_reduction(self):
+        matched = frappe._dict(
+            ims_action="Accepted",
+            doc_type="Credit Note",
+            is_amended=0,
+            is_itc_reduction_blocked=0,
+            link_doctype="Purchase Invoice",
+            link_name="PINV-1",
+            bill_no="CN-MATCHED",
+        )
+        unmatched = frappe._dict(matched, link_doctype=None, link_name=None, bill_no="CN-UNMATCHED")
+        blocked = frappe._dict(unmatched, is_itc_reduction_blocked=1, bill_no="CN-BLOCKED")
+        b2b = frappe._dict(unmatched, doc_type="Invoice", is_amended=0, bill_no="B2B-UNMATCHED")
+
+        # only the unmatched specified accept is deferred (skipped); the rest are kept
+        kept = defer_undeclarable_itc_reduction([matched, unmatched, blocked, b2b])
+        self.assertEqual(
+            [invoice.bill_no for invoice in kept],
+            ["CN-MATCHED", "CN-BLOCKED", "B2B-UNMATCHED"],
+        )
+
+    def test_set_declared_itc_on_accept(self):
+        cn = create_gst_inward_supply(
+            bill_no="CN-IMS-DECL",
+            bill_date="2024-12-11",
+            classification="CDNR",
+            doc_type="Credit Note",
+            is_amended=0,
+            previous_ims_action="No Action",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-11",
+        )
+        self.addCleanup(self.delete_inward_supply, cn.name)
+
+        frappe.db.set_value(
+            "GST Inward Supply",
+            cn.name,
+            {"link_doctype": "Purchase Invoice", "link_name": self.pinv.name},
+        )
+
+        set_declared_itc((cn.name,), "Accepted")
+
+        cn.reload()
+        self.assertEqual(cn.itc_reduction_required, 1)
+        self.assertEqual(cn.declared_sgst, cn.declared_cgst)  # govt: CGST == SGST
+
+    def gov_invoice(self, **overrides):
+        invoice = frappe._dict(
+            {
+                "supplier_gstin": "24MAYAS0100J1JD",
+                "supply_type": "Regular",
+                "supplier_return_form": "R1",
+                "sup_return_period": "012023",
+                "document_value": 1000,
+                "place_of_supply": "07-Delhi",
+                "previous_ims_action": "No Action",
+                "igst": 0,
+                "cgst": 900,
+                "sgst": 900,
+                "cess": 0,
+                "taxable_value": 10000,
+                "ims_action": "Accepted",
+                "is_itc_reduction_blocked": 0,
+                "itc_reduction_required": 1,
+                "declared_igst": 0,
+                "declared_cgst": 850,
+                "declared_sgst": 850,
+                "declared_cess": 0,
+                "remarks": None,
+                "is_remarks_blocked": 0,
+            }
+        )
+        invoice.update(overrides)
+        return invoice
+
+    def delete_inward_supply(self, name):
+        if frappe.db.exists("GST Inward Supply", name):
+            frappe.delete_doc("GST Inward Supply", name, force=True)
 
     def test_update_previous_ims_action(self):
         self.gst_ims.update_action((self.invoice_name_1,), "Accepted")
