@@ -23,10 +23,12 @@
    "read_only": 1
   },
   {
+   "columns": 3,
    "fieldname": "tax_amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Tax Amount",
+   "options": "Company:company:default_currency",
    "read_only": 1
   },
   {
@@ -34,6 +36,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "columns": 10,
    "fieldname": "account_head",
    "fieldtype": "Link",
    "in_list_view": 1,

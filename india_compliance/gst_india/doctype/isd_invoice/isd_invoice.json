@@ -94,6 +94,7 @@
    "fieldtype": "Currency",
    "label": "Total Eligible",
    "no_copy": 1,
+   "options": "Company:company:default_currency",
    "read_only": 1
   },
   {
@@ -101,6 +102,7 @@
    "fieldtype": "Currency",
    "label": "Total Ineligible",
    "no_copy": 1,
+   "options": "Company:company:default_currency",
    "read_only": 1
   },
   {

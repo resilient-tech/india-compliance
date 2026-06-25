@@ -29,6 +29,7 @@
  ],
  "fields": [
   {
+   "columns": 5,
    "fieldname": "purchase_invoice",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -53,6 +54,7 @@
    "default": "0",
    "fetch_from": "item.is_ineligible_for_itc",
    "fetch_if_empty": 1,
+   "columns": 2,
    "fieldname": "is_ineligible_for_itc",
    "fieldtype": "Check",
    "in_list_view": 1,
@@ -72,67 +74,83 @@
   {
    "default": "0",
    "fieldname": "total_igst",
-   "fieldtype": "Float",
+   "fieldtype": "Currency",
    "label": "Total IGST",
+   "options": "Company:company:default_currency",
    "read_only_depends_on": "eval:parent.is_external_invoice"
   },
   {
    "default": "0",
    "fieldname": "total_cgst",
-   "fieldtype": "Float",
+   "fieldtype": "Currency",
    "label": "Total CGST",
+   "options": "Company:company:default_currency",
    "read_only_depends_on": "eval:parent.is_external_invoice"
   },
   {
    "default": "0",
    "fieldname": "total_sgst",
-   "fieldtype": "Float",
+   "fieldtype": "Currency",
    "label": "Total SGST",
+   "options": "Company:company:default_currency",
    "read_only_depends_on": "eval:parent.is_external_invoice"
   },
   {
    "default": "0",
    "fieldname": "total_cess",
-   "fieldtype": "Float",
+   "fieldtype": "Currency",
    "label": "Total CESS",
+   "options": "Company:company:default_currency",
    "read_only_depends_on": "eval:parent.is_external_invoice"
   },
   {
    "default": "0",
    "fieldname": "total_cess_non_advol",
-   "fieldtype": "Float",
+   "fieldtype": "Currency",
    "label": "Total CESS Non Advol",
+   "options": "Company:company:default_currency",
    "read_only_depends_on": "eval:parent.is_external_invoice"
   },
   {
+   "columns": 3,
    "default": "0",
    "fieldname": "distributed_igst",
    "fieldtype": "Currency",
-   "label": "Distributed IGST"
+   "in_list_view": 1,
+   "label": "Distributed IGST",
+   "options": "Company:company:default_currency"
   },
   {
+   "columns": 3,
    "default": "0",
    "fieldname": "distributed_cgst",
    "fieldtype": "Currency",
-   "label": "Distributed CGST"
+   "in_list_view": 1,
+   "label": "Distributed CGST",
+   "options": "Company:company:default_currency"
   },
   {
+   "columns": 3,
    "default": "0",
    "fieldname": "distributed_sgst",
    "fieldtype": "Currency",
-   "label": "Distributed SGST"
+   "in_list_view": 1,
+   "label": "Distributed SGST",
+   "options": "Company:company:default_currency"
   },
   {
    "default": "0",
    "fieldname": "distributed_cess",
    "fieldtype": "Currency",
-   "label": "Distributed CESS"
+   "label": "Distributed CESS",
+   "options": "Company:company:default_currency"
   },
   {
    "default": "0",
    "fieldname": "distributed_cess_non_advol",
    "fieldtype": "Currency",
-   "label": "Distributed CESS Non Advol"
+   "label": "Distributed CESS Non Advol",
+   "options": "Company:company:default_currency"
   },
   {
    "fieldname": "section_break_ewty",
