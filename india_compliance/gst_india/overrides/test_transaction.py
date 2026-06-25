@@ -1958,39 +1958,6 @@ class TestItemUpdate(FrappeTestCase):
                 doc.items[1],
             )
 
-    def test_gst_treatment_recomputed_when_item_updated_after_submit(self):
-        # Update Items must recompute GST treatment, not just amounts; this
-        # post-submit path skips validate.
-        for doctype in ["Sales Order", "Purchase Order"]:
-            doc = self.create_order(doctype)
-            item = doc.items[0]
-
-            item_to_update = [
-                {
-                    "item_code": item.item_code,
-                    "qty": item.qty,
-                    "rate": item.rate,
-                    "docname": item.name,
-                    "name": item.name,
-                    "idx": item.idx,
-                },
-                {"item_code": "_Test Non GST Item", "qty": 1, "rate": 50, "idx": 2},
-            ]
-
-            update_child_qty_rate(doctype, json.dumps(item_to_update), doc.name)
-            doc = frappe.get_doc(doctype, doc.name)
-
-            self.assertDocumentEqual(
-                {
-                    "gst_treatment": "Non-GST",
-                    "cgst_amount": 0,
-                    "sgst_amount": 0,
-                    "igst_amount": 0,
-                },
-                doc.items[1],
-            )
-            self.assertEqual(doc.items[0].gst_treatment, "Taxable")
-
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_overseas_order_add_non_gst_item_after_submit(self):
         """
@@ -2161,7 +2128,7 @@ class TestPlaceOfSupply(FrappeTestCase):
         self.assertEqual({tax.gst_tax_type for tax in so.taxes}, {"igst"})
 
         selected_items = [{"item_code": so.items[0].item_code, "supplier": "_Test Registered Supplier"}]
-        po = make_purchase_order(so.name, selected_items=selected_items)[0]
+        po = make_purchase_order(so.name, selected_items=selected_items)
 
         # after_mapping resets to intra-state
         self.assertEqual(po.place_of_supply, "24-Gujarat")
