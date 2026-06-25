@@ -6,6 +6,7 @@ from functools import reduce
 from operator import add
 
 import frappe
+from erpnext import get_default_cost_center
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
@@ -569,7 +570,7 @@ class ISDInvoice(Document):
             "debit": 0,
             "credit": 0,
             dr_or_cr: amount,  # "debit" or "credit"
-            "cost_center": self.cost_center,
+            "cost_center": self.cost_center or get_default_cost_center(self.company),
             **attributes,
         }
         if company_gstin:
@@ -784,11 +785,7 @@ def get_isd_autofill_values(changed_field: str, doc: str | dict):
 
 @frappe.whitelist()
 def get_input_gst_accounts(company: str):
-    accounts = get_gst_accounts_by_type(company, "Input")
-    accounts.default_gst_expense_account = frappe.db.get_value(
-        "Company", company, "default_gst_expense_account"
-    )
-    return accounts
+    return get_gst_accounts_by_type(company, "Input")
 
 
 def _map_isd_invoice(source_name, target_doc, field_map, post_process, map_accounting_dimensions=False):

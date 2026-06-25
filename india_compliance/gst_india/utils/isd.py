@@ -118,25 +118,23 @@ def calculate_distribution(doc, cumulative):
 
 
 def is_inter_state_distribution(doc):
-    # different place of supply -> inter-state outright (no category lookup needed)
-    if doc.company_pos and doc.party_pos and doc.company_pos != doc.party_pos:
-        return True
-
-    # same / missing POS: SEZ / overseas recipients are still inter-state (IGST)
+    # SEZ / overseas recipients are always inter-state (IGST), regardless of place of supply
     party_gst_category = (
-        frappe.db.get_value("Address", doc.party_address, "gst_category") if doc.party_address else None
+        frappe.get_cached_value("Address", doc.party_address, "gst_category") if doc.party_address else None
     )
     if party_gst_category in IMPORT_GST_CATEGORIES:
         return True
 
+    # prefer the place of supply (state number) when both are known -> no extra state lookups
     if doc.company_pos and doc.party_pos:
         return doc.company_pos != doc.party_pos
 
+    # fall back to the addresses' states when a POS is missing
     company_state = (
-        frappe.db.get_value("Address", doc.company_address, "gst_state") if doc.company_address else None
+        frappe.get_cached_value("Address", doc.company_address, "gst_state") if doc.company_address else None
     )
     party_state = (
-        frappe.db.get_value("Address", doc.party_address, "gst_state") if doc.party_address else None
+        frappe.get_cached_value("Address", doc.party_address, "gst_state") if doc.party_address else None
     )
     return company_state != party_state
 

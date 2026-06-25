@@ -54,6 +54,7 @@ frappe.ui.form.on("ISD Invoice", {
 
     async company(frm) {
         await frm.isd_controller.fetch_gst_accounts();
+        await frm.isd_controller.fetch_default_expense_account();
         await fetch_isd_autofill(frm, "company");
     },
 
@@ -252,6 +253,7 @@ class ISDInvoiceController {
     setup() {
         this.set_queries();
         this.fetch_gst_accounts();
+        this.fetch_default_expense_account();
     }
 
     set_queries() {
@@ -314,8 +316,7 @@ class ISDInvoiceController {
         this.frm.set_query("account_head", "taxes", () => {
             return {
                 filters: {
-                    company: this.frm.doc.company,
-                    is_group: 0,
+                    name: ["in", Object.values(this.gst_accounts || {}).filter(Boolean)],
                 },
             };
         });
@@ -348,6 +349,15 @@ class ISDInvoiceController {
         });
 
         this.frm.set_query("expense_account", () => {
+            return {
+                filters: {
+                    company: this.frm.doc.company,
+                    is_group: 0,
+                },
+            };
+        });
+
+        this.frm.set_query("cost_center", () => {
             return {
                 filters: {
                     company: this.frm.doc.company,
@@ -446,15 +456,21 @@ class ISDInvoiceController {
     }
     async fetch_gst_accounts() {
         if (!this.frm.doc.company) return;
-        return frappe
-            .call({
-                method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_input_gst_accounts",
-                args: { company: this.frm.doc.company },
-            })
-            .then((result) => {
-                this.gst_accounts = result.message || {};
-                this.default_expense_account = result.message?.default_gst_expense_account || null;
-            });
+        const { message } = await frappe.call({
+            method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_input_gst_accounts",
+            args: { company: this.frm.doc.company },
+        });
+        this.gst_accounts = message || {};
+    }
+
+    async fetch_default_expense_account() {
+        if (!this.frm.doc.company) return;
+        const { message } = await frappe.db.get_value(
+            "Company",
+            this.frm.doc.company,
+            "default_gst_expense_account",
+        );
+        this.default_expense_account = message?.default_gst_expense_account || null;
     }
 
     async is_inter_state_distribution() {
