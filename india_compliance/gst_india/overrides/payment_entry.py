@@ -407,6 +407,30 @@ def adjust_allocations_for_taxes_in_payment_reconciliation(doc):
         )
 
 
+def get_included_taxes_query(gst_accounts, payment_entries=None):
+    """
+    Subquery summing the GST embedded in paid_amount per Payment Entry
+    (taxes flagged `included_in_paid_amount` on tax-inclusive advances).
+    Exclusive payments have no such taxes, so they contribute no row -> 0.
+    """
+    pe_tax = frappe.qb.DocType("Advance Taxes and Charges")
+    query = (
+        frappe.qb.from_(pe_tax)
+        .select(
+            pe_tax.parent,
+            Sum(pe_tax.base_tax_amount).as_("included_taxes"),
+        )
+        .where(pe_tax.included_in_paid_amount == 1)
+        .where(pe_tax.account_head.isin(gst_accounts))
+        .groupby(pe_tax.parent)
+    )
+
+    if payment_entries is not None:
+        query = query.where(pe_tax.parent.isin(payment_entries))
+
+    return query
+
+
 def get_taxes_summary(company, payment_entries):
     gst_accounts = get_all_gst_accounts(company)
     if not gst_accounts:
@@ -451,15 +475,8 @@ def get_taxes_summary(company, payment_entries):
         return taxes
 
     # carve out GST embedded in paid_amount (included_in_paid_amount); exclusive -> 0
-    pe_tax = frappe.qb.DocType("Advance Taxes and Charges")
-    included_taxes = (
-        frappe.qb.from_(pe_tax)
-        .select(pe_tax.parent, Sum(pe_tax.base_tax_amount).as_("included_taxes"))
-        .where(pe_tax.parent.isin(list(taxes.keys())))
-        .where(pe_tax.included_in_paid_amount == 1)
-        .where(pe_tax.account_head.isin(gst_accounts))
-        .groupby(pe_tax.parent)
-        .run(as_dict=True)
+    included_taxes = get_included_taxes_query(gst_accounts, payment_entries=list(taxes.keys())).run(
+        as_dict=True
     )
     included_taxes = {row.parent: flt(row.included_taxes) for row in included_taxes}
 
