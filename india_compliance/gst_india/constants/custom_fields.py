@@ -1266,19 +1266,6 @@ CUSTOM_FIELDS = {
             "insert_after": "is_inter_state",
             "print_hide": 1,
         },
-        {
-            "fieldname": "tax_category_column_break",
-            "fieldtype": "Column Break",
-            "insert_after": "is_reverse_charge",
-        },
-        {
-            "fieldname": "gst_state",
-            "label": "Source State",
-            "fieldtype": "Select",
-            "options": state_options,
-            "insert_after": "company",
-            "translatable": 0,
-        },
     ],
     "Item": [
         {
