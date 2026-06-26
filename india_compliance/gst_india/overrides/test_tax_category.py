@@ -83,6 +83,8 @@ class TestTaxCategoryAutoSelection(IntegrationTestCase):
             "_Test Gujarat In-State", is_inter_state=0, is_reverse_charge=0, gst_state=SOURCE_STATE
         )
         template = self._create_linked_template("_Test Gujarat In-State Template", category.name)
+        self.addCleanup(frappe.delete_doc, "Tax Category", category.name, force=True)
+        self.addCleanup(frappe.delete_doc, SALES_TEMPLATE, template, force=True)
 
         gst_details = self._sales_gst_details()
         self.assertEqual(gst_details.get("taxes_and_charges"), template)
@@ -97,9 +99,11 @@ class TestTaxCategoryAutoSelection(IntegrationTestCase):
         self.assertEqual(gst_details.get("taxes_and_charges"), DEFAULT_IN_STATE_TEMPLATE)
 
     def test_state_specific_category_without_template_falls_back_to_default(self):
-        self._create_tax_category(
+        category = self._create_tax_category(
             "_Test Gujarat No Template", is_inter_state=0, is_reverse_charge=0, gst_state=SOURCE_STATE
         )
+        # Remove this company-state category so it can't collide with the preferred-over-default test.
+        self.addCleanup(frappe.delete_doc, "Tax Category", category.name, force=True)
 
         gst_details = self._sales_gst_details()
         self.assertEqual(gst_details.get("taxes_and_charges"), DEFAULT_IN_STATE_TEMPLATE)
