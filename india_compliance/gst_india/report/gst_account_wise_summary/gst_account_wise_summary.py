@@ -329,6 +329,7 @@ class AccountWiseSummary:
 
         if filters.get("doctype") not in ["Journal Entry", "Bill of Entry"]:
             query = query.where(doc.company_gstin != IfNull(doc[filters.gstin_field], ""))
+            query = query.where(IfNull(doc.is_out_of_scope_of_gst, 0) == 0)
 
         if filters.get("doctype") != "Bill of Entry":
             query = query.where(doc.is_opening == "No")

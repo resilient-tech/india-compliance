@@ -252,6 +252,7 @@ def is_e_waybill_applicable(doc, gst_settings=None):
 
     if (
         not gst_settings.enable_e_waybill
+        or doc.get("is_out_of_scope_of_gst")
         or doc.company_gstin == doc.billing_address_gstin
         or doc.ewaybill
         or not are_goods_supplied(doc)

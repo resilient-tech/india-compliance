@@ -132,6 +132,7 @@ def process_data(data):
         "Nil-Rated",
         "Exempted",
         "Non-GST",
+        "Out of Scope",
     ]
 
     # Sort the dictionary based on the sort order
@@ -168,6 +169,7 @@ def get_doctype_wise_data(filters, doctype):
             (doc.is_opening == "No")
             & (doc.company_gstin != IfNull(doc[filters.gstin_field], ""))
             & (doc.is_reverse_charge == filters.is_reverse_charge)
+            & (IfNull(doc.is_out_of_scope_of_gst, 0) == 0)
         )
 
     if filters.get("company_gstin"):

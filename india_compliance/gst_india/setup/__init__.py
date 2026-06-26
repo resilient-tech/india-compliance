@@ -13,6 +13,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     EDUCATION_CUSTOM_FIELDS,
     HEALTHCARE_CUSTOM_FIELDS,
     HRMS_CUSTOM_FIELDS,
+    OUT_OF_SCOPE_OF_GST_FIELDS,
     PURCHASE_REVERSE_CHARGE_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
@@ -331,6 +332,7 @@ def get_all_custom_fields():
         CUSTOM_FIELDS,
         SALES_REVERSE_CHARGE_FIELDS,
         PURCHASE_REVERSE_CHARGE_FIELDS,
+        OUT_OF_SCOPE_OF_GST_FIELDS,
         E_INVOICE_FIELDS,
         E_WAYBILL_FIELDS,
     ):

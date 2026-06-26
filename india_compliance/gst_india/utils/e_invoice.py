@@ -537,6 +537,9 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
             exc=AlreadyGeneratedError,
         )
 
+    if doc.get("is_out_of_scope_of_gst"):
+        return _throw(_("e-Invoice is not applicable for transactions Out of Scope of GST"))
+
     if doc.company_gstin == doc.billing_address_gstin:
         return _throw(_("e-Invoice is not applicable for invoices with same company and billing GSTIN"))
 

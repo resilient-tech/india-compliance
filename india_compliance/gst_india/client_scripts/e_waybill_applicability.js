@@ -21,6 +21,11 @@ class EwaybillApplicability {
             );
         }
 
+        if (this.frm.doc.is_out_of_scope_of_gst) {
+            is_ewb_applicable = false;
+            message_list.push("e-Waybill is not applicable for transactions Out of Scope of GST.");
+        }
+
         // at least one item is not a service
         is_ewb_applicable = this.has_goods_item(is_ewb_applicable, message_list);
 
