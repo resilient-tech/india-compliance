@@ -1014,7 +1014,6 @@ class ReconciledData(BaseReconciliation):
         for doc in purchases_and_bill_of_entry.values():
             reconciliation_data.append(frappe._dict({"_purchase_invoice": doc}))
 
-        self.gstin_map = self.get_gstin_status_map(reconciliation_data)
         self.process_data(reconciliation_data, retain_doc=retain_doc)
 
         return reconciliation_data
@@ -1123,6 +1122,8 @@ class ReconciledData(BaseReconciliation):
             "gstin_status": "",
             "gstin_cancelled_date": "",
         }
+
+        self.gstin_map = self.get_gstin_status_map(reconciliation_data)
 
         for data in reconciliation_data:
             data.update(default_dict)
