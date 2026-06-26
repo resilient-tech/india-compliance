@@ -86,3 +86,4 @@ india_compliance.patches.v15.set_boe_applicable_for_import_goods_purchase_invoic
 india_compliance.patches.post_install.update_gst_treatment_for_import_transactions
 execute:import frappe; frappe.db.set_single_value("GST Settings", "nil_exempt_e_invoice_treatment", "Do Not Generate")
 india_compliance.patches.v16.update_tds_section_display_name
+india_compliance.patches.v15.set_india_compliance_default_tax_category
