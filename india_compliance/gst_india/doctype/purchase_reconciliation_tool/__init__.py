@@ -935,6 +935,7 @@ class ReconciledData(BaseReconciliation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.gstin_party_map = frappe._dict()
+        self.gstin_map = frappe._dict()
         self.dimension_fields = [*get_accounting_dimensions(), "cost_center", "project"]
 
     def get_consolidated_data(
@@ -1118,7 +1119,11 @@ class ReconciledData(BaseReconciliation):
             "irn_source": "",
             "irn_number": "",
             "irn_gen_date": "",
+            "gstin_status": "",
+            "gstin_cancelled_date": "",
         }
+
+        self.gstin_map = self.get_gstin_status_map(reconciliation_data)
 
         for data in reconciliation_data:
             data.update(default_dict)
@@ -1148,6 +1153,7 @@ class ReconciledData(BaseReconciliation):
         ):
             data[field] = purchase.get(field) or inward_supply.get(field)
 
+        gstin_info = self.gstin_map.get(data.supplier_gstin, frappe._dict())
         data.update(
             {
                 "supplier_name": data.supplier_name or self.guess_supplier_name(data.supplier_gstin),
@@ -1168,6 +1174,8 @@ class ReconciledData(BaseReconciliation):
                 "irn_source": inward_supply.get("irn_source"),
                 "irn_number": inward_supply.get("irn_number"),
                 "irn_gen_date": format_date(inward_supply.get("irn_gen_date")),
+                "gstin_status": gstin_info.get("status") or "",
+                "gstin_cancelled_date": gstin_info.get("cancelled_date") or "",
             }
         )
 
@@ -1179,6 +1187,23 @@ class ReconciledData(BaseReconciliation):
         elif not inward_supply:
             data.match_status = MatchStatus.MISSING_IN_2A_2B.value
             data.action = "Ignore" if purchase.get("reconciliation_status") == "Ignored" else "No Action"
+
+    def get_gstin_status_map(self, reconciliation_data):
+        supplier_gstins = {
+            doc.get("_purchase_invoice", frappe._dict()).get("supplier_gstin")
+            or doc.get("_inward_supply", frappe._dict()).get("supplier_gstin")
+            for doc in reconciliation_data
+        } - {None, ""}
+
+        if not supplier_gstins:
+            return frappe._dict()
+
+        records = frappe.get_all(
+            "GSTIN",
+            filters={"name": ("in", list(supplier_gstins))},
+            fields=["name", "status", "cancelled_date"],
+        )
+        return frappe._dict({r.name: r for r in records})
 
     def update_amount_difference(self, data, purchase, inward_supply):
         data.taxable_value_difference = rounded(
