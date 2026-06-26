@@ -935,6 +935,19 @@ class ImportDialog {
     async fetch_import_history() {
         if (!this.company_gstin || !this.return_type || !this.date_range) return;
 
+        // Skip duplicate requests for identical arguments. While the dialog
+        // applies its field defaults, several field onchange handlers (and the
+        // explicit call in init_dialog) can invoke this with the same arguments,
+        // which would otherwise fire the same API call more than once.
+        const args_signature = JSON.stringify([
+            this.company_gstin,
+            this.return_type,
+            this.date_range,
+            this.for_download,
+        ]);
+        if (args_signature === this._last_import_history_signature) return;
+        this._last_import_history_signature = args_signature;
+
         // fetch history
         const { message } = await this.frm._call("get_import_history", {
             company_gstin: this.company_gstin,
