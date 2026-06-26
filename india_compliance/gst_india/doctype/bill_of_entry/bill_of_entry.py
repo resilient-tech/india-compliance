@@ -791,15 +791,26 @@ def fetch_pending_boe_invoices(
     if filters.name and filters.name[1] is None:
         filters.name = ["!=", ""]
 
+    parent_filters = {
+        **filters,
+        "docstatus": 1,
+        "gst_category": ["in", list(IMPORT_GST_CATEGORIES)],
+        "is_boe_applicable": 1,
+    }
+    # List-form filters with the child doctype spelled out for pending_boe_qty: frappe then
+    # resolves it as a Float and skips the ifnull(col, '') wrap, which breaks on postgres as
+    # coalesce(numeric, '') when the child field's type can't be resolved from the parent.
+    pi_filters = [
+        [field, value[0], value[1]]
+        if isinstance(value, list | tuple) and len(value) == 2
+        else [field, "=", value]
+        for field, value in parent_filters.items()
+    ]
+    pi_filters.append(["Purchase Invoice Item", "pending_boe_qty", ">", 0])
+
     return frappe.get_list(
         "Purchase Invoice",
-        filters={
-            **filters,
-            "docstatus": 1,
-            "gst_category": ["in", list(IMPORT_GST_CATEGORIES)],
-            "is_boe_applicable": 1,
-            "pending_boe_qty": [">", 0],
-        },
+        filters=pi_filters,
         fields=["name", "company", "company_gstin"],
         limit_start=start,
         limit_page_length=page_len,
