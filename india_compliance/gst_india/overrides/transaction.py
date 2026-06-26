@@ -968,26 +968,34 @@ def get_tax_template_based_on_category(master_doctype, company, party_details):
 def get_tax_template(master_doctype, company, is_inter_state, state_code, is_reverse_charge):
     tax_categories = frappe.get_all(
         "Tax Category",
-        fields=["name", "is_inter_state", "gst_state"],
+        fields=["name", "gst_state"],
         filters={
             "is_inter_state": 1 if is_inter_state else 0,
             "is_reverse_charge": 1 if is_reverse_charge else 0,
             "disabled": 0,
         },
+        or_filters={"is_india_compliance_default": 1, "gst_state": ["!=", ""]},
     )
 
-    default_tax = ""
-
+    state_specific = []
+    default = []
     for tax_category in tax_categories:
-        if STATE_NUMBERS.get(tax_category.gst_state) == state_code or (
-            not default_tax and not tax_category.gst_state
-        ):
-            default_tax = frappe.db.get_value(
-                master_doctype,
-                {"company": company, "disabled": 0, "tax_category": tax_category.name},
-                "name",
-            )
-    return default_tax
+        if tax_category.gst_state:
+            if STATE_NUMBERS.get(tax_category.gst_state) == state_code:
+                state_specific.append(tax_category.name)
+        else:
+            default.append(tax_category.name)
+
+    for tax_category in state_specific + default:
+        default_tax = frappe.db.get_value(
+            master_doctype,
+            {"company": company, "disabled": 0, "tax_category": tax_category},
+            "name",
+        )
+        if default_tax:
+            return default_tax
+
+    return ""
 
 
 def validate_reverse_charge_transaction(doc):
