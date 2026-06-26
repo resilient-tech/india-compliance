@@ -6,7 +6,7 @@ from typing import ClassVar
 
 import frappe
 from frappe.query_builder import Case, Criterion
-from frappe.query_builder.functions import Date, IfNull, Sum
+from frappe.query_builder.functions import Date, IfNull, Max, Sum
 from frappe.utils import cint, flt, getdate
 from pypika import Order
 
@@ -748,8 +748,9 @@ class GSTR1DocumentIssuedSummary:
         return (
             query.join(self.sales_invoice_item)
             .on(self.sales_invoice.name == self.sales_invoice_item.parent)
+            # Max(): child col, not in GROUP BY (SI.name); invalid bare on postgres
             .select(
-                self.sales_invoice_item.gst_treatment,
+                Max(self.sales_invoice_item.gst_treatment).as_("gst_treatment"),
             )
         )
 

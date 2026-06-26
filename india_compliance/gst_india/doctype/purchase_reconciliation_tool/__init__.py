@@ -9,7 +9,7 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 )
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Abs, IfNull, Sum
+from frappe.query_builder.functions import Abs, IfNull, Max, Sum
 from frappe.utils import add_months, cint, format_date, getdate, rounded
 from rapidfuzz import fuzz, process
 
@@ -592,8 +592,9 @@ class BillOfEntry:
             self.BOE.bill_of_entry_date.as_("bill_date"),
             self.BOE.posting_date,
             self.BOE.company_gstin,
-            self.PI.supplier_name,
-            self.PI.is_reverse_charge,
+            # Max(): joined PI cols, not in GROUP BY (BOE.name); invalid bare on postgres
+            Max(self.PI.supplier_name).as_("supplier_name"),
+            Max(self.PI.is_reverse_charge).as_("is_reverse_charge"),
             *tax_fields,
         ]
 
@@ -602,7 +603,9 @@ class BillOfEntry:
 
         for field in purchase_fields:
             fields.append(
-                Case().when(self.PI.gst_category == "SEZ", getattr(self.PI, field)).else_(None).as_(field)
+                Max(Case().when(self.PI.gst_category == "SEZ", getattr(self.PI, field)).else_(None)).as_(
+                    field
+                )
             )
 
         # Add only boe fields

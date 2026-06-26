@@ -528,10 +528,13 @@ def update_pending_status(e_invoice_applicability_date, company=None):
     gst_settings = frappe.get_cached_doc("GST Settings")
     if gst_settings.nil_exempt_e_invoice_treatment == "Do Not Generate":
         sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
-        query = (
-            query.join(sales_invoice_item)
-            .on(sales_invoice_item.parent == sales_invoice.name)
-            .where(sales_invoice_item.gst_treatment.isin(TAXABLE_GST_TREATMENTS))
+        # subquery, not UPDATE..JOIN (invalid on postgres)
+        query = query.where(
+            sales_invoice.name.isin(
+                frappe.qb.from_(sales_invoice_item)
+                .select(sales_invoice_item.parent)
+                .where(sales_invoice_item.gst_treatment.isin(TAXABLE_GST_TREATMENTS))
+            )
         )
 
     if company:

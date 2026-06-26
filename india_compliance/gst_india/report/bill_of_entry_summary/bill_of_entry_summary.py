@@ -3,7 +3,7 @@
 
 import frappe
 from frappe import _
-from frappe.query_builder.custom import GROUP_CONCAT
+from frappe.query_builder.functions import GroupConcat, Max
 
 
 def execute(filters=None):
@@ -67,7 +67,8 @@ def update_journal_entry_for_payment(query):
     return (
         query.left_join(journal_entry_account)
         .on(bill_of_entry.name == journal_entry_account.reference_name)
-        .select(journal_entry_account.parent.as_("payment_journal_entry"))
+        # Max(): joined col, not in GROUP BY (bill_of_entry.name); invalid bare on postgres
+        .select(Max(journal_entry_account.parent).as_("payment_journal_entry"))
     )
 
 
@@ -82,8 +83,9 @@ def update_purchase_invoice_query(query):
         .left_join(purchase_invoice)
         .on(purchase_invoice.name == bill_of_entry_item.purchase_invoice)
         .select(
-            GROUP_CONCAT(purchase_invoice.name, ",").as_("purchase_invoice"),
-            purchase_invoice.supplier,
+            GroupConcat(purchase_invoice.name, ",").as_("purchase_invoice"),
+            # Max(): multiple PIs per BoE, so not in GROUP BY; invalid bare on postgres
+            Max(purchase_invoice.supplier).as_("supplier"),
         )
         .groupby(bill_of_entry.name)
     )

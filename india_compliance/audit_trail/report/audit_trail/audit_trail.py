@@ -108,7 +108,11 @@ class BaseAuditTrail:
         return doctypes
 
     def update_count(self):
-        fields = ["owner as user_name", {"COUNT": "name", "as": "count"}]
+        # bare owner + COUNT with no GROUP BY breaks postgres; drop owner when not grouping
+        if self.group_by:
+            fields = ["owner as user_name", {"COUNT": "name", "as": "count"}]
+        else:
+            fields = [{"COUNT": "name", "as": "count"}]
         self.filters["creation"] = self.get_date()
 
         if doctype := self.filters.pop("doctype", None):

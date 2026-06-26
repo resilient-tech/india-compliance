@@ -3,7 +3,7 @@
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import add_to_date
+from frappe.utils import add_to_date, cint
 
 
 class GSTRImportLog(Document):
@@ -81,4 +81,5 @@ def toggle_scheduled_jobs(stopped):
     )
 
     if scheduled_job:
-        frappe.db.set_value("Scheduled Job Type", scheduled_job, "stopped", stopped)
+        # cint: callers pass a bool, postgres rejects bool on smallint
+        frappe.db.set_value("Scheduled Job Type", scheduled_job, "stopped", cint(stopped))

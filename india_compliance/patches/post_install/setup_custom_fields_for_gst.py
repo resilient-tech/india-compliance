@@ -17,8 +17,9 @@ def delete_tax_id_custom_field():
 
 def set_correct_state_number():
     # set correct state number for all states with single digit state number
+    # single-quoted '0': postgres reads "0" as an identifier
     frappe.db.sql(
-        """UPDATE tabAddress SET gst_state_number=concat("0", gst_state_number)
+        """UPDATE `tabAddress` SET gst_state_number=concat('0', gst_state_number)
             WHERE length(gst_state_number) = 1"""
     )
 

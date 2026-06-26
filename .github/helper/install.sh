@@ -11,12 +11,18 @@ fi
 
 cd ~ || exit
 
+# Database backend to test against: "mariadb" (default) or "postgres". The postgres job sets DB=postgres.
+DB="${DB:-mariadb}"
+
 echo "Setting Up System Dependencies..."
 
 sudo apt update
 
 sudo apt remove mysql-server mysql-client
 sudo apt install libcups2-dev redis-server mariadb-client
+if [ "$DB" == "postgres" ]; then
+    sudo apt install postgresql-client
+fi
 
 install_whktml() {
     wget -O /tmp/wkhtmltox.deb https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_amd64.deb
@@ -35,10 +41,26 @@ bench init --skip-assets --frappe-path ~/frappe --python "$(which python)" frapp
 
 mkdir ~/frappe-bench/sites/test_site
 
-cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config.json" ~/frappe-bench/sites/test_site/
+if [ "$DB" == "postgres" ]; then
+    cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config_postgres.json" ~/frappe-bench/sites/test_site/site_config.json
+else
+    cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config.json" ~/frappe-bench/sites/test_site/site_config.json
+fi
 
 
-mariadb --host 127.0.0.1 --port 3306 -u root -ptravis -e "
+if [ "$DB" == "postgres" ]; then
+    # `bench reinstall` (via psycopg2) creates the test_frappe database + user itself, using the
+    # root_login/root_password from site_config. We only tune the throwaway CI server for speed:
+    # durability off (postgres fsyncs every commit by default, which dominates a commit-heavy
+    # suite). All params are reloadable via SIGHUP, so no restart is needed.
+    export PGPASSWORD=travis
+    psql -h 127.0.0.1 -p 5432 -U postgres \
+        -c "ALTER SYSTEM SET synchronous_commit = 'off'" \
+        -c "ALTER SYSTEM SET fsync = 'off'" \
+        -c "ALTER SYSTEM SET full_page_writes = 'off'" \
+        -c "SELECT pg_reload_conf()"
+else
+    mariadb --host 127.0.0.1 --port 3306 -u root -ptravis -e "
 SET GLOBAL character_set_server = 'utf8mb4';
 SET GLOBAL collation_server = 'utf8mb4_unicode_ci';
 
@@ -48,6 +70,7 @@ GRANT ALL PRIVILEGES ON \`test_resilient\`.* TO 'test_resilient'@'localhost';
 
 FLUSH PRIVILEGES;
 "
+fi
 
 cd ~/frappe-bench || exit
 
@@ -71,4 +94,3 @@ bench reinstall --yes
 
 bench --verbose install-app india_compliance
 bench --site test_site add-to-hosts
-

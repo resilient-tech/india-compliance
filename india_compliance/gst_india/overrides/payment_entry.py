@@ -423,7 +423,8 @@ def get_taxes_summary(company, payment_entries):
         # It will still cause issues where
         # other taxes are charged like TDS and GST Account are specified in deduction table.
         .where(pe.total_taxes_and_charges != 0)
-        .groupby(gl_entry.voucher_no)
+        # group by pe PK (== voucher_no via join) so bare pe.* cols are valid on postgres
+        .groupby(pe.name)
         .run(as_dict=True)
     )
 

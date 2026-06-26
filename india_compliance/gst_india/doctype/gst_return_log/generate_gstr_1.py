@@ -5,7 +5,7 @@ from typing import ClassVar
 
 import frappe
 from frappe import _, unscrub
-from frappe.utils import flt, sbool
+from frappe.utils import cint, flt, sbool
 from frappe.utils.data import getdate
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
@@ -803,7 +803,7 @@ class FileGSTR1:
 
         # reset called after proceed to file
         self.db_set({"filing_status": "Not Filed"})
-        self.db_set({"is_nil": sbool(is_nil_return)})
+        self.db_set({"is_nil": cint(sbool(is_nil_return))})  # cint: postgres rejects bool on smallint
 
         api = GSTR1API(self)
         response = api.reset_gstr_1_data(self.return_period)
@@ -950,7 +950,7 @@ class FileGSTR1:
             response = {}
 
         summary = api.get_gstr_1_data("RETSUM", self.return_period)
-        self.db_set("is_nil", summary.isnil == "Y")
+        self.db_set("is_nil", cint(summary.isnil == "Y"))  # cint: postgres rejects bool on smallint
 
         if summary.error:
             return

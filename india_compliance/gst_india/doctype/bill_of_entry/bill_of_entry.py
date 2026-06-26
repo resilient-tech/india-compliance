@@ -423,21 +423,19 @@ class BillofEntry(Document):
         pi_item = frappe.qb.DocType("Purchase Invoice Item")
         boe_item = frappe.qb.DocType("Bill of Entry Item")
 
+        # correlated subquery, not UPDATE..JOIN (invalid on postgres)
         submitted_boe_qty = (
             frappe.qb.from_(boe_item)
-            .select(boe_item.pi_detail, Sum(boe_item.qty).as_("qty"))
-            .where(boe_item.pi_detail.isin(pi_item_names))
+            .select(Sum(boe_item.qty))
+            .where(boe_item.pi_detail == pi_item.name)
             .where(boe_item.docstatus == 1)
-            .groupby(boe_item.pi_detail)
         )
 
         (
             frappe.qb.update(pi_item)
-            .left_join(submitted_boe_qty)
-            .on(pi_item.name == submitted_boe_qty.pi_detail)
             .set(
                 pi_item.pending_boe_qty,
-                pi_item.qty - IfNull(submitted_boe_qty.qty, 0),
+                pi_item.qty - IfNull(submitted_boe_qty, 0),
             )
             .where(pi_item.name.isin(pi_item_names))
             .run()
