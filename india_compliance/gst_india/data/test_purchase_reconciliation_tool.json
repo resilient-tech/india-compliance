@@ -34,7 +34,9 @@
                     "irn_number": null,
                     "irn_source": null,
                     "itc_availability": "Yes",
-                    "reason_itc_unavailability": null
+                    "reason_itc_unavailability": null,
+                    "gstin_status": "",
+                    "gstin_cancelled_date": ""
                 }
             },
             {
@@ -88,7 +90,9 @@
                     "irn_number": null,
                     "irn_source": null,
                     "itc_availability": "Yes",
-                    "reason_itc_unavailability": null
+                    "reason_itc_unavailability": null,
+                    "gstin_status": "",
+                    "gstin_cancelled_date": ""
                 }
             },
             {
@@ -136,7 +140,9 @@
                     "irn_number": null,
                     "irn_source": null,
                     "itc_availability": "Yes",
-                    "reason_itc_unavailability": null
+                    "reason_itc_unavailability": null,
+                    "gstin_status": "",
+                    "gstin_cancelled_date": ""
                 }
             }
         ],
@@ -176,7 +182,9 @@
                     "irn_number": null,
                     "irn_source": null,
                     "itc_availability": "Yes",
-                    "reason_itc_unavailability": null
+                    "reason_itc_unavailability": null,
+                    "gstin_status": "",
+                    "gstin_cancelled_date": ""
                 }
             }
         ],
@@ -189,7 +197,7 @@
                     "bill_no": "BILL-23-00030",
                     "items": [
                         {
-                            "taxable_value": 10000.50,
+                            "taxable_value": 10000.5,
                             "rate": 18,
                             "sgst": 900.045,
                             "cgst": 900.045
@@ -223,7 +231,9 @@
                     "irn_number": null,
                     "irn_source": null,
                     "itc_availability": "Yes",
-                    "reason_itc_unavailability": null
+                    "reason_itc_unavailability": null,
+                    "gstin_status": "",
+                    "gstin_cancelled_date": ""
                 }
             }
         ],
@@ -261,7 +271,9 @@
                     "irn_number": null,
                     "irn_source": null,
                     "itc_availability": "Yes",
-                    "reason_itc_unavailability": null
+                    "reason_itc_unavailability": null,
+                    "gstin_status": "",
+                    "gstin_cancelled_date": ""
                 }
             }
         ],
@@ -301,7 +313,9 @@
                     "irn_number": null,
                     "irn_source": null,
                     "itc_availability": "Yes",
-                    "reason_itc_unavailability": null
+                    "reason_itc_unavailability": null,
+                    "gstin_status": "",
+                    "gstin_cancelled_date": ""
                 }
             }
         ],
@@ -341,7 +355,9 @@
                     "irn_number": null,
                     "irn_source": null,
                     "itc_availability": "Yes",
-                    "reason_itc_unavailability": null
+                    "reason_itc_unavailability": null,
+                    "gstin_status": "",
+                    "gstin_cancelled_date": ""
                 }
             }
         ],
@@ -382,7 +398,9 @@
                     "irn_number": null,
                     "irn_source": null,
                     "itc_availability": "Yes",
-                    "reason_itc_unavailability": null
+                    "reason_itc_unavailability": null,
+                    "gstin_status": "",
+                    "gstin_cancelled_date": ""
                 }
             }
         ],
@@ -390,7 +408,7 @@
             {
                 "PURCHASE_INVOICE": {
                     "bill_no": "BILL-23-00050",
-                    "items" : [
+                    "items": [
                         {
                             "item_code": "_Test Nil Rated Item",
                             "rate": 1000,
@@ -443,7 +461,9 @@
                     "irn_number": null,
                     "irn_source": null,
                     "itc_availability": "Yes",
-                    "reason_itc_unavailability": null
+                    "reason_itc_unavailability": null,
+                    "gstin_status": "",
+                    "gstin_cancelled_date": ""
                 }
             }
         ]
