@@ -277,15 +277,16 @@ def get_journal_entries(month_or_quarter: str, year: str, company: str, filing_p
         .on(sales_invoice.name == sales_invoice_taxes.parent)
         .select(
             sales_invoice_taxes.account_head.as_("account"),
-            Case()
-            .when(sales_invoice_taxes.tax_amount > 0, Sum(sales_invoice_taxes.tax_amount))
-            .as_("debit_in_account_currency"),
-            Case()
-            .when(
-                sales_invoice_taxes.tax_amount < 0,
-                Sum(sales_invoice_taxes.tax_amount * (-1)),
-            )
-            .as_("credit_in_account_currency"),
+            # Sum(CASE ...), not CASE WHEN col THEN Sum(...): the bare col in the WHEN is neither
+            # grouped nor aggregated, which postgres rejects. Same totals per account on MariaDB.
+            Sum(Case().when(sales_invoice_taxes.tax_amount > 0, sales_invoice_taxes.tax_amount).else_(0)).as_(
+                "debit_in_account_currency"
+            ),
+            Sum(
+                Case()
+                .when(sales_invoice_taxes.tax_amount < 0, sales_invoice_taxes.tax_amount * (-1))
+                .else_(0)
+            ).as_("credit_in_account_currency"),
         )
         .where(sales_invoice.is_reverse_charge == 1)
         .where(Date(sales_invoice.posting_date).between(getdate(from_date), getdate(to_date)))
