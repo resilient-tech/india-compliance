@@ -12,8 +12,6 @@ COMPANY_GSTIN = "24AAQCA8719H1ZC"
 SALES_TEMPLATE = "Sales Taxes and Charges Template"
 PURCHASE_TEMPLATE = "Purchase Taxes and Charges Template"
 DEFAULT_IN_STATE_TEMPLATE = f"Output GST In-state - {COMPANY_ABBR}"
-# Company source state (GSTIN 24AAQCA8719H1ZC -> Gujarat)
-SOURCE_STATE = "Gujarat"
 # Gujarat address -> intra-state supply; Karnataka -> inter-state.
 GUJARAT_CUSTOMER_ADDRESS = "_Test Registered Customer-Billing"
 KARNATAKA_CUSTOMER_ADDRESS = "_Test Registered Customer-Billing-3"
@@ -76,38 +74,6 @@ class TestTaxCategoryAutoSelection(IntegrationTestCase):
         doc = create_transaction(doctype="Sales Invoice", is_in_state=True, do_not_submit=True)
         self.assertEqual(doc.taxes_and_charges, DEFAULT_IN_STATE_TEMPLATE)
 
-    # ---------- state-specific override precedence ----------
-
-    def test_state_specific_tax_category_is_preferred_over_default(self):
-        category = self._create_tax_category(
-            "_Test Gujarat In-State", is_inter_state=0, is_reverse_charge=0, gst_state=SOURCE_STATE
-        )
-        template = self._create_linked_template("_Test Gujarat In-State Template", category.name)
-        self.addCleanup(frappe.delete_doc, "Tax Category", category.name, force=True)
-        self.addCleanup(frappe.delete_doc, SALES_TEMPLATE, template, force=True)
-
-        gst_details = self._sales_gst_details()
-        self.assertEqual(gst_details.get("taxes_and_charges"), template)
-
-    def test_state_specific_category_for_other_state_is_ignored(self):
-        category = self._create_tax_category(
-            "_Test Karnataka In-State", is_inter_state=0, is_reverse_charge=0, gst_state="Karnataka"
-        )
-        self._create_linked_template("_Test Karnataka In-State Template", category.name)
-
-        gst_details = self._sales_gst_details()
-        self.assertEqual(gst_details.get("taxes_and_charges"), DEFAULT_IN_STATE_TEMPLATE)
-
-    def test_state_specific_category_without_template_falls_back_to_default(self):
-        category = self._create_tax_category(
-            "_Test Gujarat No Template", is_inter_state=0, is_reverse_charge=0, gst_state=SOURCE_STATE
-        )
-        # Remove this company-state category so it can't collide with the preferred-over-default test.
-        self.addCleanup(frappe.delete_doc, "Tax Category", category.name, force=True)
-
-        gst_details = self._sales_gst_details()
-        self.assertEqual(gst_details.get("taxes_and_charges"), DEFAULT_IN_STATE_TEMPLATE)
-
     # ---------- inter-state & reverse-charge defaults still resolve ----------
 
     def test_out_state_default_selection(self):
@@ -167,17 +133,6 @@ class TestTaxCategoryAutoSelection(IntegrationTestCase):
             "_Test Duplicate Default",
             is_inter_state=0,
             is_reverse_charge=0,
-            is_india_compliance_default=1,
-        )
-
-    def test_state_specific_category_cannot_be_default(self):
-        self.assertRaises(
-            ValidationError,
-            self._create_tax_category,
-            "_Test State Default",
-            is_inter_state=0,
-            is_reverse_charge=0,
-            gst_state=SOURCE_STATE,
             is_india_compliance_default=1,
         )
 

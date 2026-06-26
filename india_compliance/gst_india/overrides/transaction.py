@@ -14,7 +14,6 @@ from india_compliance.gst_india.constants import (
     GST_REFUND_TAX_TYPES,
     GST_TAX_TYPES,
     SALES_DOCTYPES,
-    STATE_NUMBERS,
     SUBCONTRACTING_DOCTYPES,
     TAX_TYPES,
     TAXABLE_GST_TREATMENTS,
@@ -882,7 +881,6 @@ def get_gst_details(
         master_doctype,
         company,
         is_inter_state_supply(frappe._dict({**party_details, "doctype": doctype})),
-        party_details.get(company_gstin_field)[:2],
         party_details.is_reverse_charge,
     ):
         gst_details.taxes_and_charges = default_tax
@@ -965,28 +963,19 @@ def get_tax_template_based_on_category(master_doctype, company, party_details):
     return default_tax
 
 
-def get_tax_template(master_doctype, company, is_inter_state, state_code, is_reverse_charge):
+def get_tax_template(master_doctype, company, is_inter_state, is_reverse_charge):
     tax_categories = frappe.get_all(
         "Tax Category",
-        fields=["name", "gst_state"],
+        pluck="name",
         filters={
             "is_inter_state": 1 if is_inter_state else 0,
             "is_reverse_charge": 1 if is_reverse_charge else 0,
+            "is_india_compliance_default": 1,
             "disabled": 0,
         },
-        or_filters={"is_india_compliance_default": 1, "gst_state": ["!=", ""]},
     )
 
-    state_specific = []
-    default = []
     for tax_category in tax_categories:
-        if tax_category.gst_state:
-            if STATE_NUMBERS.get(tax_category.gst_state) == state_code:
-                state_specific.append(tax_category.name)
-        else:
-            default.append(tax_category.name)
-
-    for tax_category in state_specific + default:
         default_tax = frappe.db.get_value(
             master_doctype,
             {"company": company, "disabled": 0, "tax_category": tax_category},
@@ -1507,7 +1496,6 @@ def set_reverse_charge(doc):
         "Purchase Taxes and Charges Template",
         doc.company,
         is_inter_state,
-        doc.company_gstin[:2],
         doc.is_reverse_charge,
     )
 
