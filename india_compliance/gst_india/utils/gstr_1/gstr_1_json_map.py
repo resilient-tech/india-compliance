@@ -4,6 +4,7 @@ from itertools import chain
 from typing import ClassVar
 
 import frappe
+from frappe.query_builder.functions import Max
 from frappe.utils import cint, flt
 
 from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX, UOM_MAP
@@ -2567,11 +2568,12 @@ class GSTR1BooksData(BooksDataMapper):
         elif type_of_business == "Adjustment":
             query = _class.get_11B_query()
             fields = (
-                _class.pe.name,
-                _class.pe.party,
-                _class.pe.posting_date,
-                _class.pe.company_gstin,
-                _class.pe_ref.reference_name,
+                # Max(): 11B groups by voucher_detail_no, so these joined PE/PER cols aren't FD
+                Max(_class.pe.name).as_("name"),
+                Max(_class.pe.party).as_("party"),
+                Max(_class.pe.posting_date).as_("posting_date"),
+                Max(_class.pe.company_gstin).as_("company_gstin"),
+                Max(_class.pe_ref.reference_name).as_("reference_name"),
             )
             multipler = -1
 
