@@ -180,7 +180,6 @@ def get_json(filters: str, report_name: str, data: str):
     gst_json["hsn"] = get_hsn_wise_json_data(report_data, filters)
 
     return {
-        "report_name": report_name,
         "filename": frappe.scrub(report_name) + ".json",
         "data": gst_json,
     }
