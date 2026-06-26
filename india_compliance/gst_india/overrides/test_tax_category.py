@@ -21,20 +21,6 @@ GUJARAT_SUPPLIER_ADDRESS = "_Test Registered Supplier-Billing"
 
 
 class TestTaxCategoryAutoSelection(IntegrationTestCase):
-    @classmethod
-    def setUpClass(cls):
-        frappe.db.savepoint("before_test_tax_category")
-
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.rollback(save_point="before_test_tax_category")
-
-    def setUp(self):
-        frappe.db.savepoint("before_each_tax_category")
-
-    def tearDown(self):
-        frappe.db.rollback(save_point="before_each_tax_category")
-
     # ---------- helpers ----------
 
     def _create_tax_category(self, title, **flags):

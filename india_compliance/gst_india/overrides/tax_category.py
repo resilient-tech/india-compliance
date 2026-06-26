@@ -14,6 +14,7 @@ def validate(doc, method=None):
                 "is_india_compliance_default": 1,
                 "is_inter_state": doc.is_inter_state,
                 "is_reverse_charge": doc.is_reverse_charge,
+                "gst_state": ["is", "not set"],
             },
         )
         if existing:
