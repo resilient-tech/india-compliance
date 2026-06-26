@@ -836,7 +836,8 @@ def get_gst_details(
 
     # Taxes Not Applicable
     if (
-        (
+        party_details.get("is_out_of_scope_of_gst")
+        or (
             not allow_same_gstin
             and (
                 party_details.get(company_gstin_field)
@@ -1391,6 +1392,10 @@ class ItemGSTTreatment:
         self.doc = doc
         is_sales_transaction = doc.doctype in SALES_DOCTYPES
 
+        if doc.get("is_out_of_scope_of_gst"):
+            self.set_for_out_of_scope()
+            return
+
         if is_sales_transaction and is_overseas_doc(doc):
             self.set_for_overseas()
             return
@@ -1411,6 +1416,10 @@ class ItemGSTTreatment:
 
         self.update_gst_treatment_map()
         self.set_default_treatment()
+
+    def set_for_out_of_scope(self):
+        for item in self.doc.items:
+            item.gst_treatment = "Out of Scope"
 
     def set_for_overseas(self):
         for item in self.doc.items:
@@ -1612,6 +1621,9 @@ def _update_place_of_supply_and_taxes(doc):
 
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
+        if doc.get("is_out_of_scope_of_gst"):
+            validate_out_of_scope(doc)
+
         set_gst_tax_type(doc)
         update_item_gst_treatment(doc)
         update_item_gst_details(doc)
@@ -1834,8 +1846,25 @@ def reset_gst_details_on_cross_mapping(target_doc, source_doc):
 
 
 def ignore_gst_validations(doc):
-    if not is_indian_registered_company(doc) or doc.get("is_opening") == "Yes":
+    if (
+        not is_indian_registered_company(doc)
+        or doc.get("is_opening") == "Yes"
+        or doc.get("is_out_of_scope_of_gst")
+    ):
         return True
+
+
+def validate_out_of_scope(doc):
+    # no GST account allowed when transaction is out of scope of GST
+    # gst_tax_type is blank under the skip gate, so match account heads directly
+    gst_accounts = set(get_all_gst_accounts(doc.company))
+    for row in doc.get("taxes") or []:
+        if row.account_head in gst_accounts:
+            frappe.throw(
+                _(
+                    "Row #{0}: Cannot charge GST account {1} since the transaction is Out of Scope of GST"
+                ).format(row.idx, bold(row.account_head))
+            )
 
 
 def on_change_item(doc, method=None):
@@ -1857,6 +1886,9 @@ def on_change_item(doc, method=None):
 
 
 def before_update_after_submit(doc, method=None):
+    if doc.get("is_out_of_scope_of_gst"):
+        validate_out_of_scope(doc)
+
     if ignore_gst_validations(doc):
         return
 
@@ -1884,6 +1916,9 @@ ADDRESS_DEPENDENT_FIELDS = {
 
 
 def sync_address_dependent_fields_on_submit(doc, method=None):
+    if doc.docstatus == 1 and doc.get("is_out_of_scope_of_gst"):
+        validate_out_of_scope(doc)
+
     if doc.docstatus != 1 or ignore_gst_validations(doc):
         return
 

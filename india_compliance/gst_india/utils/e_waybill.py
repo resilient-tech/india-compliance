@@ -1393,6 +1393,12 @@ class EWaybillData(GSTTransactionData):
         - Outward Material Transfer with different company and supplier gstin
         """
 
+        if self.doc.get("is_out_of_scope_of_gst"):
+            frappe.throw(
+                _("e-Waybill is not applicable for transactions Out of Scope of GST"),
+                exc=NotApplicableError,
+            )
+
         address = ADDRESS_FIELDS.get(self.doc.doctype)
         for key in ("bill_from", "bill_to"):
             if not self.doc.get(address[key]):

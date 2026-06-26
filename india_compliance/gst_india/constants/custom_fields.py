@@ -805,7 +805,7 @@ CUSTOM_FIELDS = {
             "fieldname": "gst_treatment",
             "label": "GST Treatment",
             "fieldtype": "Autocomplete",
-            "options": "Taxable\nZero-Rated\nNil-Rated\nExempted\nNon-GST",
+            "options": "Taxable\nZero-Rated\nNil-Rated\nExempted\nNon-GST\nOut of Scope",
             "fetch_from": "item_tax_template.gst_treatment",
             "fetch_if_empty": 1,
             "insert_after": "item_tax_template",
@@ -1412,6 +1412,21 @@ PURCHASE_REVERSE_CHARGE_FIELDS = {
     "Purchase Receipt": {**reverse_charge_field, "insert_after": "is_return"},
     "Purchase Order": {**reverse_charge_field, "insert_after": "supplier_warehouse"},
     "Supplier Quotation": {**reverse_charge_field, "insert_after": "has_unit_price_items"},
+}
+
+out_of_scope_field = {
+    "fieldname": "is_out_of_scope_of_gst",
+    "label": "Out of Scope of GST",
+    "fieldtype": "Check",
+    "print_hide": 1,
+    "default": "0",
+}
+
+# Manual override to keep a transaction out of GST entirely (eg. merchant trade).
+# Same doctypes as reverse charge => POS Invoice and Stock Entry excluded.
+OUT_OF_SCOPE_OF_GST_FIELDS = {
+    doctype: {**out_of_scope_field, "insert_after": "is_reverse_charge"}
+    for doctype in (*SALES_REVERSE_CHARGE_FIELDS, *PURCHASE_REVERSE_CHARGE_FIELDS)
 }
 
 E_INVOICE_FIELDS = {

@@ -64,6 +64,7 @@ def get_data(filters=None):
         .where(IfNull(sales_invoice.einvoice_status, "") != "")
         .where(sales_invoice.docstatus != 0)
         .where(sales_invoice.is_opening != "Yes")
+        .where(IfNull(sales_invoice.is_out_of_scope_of_gst, 0) == 0)
     )
 
     if filters.get("company"):

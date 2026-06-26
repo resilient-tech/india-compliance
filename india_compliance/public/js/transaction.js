@@ -38,7 +38,13 @@ for (const doctype of ["Sales Invoice", "Sales Order", "Delivery Note"]) {
 }
 
 function fetch_gst_details(doctype) {
-    const event_fields = ["tax_category", "company_gstin", "place_of_supply", "is_reverse_charge"];
+    const event_fields = [
+        "tax_category",
+        "company_gstin",
+        "place_of_supply",
+        "is_reverse_charge",
+        "is_out_of_scope_of_gst",
+    ];
 
     // we are using address below to prevent multiple event triggers
     if (frappe.boot.sales_doctypes.includes(doctype)) {
@@ -122,6 +128,7 @@ async function update_gst_details(frm, event) {
         "company_gstin",
         "place_of_supply",
         "is_reverse_charge",
+        "is_out_of_scope_of_gst",
     ];
 
     if (frappe.boot.sales_doctypes.includes(frm.doc.doctype)) {

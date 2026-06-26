@@ -317,6 +317,11 @@ function is_e_invoice_applicable(frm, show_message = false) {
     let is_einv_applicable = true;
     let message_list = [];
 
+    if (frm.doc.is_out_of_scope_of_gst) {
+        is_einv_applicable = false;
+        message_list.push("e-Invoice is not applicable for transactions Out of Scope of GST.");
+    }
+
     if (!frm.doc.company_gstin) {
         is_einv_applicable = false;
         message_list.push("Company GSTIN is not set. Ensure its set in Company Address.");

@@ -63,6 +63,9 @@ def onload(doc, method=None):
 
 def validate(doc, method=None):
     if validate_transaction(doc) is False:
+        # validate_transaction bails for out-of-scope docs before set_reconciliation_status runs below
+        if doc.get("is_out_of_scope_of_gst"):
+            set_reconciliation_status(doc)
         return
 
     validate_hsn_codes(doc)
@@ -105,7 +108,7 @@ def on_cancel(doc, method=None):
 def set_reconciliation_status(doc):
     reconciliation_status = "Not Applicable"
 
-    if is_b2b_invoice(doc):
+    if is_b2b_invoice(doc) and not doc.get("is_out_of_scope_of_gst"):
         reconciliation_status = "Unreconciled"
 
     doc.reconciliation_status = reconciliation_status

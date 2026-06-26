@@ -235,6 +235,7 @@ class SummarizeGSTR1:
             "Excluded from Report (Invalid Invoice Number)",
             "Excluded from Report (Same GSTIN Billing)",
             "Excluded from Report (Is Opening Entry)",
+            "Excluded from Report (Out of Scope of GST)",
         ):
             return
 

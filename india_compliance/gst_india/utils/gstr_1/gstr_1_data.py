@@ -133,6 +133,7 @@ class GSTR1Query:
             )
             .where(self.si.docstatus == 1)
             .where(self.si.is_opening != "Yes")
+            .where(IfNull(self.si.is_out_of_scope_of_gst, 0) == 0)
             .where(IfNull(self.si.billing_address_gstin, "") != self.si.company_gstin)
             .orderby(
                 self.si.posting_date,
@@ -736,6 +737,7 @@ class GSTR1DocumentIssuedSummary:
             self.sales_invoice.is_return,
             self.sales_invoice.is_debit_note,
             self.sales_invoice.is_opening,
+            self.sales_invoice.is_out_of_scope_of_gst,
         ]
 
         query = self.build_query(
@@ -756,6 +758,7 @@ class GSTR1DocumentIssuedSummary:
     def get_query_for_purchase_invoice(self):
         additional_selects = [
             self.purchase_invoice.is_opening,
+            self.purchase_invoice.is_out_of_scope_of_gst,
         ]
 
         additional_conditions = [
@@ -892,6 +895,7 @@ class GSTR1DocumentIssuedSummary:
             "Excluded from Report (Invalid Invoice Number)": [],
             "Excluded from Report (Same GSTIN Billing)": [],
             "Excluded from Report (Is Opening Entry)": [],
+            "Excluded from Report (Out of Scope of GST)": [],
             "Invoices for outward supply": [],
             "Debit Note": [],
             "Credit Note": [],
@@ -907,6 +911,8 @@ class GSTR1DocumentIssuedSummary:
                 nature_of_document["Excluded from Report (Is Opening Entry)"].append(doc)
             elif doc.same_gstin_billing:
                 nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(doc)
+            elif doc.get("is_out_of_scope_of_gst"):
+                nature_of_document["Excluded from Report (Out of Scope of GST)"].append(doc)
             elif doctype == "Purchase Invoice":
                 nature_of_document["Invoices for inward supply from unregistered person"].append(doc)
             elif doctype == "Stock Entry" or doctype == "Subcontracting Receipt":
