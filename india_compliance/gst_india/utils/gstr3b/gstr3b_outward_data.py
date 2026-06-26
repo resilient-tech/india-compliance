@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe.query_builder.functions import Max
 
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import GSTR3BInwardQuery
@@ -176,11 +177,12 @@ class GSTR3BOutwardInvoices(GSTR3BCategoryConditions):
             (
                 "get_11B_query",
                 (
-                    advance_data.pe.name.as_("invoice_no"),
-                    advance_data.pe.party.as_("customer_name"),
-                    advance_data.pe.posting_date,
-                    advance_data.pe.company_gstin,
-                    advance_data.pe_ref.reference_name.as_("return_against"),
+                    # Max(): 11B groups by voucher_detail_no, so these joined PE/PER cols aren't FD
+                    Max(advance_data.pe.name).as_("invoice_no"),
+                    Max(advance_data.pe.party).as_("customer_name"),
+                    Max(advance_data.pe.posting_date).as_("posting_date"),
+                    Max(advance_data.pe.company_gstin).as_("company_gstin"),
+                    Max(advance_data.pe_ref.reference_name).as_("return_against"),
                 ),
                 -1,
             ),

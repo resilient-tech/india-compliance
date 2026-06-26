@@ -967,7 +967,8 @@ class GSTR11A11BData:
             self.get_query("Adjustment")
             .join(self.pe_ref)
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
-            .select(self.pe_ref.allocated_amount.as_("taxable_value"))
+            # Max(): grouped by voucher_detail_no, not the pe_ref PK
+            .select(Max(self.pe_ref.allocated_amount).as_("taxable_value"))
             .groupby(self.gl_entry.voucher_detail_no)
         )
 
@@ -981,7 +982,8 @@ class GSTR11A11BData:
             .join(self.pe)
             .on(self.pe.name == self.gl_entry.voucher_no)
             .select(
-                self.pe.place_of_supply,
+                # Max(): bare in the 11B path (groups by voucher_detail_no, not the pe PK)
+                Max(self.pe.place_of_supply).as_("place_of_supply"),
                 Sum(
                     Case()
                     .when(
