@@ -508,6 +508,9 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             "cess_non_advol_amount",
             "invoice_total",
             "returned_invoice_total",
+            # future-proof: wrap any additional columns too (none on this path today)
+            *self.additional_si_columns,
+            *self.additional_si_item_columns,
         )
 
         query = (

@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
-from frappe.utils import add_to_date, getdate
+from frappe.utils import add_to_date, cint, getdate
 
 from india_compliance.gst_india.constants import (
     GST_ACCOUNT_FIELDS,
@@ -133,7 +133,7 @@ class GSTSettings(Document):
             "Scheduled Job Type",
             {"method": "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_e_waybill_generation"},
             "stopped",
-            not self.enable_retry_einv_ewb_generation,
+            cint(not self.enable_retry_einv_ewb_generation),  # cint: postgres rejects bool on smallint
         )
 
     def update_auto_refresh_authtoken_scheduled_job(self):
@@ -146,7 +146,7 @@ class GSTSettings(Document):
                 "method": "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_refresh_authtoken"
             },
             "stopped",
-            not self.enable_auto_reconciliation,
+            cint(not self.enable_auto_reconciliation),  # cint: postgres rejects bool on smallint
         )
 
     def get_gstin_with_credentials(self, service=None):
