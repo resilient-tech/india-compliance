@@ -14,16 +14,18 @@ on:
 
   pull_request:
 
+  # Note: the release-target branches (version-14/15/16) are intentionally
+  # excluded here. Code reaches them only via the automated release PR
+  # (version-X-hotfix -> version-X), which is already tested by the
+  # pull_request event above. Including them would run the suite a second
+  # time on the post-merge push. See #4206.
   push:
     branches:
       [
         develop,
         version-14-hotfix,
-        version-14,
         version-15-hotfix,
-        version-15,
         version-16-hotfix,
-        version-16,
       ]
 
   workflow_dispatch:
