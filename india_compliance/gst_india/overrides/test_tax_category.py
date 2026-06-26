@@ -1,6 +1,6 @@
 import frappe
 from frappe.exceptions import ValidationError
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.overrides.company import get_tax_defaults
 from india_compliance.gst_india.overrides.transaction import get_gst_details
@@ -20,7 +20,7 @@ KARNATAKA_CUSTOMER_ADDRESS = "_Test Registered Customer-Billing-3"
 GUJARAT_SUPPLIER_ADDRESS = "_Test Registered Supplier-Billing"
 
 
-class TestTaxCategoryAutoSelection(IntegrationTestCase):
+class TestTaxCategoryAutoSelection(FrappeTestCase):
     # ---------- helpers ----------
 
     def _create_tax_category(self, title, **flags):
