@@ -146,6 +146,21 @@ class TestTransaction(IntegrationTestCase):
         doc = create_transaction(**self.transaction_details, is_out_of_scope_of_gst=1)
         self.assertEqual(doc.reconciliation_status, "Not Applicable")
 
+    def test_out_of_scope_of_gst_forbids_gst_accounts_after_submit(self):
+        # validate does not run on submitted edits; the submit hook carries the guard
+        if self.doctype != "Sales Invoice":
+            return
+
+        doc = create_transaction(**self.transaction_details, is_out_of_scope_of_gst=1)
+        _append_taxes(doc, ("CGST", "SGST"), rate=9)
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"Out of Scope of GST"),
+            sync_address_dependent_fields_on_submit,
+            doc,
+        )
+
     @change_settings(
         "GST Settings",
         {"enable_rcm_for_unregistered_supplier": 1, "rcm_threshold": 5000},

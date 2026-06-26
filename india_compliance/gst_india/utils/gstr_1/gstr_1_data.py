@@ -910,6 +910,7 @@ class GSTR1DocumentIssuedSummary:
             elif doc.is_opening == "Yes":
                 nature_of_document["Excluded from Report (Is Opening Entry)"].append(doc)
             elif doc.same_gstin_billing:
+                # same-GSTIN is the more specific reason; out-of-scope catches the rest
                 nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(doc)
             elif doc.get("is_out_of_scope_of_gst"):
                 nature_of_document["Excluded from Report (Out of Scope of GST)"].append(doc)

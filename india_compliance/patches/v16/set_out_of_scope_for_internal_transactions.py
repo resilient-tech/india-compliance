@@ -13,7 +13,8 @@ TRANSACTIONS = [
 
 
 def execute():
-    if not frappe.get_all("Company", {"country": "India"}, pluck="name"):
+    indian_companies = frappe.get_all("Company", {"country": "India"}, pluck="name")
+    if not indian_companies:
         return
 
     for doctype, party_field in TRANSACTIONS:
@@ -21,7 +22,8 @@ def execute():
         (
             frappe.qb.update(doc)
             .set(doc.is_out_of_scope_of_gst, 1)
-            .where(doc.docstatus == 1)
+            .where(doc.company.isin(indian_companies))  # multi-company: only Indian companies
+            .where(doc.docstatus == 1)  # submitted only; cancelled docs left as-is
             .where(IfNull(doc.company_gstin, "") != "")  # both-empty must not match
             .where(doc.company_gstin == doc[party_field])
             .where(IfNull(doc.is_out_of_scope_of_gst, 0) == 0)

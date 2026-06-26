@@ -268,7 +268,9 @@ def set_gst_tax_type(doc, method=None):
     if not doc.taxes:
         return
 
-    gst_tax_account_map = {} if ignore_gst_validations(doc) else get_gst_account_gst_tax_type_map()
+    # out-of-scope still needs tax types resolved so GST accounts can be forbidden
+    skip_gst_tax_type = ignore_gst_validations(doc) and not doc.get("is_out_of_scope_of_gst")
+    gst_tax_account_map = {} if skip_gst_tax_type else get_gst_account_gst_tax_type_map()
 
     for tax in doc.taxes:
         # Setting as None if not GST Account
@@ -1622,9 +1624,10 @@ def _update_place_of_supply_and_taxes(doc):
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         if doc.get("is_out_of_scope_of_gst"):
-            validate_out_of_scope(doc)
+            validate_out_of_scope(doc)  # also resolves gst_tax_type
+        else:
+            set_gst_tax_type(doc)
 
-        set_gst_tax_type(doc)
         update_item_gst_treatment(doc)
         update_item_gst_details(doc)
         return False
@@ -1856,10 +1859,10 @@ def ignore_gst_validations(doc):
 
 def validate_out_of_scope(doc):
     # no GST account allowed when transaction is out of scope of GST
-    # gst_tax_type is blank under the skip gate, so match account heads directly
-    gst_accounts = set(get_all_gst_accounts(doc.company))
+    # resolve gst_tax_type first since the skip gate leaves it blank otherwise
+    set_gst_tax_type(doc)
     for row in doc.get("taxes") or []:
-        if row.account_head in gst_accounts:
+        if row.gst_tax_type:
             frappe.throw(
                 _(
                     "Row #{0}: Cannot charge GST account {1} since the transaction is Out of Scope of GST"
