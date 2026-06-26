@@ -471,29 +471,54 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         return query.run(as_dict=True)
 
     def get_invoices_for_hsn_wise_summary(self):
-        query = self.get_base_query()
+        base = self.get_base_query()
+
+        # postgres rejects bare non-grouped columns in SELECT *. Group keys stay bare, the amounts
+        # are summed, everything else is Max()-wrapped: one row per group, same as MariaDB's loose
+        # output. (This path never passes additional_si_* columns, so the column set is fixed.)
+        group_by = ("invoice_no", "gst_hsn_code", "gst_rate", "gst_treatment", "uom")
+        summed = (
+            "qty",
+            "taxable_value",
+            "cgst_amount",
+            "sgst_amount",
+            "igst_amount",
+            "total_cess_amount",
+            "total_tax",
+            "total_amount",
+        )
+        wrapped = (
+            "item_code",
+            "billing_address_gstin",
+            "company_gstin",
+            "customer_name",
+            "posting_date",
+            "place_of_supply",
+            "is_reverse_charge",
+            "ecommerce_gstin",
+            "is_return",
+            "is_debit_note",
+            "return_against",
+            "is_export_with_gst",
+            "shipping_port_code",
+            "shipping_bill_number",
+            "shipping_bill_date",
+            "gst_category",
+            "cess_amount",
+            "cess_non_advol_amount",
+            "invoice_total",
+            "returned_invoice_total",
+        )
 
         query = (
-            frappe.qb.from_(query)
+            frappe.qb.from_(base)
             .select(
-                "*",
-                Sum(query.qty).as_("qty"),
-                Sum(query.taxable_value).as_("taxable_value"),
-                Sum(query.cgst_amount).as_("cgst_amount"),
-                Sum(query.sgst_amount).as_("sgst_amount"),
-                Sum(query.igst_amount).as_("igst_amount"),
-                Sum(query.total_cess_amount).as_("total_cess_amount"),
-                Sum(query.total_tax).as_("total_tax"),
-                Sum(query.total_amount).as_("total_amount"),
+                *(getattr(base, col) for col in group_by),
+                *(Sum(getattr(base, col)).as_(col) for col in summed),
+                *(Max(getattr(base, col)).as_(col) for col in wrapped),
             )
-            .groupby(
-                query.invoice_no,
-                query.gst_hsn_code,
-                query.gst_rate,
-                query.gst_treatment,
-                query.uom,
-            )
-            .orderby(query.posting_date, query.invoice_no, query.item_code, order=Order.desc)
+            .groupby(*(getattr(base, col) for col in group_by))
+            .orderby(Max(base.posting_date), base.invoice_no, Max(base.item_code), order=Order.desc)
         )
 
         return query.run(as_dict=True)
