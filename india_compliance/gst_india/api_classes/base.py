@@ -1,7 +1,7 @@
 import copy
 from base64 import b64decode
 from typing import ClassVar
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin
 
 import frappe
 import requests
@@ -280,8 +280,8 @@ class BaseAPI:
             frappe.throw(
                 _(
                     "Error establishing connection to GSP. Please contact India"
-                    " Compliance API support at <strong>api-support@indiacompliance.app</strong>."
-                ),
+                    " Compliance API support at {0}."
+                ).format(self.get_support_email_link()),
                 title=_("GSP Connection Error"),
             )
 
@@ -300,6 +300,20 @@ class BaseAPI:
 
         if status_code == 504:
             raise GatewayTimeoutError
+
+    def get_support_email_link(self):
+        """Return a clickable mailto: link for India Compliance API support."""
+        support_email = "api-support@indiacompliance.app"
+
+        subject = "Error establishing connection to GSP"
+        if company := getattr(self, "company", None):
+            subject = f"{subject} for {company}"
+
+        body = "Hello India Compliance Team,\n\n\n// Please describe the issue and paste the error here\n"
+
+        # &amp; keeps the href valid HTML; the browser decodes it before parsing the mailto.
+        mailto = f"mailto:{support_email}?subject={quote(subject)}&amp;body={quote(body)}"
+        return f'<a href="{mailto}">{support_email}</a>'
 
     def generate_request_id(self, length=12):
         return f"IC{frappe.generate_hash(length=length - 2)}".upper()
