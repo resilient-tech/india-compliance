@@ -77,12 +77,10 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
                 },
                 callback: function(r) {
                     if (r.message) {
-                        const args = {
-                            cmd: 'india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies.download_json_file',
-                            data: r.message.data,
-                            report_name: r.message.report_name
-                        };
-                        open_url_post(frappe.request.url, args);
+                        india_compliance.trigger_file_download(
+                            JSON.stringify(r.message.data, null, 2),
+                            r.message.filename
+                        );
                     }
                 }
             });
