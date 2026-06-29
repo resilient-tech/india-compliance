@@ -18,6 +18,7 @@ from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.api import enqueue_integration_request
 
 BASE_URL = "https://asp.resilient.tech"
+SUPPORT_EMAIL = "api-support@indiacompliance.app"
 
 
 class BaseAPI:
@@ -278,10 +279,9 @@ class BaseAPI:
             status_code == 403 and response_json and response_json.get("error") == "access_denied"
         ):
             frappe.throw(
-                _(
-                    "Error establishing connection to GSP. Please contact India"
-                    " Compliance API support at {0}."
-                ).format(frappe.bold(self.get_support_email_link())),
+                _("Error establishing connection to GSP.<br><br>Please contact support at {0}").format(
+                    frappe.bold(self.get_support_email_link(error=response_json))
+                ),
                 title=_("GSP Connection Error"),
             )
 
@@ -302,16 +302,21 @@ class BaseAPI:
             raise GatewayTimeoutError
 
     def get_support_email_link(self, subject="Error establishing connection to GSP", error=None):
-        support_email = "api-support@indiacompliance.app"
+        email = self.support_email or SUPPORT_EMAIL
+
+        if company := getattr(self, "company", None):
+            subject = f"{subject} - {company}"
 
         if error:
             body = f"Hello India Compliance Team,\n\n\n{error}\n"
         else:
-            body = "Hello India Compliance Team,\n\n\n// Please describe the issue and paste the error here\n"
+            body = (
+                "Hello India Compliance Team,\n\n\n// Please describe the issue and paste the error here...\n"
+            )
 
         # &amp; keeps the href valid HTML.
-        mailto = f"mailto:{support_email}?subject={quote(subject)}&amp;body={quote(body)}"
-        return f'<a href="{mailto}">{support_email}</a>'
+        mailto = f"mailto:{email}?subject={quote(subject)}&amp;body={quote(body)}"
+        return f'<a href="{mailto}">{email}</a>'
 
     def generate_request_id(self, length=12):
         return f"IC{frappe.generate_hash(length=length - 2)}".upper()
