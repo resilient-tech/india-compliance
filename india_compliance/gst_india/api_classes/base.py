@@ -25,6 +25,8 @@ class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
     PLACEHOLDER = "*****"
+    # Subclasses may override this; falls back to the module-level SUPPORT_EMAIL.
+    support_email = None
     DEFAULT_MASK_MAP: ClassVar[dict] = {
         "headers": [
             "x-api-key",
