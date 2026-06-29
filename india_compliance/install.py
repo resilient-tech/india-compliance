@@ -28,6 +28,7 @@ POST_INSTALL_PATCHES = (
     "rename_import_of_capital_goods",
     "update_hsn_code",
     "update_company_fixtures",
+    "set_india_compliance_default_tax_category",
     "merge_utgst_account_into_sgst_account",
     "remove_consumer_gst_category",
     "migrate_e_invoice_settings_to_gst_settings",
