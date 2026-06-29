@@ -18,15 +18,13 @@ from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.api import enqueue_integration_request
 
 BASE_URL = "https://asp.resilient.tech"
-SUPPORT_EMAIL = "api-support@indiacompliance.app"
+DEFAULT_SUPPORT_EMAIL = "api-support@indiacompliance.app"
 
 
 class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
     PLACEHOLDER = "*****"
-    # Subclasses may override this; falls back to the module-level SUPPORT_EMAIL.
-    support_email = None
     DEFAULT_MASK_MAP: ClassVar[dict] = {
         "headers": [
             "x-api-key",
@@ -64,6 +62,7 @@ class BaseAPI:
             )
         }
         self.default_log_values = {}
+        self.support_email = None
 
         self.setup(*args, **kwargs)
 
@@ -304,7 +303,7 @@ class BaseAPI:
             raise GatewayTimeoutError
 
     def get_support_email_link(self, subject="Error establishing connection to GSP", error=None):
-        email = self.support_email or SUPPORT_EMAIL
+        email = self.support_email or DEFAULT_SUPPORT_EMAIL
 
         if company := getattr(self, "company", None):
             subject = f"{subject} - {company}"
