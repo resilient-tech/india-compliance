@@ -100,7 +100,7 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
                 callback: function(r) {
                     if (r.message) {
                         india_compliance.trigger_file_download(
-                            JSON.stringify(r.message.data, null, 4),
+                            JSON.stringify(r.message.data, null, 2),
                             r.message.filename
                         );
                     }
