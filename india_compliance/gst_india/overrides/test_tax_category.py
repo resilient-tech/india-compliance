@@ -3,7 +3,7 @@ from frappe.exceptions import ValidationError
 from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.overrides.company import get_tax_defaults
-from india_compliance.gst_india.overrides.transaction import get_gst_details
+from india_compliance.gst_india.overrides.transaction import get_gst_details, get_tax_template
 from india_compliance.gst_india.utils.tests import create_transaction
 
 COMPANY = "_Test Indian Registered Company"
@@ -82,6 +82,12 @@ class TestTaxCategoryAutoSelection(IntegrationTestCase):
         )
         gst_details = self._sales_gst_details()
         self.assertEqual(gst_details.get("taxes_and_charges"), expected)
+
+    def test_disabled_default_is_not_auto_selected(self):
+        frappe.db.set_value("Tax Category", "In-State", "disabled", 1)
+        self.addCleanup(frappe.db.set_value, "Tax Category", "In-State", "disabled", 0)
+
+        self.assertEqual(get_tax_template(SALES_TEMPLATE, COMPANY, False, False), "")
 
     def test_out_state_default_selection(self):
         expected = frappe.db.get_value(
