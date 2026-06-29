@@ -986,14 +986,23 @@ def get_tax_template(master_doctype, company, is_inter_state, state_code, is_rev
         else:
             default.append(tax_category.name)
 
-    for tax_category in state_specific + default:
-        default_tax = frappe.db.get_value(
+    # State-specific categories take precedence over defaults.
+    ordered_categories = state_specific + default
+    if not ordered_categories:
+        return ""
+
+    template_by_category = frappe._dict(
+        frappe.get_all(
             master_doctype,
-            {"company": company, "disabled": 0, "tax_category": tax_category},
-            "name",
+            fields=["tax_category", "name"],
+            filters={"company": company, "disabled": 0, "tax_category": ["in", ordered_categories]},
+            as_list=True,
         )
-        if default_tax:
-            return default_tax
+    )
+
+    for tax_category in ordered_categories:
+        if template := template_by_category.get(tax_category):
+            return template
 
     return ""
 
