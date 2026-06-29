@@ -23,7 +23,34 @@ SUPPORT_EMAIL = "api-support@indiacompliance.app"
 class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
+<<<<<<< HEAD
     SENSITIVE_INFO = ("x-api-key",)
+=======
+    PLACEHOLDER = "*****"
+    # Subclasses may override this; falls back to the module-level SUPPORT_EMAIL.
+    support_email = None
+    DEFAULT_MASK_MAP: ClassVar[dict] = {
+        "headers": [
+            "x-api-key",
+            "auth-token",
+            "auth_token",
+            "AuthToken",
+            "password",
+            "Password",
+        ],
+        "output": [
+            "auth-token",
+            "auth_token",
+            "AuthToken",
+            "sek",
+            "Sek",
+            "rek",
+            "Rek",
+        ],
+        "data": ["app_key", "AppKey", "password", "Password"],
+        "body": ["app_key", "AppKey", "password", "Password"],
+    }
+>>>>>>> 5d585533 (fix: define support_email class attribute to avoid AttributeError)
 
     def __init__(self, *args, **kwargs):
         self.settings = frappe.get_cached_doc("GST Settings")
