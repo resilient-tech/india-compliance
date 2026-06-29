@@ -144,8 +144,6 @@ class TestTaxCategoryAutoSelection(IntegrationTestCase):
         )
 
     def test_disabled_default_does_not_conflict(self):
-        # A disabled default is never selected at runtime, so it must be creatable even when an
-        # active default already exists for the same Inter State / Reverse Charge combination.
         category = self._create_tax_category(
             "_Test Disabled Default",
             is_inter_state=0,
@@ -156,8 +154,6 @@ class TestTaxCategoryAutoSelection(IntegrationTestCase):
         self.assertTrue(frappe.db.exists("Tax Category", category.name))
 
     def test_active_default_allowed_when_existing_default_is_disabled(self):
-        # Disabling the shipped default for a combination must let an admin create a replacement;
-        # runtime selection ignores disabled categories, so the validator must too.
         frappe.db.set_value("Tax Category", "In-State", "disabled", 1)
         self.addCleanup(frappe.db.set_value, "Tax Category", "In-State", "disabled", 0)
 
