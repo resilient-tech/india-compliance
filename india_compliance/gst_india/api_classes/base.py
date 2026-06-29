@@ -281,7 +281,7 @@ class BaseAPI:
                 _(
                     "Error establishing connection to GSP. Please contact India"
                     " Compliance API support at {0}."
-                ).format(self.get_support_email_link()),
+                ).format(frappe.bold(self.get_support_email_link())),
                 title=_("GSP Connection Error"),
             )
 
@@ -301,17 +301,15 @@ class BaseAPI:
         if status_code == 504:
             raise GatewayTimeoutError
 
-    def get_support_email_link(self):
-        """Return a clickable mailto: link for India Compliance API support."""
+    def get_support_email_link(self, subject="Error establishing connection to GSP", error=None):
         support_email = "api-support@indiacompliance.app"
 
-        subject = "Error establishing connection to GSP"
-        if company := getattr(self, "company", None):
-            subject = f"{subject} for {company}"
+        if error:
+            body = f"Hello India Compliance Team,\n\n\n{error}\n"
+        else:
+            body = "Hello India Compliance Team,\n\n\n// Please describe the issue and paste the error here\n"
 
-        body = "Hello India Compliance Team,\n\n\n// Please describe the issue and paste the error here\n"
-
-        # &amp; keeps the href valid HTML; the browser decodes it before parsing the mailto.
+        # &amp; keeps the href valid HTML.
         mailto = f"mailto:{support_email}?subject={quote(subject)}&amp;body={quote(body)}"
         return f'<a href="{mailto}">{support_email}</a>'
 
