@@ -6,7 +6,7 @@ def validate(doc, method=None):
     if doc.get("is_india_compliance_default") and doc.get("gst_state"):
         frappe.throw(_("India Compliance Default Tax Category cannot have a Source State"))
 
-    if doc.get("is_india_compliance_default"):
+    if doc.get("is_india_compliance_default") and not doc.disabled:
         existing = frappe.db.get_value(
             "Tax Category",
             {
@@ -15,6 +15,7 @@ def validate(doc, method=None):
                 "is_inter_state": doc.is_inter_state,
                 "is_reverse_charge": doc.is_reverse_charge,
                 "gst_state": ["is", "not set"],
+                "disabled": 0,
             },
         )
         if existing:
