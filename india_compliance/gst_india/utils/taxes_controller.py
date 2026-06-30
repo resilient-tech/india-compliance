@@ -137,6 +137,10 @@ class CustomTaxController:
 
                 continue
 
+            if not items:
+                tax.item_wise_tax_rates = "{}"
+                continue
+
             item_wise_tax_rates = json.loads(tax.item_wise_tax_rates) if tax.item_wise_tax_rates else {}
 
             for item in items:
@@ -211,9 +215,16 @@ class CustomTaxController:
         """
         Returns items and taxes to update based on item_name and tax_name passed.
         If item_name and tax_name are not passed, all items and taxes are returned.
+
         """
-        items = self.doc.get("items", {"name": item_name}) if item_name else self.doc.get("items")
-        taxes = self.doc.get("taxes", {"name": tax_name}) if tax_name else self.doc.taxes
+        items = self.doc.get("items") or []
+        taxes = self.doc.get("taxes") or []
+
+        if item_name:
+            items = [item for item in items if item.name == item_name]
+
+        if tax_name:
+            taxes = [tax for tax in taxes if tax.name == tax_name]
 
         return items, taxes
 

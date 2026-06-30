@@ -1,3 +1,4 @@
+import json
 import re
 
 import frappe
@@ -12,8 +13,12 @@ from erpnext.stock.doctype.stock_entry.stock_entry import make_stock_in_entry
 from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order import (
     make_subcontracting_receipt,
 )
-from frappe.tests import IntegrationTestCase
+from frappe.tests import IntegrationTestCase, UnitTestCase
 
+from india_compliance.gst_india.utils.taxes_controller import (
+    CustomTaxController,
+    set_item_wise_tax_rates,
+)
 from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_FINISHED_ITEM,
     SUBCONTRACTING_TEST_FINISHED_ITEM_2,
@@ -561,3 +566,70 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertEqual(target_se.bill_to_gstin, source_se.bill_to_gstin)
         self.assertEqual(target_se.ship_from_address, source_se.ship_from_address)
         self.assertEqual(target_se.ship_to_address, source_se.ship_to_address)
+
+
+def _make_taxes_controller_doc(items=None, taxes=None):
+    """Build a client-style _dict doc as produced by json.loads(..., object_hook=_dict)."""
+    data = {"doctype": "Subcontracting Order"}
+    if items is not None:
+        data["items"] = items
+    if taxes is not None:
+        data["taxes"] = taxes
+    return json.loads(json.dumps(data), object_hook=frappe._dict)
+
+
+class TestCustomTaxController(UnitTestCase):
+    def test_get_rows_to_update_defaults_empty_items_to_list(self):
+        """Missing/null items (new doc before any row is added) must yield [], not None."""
+        doc = _make_taxes_controller_doc(items=None, taxes=[{"name": "tax1"}])
+        items, taxes = CustomTaxController(doc).get_rows_to_update()
+
+        self.assertEqual(items, [])
+        self.assertEqual(len(taxes), 1)
+
+    def test_get_rows_to_update_filters_by_name(self):
+        """item_name/tax_name must actually filter (the old _dict.get default form never did)."""
+        doc = _make_taxes_controller_doc(
+            items=[{"name": "item1"}, {"name": "item2"}],
+            taxes=[{"name": "tax1"}, {"name": "tax2"}],
+        )
+
+        items, taxes = CustomTaxController(doc).get_rows_to_update(item_name="item2", tax_name="tax1")
+        self.assertEqual([item.name for item in items], ["item2"])
+        self.assertEqual([tax.name for tax in taxes], ["tax1"])
+
+        # No filter => all rows.
+        items, taxes = CustomTaxController(doc).get_rows_to_update()
+        self.assertEqual(len(items), 2)
+        self.assertEqual(len(taxes), 2)
+
+    def test_taxes_calculation_when_item_is_null(self):
+        edited_tax = "new-india-compliance-taxes-and-charges-jaoikbhpue"
+        doc_json = json.dumps(
+            {
+                "doctype": "Subcontracting Order",
+                "company": "_Test Company",
+                "items": None,
+                "taxes": [
+                    {
+                        "name": "new-india-compliance-taxes-and-charges-orwoljgdqa",
+                        "charge_type": "On Net Total",
+                        "account_head": "Input Tax CGST - FP",
+                        "gst_tax_type": "cgst",
+                    },
+                    {
+                        "name": edited_tax,
+                        "charge_type": "On Net Total",
+                        "account_head": "Input Tax SGST - FP",
+                        "gst_tax_type": "sgst",
+                    },
+                ],
+            }
+        )
+
+        frappe.response.docs = []
+        set_item_wise_tax_rates(doc=doc_json, item_name="", tax_name=edited_tax)
+
+        echoed = frappe.response.docs[0]
+        edited_row = next(tax for tax in echoed.taxes if tax.name == edited_tax)
+        self.assertEqual(edited_row.get("item_wise_tax_rates"), "{}")
