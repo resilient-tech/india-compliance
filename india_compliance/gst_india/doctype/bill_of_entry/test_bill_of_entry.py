@@ -258,6 +258,10 @@ class TestBillofEntry(FrappeTestCase):
         self.assertEqual(actual_row.item_wise_tax_rates, manual_rates)
         self.assertEqual(actual_row.tax_amount, 18)
 
+        # Actual rows are user-entered and must still be included in the totals.
+        self.assertEqual(boe.total_taxes, 18)
+        self.assertEqual(boe.total_amount_payable, boe.total_customs_duty + 18)
+
     def test_pending_boe_qty(self):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
 
