@@ -133,10 +133,11 @@ india_compliance.taxes_controller = class TaxesController {
             return flt(flt(qty) * flt(rate), precision(precisionType, row));
         };
 
-        if (this.frm.doc.doctype === "Subcontracting Receipt") {
-            amount = calculateAmount(row.qty, row.rate, "amount");
-        } else if (this.frm.doc.doctype === "Stock Entry") {
+        if (this.frm.doc.doctype === "Stock Entry") {
             amount = calculateAmount(row.transfer_qty, row.basic_rate, "basic_amount");
+        } else {
+            // Subcontracting Order / Subcontracting Receipt use qty * rate
+            amount = calculateAmount(row.qty, row.rate, "amount");
         }
 
         row.taxable_value = amount;
