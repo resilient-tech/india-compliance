@@ -164,12 +164,12 @@ class CustomTaxController:
 
         for tax in self.doc.taxes:
             if tax.charge_type == "Actual":
-                continue
+                tax.tax_amount = flt(tax.tax_amount)
+            else:
+                tax.tax_amount = self.get_tax_amount(tax.item_wise_tax_rates, tax.charge_type)
 
-            tax.tax_amount = self.get_tax_amount(tax.item_wise_tax_rates, tax.charge_type)
-
-            if tax.account_head in round_off_accounts:
-                tax.tax_amount = round(tax.tax_amount, 0)
+                if tax.account_head in round_off_accounts:
+                    tax.tax_amount = round(tax.tax_amount, 0)
 
             total_taxes += tax.tax_amount
             tax.base_total = total_taxes + total_taxable_value
