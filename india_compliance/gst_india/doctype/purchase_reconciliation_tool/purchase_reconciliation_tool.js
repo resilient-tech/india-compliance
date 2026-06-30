@@ -935,39 +935,19 @@ class ImportDialog {
     async fetch_import_history() {
         if (!this.company_gstin || !this.return_type || !this.date_range) return;
 
-        // Skip duplicate requests for identical arguments, whether already
-        // in-flight or last completed successfully. The signature is only
-        // marked as completed after a successful fetch, so a failed request
-        // can still be retried with the same arguments.
-        const args_signature = JSON.stringify([
-            this.company_gstin,
-            this.return_type,
-            this.date_range,
-            this.for_download,
-        ]);
-        if (
-            args_signature === this._last_import_history_signature ||
-            args_signature === this._pending_import_history_signature
-        ) {
-            return;
-        }
-        this._pending_import_history_signature = args_signature;
+        // Skip repeat calls for identical arguments
+        const args = {
+            company_gstin: this.company_gstin,
+            return_type: this.return_type,
+            date_range: this.date_range,
+            for_download: this.for_download,
+        };
+        const signature = JSON.stringify(args);
+        if (signature === this._import_history_signature) return;
+        this._import_history_signature = signature;
 
         // fetch history
-        let message;
-        try {
-            ({ message } = await this.frm._call("get_import_history", {
-                company_gstin: this.company_gstin,
-                return_type: this.return_type,
-                date_range: this.date_range,
-                for_download: this.for_download,
-            }));
-            this._last_import_history_signature = args_signature;
-        } finally {
-            if (this._pending_import_history_signature === args_signature) {
-                this._pending_import_history_signature = null;
-            }
-        }
+        const { message } = await this.frm._call("get_import_history", args);
 
         // ensure sequence is maintained
         function get_map(message) {
