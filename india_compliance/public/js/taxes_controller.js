@@ -192,7 +192,7 @@ india_compliance.taxes_controller = class TaxesController {
         return (
             this.frm.doc.items.reduce((total, item) => {
                 let multiplier =
-                    item.charge_type === "On Item Quantity" ? item.qty : item.taxable_value / 100;
+                    tax_row.charge_type === "On Item Quantity" ? item.qty : item.taxable_value / 100;
                 return total + multiplier * (item_wise_tax_rates[item.name] || tax_row.rate);
             }, 0) || 0
         );
