@@ -114,11 +114,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     async subcontracting_inward_order(frm) {
-        if (
-            !frm.doc.subcontracting_inward_order ||
-            frm.doc.bill_to_address ||
-            !india_compliance.is_subcontracting_inward_entry(frm.doc)
-        )
+        if (!frm.doc.subcontracting_inward_order || !india_compliance.is_subcontracting_inward_entry(frm.doc))
             return;
 
         const customer = (

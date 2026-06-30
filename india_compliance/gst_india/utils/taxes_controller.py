@@ -5,7 +5,6 @@ from erpnext.controllers.taxes_and_totals import (
     get_round_off_applicable_accounts as fetch_round_off_accounts,
 )
 from frappe import _
-from frappe.query_builder.functions import Sum
 from frappe.utils.data import flt
 
 from india_compliance.gst_india.overrides.transaction import (
@@ -163,10 +162,12 @@ class CustomTaxController:
         for item in self.doc.items:
             item.additional_taxable_value = 0
 
-        if self.doc.purpose == "Subcontracting Delivery":
-            _set_subcontracting_delivery_additional_value(self.doc)
-        elif self.doc.purpose == "Return Raw Material to Customer":
-            _set_return_raw_material_additional_value(self.doc)
+        # Imported lazily: subcontracting_transaction imports this module at load time.
+        from india_compliance.gst_india.overrides.subcontracting_transaction import (
+            set_subcontracting_inward_taxable_value,
+        )
+
+        set_subcontracting_inward_taxable_value(self.doc)
 
     def update_tax_amount(self):
         total_taxes = 0
@@ -268,135 +269,3 @@ def validate_taxes(doc):
 
         if tax.account_head not in gst_accounts:
             frappe.throw(_("Row #{0}: Only GST accounts are allowed in {1}.").format(tax.idx, doc.doctype))
-
-
-def get_customer_provided_material_rates(received_item_names):
-    """Return the weighted-average receipt rate of customer materials per SCIO Received Item.
-
-    Sourced from "Receive from Customer" entries so the value does not depend
-    on the running SCIO rate field.
-    """
-    if not received_item_names:
-        return {}
-
-    se = frappe.qb.DocType("Stock Entry")
-    sed = frappe.qb.DocType("Stock Entry Detail")
-
-    rows = (
-        frappe.qb.from_(sed)
-        .join(se)
-        .on(se.name == sed.parent)
-        .select(
-            sed.scio_detail,
-            Sum(sed.customer_provided_item_cost * sed.transfer_qty).as_("total_value"),
-            Sum(sed.transfer_qty).as_("total_qty"),
-        )
-        .where(
-            (se.docstatus == 1)
-            & (se.purpose == "Receive from Customer")
-            & (sed.scio_detail.isin(list(received_item_names)))
-        )
-        .groupby(sed.scio_detail)
-        .run(as_dict=True)
-    )
-
-    return {row.scio_detail: flt(row.total_value) / flt(row.total_qty) for row in rows if row.total_qty}
-
-
-def _set_subcontracting_delivery_additional_value(doc):
-    """Add the value of consumed customer materials to the delivered finished goods.
-
-    additional = SUM(avg_rate * consumed_qty) / produced_qty * delivered transfer_qty.
-    Quantities are all in stock UOM (consumed_qty, produced_qty, transfer_qty), so
-    the value is consistent with the row amount. Left at 0 for secondary items,
-    no consumption, or no production yet.
-    """
-    scio_details = {item.scio_detail for item in doc.items if item.get("scio_detail")}
-    if not scio_details:
-        return
-
-    # Customer-provided received items for the finished goods being delivered.
-    received_items = frappe.get_all(
-        "Subcontracting Inward Order Received Item",
-        filters={"reference_name": ("in", list(scio_details)), "is_customer_provided_item": 1},
-        fields=["name", "reference_name", "consumed_qty"],
-    )
-    if not received_items:
-        return
-
-    rates = get_customer_provided_material_rates({row.name for row in received_items})
-
-    produced_qty = frappe._dict(
-        frappe.get_all(
-            "Subcontracting Inward Order Item",
-            filters={"name": ("in", list(scio_details))},
-            fields=["name", "produced_qty"],
-            as_list=True,
-        )
-    )
-
-    # Total consumed customer-material value per finished good.
-    fg_material_cost = {}
-    for row in received_items:
-        cost = flt(rates.get(row.name)) * flt(row.consumed_qty)
-        fg_material_cost[row.reference_name] = fg_material_cost.get(row.reference_name, 0) + cost
-
-    precision = doc.precision("additional_taxable_value", "items")
-    rows_without_produced_qty = []
-
-    for item in doc.items:
-        scio_detail = item.get("scio_detail")
-        material_cost = fg_material_cost.get(scio_detail)
-        if not material_cost:
-            continue
-
-        if not produced_qty.get(scio_detail):
-            rows_without_produced_qty.append(item.idx)
-            continue
-
-        item.additional_taxable_value = flt(
-            material_cost / flt(produced_qty.get(scio_detail)) * flt(item.transfer_qty), precision
-        )
-
-    if rows_without_produced_qty:
-        frappe.msgprint(
-            _(
-                "Row #{0}: Value of customer-provided materials could not be added to the"
-                " taxable value as no production has been reported yet"
-            ).format(", ".join(str(idx) for idx in rows_without_produced_qty)),
-            alert=True,
-            indicator="yellow",
-        )
-
-
-def _set_return_raw_material_additional_value(doc):
-    """Set the returned RM taxable value to the customer's declared value (Rule 55).
-
-    additional = rate * qty - amount, and may be negative to correct the SE
-    amount. A return moves on-hand material, so the SCIO Received Item rate
-    (weighted average of receipts) is used; self-procured items (no rate) are skipped.
-    """
-    scio_details = {item.scio_detail for item in doc.items if item.get("scio_detail")}
-    if not scio_details:
-        return
-
-    rates = frappe._dict(
-        frappe.get_all(
-            "Subcontracting Inward Order Received Item",
-            filters={"name": ("in", list(scio_details)), "is_customer_provided_item": 1},
-            fields=["name", "rate"],
-            as_list=True,
-        )
-    )
-    if not rates:
-        return
-
-    precision = doc.precision("additional_taxable_value", "items")
-
-    for item in doc.items:
-        scio_detail = item.get("scio_detail")
-        if scio_detail not in rates:
-            continue
-
-        declared_value = flt(rates[scio_detail]) * flt(item.transfer_qty)
-        item.additional_taxable_value = flt(declared_value - flt(item.amount), precision)
