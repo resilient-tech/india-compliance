@@ -15,6 +15,7 @@ from frappe.utils import (
     getdate,
 )
 from frappe.utils.response import json_handler
+from frappe.utils.synchronization import filelock
 
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     FileGSTR1,
@@ -323,6 +324,53 @@ def get_compressed_data(json_data):
 
 def get_decompressed_data(content):
     return frappe.parse_json(frappe.safe_decode(gzip.decompress(content)))
+
+
+def store_raw_return_data(gstin, return_type, return_period, json_data, *, merge=False):
+    """Persist the GSTN payload (gzipped) on the period's return log row,
+    for the GST Return Export tool.
+
+    merge=True updates section keys into the existing payload; merge=False overwrites.
+    """
+    name = f"{return_type}-{return_period}-{gstin}"
+
+    if not frappe.db.exists(DOCTYPE, name):
+        get_gst_return_log(name)
+
+    with filelock(frappe.scrub(f"raw_return_{name}")):
+        file = get_file_doc(DOCTYPE, name, "raw_data")
+
+        if merge and file and isinstance(json_data, dict):
+            existing = get_decompressed_data(file.get_content(encodings=[]))
+            if isinstance(existing, dict):
+                json_data = {**existing, **json_data}
+
+        content = get_compressed_data(json_data)
+
+        if file:
+            file.save_file(content=content, overwrite=True)
+        else:
+            file = frappe.get_doc(
+                {
+                    "doctype": "File",
+                    "attached_to_doctype": DOCTYPE,
+                    "attached_to_name": name,
+                    "attached_to_field": "raw_data",
+                    "file_name": frappe.scrub(f"{name}-raw_data.json.gz"),
+                    "is_private": 1,
+                    "content": content,
+                }
+            ).insert(ignore_permissions=True)
+            frappe.db.set_value(DOCTYPE, name, "raw_data", file.file_url)
+
+
+def get_raw_return_data(gstin, return_type, return_period):
+    """Return the stored GSTN payload (parsed), or None if not synced yet."""
+    file = get_file_doc(DOCTYPE, f"{return_type}-{return_period}-{gstin}", "raw_data")
+    if not file:
+        return None
+
+    return get_decompressed_data(file.get_content(encodings=[]))
 
 
 def create_ims_return_log(company_gstin):
