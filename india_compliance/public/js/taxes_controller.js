@@ -95,7 +95,7 @@ india_compliance.taxes_controller = class TaxesController {
 
         taxes.forEach((tax) => {
             const item_wise_tax_rates = JSON.parse(tax.item_wise_tax_rates || "{}");
-            this.frm.doc.items.forEach((item) => {
+            (this.frm.doc.items || []).forEach((item) => {
                 if (item.item_tax_template) return;
                 item_wise_tax_rates[item.name] = tax.rate;
             });
@@ -153,12 +153,16 @@ india_compliance.taxes_controller = class TaxesController {
         const total_taxable_value = this.calculate_total_taxable_value();
 
         this.frm.doc.taxes.forEach(async (row) => {
-            if (!row.charge_type || row.charge_type === "Actual") return;
+            if (!row.charge_type) return;
 
-            row.tax_amount = this.get_tax_amount(row);
+            if (row.charge_type === "Actual") {
+                row.tax_amount = flt(row.tax_amount);
+            } else {
+                row.tax_amount = this.get_tax_amount(row);
 
-            if (frappe.flags.round_off_applicable_accounts?.includes(row.account_head))
-                row.tax_amount = Math.round(row.tax_amount);
+                if (frappe.flags.round_off_applicable_accounts?.includes(row.account_head))
+                    row.tax_amount = Math.round(row.tax_amount);
+            }
 
             total_taxes += row.tax_amount;
             row.base_total = total_taxes + total_taxable_value;
@@ -191,7 +195,7 @@ india_compliance.taxes_controller = class TaxesController {
 
         const item_wise_tax_rates = JSON.parse(tax_row.item_wise_tax_rates || "{}");
         return (
-            this.frm.doc.items.reduce((total, item) => {
+            (this.frm.doc.items || []).reduce((total, item) => {
                 let multiplier =
                     tax_row.charge_type === "On Item Quantity" ? item.qty : item.taxable_value / 100;
                 return total + multiplier * (item_wise_tax_rates[item.name] || tax_row.rate);
@@ -201,7 +205,7 @@ india_compliance.taxes_controller = class TaxesController {
 
     calculate_total_taxable_value() {
         return (
-            this.frm.doc.items.reduce((total, item) => {
+            (this.frm.doc.items || []).reduce((total, item) => {
                 return total + item.taxable_value;
             }, 0) || 0
         );
