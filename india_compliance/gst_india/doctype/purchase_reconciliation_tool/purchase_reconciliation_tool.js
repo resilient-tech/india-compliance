@@ -935,13 +935,19 @@ class ImportDialog {
     async fetch_import_history() {
         if (!this.company_gstin || !this.return_type || !this.date_range) return;
 
-        // fetch history
-        const { message } = await this.frm._call("get_import_history", {
+        // Skip repeat calls for identical arguments
+        const args = {
             company_gstin: this.company_gstin,
             return_type: this.return_type,
             date_range: this.date_range,
             for_download: this.for_download,
-        });
+        };
+        const signature = JSON.stringify(args);
+        if (signature === this._import_history_signature) return;
+        this._import_history_signature = signature;
+
+        // fetch history
+        const { message } = await this.frm._call("get_import_history", args);
 
         // ensure sequence is maintained
         function get_map(message) {
