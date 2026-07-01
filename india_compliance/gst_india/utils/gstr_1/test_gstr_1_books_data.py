@@ -748,14 +748,14 @@ class TestGSTR1BooksData(FrappeTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_b2cs_overseas_intra_state_credit_note(self):
-        # Foreign customer, but an intra-state supply delivered within India (Gujarat
-        # shipping address WITHOUT a GSTIN). Place of supply -- not the customer's
-        # "Overseas" master -- governs the table: this is a domestic B2C intra-state supply
-        # => Table 7 / B2CS, NOT exports/CDNUR. (An Indian shipping address with a GSTIN
-        # would instead make it B2B.)
+        # Foreign customer with an Overseas billing address (no GSTIN), but the supply is
+        # delivered within India to a Gujarat shipping address (POS = 24-Gujarat, not
+        # "96-Other Countries").this is a B2C intra-state supply
+        # NOT exports/CDNUR.
         si = create_sales_invoice(
             customer="_Test Foreign Customer-1",
-            shipping_address_name="_Test Foreign Customer-1-Unregistered-Shipping",
+            customer_address="_Test Foreign Customer-1-Billing",
+            shipping_address_name="_Test Foreign Customer-1-Shipping",
             place_of_supply="24-Gujarat",
             is_in_state=True,
         )
@@ -772,20 +772,17 @@ class TestGSTR1BooksData(FrappeTestCase):
         self.assertIn(si.name, by_doc)
         self.assertIn(cn.name, by_doc)
 
-        # Taxable values net to zero
         self.assertEqual(
             by_doc[si.name]["total_taxable_value"] + by_doc[cn.name]["total_taxable_value"],
             0.0,
         )
 
-        # No leak into CDNUR
         self.assertNotIn(cn.name, data.get(GSTR1_SubCategory.CDNUR.value, {}))
 
     def test_cdnur_credit_note_not_double_counted_in_b2cs(self):
         # Inter-state B2C (Unregistered) invoice ABOVE the B2CL threshold (> 1 lakh),
         # then a PARTIAL credit note whose own value is BELOW the threshold.
-        # is_b2cl_cn_dn is True (original > 1L) while is_b2cl_inv is False (CN own value < 1L) --
-        # the CN belongs only in CDNUR (Table 9B), never B2CS, and must not be double counted.
+        # the CN belongs only in CDNUR (Table 9B)
         si = create_sales_invoice(
             customer="_Test Unregistered Customer",
             place_of_supply="27-Maharashtra",  # inter-state vs company GSTIN 24...
@@ -808,6 +805,137 @@ class TestGSTR1BooksData(FrappeTestCase):
         b2cs = data.get(GSTR1_SubCategory.B2CS.value, {})
         b2cs_docs = {row["document_number"] for rows in b2cs.values() for row in rows}
         self.assertNotIn(cn.name, b2cs_docs)
+
+    def test_b2cs_credit_note_below_b2cl_limit_stays_in_b2cs(self):
+        si = create_sales_invoice(
+            customer="_Test Unregistered Customer",
+            place_of_supply="27-Maharashtra",  # inter-state vs company GSTIN 24...
+            is_out_state=True,
+            qty=1,
+            rate=5000,  # original invoice value 5,900 < 1,00,000
+        )
+
+        cn = make_sales_return(si.name).save()
+        cn.submit()
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        # CN lands in B2CS under the POS + rate key, with negative (return) values
+        b2cs_rows = data[GSTR1_SubCategory.B2CS.value]["27-Maharashtra - 18.0"]
+        cn_row = next(row for row in b2cs_rows if row["document_number"] == cn.name)
+        self.assertDictEq(
+            {
+                "transaction_type": "Credit Note",
+                "document_type": "OE",
+                "place_of_supply": "27-Maharashtra",
+                "total_taxable_value": -5000.0,
+                "total_igst_amount": -900.0,
+                "tax_rate": 18.0,
+            },
+            cn_row,
+        )
+
+        # CN must NOT leak into CDNUR
+        self.assertNotIn(cn.name, data.get(GSTR1_SubCategory.CDNUR.value, {}))
+
+    def test_cdnur_full_value_b2cl_credit_note(self):
+        # Full credit note of an inter-state B2C (Unregistered) invoice ABOVE the B2CL
+        # threshold.The CN belongs in CDNUR (Table 9B) with type "B2CL".
+        si = create_sales_invoice(
+            customer="_Test Unregistered Customer",
+            place_of_supply="27-Maharashtra",
+            is_out_state=True,
+            qty=10,
+            rate=20000,  # original invoice value 2,00,000 > 1,00,000
+        )
+
+        cn = make_sales_return(si.name).save()
+        cn.submit()
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        self.assertDictEq(
+            {
+                "transaction_type": "Credit Note",
+                "document_number": cn.name,
+                "document_type": "B2CL",
+                "place_of_supply": "27-Maharashtra",
+                "total_taxable_value": -200000.0,
+                "total_igst_amount": -36000.0,
+                "total_cgst_amount": 0.0,
+                "total_sgst_amount": 0.0,
+            },
+            data[GSTR1_SubCategory.CDNUR.value][cn.name],
+        )
+
+        # CN must NOT also appear anywhere in B2CS
+        b2cs = data.get(GSTR1_SubCategory.B2CS.value, {})
+        b2cs_docs = {row["document_number"] for rows in b2cs.values() for row in rows}
+        self.assertNotIn(cn.name, b2cs_docs)
+
+    def test_cdnur_debit_note(self):
+        # Debit note (is_debit_note) against an inter-state B2C (Unregistered) invoice ABOVE
+        # the B2CL threshold classified under CDNUR (Table 9B) with type "B2CL".
+        si = create_sales_invoice(
+            customer="_Test Unregistered Customer",
+            place_of_supply="27-Maharashtra",
+            is_out_state=True,
+            qty=10,
+            rate=20000,  # original invoice value 2,00,000 > 1,00,000
+        )
+
+        dn = make_sales_return(si.name)
+        dn.is_return = 0
+        dn.is_debit_note = 1
+        for item in dn.items:
+            item.qty = abs(item.qty)  # debit note: positive quantities
+        dn.save()
+        dn.submit()
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        self.assertDictEq(
+            {
+                "transaction_type": "Debit Note",
+                "document_number": dn.name,
+                "document_type": "B2CL",
+                "place_of_supply": "27-Maharashtra",
+                "total_taxable_value": 200000.0,
+                "total_igst_amount": 36000.0,
+            },
+            data[GSTR1_SubCategory.CDNUR.value][dn.name],
+        )
+
+        # DN must NOT appear in B2CS
+        b2cs = data.get(GSTR1_SubCategory.B2CS.value, {})
+        b2cs_docs = {row["document_number"] for rows in b2cs.values() for row in rows}
+        self.assertNotIn(dn.name, b2cs_docs)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_cdnur_export_credit_note_without_tax(self):
+        # Credit note of an export invoice WITHOUT payment of tax. The CN belongs
+        # in CDNUR (Table 9B) with type "EXPWOP" and zero IGST.
+        si = create_sales_invoice(
+            customer="_Test Foreign Customer",
+            customer_address="_Test Foreign Customer-Billing",
+        )
+
+        cn = make_sales_return(si.name).save()
+        cn.submit()
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        self.assertDictEq(
+            {
+                "transaction_type": "Credit Note",
+                "document_number": cn.name,
+                "document_type": "EXPWOP",
+                "place_of_supply": "96-Other Countries",
+                "total_taxable_value": -100.0,
+                "total_igst_amount": 0.0,
+            },
+            data[GSTR1_SubCategory.CDNUR.value][cn.name],
+        )
 
     def test_ecommerce_invoices_aggregate_under_supecom(self):
         ecommerce_gstin_1 = "20ALYPD6528PQC5"
