@@ -1,7 +1,8 @@
 import json
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import getdate
 
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
@@ -203,6 +204,82 @@ class TestGSTR1B2CL(FrappeTestCase):
         self.assertEqual(len(result[0]["inv"]), 2)
         self.assertEqual(result[0]["inv"][0]["itms"][0]["num"], 1)
         self.assertEqual(result[0]["inv"][1]["itms"][0]["num"], 1)
+
+
+class TestGSTR1B2CS(FrappeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.filters = {
+            "company": "_Test Indian Registered Company",
+            "company_gstin": "24AAQCA8719H1ZC",
+            "from_date": str(getdate()),
+            "to_date": str(getdate()),
+        }
+
+    def _run(self, type_of_business):
+        return execute({**self.filters, "type_of_business": type_of_business})[1]
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_b2cs_overseas_intra_state_credit_note(self):
+        # Foreign customer, but an intra-state supply delivered within India (Gujarat
+        # shipping address WITHOUT a GSTIN). Place of supply -- not the customer's
+        # "Overseas" master -- governs the table: domestic B2C intra-state => B2C Small,
+        # NOT exports/CDNUR.
+        si = create_sales_invoice(
+            customer="_Test Foreign Customer-1",
+            shipping_address_name="_Test Foreign Customer-1-Shipping-Unregistered",
+            place_of_supply="24-Gujarat",
+            is_in_state=True,
+        )
+
+        cn = make_sales_return(si.name).save()
+        cn.submit()
+
+        b2cs = self._run("B2C Small")
+        cdnur = self._run("CDNR-UNREG")
+
+        # The supply is classified B2C Small (Table 7) keyed on place of supply: a
+        # 24-Gujarat @ 18% row exists. (The legacy report aggregates SI + CN into one
+        # (rate, place_of_supply) row, so individual document numbers are not retained
+        # here -- the netting is asserted in the Beta test, which keeps per-document rows.)
+        self.assertTrue(
+            any(row.get("place_of_supply") == "24-Gujarat" and row.get("rate") == 18.0 for row in b2cs),
+            f"Expected a B2C Small row for 24-Gujarat @ 18%; got {b2cs}",
+        )
+
+        # Neither the invoice nor the credit note must leak into CDNUR (it is not an
+        # export and the place of supply is intra-state).
+        cdnur_docs = {row.get("invoice_number") for row in cdnur}
+        self.assertNotIn(si.name, cdnur_docs)
+        self.assertNotIn(cn.name, cdnur_docs)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_cdnur_credit_note_not_double_counted_in_b2cs(self):
+        # Inter-state B2C (Unregistered) invoice ABOVE the B2CL threshold (> 1 lakh),
+        # then a PARTIAL credit note whose own value is BELOW the threshold. The legacy
+        # report uses the ORIGINAL invoice total (return_against_invoice_total) to decide
+        # B2CL, so the CN belongs only in CDNUR (Table 9B), never B2C Small.
+        si = create_sales_invoice(
+            customer="_Test Unregistered Customer",
+            place_of_supply="27-Maharashtra",  # inter-state vs company GSTIN 24...
+            is_out_state=True,
+            qty=10,
+            rate=20000,  # original invoice value 2,00,000 > 1,00,000
+        )
+
+        cn = make_sales_return(si.name)
+        cn.items[0].qty = -1  # partial return: CN own value 20,000 < 1,00,000
+        cn.save()
+        cn.submit()
+
+        b2cs = self._run("B2C Small")
+        cdnur = self._run("CDNR-UNREG")
+
+        # CN must appear in CDNUR
+        self.assertIn(cn.name, {row.get("invoice_number") for row in cdnur})
+
+        # CN must NOT also appear in B2C Small
+        self.assertNotIn(cn.name, {row.get("invoice_number") for row in b2cs})
 
 
 def create_test_items():
