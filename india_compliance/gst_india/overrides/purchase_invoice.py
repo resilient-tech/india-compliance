@@ -25,6 +25,7 @@ from india_compliance.gst_india.utils import (
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.isd import ISD_GST_CATEGORY
 from india_compliance.gst_india.utils.itc_claim import (
     _is_gstr3b_filed,
     set_or_validate_itc_claim_period,
@@ -72,6 +73,7 @@ def validate(doc, method=None):
     set_ineligibility_reason(doc)
     set_itc_classification(doc)
     set_boe_applicability(doc)
+    set_is_isd_applicable(doc)
     validate_reverse_charge(doc)
     validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
@@ -133,6 +135,17 @@ def set_boe_applicability(doc):
         alert=True,
         indicator="blue",
     )
+
+
+def set_is_isd_applicable(doc):
+    doc.is_isd_applicable = 0
+
+    if doc.ineligibility_reason == "ITC restricted due to PoS rules":
+        return
+
+    gst_category = frappe.db.get_value("Address", doc.billing_address, "gst_category")
+    if gst_category == ISD_GST_CATEGORY:
+        doc.is_isd_applicable = 1
 
 
 def is_b2b_invoice(doc):

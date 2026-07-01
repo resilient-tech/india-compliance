@@ -5,6 +5,7 @@ from erpnext.setup.setup_wizard.operations.taxes_setup import (
 from frappe.utils import flt
 
 from india_compliance.gst_india.utils import get_data_file_path
+from india_compliance.gst_india.utils.isd import ISD_DISTRIBUTION_PROVISIONAL_ACCOUNT
 
 
 def delete_gst_settings_for_company(doc, method=None):
@@ -35,6 +36,7 @@ def create_company_fixtures(company, gst_rate=None):
 
     make_default_customs_accounts(company)
     make_default_gst_expense_accounts(company)
+    make_default_isd_provisional_account(company)
 
 
 def make_default_customs_accounts(company):
@@ -59,6 +61,15 @@ def make_default_gst_expense_accounts(company):
         account_name="GST Expense",
         parent="Indirect Expenses",
         default_fieldname="default_gst_expense_account",
+    )
+
+
+def make_default_isd_provisional_account(company):
+    create_default_company_account(
+        company,
+        account_name=ISD_DISTRIBUTION_PROVISIONAL_ACCOUNT,
+        parent="Tax Assets",
+        default_fieldname="default_isd_provisional_account",
     )
 
 
