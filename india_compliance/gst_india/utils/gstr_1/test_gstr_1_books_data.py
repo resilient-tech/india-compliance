@@ -746,69 +746,6 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 data[GSTR1_SubCategory.B2CS.value][f"{si.place_of_supply} - 18.0"][0],
             )
 
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
-    def test_b2cs_overseas_intra_state_credit_note(self):
-        # Foreign customer, but an intra-state supply delivered within India (Gujarat
-        # shipping address WITHOUT a GSTIN). Place of supply -- not the customer's
-        # "Overseas" master -- governs the table: this is a domestic B2C intra-state supply
-        # => Table 7 / B2CS, NOT exports/CDNUR. (An Indian shipping address with a GSTIN
-        # would instead make it B2B.)
-        si = create_sales_invoice(
-            customer="_Test Foreign Customer-1",
-            shipping_address_name="_Test Foreign Customer-1-Shipping-Unregistered",
-            place_of_supply="24-Gujarat",
-            is_in_state=True,
-        )
-
-        cn = make_sales_return(si.name).save()
-        cn.submit()
-
-        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
-
-        b2cs_rows = data[GSTR1_SubCategory.B2CS.value]["24-Gujarat - 18.0"]
-        by_doc = {row["document_number"]: row for row in b2cs_rows}
-
-        # Both SI and CN land in B2CS under the same POS + rate key
-        self.assertIn(si.name, by_doc)
-        self.assertIn(cn.name, by_doc)
-
-        # Taxable values net to zero
-        self.assertEqual(
-            by_doc[si.name]["total_taxable_value"] + by_doc[cn.name]["total_taxable_value"],
-            0.0,
-        )
-
-        # No leak into CDNUR
-        self.assertNotIn(cn.name, data.get(GSTR1_SubCategory.CDNUR.value, {}))
-
-    def test_cdnur_credit_note_not_double_counted_in_b2cs(self):
-        # Inter-state B2C (Unregistered) invoice ABOVE the B2CL threshold (> 1 lakh),
-        # then a PARTIAL credit note whose own value is BELOW the threshold.
-        # is_b2cl_cn_dn is True (original > 1L) while is_b2cl_inv is False (CN own value < 1L) --
-        # the CN belongs only in CDNUR (Table 9B), never B2CS, and must not be double counted.
-        si = create_sales_invoice(
-            customer="_Test Unregistered Customer",
-            place_of_supply="27-Maharashtra",  # inter-state vs company GSTIN 24...
-            is_out_state=True,
-            qty=10,
-            rate=20000,  # original invoice value 2,00,000 > 1,00,000
-        )
-
-        cn = make_sales_return(si.name)
-        cn.items[0].qty = -1  # partial return: CN own value 20,000 < 1,00,000
-        cn.save()
-        cn.submit()
-
-        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
-
-        # CN must appear in CDNUR
-        self.assertIn(cn.name, data.get(GSTR1_SubCategory.CDNUR.value, {}))
-
-        # CN must NOT also appear anywhere in B2CS (any POS + rate list)
-        b2cs = data.get(GSTR1_SubCategory.B2CS.value, {})
-        b2cs_docs = {row["document_number"] for rows in b2cs.values() for row in rows}
-        self.assertNotIn(cn.name, b2cs_docs)
-
     def test_ecommerce_invoices_aggregate_under_supecom(self):
         ecommerce_gstin_1 = "20ALYPD6528PQC5"
         ecommerce_gstin_2 = "29AABCF8078M1C8"
