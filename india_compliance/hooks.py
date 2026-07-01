@@ -289,7 +289,10 @@ doc_events = {
         "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
         "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         "validate": ("india_compliance.gst_india.overrides.transaction.validate_transaction"),
-        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.sync_address_dependent_fields_on_submit",
+        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit",
+    },
+    "Quotation Item": {
+        "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
     },
     "Supplier Quotation": {
         "onload": "india_compliance.gst_india.overrides.transaction.onload",
@@ -298,7 +301,10 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         ],
         "validate": ("india_compliance.gst_india.overrides.transaction.validate_transaction"),
-        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.sync_address_dependent_fields_on_submit",
+        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit",
+    },
+    "Supplier Quotation Item": {
+        "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
     },
     "Accounts Settings": {"validate": "india_compliance.audit_trail.overrides.accounts_settings.validate"},
     "Property Setter": {
