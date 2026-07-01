@@ -1241,10 +1241,22 @@ CUSTOM_FIELDS = {
     ],
     "Tax Category": [
         {
+            "fieldname": "is_india_compliance_default",
+            "label": "India Compliance Default",
+            "fieldtype": "Check",
+            "insert_after": "disabled",
+            "print_hide": 1,
+            "no_copy": 1,
+            "description": (
+                "When enabled, this Tax Category is used for automatic GST tax template"
+                " selection for the given Inter State / Reverse Charge combination."
+            ),
+        },
+        {
             "fieldname": "is_inter_state",
             "label": "Is Inter State",
             "fieldtype": "Check",
-            "insert_after": "disabled",
+            "insert_after": "is_india_compliance_default",
             "print_hide": 1,
         },
         {

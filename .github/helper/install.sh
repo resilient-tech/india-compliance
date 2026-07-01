@@ -47,29 +47,27 @@ else
     cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config.json" ~/frappe-bench/sites/test_site/site_config.json
 fi
 
-
 if [ "$DB" == "postgres" ]; then
-    # `bench reinstall` (via psycopg2) creates the test_frappe database + user itself, using the
-    # root_login/root_password from site_config. We only tune the throwaway CI server for speed:
-    # durability off (postgres fsyncs every commit by default, which dominates a commit-heavy
-    # suite). All params are reloadable via SIGHUP, so no restart is needed.
     export PGPASSWORD=travis
-    psql -h 127.0.0.1 -p 5432 -U postgres \
+
+    psql \
+        -h 127.0.0.1 \
+        -p 5432 \
+        -U postgres \
         -c "ALTER SYSTEM SET synchronous_commit = 'off'" \
         -c "ALTER SYSTEM SET fsync = 'off'" \
         -c "ALTER SYSTEM SET full_page_writes = 'off'" \
         -c "SELECT pg_reload_conf()"
 else
-    mariadb --host 127.0.0.1 --port 3306 -u root -ptravis -e "
-SET GLOBAL character_set_server = 'utf8mb4';
-SET GLOBAL collation_server = 'utf8mb4_unicode_ci';
-
-CREATE USER 'test_resilient'@'localhost' IDENTIFIED BY 'test_resilient';
-CREATE DATABASE test_resilient;
-GRANT ALL PRIVILEGES ON \`test_resilient\`.* TO 'test_resilient'@'localhost';
-
-FLUSH PRIVILEGES;
-"
+    mariadb \
+        --host 127.0.0.1 \
+        --port 3306 \
+        -u root \
+        -ptravis \
+        -e "
+            SET GLOBAL character_set_server = 'utf8mb4';
+            SET GLOBAL collation_server = 'utf8mb4_unicode_ci';
+        "
 fi
 
 cd ~/frappe-bench || exit
