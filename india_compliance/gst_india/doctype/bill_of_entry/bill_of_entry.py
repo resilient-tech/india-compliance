@@ -770,6 +770,7 @@ def get_pi_items(purchase_invoices):
     )
 
 
+# TODO: After List of fitters is supported in MultiSelectDialog, remove this function.
 @frappe.whitelist()
 def fetch_pending_boe_invoices(
     doctype: str,
@@ -787,19 +788,15 @@ def fetch_pending_boe_invoices(
     if txt and not filters.get("name"):
         filters.name = ["like", f"%{txt}%"]
 
-    # TODO: fix required in frappe
-    if filters.name and filters.name[1] is None:
-        filters.name = ["!=", ""]
-
     parent_filters = {
         **filters,
         "docstatus": 1,
         "gst_category": ["in", list(IMPORT_GST_CATEGORIES)],
         "is_boe_applicable": 1,
     }
-    # List-form filters with the child doctype spelled out for pending_boe_qty: frappe then
-    # resolves it as a Float and skips the ifnull(col, '') wrap, which breaks on postgres as
-    # coalesce(numeric, '') when the child field's type can't be resolved from the parent.
+
+    # Use list filters so pending_boe_qty is treated as Float, avoiding coalesce(numeric, '') on Postgres.
+
     pi_filters = [
         [field, value[0], value[1]]
         if isinstance(value, list | tuple) and len(value) == 2
