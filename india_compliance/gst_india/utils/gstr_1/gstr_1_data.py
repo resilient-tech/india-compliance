@@ -301,8 +301,8 @@ class GSTR1CategoryConditions(GSTR1Conditions):
             not self.is_nil_rated_exempted_or_non_gst(invoice)
             and not self.has_gstin_and_is_not_export(invoice)
             and not self.is_export(invoice)
-            and not self.is_cdnur_invoice(invoice)
-            and (not self.is_b2cl_cn_dn(invoice) or not self.is_b2cl_inv(invoice))
+            and not self.is_b2cl_cn_dn(invoice)
+            and not self.is_b2cl_inv(invoice)
         )
 
     def is_cdnr_invoice(self, invoice):
