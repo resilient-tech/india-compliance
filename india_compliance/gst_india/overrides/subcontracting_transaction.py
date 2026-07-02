@@ -8,7 +8,6 @@ from pypika import Order
 
 from india_compliance.gst_india.constants import (
     E_WAYBILL_STOCK_ENTRY_PURPOSES,
-    SUBCONTRACTING_INWARD_PURPOSES,
 )
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
@@ -98,7 +97,12 @@ def after_mapping_stock_entry(doc, method, source_doc):
         doc.taxes = []
 
     set_item_tax_template(doc, source_doc)
-    update_address_fields(doc, source_doc)
+
+    # set_address_fields
+    if source_doc.doctype == "Subcontracting Inward Order":
+        set_address_for_subcontracting_inward(doc, source_doc)
+    else:
+        update_address_fields(doc, source_doc)
 
 
 def update_address_fields(doc, source_doc):
@@ -116,34 +120,19 @@ def update_address_fields(doc, source_doc):
     doc.ship_to_address = address_map.ship_to
 
     set_address_display(doc)
+    set_gstin_and_gst_category(doc)
 
 
-def set_address_for_subcontracting_inward(doc):
-    """Set bill_from/bill_to addresses and re-derive their GSTIN and gst_category for Subcontracting Inward Stock Entries."""
-    if doc.purpose not in SUBCONTRACTING_INWARD_PURPOSES or not doc.get("subcontracting_inward_order"):
-        return
-
+def set_address_for_subcontracting_inward(doc, source_doc):
+    """Set company (bill_from) -> customer (bill_to) addresses and GSTIN/category for Subcontracting Inward Stock Entries."""
     if not doc.bill_from_address:
-        doc.bill_from_address = get_default_address("Company", doc.company)
+        doc.bill_from_address = get_default_address("Company", source_doc.company)
 
     if not doc.bill_to_address:
-        customer = frappe.db.get_value(
-            "Subcontracting Inward Order", doc.subcontracting_inward_order, "customer"
-        )
-        doc.bill_to_address = get_default_address("Customer", customer)
-
-    for address_field, gstin_field, gst_category_field in (
-        ("bill_from_address", "bill_from_gstin", "bill_from_gst_category"),
-        ("bill_to_address", "bill_to_gstin", "bill_to_gst_category"),
-    ):
-        address = doc.get(address_field)
-        gstin, gst_category = (
-            frappe.db.get_value("Address", address, ["gstin", "gst_category"]) if address else (None, None)
-        )
-        doc.set(gstin_field, gstin)
-        doc.set(gst_category_field, gst_category)
+        doc.bill_to_address = get_default_address("Customer", source_doc.customer)
 
     set_address_display(doc)
+    set_gstin_and_gst_category(doc)
 
 
 def get_mapped_address(doc, source_doc):
@@ -288,9 +277,6 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    if doc.doctype == "Stock Entry":
-        set_address_for_subcontracting_inward(doc)
-
     field_map = (
         STOCK_ENTRY_FIELD_MAP if doc.doctype == "Stock Entry" else SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
     )
@@ -500,6 +486,23 @@ def set_address_display(doc):
     for address in adddress_fields:
         if doc.get(address):
             setattr(doc, address + "_display", get_address_display(doc.get(address)))
+
+
+def set_gstin_and_gst_category(doc):
+    address_fields = (
+        "bill_from_address",
+        "bill_to_address",
+    )
+
+    for address in address_fields:
+        if doc.get(address):
+            gst_category, gstin = frappe.db.get_value("Address", doc.get(address), ["gst_category", "gstin"])
+            if address == "bill_from_address":
+                doc.bill_from_gst_category = gst_category
+                doc.bill_from_gstin = gstin
+            else:
+                doc.bill_to_gst_category = gst_category
+                doc.bill_to_gstin = gstin
 
 
 @frappe.whitelist()
