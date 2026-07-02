@@ -120,7 +120,6 @@ def update_address_fields(doc, source_doc):
     doc.ship_to_address = address_map.ship_to
 
     set_address_display(doc)
-    set_gstin_and_gst_category(doc)
 
 
 def set_address_for_subcontracting_inward(doc, source_doc):
@@ -132,7 +131,6 @@ def set_address_for_subcontracting_inward(doc, source_doc):
         doc.bill_to_address = get_default_address("Customer", source_doc.customer)
 
     set_address_display(doc)
-    set_gstin_and_gst_category(doc)
 
 
 def get_mapped_address(doc, source_doc):
@@ -486,23 +484,6 @@ def set_address_display(doc):
     for address in adddress_fields:
         if doc.get(address):
             setattr(doc, address + "_display", get_address_display(doc.get(address)))
-
-
-def set_gstin_and_gst_category(doc):
-    address_fields = (
-        "bill_from_address",
-        "bill_to_address",
-    )
-
-    for address in address_fields:
-        if doc.get(address):
-            gst_category, gstin = frappe.db.get_value("Address", doc.get(address), ["gst_category", "gstin"])
-            if address == "bill_from_address":
-                doc.bill_from_gst_category = gst_category
-                doc.bill_from_gstin = gstin
-            else:
-                doc.bill_to_gst_category = gst_category
-                doc.bill_to_gstin = gstin
 
 
 @frappe.whitelist()
