@@ -243,6 +243,38 @@ class TestBillofEntry(IntegrationTestCase):
 
         boe.save()
 
+    def test_charge_type_actual_preserves_item_wise_tax_rates(self):
+
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.save()
+
+        manual_rates = json.dumps({boe.items[0].name: 18})
+        boe.taxes = []
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Input Tax IGST - _TIRC",
+                "tax_amount": 18,
+                "cost_center": "Main - _TIRC",
+                "item_wise_tax_rates": manual_rates,
+            },
+        )
+
+        boe.save()
+
+        actual_row = next(tax for tax in boe.taxes if tax.charge_type == "Actual")
+        self.assertEqual(actual_row.item_wise_tax_rates, manual_rates)
+        self.assertEqual(actual_row.tax_amount, 18)
+
+        # Actual rows are user-entered and must still be included in the totals.
+        self.assertEqual(boe.total_taxes, 18)
+        self.assertEqual(boe.total_amount_payable, boe.total_customs_duty + 18)
+
     def test_pending_boe_qty(self):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
 
