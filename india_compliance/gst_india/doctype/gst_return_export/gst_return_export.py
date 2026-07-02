@@ -62,6 +62,28 @@ class GSTReturnExport(Document):
             deduplicate=True,
         )
 
+    @frappe.whitelist()
+    def get_summary(self, company_gstin: str, return_type: str, date_range: str | list):
+        """Read the prepared per-period summary(ies) for the current selection."""
+        frappe.has_permission("GST Return Export", "export", throw=True)
+        return_type = GST_RETURN_TO_RETURN_TYPE.get(return_type, return_type)
+
+        from india_compliance.gst_india.doctype.gst_return_summary.gst_return_summary import (
+            get_return_summary,
+        )
+        from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
+            BaseUtil,
+        )
+
+        periods = BaseUtil.get_periods(date_range, ReturnType(return_type), company_gstin)
+        summaries = []
+        for period in periods:
+            summary = get_return_summary(company_gstin, return_type, period)
+            if summary:
+                summaries.append({"period": period, **summary})
+
+        return {"return_type": return_type, "summaries": summaries}
+
 
 def get_periods_to_sync(company_gstin, return_type, date_range):
     """Periods GSTN can serve now, minus frozen-2B / quarterly ones."""
@@ -89,6 +111,13 @@ def _sync_return_data(company_gstin, return_type, periods):
             download_gstr_2a(company_gstin, periods)
         else:
             download_gstr_2b(company_gstin, periods)
+
+        from india_compliance.gst_india.doctype.gst_return_summary.gst_return_summary import (
+            build_and_store_summary,
+        )
+
+        for period in periods:
+            build_and_store_summary(company_gstin, return_type, period)
 
     except Exception as e:
         frappe.publish_realtime(

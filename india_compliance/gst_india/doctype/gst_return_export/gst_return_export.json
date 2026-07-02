@@ -67,13 +67,11 @@
   },
   {
    "fieldname": "summary_section",
-   "fieldtype": "Section Break",
-   "label": "Summary"
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "summary_html",
-   "fieldtype": "HTML",
-   "label": "Summary"
+   "fieldtype": "HTML"
   }
  ],
  "hide_toolbar": 1,

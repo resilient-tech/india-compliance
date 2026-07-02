@@ -27,7 +27,6 @@
   "unfiled_summary",
   "filed_summary",
   "authenticated_summary",
-  "raw_data",
   "computed_data_section",
   "is_latest_data",
   "section_break_emlz",
@@ -112,6 +111,7 @@
    "read_only": 1
   },
   {
+   "description": "Data as on the government portal (gzipped): the filed return for GSTR-1/3B, or the downloaded payload for GSTR-2A/2B (used by the GST Return Export tool).",
    "fieldname": "filed",
    "fieldtype": "Attach",
    "label": "Filed Data",
@@ -229,15 +229,6 @@
    "fieldname": "is_nil",
    "fieldtype": "Check",
    "label": "Is Nil Return",
-   "read_only": 1
-  },
-  {
-   "description": "Verbatim GSTN payload (gzipped) stored for the GST Return Export tool",
-   "fieldname": "raw_data",
-   "fieldtype": "Attach",
-   "hidden": 1,
-   "label": "Raw Data",
-   "no_copy": 1,
    "read_only": 1
   }
  ],

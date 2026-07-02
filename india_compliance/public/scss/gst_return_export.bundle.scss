@@ -1,0 +1,78 @@
+// Styles for the GST Return Export tool summary view.
+// Scoped under .gst-return-summary (the wrapper the client injects into
+// the summary_html field). Loaded via frappe.require in gst_return_export.js.
+
+.gst-return-summary {
+    .summary-heading {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .period-block {
+        margin-bottom: 1.5rem;
+    }
+
+    .period-title {
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+
+    .sync-status {
+        font-size: 11px;
+        margin-top: 6px;
+    }
+
+    // ITC buckets (2B): Available / Not Available / Reversal
+    .itc-cards {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .itc-card {
+        flex: 1;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 12px 14px;
+
+        &__label {
+            font-size: 12px;
+        }
+
+        &__total {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 4px 0 8px;
+        }
+
+        &__breakup {
+            font-size: 12px;
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+    }
+
+    // Section-wise summary table
+    .section-table {
+        font-size: 13px;
+        margin: 0;
+
+        th:not(:first-child),
+        td:not(:first-child) {
+            text-align: right;
+        }
+
+        tfoot tr {
+            font-weight: 600;
+        }
+    }
+
+    .summary-placeholder {
+        padding: 2.5rem 1rem;
+        text-align: center;
+        border: 1px dashed var(--border-color);
+        border-radius: 8px;
+    }
+}

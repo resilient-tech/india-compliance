@@ -327,8 +327,8 @@ def get_decompressed_data(content):
 
 
 def store_raw_return_data(gstin, return_type, return_period, json_data, *, merge=False):
-    """Persist the GSTN payload (gzipped) on the period's return log row,
-    for the GST Return Export tool.
+    """Persist the GSTN payload (gzipped) on the period's return log row in the
+    `filed` field (what's on the government portal), for the GST Return Export tool.
 
     merge=True updates section keys into the existing payload; merge=False overwrites.
     """
@@ -338,7 +338,7 @@ def store_raw_return_data(gstin, return_type, return_period, json_data, *, merge
         get_gst_return_log(name)
 
     with filelock(frappe.scrub(f"raw_return_{name}")):
-        file = get_file_doc(DOCTYPE, name, "raw_data")
+        file = get_file_doc(DOCTYPE, name, "filed")
 
         if merge and file and isinstance(json_data, dict):
             existing = get_decompressed_data(file.get_content(encodings=[]))
@@ -355,18 +355,18 @@ def store_raw_return_data(gstin, return_type, return_period, json_data, *, merge
                     "doctype": "File",
                     "attached_to_doctype": DOCTYPE,
                     "attached_to_name": name,
-                    "attached_to_field": "raw_data",
-                    "file_name": frappe.scrub(f"{name}-raw_data.json.gz"),
+                    "attached_to_field": "filed",
+                    "file_name": frappe.scrub(f"{name}-filed.json.gz"),
                     "is_private": 1,
                     "content": content,
                 }
             ).insert(ignore_permissions=True)
-            frappe.db.set_value(DOCTYPE, name, "raw_data", file.file_url)
+            frappe.db.set_value(DOCTYPE, name, "filed", file.file_url)
 
 
 def get_raw_return_data(gstin, return_type, return_period):
-    """Return the stored GSTN payload (parsed), or None if not synced yet."""
-    file = get_file_doc(DOCTYPE, f"{return_type}-{return_period}-{gstin}", "raw_data")
+    """Return the stored GSTN payload (parsed) from the `filed` field, or None."""
+    file = get_file_doc(DOCTYPE, f"{return_type}-{return_period}-{gstin}", "filed")
     if not file:
         return None
 
