@@ -14,7 +14,6 @@ from india_compliance.gst_india.constants import (
     GST_REFUND_TAX_TYPES,
     GST_TAX_TYPES,
     SALES_DOCTYPES,
-    STATE_NUMBERS,
     SUBCONTRACTING_DOCTYPES,
     TAX_TYPES,
     TAXABLE_GST_TREATMENTS,
@@ -882,7 +881,6 @@ def get_gst_details(
         master_doctype,
         company,
         is_inter_state_supply(frappe._dict({**party_details, "doctype": doctype})),
-        party_details.get(company_gstin_field)[:2],
         party_details.is_reverse_charge,
     ):
         gst_details.taxes_and_charges = default_tax
@@ -965,46 +963,28 @@ def get_tax_template_based_on_category(master_doctype, company, party_details):
     return default_tax
 
 
-def get_tax_template(master_doctype, company, is_inter_state, state_code, is_reverse_charge):
-    tax_categories = frappe.get_all(
+def get_tax_template(master_doctype, company, is_inter_state, is_reverse_charge):
+    tax_category = frappe.db.get_value(
         "Tax Category",
-        fields=["name", "gst_state"],
-        filters={
+        {
             "is_inter_state": 1 if is_inter_state else 0,
             "is_reverse_charge": 1 if is_reverse_charge else 0,
+            "is_india_compliance_default": 1,
             "disabled": 0,
         },
-        or_filters={"is_india_compliance_default": 1, "gst_state": ["!=", ""]},
+        "name",
     )
-
-    state_specific = []
-    default = []
-    for tax_category in tax_categories:
-        if tax_category.gst_state:
-            if STATE_NUMBERS.get(tax_category.gst_state) == state_code:
-                state_specific.append(tax_category.name)
-        else:
-            default.append(tax_category.name)
-
-    # State-specific categories take precedence over defaults.
-    ordered_categories = state_specific + default
-    if not ordered_categories:
+    if not tax_category:
         return ""
 
-    template_by_category = frappe._dict(
-        frappe.get_all(
+    return (
+        frappe.db.get_value(
             master_doctype,
-            fields=["tax_category", "name"],
-            filters={"company": company, "disabled": 0, "tax_category": ["in", ordered_categories]},
-            as_list=True,
+            {"company": company, "disabled": 0, "tax_category": tax_category},
+            "name",
         )
+        or ""
     )
-
-    for tax_category in ordered_categories:
-        if template := template_by_category.get(tax_category):
-            return template
-
-    return ""
 
 
 def validate_reverse_charge_transaction(doc):
@@ -1516,7 +1496,6 @@ def set_reverse_charge(doc):
         "Purchase Taxes and Charges Template",
         doc.company,
         is_inter_state,
-        doc.company_gstin[:2],
         doc.is_reverse_charge,
     )
 
