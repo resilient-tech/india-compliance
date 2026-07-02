@@ -1,6 +1,5 @@
 import json
 import re
-from typing import ClassVar
 
 import frappe
 from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import (
@@ -39,6 +38,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.setup.property_setters import (
     ADDRESS_FIELDS_BY_DOCTYPE,
 )
+from india_compliance.gst_india.utils.jinja import get_gst_breakup
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
@@ -1881,26 +1881,23 @@ class TestRegionalOverrides(IntegrationTestCase):
 
 
 class TestItemUpdate(IntegrationTestCase):
-    DATA: ClassVar[dict] = {
-        "customer": "_Test Unregistered Customer",
-        "item_code": "_Test Trading Goods 1",
-        "qty": 1,
-        "rate": 100,
-        "is_in_state": 1,
-    }
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-
-    def create_order(self, doctype):
-        self.DATA["doctype"] = doctype
-        doc = create_transaction(**self.DATA)
-        return doc
-
-    def test_so_and_po_after_item_update(self):
-        for doctype in ["Sales Order", "Purchase Order"]:
-            doc = self.create_order(doctype)
+    def test_gst_details_recomputed_when_item_updated_after_submit(self):
+        for doctype in [
+            "Sales Order",
+            "Purchase Order",
+            "Quotation",
+            "Supplier Quotation",
+        ]:
+            # Quotation, needs an explicit customer.
+            party = {"customer": "_Test Registered Customer"} if doctype == "Quotation" else {}
+            doc = create_transaction(
+                doctype=doctype,
+                item_code="_Test Trading Goods 1",
+                qty=1,
+                rate=100,
+                is_in_state=1,
+                **party,
+            )
 
             self.assertDocumentEqual(
                 {
@@ -1951,38 +1948,62 @@ class TestItemUpdate(IntegrationTestCase):
                 doc.items[1],
             )
 
-    def test_gst_treatment_recomputed_when_item_updated_after_submit(self):
-        # Update Items must recompute GST treatment, not just amounts; this
-        # post-submit path skips validate.
-        for doctype in ["Sales Order", "Purchase Order"]:
-            doc = self.create_order(doctype)
-            item = doc.items[0]
+            breakup = json.loads(get_gst_breakup(doc))
+            total_taxable = sum(row["Taxable Amount"] for row in breakup)
+            self.assertEqual(total_taxable, doc.base_net_total)
 
-            item_to_update = [
-                {
-                    "item_code": item.item_code,
-                    "qty": item.qty,
-                    "rate": item.rate,
-                    "docname": item.name,
-                    "name": item.name,
-                    "idx": item.idx,
-                },
-                {"item_code": "_Test Non GST Item", "qty": 1, "rate": 50, "idx": 2},
-            ]
+    def _assert_new_item_treatment(self, doc, expected_treatment):
+        item = doc.items[0]
+        item_to_update = [
+            {
+                "item_code": item.item_code,
+                "qty": item.qty,
+                "rate": item.rate,
+                "docname": item.name,
+                "name": item.name,
+                "idx": item.idx,
+            },
+            {"item_code": "_Test Trading Goods 1", "qty": 1, "rate": 50, "idx": 2},
+        ]
 
-            update_child_qty_rate(doctype, json.dumps(item_to_update), doc.name)
-            doc = frappe.get_doc(doctype, doc.name)
+        update_child_qty_rate(doc.doctype, json.dumps(item_to_update), doc.name)
+        doc = frappe.get_doc(doc.doctype, doc.name)
 
-            self.assertDocumentEqual(
-                {
-                    "gst_treatment": "Non-GST",
-                    "cgst_amount": 0,
-                    "sgst_amount": 0,
-                    "igst_amount": 0,
-                },
-                doc.items[1],
+        self.assertDocumentEqual(
+            {"gst_treatment": expected_treatment, "taxable_value": 50},
+            doc.items[1],
+        )
+        self.assertEqual(doc.items[0].gst_treatment, expected_treatment)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_sales_gst_treatment_recomputed_when_item_updated_after_submit(self):
+        for doctype in ["Sales Order", "Quotation"]:
+            doc = create_transaction(
+                doctype=doctype,
+                customer="_Test Foreign Customer",
+                party_name="_Test Foreign Customer",
+                item_code="_Test Trading Goods 1",
+                qty=1,
+                rate=100,
+                is_out_state=1,
+                is_export_with_gst=1,
             )
-            self.assertEqual(doc.items[0].gst_treatment, "Taxable")
+            self.assertEqual(doc.items[0].gst_treatment, "Zero-Rated")
+
+            self._assert_new_item_treatment(doc, "Zero-Rated")
+
+    def test_purchase_gst_treatment_recomputed_when_item_updated_after_submit(self):
+        for doctype in ["Purchase Order", "Supplier Quotation"]:
+            doc = create_transaction(
+                doctype=doctype,
+                supplier="_Test Registered Supplier",
+                item_code="_Test Trading Goods 1",
+                qty=1,
+                rate=100,
+            )
+            self.assertEqual(doc.items[0].gst_treatment, "Nil-Rated")
+
+            self._assert_new_item_treatment(doc, "Nil-Rated")
 
 
 class TestPlaceOfSupply(IntegrationTestCase):
