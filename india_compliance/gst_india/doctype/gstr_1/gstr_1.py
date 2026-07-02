@@ -277,8 +277,7 @@ def get_journal_entries(month_or_quarter: str, year: str, company: str, filing_p
         .on(sales_invoice.name == sales_invoice_taxes.parent)
         .select(
             sales_invoice_taxes.account_head.as_("account"),
-            # Sum(CASE ...), not CASE WHEN col THEN Sum(...): the bare col in the WHEN is neither
-            # grouped nor aggregated, which postgres rejects. Same totals per account on MariaDB.
+            # use SUM(CASE ...) instead of CASE ... SUM(...) for postgres compatibility
             Sum(Case().when(sales_invoice_taxes.tax_amount > 0, sales_invoice_taxes.tax_amount).else_(0)).as_(
                 "debit_in_account_currency"
             ),

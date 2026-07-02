@@ -133,7 +133,7 @@ class GSTSettings(Document):
             "Scheduled Job Type",
             {"method": "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_e_waybill_generation"},
             "stopped",
-            cint(not self.enable_retry_einv_ewb_generation),  # cint: postgres rejects bool on smallint
+            cint(not self.enable_retry_einv_ewb_generation),  # store 0/1 instead of bool for Postgres
         )
 
     def update_auto_refresh_authtoken_scheduled_job(self):
@@ -146,7 +146,7 @@ class GSTSettings(Document):
                 "method": "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_refresh_authtoken"
             },
             "stopped",
-            cint(not self.enable_auto_reconciliation),  # cint: postgres rejects bool on smallint
+            cint(not self.enable_auto_reconciliation),  # store 0/1 instead of bool for Postgres
         )
 
     def get_gstin_with_credentials(self, service=None):
@@ -528,7 +528,7 @@ def update_pending_status(e_invoice_applicability_date, company=None):
     gst_settings = frappe.get_cached_doc("GST Settings")
     if gst_settings.nil_exempt_e_invoice_treatment == "Do Not Generate":
         sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
-        # subquery, not UPDATE..JOIN (invalid on postgres)
+        # use subquery, not UPDATE..JOIN (invalid on postgres)
         query = query.where(
             sales_invoice.name.isin(
                 frappe.qb.from_(sales_invoice_item)

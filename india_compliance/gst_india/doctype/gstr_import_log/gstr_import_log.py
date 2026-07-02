@@ -81,5 +81,5 @@ def toggle_scheduled_jobs(stopped):
     )
 
     if scheduled_job:
-        # cint: callers pass a bool, postgres rejects bool on smallint
+        # store 0/1 instead of bool for Postgres
         frappe.db.set_value("Scheduled Job Type", scheduled_job, "stopped", cint(stopped))
