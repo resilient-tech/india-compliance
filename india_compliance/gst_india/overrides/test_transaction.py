@@ -1887,30 +1887,7 @@ class TestRegionalOverrides(FrappeTestCase):
         self.assertTrue(party_details.get("taxes"))
 
 
-<<<<<<< HEAD
 class TestItemUpdate(FrappeTestCase):
-    DATA: ClassVar[dict] = {
-        "customer": "_Test Unregistered Customer",
-        "item_code": "_Test Trading Goods 1",
-        "qty": 1,
-        "rate": 100,
-        "is_in_state": 1,
-    }
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-
-    def create_order(self, doctype):
-        self.DATA["doctype"] = doctype
-        doc = create_transaction(**self.DATA)
-        return doc
-
-    def test_so_and_po_after_item_update(self):
-        for doctype in ["Sales Order", "Purchase Order"]:
-            doc = self.create_order(doctype)
-=======
-class TestItemUpdate(IntegrationTestCase):
     def test_gst_details_recomputed_when_item_updated_after_submit(self):
         for doctype in [
             "Sales Order",
@@ -1928,7 +1905,6 @@ class TestItemUpdate(IntegrationTestCase):
                 is_in_state=1,
                 **party,
             )
->>>>>>> 0716eb21 (fix: update GST  Details on update item in Quotation and Supplier Quotation)
 
             self.assertDocumentEqual(
                 {
@@ -1979,26 +1955,6 @@ class TestItemUpdate(IntegrationTestCase):
                 doc.items[1],
             )
 
-<<<<<<< HEAD
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
-    def test_overseas_order_add_non_gst_item_after_submit(self):
-        """
-        Adding a Non-GST item to a submitted SEZ/overseas Sales Order via the
-        Update Items dialog must not raise. before_update_after_submit normalizes
-        gst_treatment (to "Zero-Rated") before validating the Non-GST/GST mix.
-        """
-        so = create_transaction(
-            doctype="Sales Order",
-            customer="_Test Foreign Customer",
-            item_code="_Test Trading Goods 1",
-            qty=1,
-            rate=100,
-        )
-        self.assertEqual(so.items[0].gst_treatment, "Zero-Rated")
-
-        item = so.items[0]
-        items = [
-=======
             breakup = json.loads(get_gst_breakup(doc))
             total_taxable = sum(row["Taxable Amount"] for row in breakup)
             self.assertEqual(total_taxable, doc.base_net_total)
@@ -2006,7 +1962,6 @@ class TestItemUpdate(IntegrationTestCase):
     def _assert_new_item_treatment(self, doc, expected_treatment):
         item = doc.items[0]
         item_to_update = [
->>>>>>> 0716eb21 (fix: update GST  Details on update item in Quotation and Supplier Quotation)
             {
                 "item_code": item.item_code,
                 "qty": item.qty,
@@ -2015,16 +1970,6 @@ class TestItemUpdate(IntegrationTestCase):
                 "name": item.name,
                 "idx": item.idx,
             },
-<<<<<<< HEAD
-            {"item_code": "_Test Non GST Item", "qty": 1, "rate": 50, "idx": 2},
-        ]
-
-        update_child_qty_rate("Sales Order", json.dumps(items), so.name)
-        so = frappe.get_doc("Sales Order", so.name)
-
-        for so_item in so.items:
-            self.assertEqual(so_item.gst_treatment, "Zero-Rated")
-=======
             {"item_code": "_Test Trading Goods 1", "qty": 1, "rate": 50, "idx": 2},
         ]
 
@@ -2066,7 +2011,41 @@ class TestItemUpdate(IntegrationTestCase):
             self.assertEqual(doc.items[0].gst_treatment, "Nil-Rated")
 
             self._assert_new_item_treatment(doc, "Nil-Rated")
->>>>>>> 0716eb21 (fix: update GST  Details on update item in Quotation and Supplier Quotation)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_overseas_order_add_non_gst_item_after_submit(self):
+        """
+        Adding a Non-GST item to a submitted SEZ/overseas Sales Order via the
+        Update Items dialog must not raise. before_update_after_submit normalizes
+        gst_treatment (to "Zero-Rated") before validating the Non-GST/GST mix.
+        """
+        so = create_transaction(
+            doctype="Sales Order",
+            customer="_Test Foreign Customer",
+            item_code="_Test Trading Goods 1",
+            qty=1,
+            rate=100,
+        )
+        self.assertEqual(so.items[0].gst_treatment, "Zero-Rated")
+
+        item = so.items[0]
+        items = [
+            {
+                "item_code": item.item_code,
+                "qty": item.qty,
+                "rate": item.rate,
+                "docname": item.name,
+                "name": item.name,
+                "idx": item.idx,
+            },
+            {"item_code": "_Test Non GST Item", "qty": 1, "rate": 50, "idx": 2},
+        ]
+
+        update_child_qty_rate("Sales Order", json.dumps(items), so.name)
+        so = frappe.get_doc("Sales Order", so.name)
+
+        for so_item in so.items:
+            self.assertEqual(so_item.gst_treatment, "Zero-Rated")
 
 
 class TestPlaceOfSupply(FrappeTestCase):
