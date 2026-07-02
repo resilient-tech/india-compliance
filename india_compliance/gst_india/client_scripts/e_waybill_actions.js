@@ -554,7 +554,7 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
     } else if (frm.doctype === "Sales Invoice" && frm.doc.is_return === 0 && is_foreign_transaction) {
         supply_type = "Outward";
         sub_supply_type = ["Export"];
-        document_type = "Tax Invoice";
+        document_type = frm.doc.is_export_with_gst ? "Tax Invoice" : "Bill of Supply";
     } else {
         const key = `${frm.doctype}_${frm.doc.is_return || 0}`;
         const default_supply_types = {

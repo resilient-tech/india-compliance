@@ -968,26 +968,43 @@ def get_tax_template_based_on_category(master_doctype, company, party_details):
 def get_tax_template(master_doctype, company, is_inter_state, state_code, is_reverse_charge):
     tax_categories = frappe.get_all(
         "Tax Category",
-        fields=["name", "is_inter_state", "gst_state"],
+        fields=["name", "gst_state"],
         filters={
             "is_inter_state": 1 if is_inter_state else 0,
             "is_reverse_charge": 1 if is_reverse_charge else 0,
             "disabled": 0,
         },
+        or_filters={"is_india_compliance_default": 1, "gst_state": ["!=", ""]},
     )
 
-    default_tax = ""
-
+    state_specific = []
+    default = []
     for tax_category in tax_categories:
-        if STATE_NUMBERS.get(tax_category.gst_state) == state_code or (
-            not default_tax and not tax_category.gst_state
-        ):
-            default_tax = frappe.db.get_value(
-                master_doctype,
-                {"company": company, "disabled": 0, "tax_category": tax_category.name},
-                "name",
-            )
-    return default_tax
+        if tax_category.gst_state:
+            if STATE_NUMBERS.get(tax_category.gst_state) == state_code:
+                state_specific.append(tax_category.name)
+        else:
+            default.append(tax_category.name)
+
+    # State-specific categories take precedence over defaults.
+    ordered_categories = state_specific + default
+    if not ordered_categories:
+        return ""
+
+    template_by_category = frappe._dict(
+        frappe.get_all(
+            master_doctype,
+            fields=["tax_category", "name"],
+            filters={"company": company, "disabled": 0, "tax_category": ["in", ordered_categories]},
+            as_list=True,
+        )
+    )
+
+    for tax_category in ordered_categories:
+        if template := template_by_category.get(tax_category):
+            return template
+
+    return ""
 
 
 def validate_reverse_charge_transaction(doc):
@@ -1066,6 +1083,9 @@ def validate_gst_refund_accounts(doc):
 
     for tax in doc.taxes:
         tax_amount = flt(tax.base_tax_amount_after_discount_amount)
+        if tax.gst_tax_type not in TAX_TYPES:
+            continue
+
         if tax.gst_tax_type not in GST_REFUND_TAX_TYPES:
             net_amount += tax_amount
             continue
@@ -1086,7 +1106,8 @@ def validate_gst_refund_accounts(doc):
         net_amount += tax_amount
 
     # Validate if refund amount is same as total gst amount
-    if has_refund and net_amount != 0:
+    tax_precision = doc.precision("base_tax_amount_after_discount_amount", "taxes")
+    if has_refund and flt(net_amount, tax_precision) != 0:
         frappe.throw(_("Total GST amount should be equal to Refund amount."))
 
 
@@ -1608,12 +1629,17 @@ def _update_place_of_supply_and_taxes(doc):
 
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
+        set_gst_tax_type(doc)
+        update_item_gst_treatment(doc)
+        update_item_gst_details(doc)
         return False
 
     if doc.is_new():
         _update_place_of_supply_and_taxes(doc)
 
     set_gst_tax_type(doc)
+    update_item_gst_treatment(doc)
+
     validate_items(doc)
 
     if doc.place_of_supply:
@@ -1670,6 +1696,22 @@ def validate_transaction(doc, method=None):
         validate_gst_refund_accounts(doc)
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
+    update_item_gst_details(doc)
+    validate_item_tax_template(doc)
+
+
+def update_item_gst_details(doc, method=None):
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
+        return
+
+    ItemGSTDetails().update(doc)
+
+
+def update_item_gst_treatment(doc, method=None):
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
+        return
+
+    ItemGSTTreatment().set(doc)
 
 
 def before_print(doc, method=None, print_settings=None):
@@ -1696,18 +1738,13 @@ def validate_ecommerce_gstin(doc):
     doc.ecommerce_gstin = validate_gstin(doc.ecommerce_gstin, label="E-commerce GSTIN", is_tcs_gstin=True)
 
 
-def update_gst_details(doc, method=None):
-    ItemGSTTreatment().set(doc)
-    if doc.doctype in DOCTYPES_WITH_GST_DETAIL:
-        ItemGSTDetails().update(doc)
-        validate_item_tax_template(doc)
-
+def update_valuation_rate(doc, method=None):
     if doc.doctype in ("Purchase Receipt", "Purchase Invoice"):
         doc.update_valuation_rate()
 
 
 def validate_item_tax_template(doc):
-    if ignore_gst_validations(doc):
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
 
     if not doc.items or not doc.taxes:
@@ -1844,15 +1881,17 @@ def before_update_after_submit(doc, method=None):
         sync_address_dependent_fields_on_submit(doc)
         return
 
+    update_item_gst_treatment(doc)  # normalize before validate_items reads it
     validate_items(doc)
 
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
 
     GSTAccounts().validate(doc, is_sales_transaction)
-    update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
-    update_gst_details(doc)
+    update_taxable_values(doc)
+    update_item_gst_details(doc)
+    validate_item_tax_template(doc)
 
 
 ADDRESS_DEPENDENT_FIELDS = {
