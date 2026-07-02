@@ -8,7 +8,6 @@ from pypika import Order
 
 from india_compliance.gst_india.constants import (
     E_WAYBILL_STOCK_ENTRY_PURPOSES,
-    SUBCONTRACTING_INWARD_PURPOSES,
 )
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
@@ -124,11 +123,7 @@ def update_address_fields(doc, source_doc):
 
 
 def set_address_for_subcontracting_inward(doc, source_doc):
-    """Set company (bill_from) -> customer (bill_to) addresses and GSTIN/category for Subcontracting Inward Stock Entries."""
-
-    if doc.purpose not in SUBCONTRACTING_INWARD_PURPOSES or not doc.get("subcontracting_inward_order"):
-        return
-
+    """Set company (bill_from) -> customer (bill_to) addresses for Subcontracting Inward Stock Entries."""
     if not doc.bill_from_address:
         doc.bill_from_address = get_default_address("Company", source_doc.company)
 
