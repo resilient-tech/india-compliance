@@ -3,6 +3,9 @@ import frappe
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     make_dimension_in_accounting_doctypes,
 )
+from erpnext.accounts.doctype.accounts_settings.accounts_settings import (
+    create_property_setter_for_hiding_field,
+)
 from frappe.utils import now_datetime, nowdate
 
 from india_compliance.gst_india.constants import GST_UOMS
@@ -79,6 +82,23 @@ def create_accounting_dimension_fields():
     for dimension in dimensions:
         doc = frappe.get_doc("Accounting Dimension", dimension)
         make_dimension_in_accounting_doctypes(doc, doctypes)
+
+    toggle_accounting_dimensions_sections(doctypes)
+
+
+def toggle_accounting_dimensions_sections(doctypes=None):
+    if not frappe.get_meta("Accounts Settings").has_field("enable_accounting_dimensions"):
+        return
+
+    if doctypes is None:
+        doctypes = frappe.get_hooks(
+            "accounting_dimension_doctypes",
+            app_name="india_compliance",
+        )
+
+    hide = not frappe.db.get_single_value("Accounts Settings", "enable_accounting_dimensions")
+    for doctype in doctypes:
+        create_property_setter_for_hiding_field(doctype, "accounting_dimensions_section", hide)
 
 
 def create_property_setters(*, include_defaults=False):
