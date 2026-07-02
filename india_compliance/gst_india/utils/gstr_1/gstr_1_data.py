@@ -301,7 +301,8 @@ class GSTR1CategoryConditions(GSTR1Conditions):
             not self.is_nil_rated_exempted_or_non_gst(invoice)
             and not self.has_gstin_and_is_not_export(invoice)
             and not self.is_export(invoice)
-            and (not self.is_b2cl_cn_dn(invoice) or not self.is_b2cl_inv(invoice))
+            and not self.is_b2cl_cn_dn(invoice)
+            and not self.is_b2cl_inv(invoice)
         )
 
     def is_cdnr_invoice(self, invoice):
@@ -986,8 +987,23 @@ class GSTR11A11BData:
         return self.process_data(records)
 
     def get_11A_query(self):
+        # For tax-inclusive payments the GST is embedded in paid_amount, exclusive -> 0.
+        from india_compliance.gst_india.overrides.payment_entry import (
+            get_included_taxes_query,
+        )
+
+        gst_accounts_list = [account_head for account_head in self.gst_accounts.values() if account_head]
+        included_taxes_query = get_included_taxes_query(gst_accounts_list)
         return (
-            self.get_query("Advances").select(self.pe.paid_amount.as_("taxable_value")).groupby(self.pe.name)
+            self.get_query("Advances")
+            .left_join(included_taxes_query)
+            .on(included_taxes_query.parent == self.pe.name)
+            .select(
+                (self.pe.base_paid_amount - IfNull(included_taxes_query.included_taxes, 0)).as_(
+                    "taxable_value"
+                )
+            )
+            .groupby(self.pe.name)
         )
 
     def get_11B_query(self):
