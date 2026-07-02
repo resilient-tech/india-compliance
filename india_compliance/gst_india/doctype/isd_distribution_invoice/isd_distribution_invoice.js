@@ -21,7 +21,7 @@ const ISD_SOURCE_ITEM_READONLY_FIELDS = [
 
 frappe.ui.form.on("ISD Distribution Invoice", {
     refresh(frm) {
-        const grid = frm.fields_dict.source_invoices.grid;
+        const grid = frm.fields_dict.source_items.grid;
         // ISD_SOURCE_ITEM_READONLY_FIELDS.forEach(field => grid.toggle_enable(field, false));
     },
     branch_turnover: calculate_distribution_ratio,

@@ -16,7 +16,7 @@
   "is_ineligible_for_itc",
   "accounting_dimensions_section",
   "cost_center",
-  "column_break_zpez",
+  "dimension_col_break",
   "project",
   "expense_details_section",
   "total_expense",
@@ -165,10 +165,6 @@
    "options": "Cost Center"
   },
   {
-   "fieldname": "column_break_zpez",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "project",
    "fieldtype": "Link",
    "label": "Project",
@@ -234,12 +230,16 @@
    "fieldname": "gst_details_section",
    "fieldtype": "Section Break",
    "label": "GST Details"
+  },
+  {
+   "fieldname": "dimension_col_break",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-07-01 17:52:24.330454",
+ "modified": "2026-07-02 14:18:17.012630",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Source Item",

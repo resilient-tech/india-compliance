@@ -95,7 +95,7 @@ def calculate_distribution(doc):
     precision = get_field_precision(meta.get_field("distributed_igst"))
     expense_precision = get_field_precision(meta.get_field("distributed_expense"))
 
-    for row in doc.source_invoices or []:
+    for row in doc.source_items or []:
         credit = get_source_head_itc(row, ratio, precision)
 
         if inter_state:
@@ -117,7 +117,7 @@ def calculate_distribution(doc):
 
 
 @frappe.whitelist()
-def get_source_items_from_purchase_invoice(purchase_invoice):
+def get_source_items_from_purchase_invoice(purchase_invoice: str):
     frappe.has_permission("Purchase Invoice", "read", doc=purchase_invoice, throw=True)
 
     pi_items = frappe.get_all(

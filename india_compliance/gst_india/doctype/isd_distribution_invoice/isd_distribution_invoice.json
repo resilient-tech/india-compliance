@@ -26,7 +26,7 @@
   "cost_center",
   "dimension_col_break",
   "project",
-  "source_invoices_section",
+  "source_items_section",
   "purchase_invoice",
   "section_break_mmxt",
   "branch_turnover",
@@ -35,7 +35,7 @@
   "column_break_mael",
   "distribution_ratio",
   "section_break_wtqm",
-  "source_invoices",
+  "source_items",
   "taxes_section",
   "taxes",
   "section_break_jryz",
@@ -260,15 +260,14 @@
    "read_only": 1
   },
   {
-   "fieldname": "source_invoices_section",
+   "fieldname": "source_items_section",
    "fieldtype": "Section Break",
    "hide_border": 1,
    "label": "Source Invoices"
   },
   {
    "fieldname": "dimension_col_break",
-   "fieldtype": "Column Break",
-   "is_virtual": 1
+   "fieldtype": "Column Break"
   },
   {
    "depends_on": "eval:doc.is_against_party",
@@ -279,7 +278,7 @@
    "options": "party_type"
   },
   {
-   "fieldname": "source_invoices",
+   "fieldname": "source_items",
    "fieldtype": "Table",
    "options": "ISD Source Item",
    "reqd": 1
@@ -427,7 +426,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-01 17:56:37.752529",
+ "modified": "2026-07-02 14:18:43.286222",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Distribution Invoice",

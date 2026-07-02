@@ -15,42 +15,44 @@
   "credit_note_against",
   "amended_from",
   "isd_distribution_invoice_reference",
-  "section_break_rvis",
+  "party_section",
   "is_against_party",
   "column_break_ejlg",
-  "against_party_section_2",
+  "conditional_party_fields_section",
   "column_break_euze",
   "party_type",
   "column_break_iziu",
   "party",
+  "party_section_conditional",
+  "column_break_fxgr",
+  "column_break_nfoq",
+  "external_isd_invoice_number",
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
   "project",
-  "source_invoices_section",
-  "purchase_invoice",
   "section_break_mmxt",
   "branch_turnover",
   "column_break_tjri",
   "total_turnover",
   "column_break_mael",
   "distribution_ratio",
-  "section_break_wtqm",
-  "source_invoices",
+  "source_items_section",
+  "source_items",
   "taxes_section",
   "taxes",
-  "section_break_hvdx",
+  "provisional_accounts_section",
   "isd_provisional_account",
   "column_break_xsms",
   "isd_provisional_amount",
   "column_break_sbcz",
   "totals_section",
   "total_eligible",
-  "column_break_5",
+  "total_ineligible_column_break",
   "total_ineligible",
   "column_break_mfrl",
   "total_expense",
-  "section_break_pbwi",
+  "totals_summary_section",
   "grand_total",
   "column_break_yjqx",
   "column_break_mcdg",
@@ -119,7 +121,7 @@
    "fieldtype": "Link",
    "label": "Credit Note Against",
    "mandatory_depends_on": "eval: doc.is_credit_note == 1",
-   "options": "ISD Distribution Invoice"
+   "options": "ISD Recipient Invoice"
   },
   {
    "fieldname": "amended_from",
@@ -132,7 +134,7 @@
    "search_index": 1
   },
   {
-   "fieldname": "section_break_rvis",
+   "fieldname": "party_section",
    "fieldtype": "Section Break"
   },
   {
@@ -146,7 +148,8 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "against_party_section_2",
+   "depends_on": "eval:doc.is_against_party",
+   "fieldname": "conditional_party_fields_section",
    "fieldtype": "Section Break"
   },
   {
@@ -154,7 +157,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:doc.is_against_party",
    "fieldname": "party_type",
    "fieldtype": "Link",
    "label": "Party Type",
@@ -166,7 +168,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:doc.is_against_party",
    "fieldname": "party",
    "fieldtype": "Dynamic Link",
    "label": "Party",
@@ -197,14 +198,10 @@
    "options": "Project"
   },
   {
-   "fieldname": "source_invoices_section",
+   "fieldname": "section_break_mmxt",
    "fieldtype": "Section Break",
    "hide_border": 1,
    "label": "Source Invoices"
-  },
-  {
-   "fieldname": "section_break_mmxt",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "branch_turnover",
@@ -231,11 +228,11 @@
    "read_only": 1
   },
   {
-   "fieldname": "section_break_wtqm",
+   "fieldname": "source_items_section",
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "source_invoices",
+   "fieldname": "source_items",
    "fieldtype": "Table",
    "options": "ISD Source Item",
    "reqd": 1
@@ -263,7 +260,7 @@
    "read_only": 1
   },
   {
-   "fieldname": "column_break_5",
+   "fieldname": "total_ineligible_column_break",
    "fieldtype": "Column Break"
   },
   {
@@ -373,11 +370,6 @@
    "options": "ISD Distribution Invoice"
   },
   {
-   "fieldname": "purchase_invoice",
-   "fieldtype": "Autocomplete",
-   "label": "Purchase Invoice"
-  },
-  {
    "fieldname": "total_expense",
    "fieldtype": "Currency",
    "label": "Total Expense",
@@ -385,7 +377,7 @@
    "read_only": 1
   },
   {
-   "fieldname": "section_break_pbwi",
+   "fieldname": "totals_summary_section",
    "fieldtype": "Section Break"
   },
   {
@@ -403,7 +395,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "section_break_hvdx",
+   "fieldname": "provisional_accounts_section",
    "fieldtype": "Section Break"
   },
   {
@@ -425,12 +417,31 @@
   {
    "fieldname": "column_break_sbcz",
    "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:!doc.isd_distribution_invoice_reference",
+   "fieldname": "external_isd_invoice_number",
+   "fieldtype": "Data",
+   "label": "External ISD Invoice Number"
+  },
+  {
+   "depends_on": "eval:doc.is_against_party",
+   "fieldname": "party_section_conditional",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_nfoq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_fxgr",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-01 17:58:26.223054",
+ "modified": "2026-07-02 17:22:40.459116",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Recipient Invoice",

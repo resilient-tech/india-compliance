@@ -12,7 +12,7 @@
   "description",
   "accounting_dimensions_section",
   "cost_center",
-  "column_break_eoqi",
+  "dimension_col_break",
   "project"
  ],
  "fields": [
@@ -68,7 +68,7 @@
    "options": "Cost Center"
   },
   {
-   "fieldname": "column_break_eoqi",
+   "fieldname": "dimension_col_break",
    "fieldtype": "Column Break"
   }
  ],

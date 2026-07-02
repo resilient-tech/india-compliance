@@ -94,7 +94,7 @@ class ISDDistributionInvoice(ISDController):
         duplicate_rows = []
         seen = set()
 
-        for row in self.source_invoices:
+        for row in self.source_items:
             pi_item = pi_items.get(row.purchase_invoice_item)
             if not pi_item:
                 # row points to an item not on this Purchase Invoice
@@ -162,15 +162,15 @@ class ISDDistributionInvoice(ISDController):
         tolerance = 0.1
 
         # self's totals are validated before this
-        available_itc = flt(sum(sum_row_tax_by_type(row, "total") for row in self.source_invoices), precision)
-        available_expense = flt(sum(flt(row.total_expense) for row in self.source_invoices), precision)
+        available_itc = flt(sum(sum_row_tax_by_type(row, "total") for row in self.source_items), precision)
+        available_expense = flt(sum(flt(row.total_expense) for row in self.source_items), precision)
 
         already = self.get_distributed_for_purchase_invoice()
 
         current_itc = flt(
-            sum(sum_row_tax_by_type(row, "distributed") for row in self.source_invoices), precision
+            sum(sum_row_tax_by_type(row, "distributed") for row in self.source_items), precision
         )
-        current_expense = flt(sum(flt(row.distributed_expense) for row in self.source_invoices), precision)
+        current_expense = flt(sum(flt(row.distributed_expense) for row in self.source_items), precision)
 
         total_itc = flt(already.itc + current_itc, precision)
         total_expense = flt(already.expense + current_expense, precision)

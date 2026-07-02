@@ -7,7 +7,6 @@ from frappe.utils import flt, get_link_to_form
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.controllers.isd_controller import ISDController
-from india_compliance.gst_india.utils import validate_invoice_number
 from india_compliance.gst_india.utils.isd import throw_row_table
 
 
@@ -17,7 +16,6 @@ class ISDRecipientInvoice(ISDController):
     def validate(self):
         self.setup_precision()
         self.setup_party_fields()
-        validate_invoice_number(self)
         self.validate_addresses()
         self.validate_turnover_and_ratio()
         self.validate_reference_distribution_invoice()

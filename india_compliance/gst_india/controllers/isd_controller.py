@@ -26,12 +26,12 @@ from india_compliance.gst_india.utils.isd import (
 class ISDController(Document):
     """Shared functionality for ISD doctypes"""
 
-    def is_company_isd(self):
+    def is_distribution_side(self):
         return self.doctype == "ISD Distribution Invoice"
 
     def setup_precision(self):
         self._tax_precision = self.precision("tax_amount", "taxes")
-        self._source_item_precision = self.precision("distributed_igst", "source_invoices")
+        self._source_item_precision = self.precision("distributed_igst", "source_items")
 
     def setup_party_fields(self):
         self._party_account = None
@@ -69,7 +69,7 @@ class ISDController(Document):
         # Each address must be enabled and linked to the entity that owns it. self.company owns the
         # distribution address on the Distribution Invoice and the recipient address on the Recipient
         # Invoice; the opposite address belongs to the counterparty (the company itself or the party).
-        if self.is_company_isd():
+        if self.is_distribution_side():
             company_address, company_label = self.distribution_address, _("Distribution Address")
             counterparty_address, counterparty_label = self.recipient_address, _("Recipient Address")
         else:
@@ -208,7 +208,7 @@ class ISDController(Document):
 
     def validate_expense_heads(self):
         invalid_rows = []
-        for row in self.source_invoices:
+        for row in self.source_items:
             try:
                 self._validate_account(row.expense_head, _("Expense Head"))
             except frappe.ValidationError:
@@ -244,7 +244,7 @@ class ISDController(Document):
         Distribution side: tax types that are being reduced(credited)
         Recipient side: tax types that are being received(debited)
         """
-        if self.is_company_isd():
+        if self.is_distribution_side():
             return self.get_credit_by_source_head()
         return self.get_distributed_by_head()
 
@@ -252,7 +252,7 @@ class ISDController(Document):
         """Aggregate ITC types being distributed"""
         ratio = get_distribution_ratio(self)
         credit_by_type = dict.fromkeys(GST_TAX_TYPES, 0.0)
-        for row in self.source_invoices:
+        for row in self.source_items:
             credit = get_source_head_itc(row, ratio, self._source_item_precision)
             for gst_tax_type in GST_TAX_TYPES:
                 credit_by_type[gst_tax_type] += credit[gst_tax_type]
@@ -261,7 +261,7 @@ class ISDController(Document):
     def get_distributed_by_head(self):
         """Aggregate ITC types being received"""
         distributed_by_type = dict.fromkeys(GST_TAX_TYPES, 0.0)
-        for row in self.source_invoices:
+        for row in self.source_items:
             for gst_tax_type in GST_TAX_TYPES:
                 distributed_by_type[gst_tax_type] += flt(
                     row.get(f"distributed_{gst_tax_type}"), self._source_item_precision
@@ -322,7 +322,7 @@ class ISDController(Document):
             )
 
     def set_tax_accounts(self):
-        if not self.source_invoices:
+        if not self.source_items:
             self.taxes = []
             return
 
@@ -348,7 +348,7 @@ class ISDController(Document):
         """Set tax amounts and total eligible/ineligible amounts."""
         totals = {"eligible": 0, "ineligible": 0}
 
-        for row in self.source_invoices:
+        for row in self.source_items:
             key = "ineligible" if row.is_ineligible_for_itc else "eligible"
             totals[key] += sum_row_tax_by_type(row, "distributed")
 
@@ -361,14 +361,14 @@ class ISDController(Document):
         self.total_eligible = flt(totals["eligible"], total_precision)
         self.total_ineligible = flt(totals["ineligible"], total_precision)
         self.total_expense = flt(
-            sum(flt(row.distributed_expense) for row in self.source_invoices),
+            sum(flt(row.distributed_expense) for row in self.source_items),
             self.precision("distributed_expense"),
         )
 
     def validate_gst_account_types(self):
         """Receiver GST accounts must be IGST on inter-state distributions"""
 
-        if self.is_company_isd():
+        if self.is_distribution_side():
             return
 
         if not is_inter_state_distribution(self):
