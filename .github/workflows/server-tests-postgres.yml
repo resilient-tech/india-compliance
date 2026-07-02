@@ -44,6 +44,8 @@ on:
 env:
   BRANCH: ${{ github.base_ref || github.ref_name }}
   APP_NAME: india_compliance
+  PYTHON_VERSION: "3.14"
+  NODE_VERSION: 24
 
 concurrency:
   group: server-tests-postgres-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event.number || github.ref || github.run_id }}
@@ -81,12 +83,12 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
           check-latest: true
 
       - name: Add to Hosts

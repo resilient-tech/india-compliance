@@ -108,7 +108,7 @@ class BaseAuditTrail:
         return doctypes
 
     def update_count(self):
-        # a bare non-aggregated column with COUNT requires it to be the GROUP BY key on postgres;
+        # bare col with COUNT must be the GROUP BY key on postgres
         fields = [{"COUNT": "name", "as": "count"}]
 
         if self.group_by:

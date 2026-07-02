@@ -32,7 +32,6 @@ class TestAuditTrailReport(IntegrationTestCase):
         self.assertGreaterEqual(row["new_count"], 1)
 
     def test_summary_by_user(self):
-        # group_by="owner" — the loose-GROUP BY path that breaks on Postgres
         _columns, data = execute(self.get_filters("Summary by User"))
         row = next(r for r in data if r["user_name"] == self.invoice.owner)
         self.assertGreaterEqual(row["new_count"], 1)
