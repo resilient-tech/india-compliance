@@ -999,7 +999,8 @@ class GSTR11A11BData:
             .left_join(included_taxes_query)
             .on(included_taxes_query.parent == self.pe.name)
             .select(
-                (self.pe.base_paid_amount - IfNull(included_taxes_query.included_taxes, 0)).as_(
+                # Max(): included_taxes from joined subquery, not FD on the pe PK grouped on
+                Max(self.pe.base_paid_amount - IfNull(included_taxes_query.included_taxes, 0)).as_(
                     "taxable_value"
                 )
             )
