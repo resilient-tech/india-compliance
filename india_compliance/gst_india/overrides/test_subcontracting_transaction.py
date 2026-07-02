@@ -17,14 +17,10 @@ from erpnext.stock.doctype.stock_entry.stock_entry import make_stock_in_entry
 from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order import (
     make_subcontracting_receipt,
 )
-<<<<<<< HEAD
 from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
     create_subcontracting_order,
 )
 from frappe.tests.utils import FrappeTestCase
-=======
-from frappe.tests import IntegrationTestCase, UnitTestCase
->>>>>>> 37794434 (fix: enhance tax handling in CustomTaxController for empty items)
 
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -569,7 +565,7 @@ def _make_taxes_controller_doc(items=None, taxes=None):
     return json.loads(json.dumps(data), object_hook=frappe._dict)
 
 
-class TestCustomTaxController(UnitTestCase):
+class TestCustomTaxController(FrappeTestCase):
     def test_get_rows_to_update_defaults_empty_items_to_list(self):
         """Missing/null items (new doc before any row is added) must yield [], not None."""
         doc = _make_taxes_controller_doc(items=None, taxes=[{"name": "tax1"}])
