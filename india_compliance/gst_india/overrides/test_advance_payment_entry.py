@@ -17,16 +17,8 @@ from erpnext.controllers.accounts_controller import (
     get_advance_payment_entries_for_regional,
 )
 from erpnext.controllers.stock_controller import show_accounting_ledger_preview
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
-=======
-from frappe.tests import IntegrationTestCase
-<<<<<<< HEAD
-from frappe.utils import flt
->>>>>>> 2005d26c (test: pe allocation for inclusive tax)
-=======
 from frappe.utils import flt, getdate
->>>>>>> 78fd5edb (fix: 11A 11B query to exclude inclusive taxes)
 
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
@@ -611,7 +603,7 @@ MATRIX_RECONCILED_GL_SEPARATE: dict = {
 }
 
 
-class TestPaymentReconciliationMatrix(IntegrationTestCase):
+class TestPaymentReconciliationMatrix(FrappeTestCase):
     # ---- the 8 core cells (no separate party account) ----
 
     def test_excl_payment_excl_invoice_via_reconcile_tool(self):
