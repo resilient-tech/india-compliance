@@ -11,7 +11,6 @@ fi
 
 cd ~ || exit
 
-# Database backend to test against: "mariadb" (default) or "postgres". The postgres job sets DB=postgres.
 DB="${DB:-mariadb}"
 
 echo "Setting Up System Dependencies..."
@@ -41,7 +40,7 @@ bench init --skip-assets --frappe-path ~/frappe --python "$(which python)" frapp
 
 mkdir ~/frappe-bench/sites/test_site
 
-# DB-specific site config + throwaway-DB durability tuning
+# DB-specific site config
 if [ "$DB" == "postgres" ]; then
     site_config="site_config_postgres.json"
 

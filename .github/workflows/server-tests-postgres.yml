@@ -79,6 +79,8 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup Python
         uses: actions/setup-python@v6
