@@ -487,6 +487,11 @@ function get_generate_e_waybill_dialog(opts, frm) {
     return d;
 }
 
+const SUBCONTRACTING_INWARD_SUB_SUPPLY_DESC = {
+    "Subcontracting Delivery": "Job Work Delivery",
+    "Return Raw Material to Customer": "Return Raw Material",
+};
+
 function get_sub_suppy_type_options(frm, is_foreign_transaction) {
     let supply_type, sub_supply_type, sub_supply_desc, document_type;
 
@@ -522,6 +527,10 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
         if (frm.doc.purpose === "Send to Subcontractor") {
             supply_type = "Outward";
             sub_supply_type = ["Job Work"];
+        } else if (india_compliance.is_subcontracting_inward_entry(frm.doc)) {
+            supply_type = "Outward";
+            sub_supply_type = ["Others"];
+            sub_supply_desc = SUBCONTRACTING_INWARD_SUB_SUPPLY_DESC[frm.doc.purpose];
         } else if (["Material Transfer", "Material Issue"].includes(frm.doc.purpose)) {
             const same_gstin = frm.doc.bill_from_gstin === frm.doc.bill_to_gstin;
 
@@ -545,7 +554,7 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
     } else if (frm.doctype === "Sales Invoice" && frm.doc.is_return === 0 && is_foreign_transaction) {
         supply_type = "Outward";
         sub_supply_type = ["Export"];
-        document_type = "Tax Invoice";
+        document_type = frm.doc.is_export_with_gst ? "Tax Invoice" : "Bill of Supply";
     } else {
         const key = `${frm.doctype}_${frm.doc.is_return || 0}`;
         const default_supply_types = {

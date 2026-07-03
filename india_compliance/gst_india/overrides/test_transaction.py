@@ -1,6 +1,5 @@
 import json
 import re
-from typing import ClassVar
 
 import frappe
 from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import (
@@ -14,7 +13,10 @@ from erpnext.controllers.accounts_controller import (
 )
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.controllers.taxes_and_totals import get_regional_round_off_accounts
-from erpnext.selling.doctype.sales_order.sales_order import make_purchase_order
+from erpnext.selling.doctype.sales_order.sales_order import (
+    make_delivery_note,
+    make_purchase_order,
+)
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     update_regional_gl_entries,
@@ -38,6 +40,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.setup.property_setters import (
     ADDRESS_FIELDS_BY_DOCTYPE,
 )
+from india_compliance.gst_india.utils.jinja import get_gst_breakup
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
@@ -374,7 +377,6 @@ class TestTransaction(IntegrationTestCase):
         purchase = supplier (re-synced here, so the supplier change alone flips it)."""
         doc = create_transaction(**self.transaction_details, is_in_state=True)
         doc.reload()
-        doc.load_doc_before_save()
 
         if self.is_sales_doctype:
             doc.customer_address = "_Test Registered Customer-Billing-3"  # Karnataka (29)
@@ -382,10 +384,10 @@ class TestTransaction(IntegrationTestCase):
         else:
             doc.supplier_address = "_Test Registered Supplier-Billing-3"  # Karnataka (29)
 
-        self.assertRaises(
+        self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            sync_address_dependent_fields_on_submit,
-            doc,
+            "Cannot charge CGST/SGST for inter-state supplies",
+            doc.save,
         )
 
     def test_block_pos_change_to_different_state_after_submit(self):
@@ -397,13 +399,12 @@ class TestTransaction(IntegrationTestCase):
         if doc.place_of_supply == "27-Maharashtra":
             return
 
-        doc.load_doc_before_save()
         doc.place_of_supply = "27-Maharashtra"
 
-        self.assertRaises(
+        self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            sync_address_dependent_fields_on_submit,
-            doc,
+            "Cannot charge CGST/SGST for inter-state supplies",
+            doc.save,
         )
 
     def test_allow_tax_neutral_pos_change_after_submit(self):
@@ -444,13 +445,12 @@ class TestTransaction(IntegrationTestCase):
             address_field = "supplier_address"
             new_address = "_Test Registered Supplier-Billing-2"
 
-        doc.load_doc_before_save()
         doc.set(address_field, new_address)
 
-        self.assertRaises(
+        self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            sync_address_dependent_fields_on_submit,
-            doc,
+            "GST Category cannot be set to",
+            doc.save,
         )
 
     def test_block_address_or_pos_change_when_ewaybill_or_irn_exists(self):
@@ -462,16 +462,15 @@ class TestTransaction(IntegrationTestCase):
 
         doc = create_transaction(**self.transaction_details)
         doc.reload()
-        doc.load_doc_before_save()
 
         # fake an e-Waybill / IRN, then a tax-neutral POS edit
         doc.set(ewb_field, "123456789012" if ewb_field == "ewaybill" else "a" * 64)
         doc.place_of_supply = "27-Maharashtra" if doc.place_of_supply != "27-Maharashtra" else "29-Karnataka"
 
-        self.assertRaises(
+        self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            sync_address_dependent_fields_on_submit,
-            doc,
+            "Cannot change the Place of Supply or address after the e-Waybill",
+            doc.save,
         )
 
     def test_validate_mandatory_gst_category(self):
@@ -1884,26 +1883,23 @@ class TestRegionalOverrides(IntegrationTestCase):
 
 
 class TestItemUpdate(IntegrationTestCase):
-    DATA: ClassVar[dict] = {
-        "customer": "_Test Unregistered Customer",
-        "item_code": "_Test Trading Goods 1",
-        "qty": 1,
-        "rate": 100,
-        "is_in_state": 1,
-    }
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-
-    def create_order(self, doctype):
-        self.DATA["doctype"] = doctype
-        doc = create_transaction(**self.DATA)
-        return doc
-
-    def test_so_and_po_after_item_update(self):
-        for doctype in ["Sales Order", "Purchase Order"]:
-            doc = self.create_order(doctype)
+    def test_gst_details_recomputed_when_item_updated_after_submit(self):
+        for doctype in [
+            "Sales Order",
+            "Purchase Order",
+            "Quotation",
+            "Supplier Quotation",
+        ]:
+            # Quotation, needs an explicit customer.
+            party = {"customer": "_Test Registered Customer"} if doctype == "Quotation" else {}
+            doc = create_transaction(
+                doctype=doctype,
+                item_code="_Test Trading Goods 1",
+                qty=1,
+                rate=100,
+                is_in_state=1,
+                **party,
+            )
 
             self.assertDocumentEqual(
                 {
@@ -1953,6 +1949,63 @@ class TestItemUpdate(IntegrationTestCase):
                 },
                 doc.items[1],
             )
+
+            breakup = json.loads(get_gst_breakup(doc))
+            total_taxable = sum(row["Taxable Amount"] for row in breakup)
+            self.assertEqual(total_taxable, doc.base_net_total)
+
+    def _assert_new_item_treatment(self, doc, expected_treatment):
+        item = doc.items[0]
+        item_to_update = [
+            {
+                "item_code": item.item_code,
+                "qty": item.qty,
+                "rate": item.rate,
+                "docname": item.name,
+                "name": item.name,
+                "idx": item.idx,
+            },
+            {"item_code": "_Test Trading Goods 1", "qty": 1, "rate": 50, "idx": 2},
+        ]
+
+        update_child_qty_rate(doc.doctype, json.dumps(item_to_update), doc.name)
+        doc = frappe.get_doc(doc.doctype, doc.name)
+
+        self.assertDocumentEqual(
+            {"gst_treatment": expected_treatment, "taxable_value": 50},
+            doc.items[1],
+        )
+        self.assertEqual(doc.items[0].gst_treatment, expected_treatment)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_sales_gst_treatment_recomputed_when_item_updated_after_submit(self):
+        for doctype in ["Sales Order", "Quotation"]:
+            doc = create_transaction(
+                doctype=doctype,
+                customer="_Test Foreign Customer",
+                party_name="_Test Foreign Customer",
+                item_code="_Test Trading Goods 1",
+                qty=1,
+                rate=100,
+                is_out_state=1,
+                is_export_with_gst=1,
+            )
+            self.assertEqual(doc.items[0].gst_treatment, "Zero-Rated")
+
+            self._assert_new_item_treatment(doc, "Zero-Rated")
+
+    def test_purchase_gst_treatment_recomputed_when_item_updated_after_submit(self):
+        for doctype in ["Purchase Order", "Supplier Quotation"]:
+            doc = create_transaction(
+                doctype=doctype,
+                supplier="_Test Registered Supplier",
+                item_code="_Test Trading Goods 1",
+                qty=1,
+                rate=100,
+            )
+            self.assertEqual(doc.items[0].gst_treatment, "Nil-Rated")
+
+            self._assert_new_item_treatment(doc, "Nil-Rated")
 
 
 class TestPlaceOfSupply(IntegrationTestCase):
@@ -2049,6 +2102,49 @@ class TestPlaceOfSupply(IntegrationTestCase):
         self.assertEqual(po.gst_category, "Registered Regular")
         self.assertTrue(po.taxes_and_charges)
         self.assertTrue(po.taxes)
+
+    def test_gst_details_recomputed_through_sales_order_to_delivery_note(self):
+        # Mapper recalcs taxes outside validate; saved DN must recompute GST details.
+        so = create_transaction(
+            doctype="Sales Order",
+            customer="_Test Registered Customer",
+            item_code="_Test Trading Goods 1",
+            qty=1,
+            rate=100,
+            is_in_state=1,  # intra-state -> CGST + SGST
+        )
+        expected = {
+            "gst_treatment": "Taxable",
+            "taxable_value": 100,
+            "igst_amount": 0,
+            "cgst_amount": 9,
+            "sgst_amount": 9,
+        }
+        self.assertDocumentEqual(expected, so.items[0])
+
+        dn = make_delivery_note(so.name)
+        dn.insert()
+        self.assertDocumentEqual(expected, dn.items[0])
+
+    def test_gst_details_recomputed_on_cross_mapping_sales_order_to_purchase_order(self):
+        # Cross-mapping must reset GST to the purchase side; sales IGST must not leak.
+        so = create_transaction(
+            doctype="Sales Order",
+            customer="_Test Registered Composition Customer",
+            item_code="_Test Trading Goods 1",
+            qty=1,
+            rate=100,
+            is_out_state=1,  # inter-state -> IGST
+        )
+        self.assertEqual(so.place_of_supply, "29-Karnataka")
+        self.assertEqual({tax.gst_tax_type for tax in so.taxes}, {"igst"})
+
+        selected_items = [{"item_code": so.items[0].item_code, "supplier": "_Test Registered Supplier"}]
+        po = make_purchase_order(so.name, selected_items=selected_items)[0]
+
+        # after_mapping resets to intra-state
+        self.assertEqual(po.place_of_supply, "24-Gujarat")
+        self.assertEqual({tax.gst_tax_type for tax in po.taxes}, {"cgst", "sgst"})
 
     def test_place_of_supply_when_sales_order_mapped_from_purchase_order(self):
         """
