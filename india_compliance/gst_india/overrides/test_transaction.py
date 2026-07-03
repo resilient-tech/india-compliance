@@ -666,6 +666,57 @@ class TestTransaction(IntegrationTestCase):
             doc.save,
         )
 
+    def test_gst_breakup_table_virtual_field(self):
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
+            return
+
+        doc = create_transaction(**self.transaction_details, is_in_state=True, do_not_submit=True)
+
+        breakup = doc.gst_breakup_table
+        self.assertTrue(breakup)
+        self.assertEqual(doc.as_dict().get("gst_breakup_table"), breakup)
+
+        doc.items[0].rate += 100
+        doc.save()
+
+        updated_breakup = doc.gst_breakup_table
+        self.assertTrue(updated_breakup)
+        self.assertNotEqual(updated_breakup, breakup)
+        self.assertEqual(doc.as_dict().get("gst_breakup_table"), updated_breakup)
+
+    def test_gst_breakup_table_in_print(self):
+        # The server print renderer gates on`doc.get(fieldname)` (instance dict, bypassing the property), so the
+        # `before_print` hook must materialize it.
+        # Fix required in Frappe
+        if self.doctype != "Sales Invoice":
+            return
+
+        doc = create_transaction(**self.transaction_details, is_in_state=True)
+        html = frappe.get_print(doc.doctype, doc.name, print_format="GST Tax Invoice")
+        html_no_letterhead = frappe.get_print(
+            doc.doctype, doc.name, print_format="GST Tax Invoice", no_letterhead=1
+        )
+
+        # `tax-break-up` is the wrapper class from templates/gst_breakup.html.
+        self.assertIn("tax-break-up", html)
+        self.assertIn("tax-break-up", html_no_letterhead)
+        self.assertIn(doc.gst_breakup_table, html)
+
+    def test_ecommerce_supply_type_virtual_field(self):
+        if self.doctype not in ("Sales Order", "Delivery Note", "Sales Invoice"):
+            return
+
+        with change_settings("GST Settings", {"enable_sales_through_ecommerce_operators": 1}):
+            doc = create_transaction(**self.transaction_details, is_in_state=True, do_not_submit=True)
+            doc.ecommerce_gstin = "29AABCF8078M1C8"
+            doc.save()
+
+            self.assertEqual(doc.ecommerce_supply_type, "Liable to collect tax u/s 52(TCS)")
+            self.assertEqual(doc.as_dict().get("ecommerce_supply_type"), doc.ecommerce_supply_type)
+
+            doc.is_reverse_charge = 1
+            self.assertEqual(doc.ecommerce_supply_type, "Liable to pay tax u/s 9(5)")
+
     def test_taxable_value_with_charges(self):
         if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
             return

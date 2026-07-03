@@ -2,7 +2,7 @@ import frappe
 from erpnext.accounts.party import get_address_tax_category
 from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
 from frappe import _, bold
-from frappe.contacts.doctype.address.address import get_address_display, get_default_address
+from frappe.contacts.doctype.address.address import get_default_address
 from frappe.utils import flt
 from pypika import Order
 
@@ -119,8 +119,6 @@ def update_address_fields(doc, source_doc):
     doc.ship_from_address = address_map.ship_from
     doc.ship_to_address = address_map.ship_to
 
-    set_address_display(doc)
-
 
 def set_address_for_subcontracting_inward(doc, source_doc):
     """Set company (bill_from) -> customer (bill_to) addresses for Subcontracting Inward Stock Entries."""
@@ -129,8 +127,6 @@ def set_address_for_subcontracting_inward(doc, source_doc):
 
     if not doc.bill_to_address:
         doc.bill_to_address = get_default_address("Customer", source_doc.customer)
-
-    set_address_display(doc)
 
 
 def get_mapped_address(doc, source_doc):
@@ -253,9 +249,6 @@ def get_dashboard_data(data):
 
 def onload(doc, method=None):
     if doc.doctype == "Stock Entry":
-        set_address_display(doc)
-
-        # For e-Waybill data mapping
         doc.company_gstin = doc.bill_from_gstin
         doc.supplier_gstin = doc.bill_to_gstin
         doc.gst_category = doc.bill_to_gst_category
@@ -471,19 +464,6 @@ class SubcontractingGSTAccounts(GSTAccounts):
         for row in self.gst_tax_rows:
             # validating charge type "On Item Quantity" and non_cess_advol_account
             self.validate_charge_type_for_cess_non_advol_accounts(row)
-
-
-def set_address_display(doc):
-    adddress_fields = (
-        "bill_from_address",
-        "bill_to_address",
-        "ship_from_address",
-        "ship_to_address",
-    )
-
-    for address in adddress_fields:
-        if doc.get(address):
-            setattr(doc, address + "_display", get_address_display(doc.get(address)))
 
 
 @frappe.whitelist()
