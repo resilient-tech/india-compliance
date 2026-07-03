@@ -70,12 +70,18 @@ DOCTYPES_WITH_GST_DETAIL = {
 ALLOWED_TAX_DIFFERENCE = 1  # Allowable difference in tax amount due to rounding off
 
 
-def set_gst_breakup(doc):
+def get_gst_breakup_html(doc):
+    """
+    Return the rendered GST Breakup HTML for the `gst_breakup_table` virtual field.
+    """
+    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
+        return
+
     gst_breakup_html = frappe.render_template("templates/gst_breakup.html", dict(doc=doc))  # nosemgrep
     if not gst_breakup_html:
         return
 
-    doc.gst_breakup_table = gst_breakup_html.replace("\n", "").replace("    ", "")
+    return gst_breakup_html.replace("\n", "").replace("    ", "")
 
 
 def update_taxable_values(doc):
@@ -1989,9 +1995,9 @@ def before_print(doc, method=None, print_settings=None):
     if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
 
-    set_ecommerce_supply_type(doc)
-    set_gst_breakup(doc)
+    doc.set("gst_breakup_table", get_gst_breakup_html(doc))
 
+<<<<<<< HEAD
 
 def onload(doc, method=None):
     if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
@@ -1999,6 +2005,10 @@ def onload(doc, method=None):
 
     set_ecommerce_supply_type(doc)
     set_gst_breakup(doc)
+=======
+    if doc.doctype in ("Sales Order", "Sales Invoice", "Delivery Note"):
+        doc.set("ecommerce_supply_type", get_ecommerce_supply_type(doc))
+>>>>>>> 71324c6 (fix: resolve virtual fields using property instead of handling them manually using onload)
 
 
 def validate_ecommerce_gstin(doc):
@@ -2213,17 +2223,25 @@ def sync_gst_details_from_address(doc, changed_address_fields):
             doc.set(category_field, gst_category or "Unregistered")
 
 
-def set_ecommerce_supply_type(doc):
+def get_ecommerce_supply_type(doc):
+    """Return the GSTR-1 E-commerce section for the `ecommerce_supply_type` virtual field.
+
+    Pure getter (no assignment) so it can back the controller property. Returns None
+    when no e-commerce GSTIN is set.
     """
-    - Set GSTR-1 E-commerce section for virtual field ecommerce_supply_type
-    """
-    if doc.doctype not in ("Sales Order", "Sales Invoice", "Delivery Note"):
-        return
+    if ignore_gst_validations(doc):
+        return None
 
     if not doc.ecommerce_gstin:
         return
 
     if doc.is_reverse_charge:
+<<<<<<< HEAD
         doc.ecommerce_supply_type = SubCategory.SUPECOM_9_5.value
     else:
         doc.ecommerce_supply_type = SubCategory.SUPECOM_52.value
+=======
+        return SUPECOM.US_9_5.value
+
+    return SUPECOM.US_52.value
+>>>>>>> 71324c6 (fix: resolve virtual fields using property instead of handling them manually using onload)
