@@ -114,6 +114,7 @@ class CustomTaxController:
 
     def set_taxes_and_totals(self):
         self.set_item_wise_tax_rates()
+        self.set_additional_taxable_value()
         self.update_item_taxable_value()
         self.update_tax_amount()
         self.update_base_grand_total()
@@ -155,7 +156,24 @@ class CustomTaxController:
 
     def update_item_taxable_value(self):
         for item in self.doc.get("items"):
-            item.taxable_value = self.get_value("amount", item)
+            taxable_value = self.get_value("amount", item)
+            taxable_value += flt(item.get("additional_taxable_value", 0), item.precision("taxable_value"))
+
+            item.taxable_value = taxable_value
+
+    def set_additional_taxable_value(self):
+        if self.doc.doctype != "Stock Entry" or not self.doc.items:
+            return
+
+        for item in self.doc.items:
+            item.additional_taxable_value = 0
+
+        # Imported lazily: subcontracting_transaction imports this module at load time.
+        from india_compliance.gst_india.overrides.subcontracting_transaction import (
+            set_subcontracting_inward_taxable_value,
+        )
+
+        set_subcontracting_inward_taxable_value(self.doc)
 
     def update_tax_amount(self):
         total_taxes = 0

@@ -1,10 +1,16 @@
 import frappe
 from erpnext.controllers.subcontracting_controller import make_rm_stock_entry
+from erpnext.manufacturing.doctype.work_order.work_order import (
+    make_stock_entry as make_stock_entry_from_work_order,
+)
+from erpnext.selling.doctype.sales_order.sales_order import (
+    make_subcontracting_inward_order as map_subcontracting_inward_order,
+)
 from frappe.utils import getdate
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
-from india_compliance.tests.erpnext_test_utils import create_subcontracting_order
+from india_compliance.tests.erpnext_test_utils import create_subcontracting_order, make_bom
 
 SUBCONTRACTING_TEST_RM_ITEM_1 = "Subcontracted SRM Item 1"
 SUBCONTRACTING_TEST_RM_ITEM_2 = "Subcontracted SRM Item 2"
@@ -12,6 +18,11 @@ SUBCONTRACTING_TEST_SERVICE_ITEM = "Subcontracted Service Item 1"
 SUBCONTRACTING_TEST_FINISHED_ITEM = "Subcontracted Item SA1"
 SUBCONTRACTING_TEST_FINISHED_ITEM_2 = "Subcontracted Item SA2"
 SUBCONTRACTING_TEST_FINISHED_ITEM_TG = "Subcontracted Item Trading Goods"
+
+SUBCONTRACTING_INWARD_TEST_FG_ITEM = "Subcontracted Inward FG Item"
+SUBCONTRACTING_INWARD_TEST_RM_ITEM = "Subcontracted Inward CRM Item"
+SUBCONTRACTING_INWARD_TEST_SERVICE_ITEM = "Subcontracted Inward Service Item"
+SUBCONTRACTING_INWARD_TEST_CUSTOMER_WAREHOUSE = "_Test Registered Customer Warehouse - _TIRC"
 
 
 def create_sales_invoice(**data):
@@ -219,6 +230,195 @@ def make_subcontracting_stock_entry(**data):
         return stock_entry
 
     return stock_entry.submit()
+
+
+def create_subcontracting_inward_data():
+    """
+    Create items, BOM, Subcontracting BOM and customer warehouse required for
+    the Subcontracting Inward flow (company is the job worker).
+    """
+    _make_subcontracting_inward_item(
+        SUBCONTRACTING_INWARD_TEST_FG_ITEM,
+        {"is_stock_item": 1, "is_sub_contracted_item": 1},
+    )
+    _make_subcontracting_inward_item(
+        SUBCONTRACTING_INWARD_TEST_RM_ITEM,
+        {
+            "is_stock_item": 1,
+            "is_purchase_item": 0,
+            "is_customer_provided_item": 1,
+            "customer": "_Test Registered Customer",
+        },
+    )
+    _make_subcontracting_inward_item(SUBCONTRACTING_INWARD_TEST_SERVICE_ITEM, {"is_stock_item": 0})
+
+    if not frappe.db.exists("BOM", {"item": SUBCONTRACTING_INWARD_TEST_FG_ITEM}):
+        make_bom(
+            item=SUBCONTRACTING_INWARD_TEST_FG_ITEM,
+            raw_materials=[SUBCONTRACTING_INWARD_TEST_RM_ITEM],
+            rate=100,
+            currency="INR",
+            company="_Test Indian Registered Company",
+        )
+
+    if not frappe.db.exists("Subcontracting BOM", {"finished_good": SUBCONTRACTING_INWARD_TEST_FG_ITEM}):
+        frappe.get_doc(
+            {
+                "doctype": "Subcontracting BOM",
+                "finished_good": SUBCONTRACTING_INWARD_TEST_FG_ITEM,
+                "service_item": SUBCONTRACTING_INWARD_TEST_SERVICE_ITEM,
+                "is_active": 1,
+            }
+        ).insert()
+
+    if not frappe.db.exists("Warehouse", SUBCONTRACTING_INWARD_TEST_CUSTOMER_WAREHOUSE):
+        frappe.get_doc(
+            {
+                "doctype": "Warehouse",
+                "warehouse_name": "_Test Registered Customer Warehouse",
+                "company": "_Test Indian Registered Company",
+                "customer": "_Test Registered Customer",
+            }
+        ).insert()
+
+
+def _make_subcontracting_inward_item(item_code, properties=None):
+    if frappe.db.exists("Item", item_code):
+        return frappe.get_doc("Item", item_code)
+
+    item = frappe.get_doc(
+        {
+            "doctype": "Item",
+            "item_code": item_code,
+            "item_name": item_code,
+            "description": item_code,
+            "item_group": "Products",
+            "gst_hsn_code": "85011011",
+            **(properties or {}),
+        }
+    )
+
+    if item.is_stock_item:
+        item.append(
+            "item_defaults",
+            {"company": "_Test Indian Registered Company", "default_warehouse": "Stores - _TIRC"},
+        )
+
+    return item.insert()
+
+
+def create_subcontracting_inward_order(**data):
+    """Create a Sales Order and a submitted Subcontracting Inward Order from it."""
+    data = frappe._dict(data)
+    create_subcontracting_inward_data()
+
+    qty = data.qty or 5
+
+    sales_order = create_transaction(
+        doctype="Sales Order",
+        is_subcontracted=1,
+        item_code=SUBCONTRACTING_INWARD_TEST_SERVICE_ITEM,
+        qty=qty,
+        rate=100,
+        fg_item=SUBCONTRACTING_INWARD_TEST_FG_ITEM,
+        fg_item_qty=qty,
+    )
+
+    scio = map_subcontracting_inward_order(sales_order.name)
+
+    if not scio.customer_warehouse:
+        scio.customer_warehouse = SUBCONTRACTING_INWARD_TEST_CUSTOMER_WAREHOUSE
+
+    for item in scio.items:
+        item.delivery_warehouse = "Finished Goods - _TIRC"
+
+    scio.submit()
+    scio.reload()
+
+    return scio
+
+
+def receive_customer_materials(scio, basic_rate=10, qty=None):
+    """Create and submit a "Receive from Customer" Stock Entry for the SCIO."""
+    scio.reload()
+    receipt = frappe.new_doc("Stock Entry").update(scio.make_rm_stock_entry_inward())
+    receipt.save()
+
+    for item in receipt.items:
+        item.basic_rate = basic_rate
+        if qty is not None:
+            item.qty = qty
+            item.transfer_qty = qty
+
+    receipt.submit()
+    return receipt
+
+
+def manufacture_for_subcontracting_inward(scio):
+    """Create a Work Order for the SCIO and submit a Manufacture Stock Entry."""
+    scio.reload()
+    work_order = frappe.get_doc("Work Order", scio.make_work_order()[0])
+    work_order.skip_transfer = 1
+    work_order.submit()
+
+    manufacture = frappe.new_doc("Stock Entry").update(
+        make_stock_entry_from_work_order(work_order.name, "Manufacture")
+    )
+    manufacture.submit()
+    return manufacture
+
+
+def make_subcontracting_inward_delivery(scio=None, do_not_save=False, do_not_submit=False, **data):
+    """
+    Build a "Subcontracting Delivery" Stock Entry. Without a SCIO, runs the
+    full inward flow (SO -> SCIO -> receive RM -> manufacture) first.
+    """
+    data = frappe._dict(data)
+
+    if scio is None:
+        scio = create_subcontracting_inward_order(**data)
+        receive_customer_materials(scio, basic_rate=data.rm_rate or 10)
+        manufacture_for_subcontracting_inward(scio)
+
+    scio.reload()
+    delivery = frappe.new_doc("Stock Entry").update(scio.make_subcontracting_delivery())
+    delivery.update(data)
+
+    if do_not_save:
+        return delivery
+
+    delivery.insert()
+
+    if do_not_submit:
+        return delivery
+
+    return delivery.submit()
+
+
+def make_subcontracting_inward_rm_return(scio=None, do_not_save=False, do_not_submit=False, **data):
+    """
+    Build a "Return Raw Material to Customer" Stock Entry. Without a SCIO,
+    creates the order and receives raw materials first (no manufacture).
+    """
+    data = frappe._dict(data)
+
+    if scio is None:
+        scio = create_subcontracting_inward_order(**data)
+        receive_customer_materials(scio, basic_rate=data.rm_rate or 10)
+
+    scio.reload()
+    rm_return = frappe.new_doc("Stock Entry").update(scio.make_rm_return())
+    rm_return.update(data)
+
+    if do_not_save:
+        return rm_return
+
+    rm_return.insert()
+
+    if do_not_submit:
+        return rm_return
+
+    return rm_return.submit()
 
 
 def append_item(transaction, data=None, company_abbr="_TIRC"):
