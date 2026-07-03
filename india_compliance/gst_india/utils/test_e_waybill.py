@@ -9,7 +9,7 @@ import responses
 import time_machine
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import add_to_date, get_datetime, now_datetime, today
+from frappe.utils import add_to_date, flt, get_datetime, now_datetime, today
 from frappe.utils.data import format_date
 from frappe.www.printview import get_html_and_style
 from responses import matchers
@@ -18,6 +18,7 @@ from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
 from india_compliance.gst_india.constants.e_waybill import (
     E_WAYBILL_CHANGES_APPLICABLE_DATE,
+    SUB_SUPPLY_TYPES,
 )
 from india_compliance.gst_india.overrides.sales_invoice import (
     is_e_waybill_applicable,
@@ -41,6 +42,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     mark_e_waybill_as_cancelled,
     mark_e_waybill_as_generated,
     schedule_ewaybill_for_extension,
+    update_transaction,
     update_transporter,
     update_vehicle_info,
 )
@@ -51,6 +53,8 @@ from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice,
     create_sales_invoice,
     create_transaction,
+    make_subcontracting_inward_delivery,
+    make_subcontracting_inward_rm_return,
     make_subcontracting_stock_entry,
 )
 
@@ -2035,3 +2039,98 @@ class TestEWaybillThreshold(IntegrationTestCase):
         )
 
         self.assertTrue(is_e_waybill_applicable(si))
+
+
+class TestSubcontractingInwardEWaybill(IntegrationTestCase):
+    """e-Waybill data for Subcontracting Delivery and Return Raw Material to Customer.
+
+    Both are outward movements (company to customer) on a Delivery Challan with
+    sub supply type "Others" plus a description, and the taxable value includes
+    the customer-provided material value.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        frappe.db.set_single_value(
+            "GST Settings",
+            {"enable_api": 1, "enable_e_waybill": 1, "enable_e_waybill_for_sc": 1},
+        )
+
+    @staticmethod
+    def _set_transport_details(stock_entry, sub_supply_desc):
+        update_transaction(
+            stock_entry,
+            frappe._dict(
+                {
+                    "transporter": None,
+                    "gst_transporter_id": None,
+                    "vehicle_no": "GJ07DL9009",
+                    "distance": 10,
+                    "lr_no": None,
+                    "lr_date": None,
+                    "mode_of_transport": "Road",
+                    "gst_vehicle_type": "Regular",
+                    "sub_supply_type": "Others",
+                    "sub_supply_desc": sub_supply_desc,
+                }
+            ),
+        )
+        stock_entry.reload()
+        # onload populates the virtual company_gstin / supplier_gstin fields the
+        # e-Waybill data builder reads (mirrors the form-load context).
+        stock_entry.run_method("onload")
+
+    def _assert_outward_to_customer(self, data, sub_supply_desc, stock_entry):
+        # Outward Delivery Challan with sub supply type "Others" + description.
+        self.assertEqual(data["supplyType"], "O")
+        self.assertEqual(data["subSupplyType"], SUB_SUPPLY_TYPES["Others"])
+        self.assertEqual(data["subSupplyDesc"], sub_supply_desc)
+        self.assertEqual(data["docType"], "CHL")
+        # Two distinct parties (job worker -> principal). The company -> customer
+        # address direction with real GSTINs is asserted in
+        # test_subcontracting_transaction; sandbox mode here rewrites GSTINs by
+        # position, so only their distinctness is meaningful.
+        self.assertTrue(data["fromGstin"])
+        self.assertTrue(data["toGstin"])
+        self.assertNotEqual(data["fromGstin"], data["toGstin"])
+        # Trade names are not rewritten in sandbox: consignor is the company
+        # (job worker), consignee is the customer (principal).
+        customer_name = frappe.db.get_value(
+            "Subcontracting Inward Order", stock_entry.subcontracting_inward_order, "customer_name"
+        )
+        self.assertEqual(data["fromTrdName"], stock_entry.company)
+        self.assertEqual(data["toTrdName"], customer_name)
+
+    def test_e_waybill_data_for_subcontracting_delivery(self):
+        delivery = make_subcontracting_inward_delivery()
+        self._set_transport_details(delivery, "Job Work Delivery")
+
+        data = EWaybillData(delivery).get_data()
+
+        self._assert_outward_to_customer(data, "Job Work Delivery", delivery)
+
+        # Taxable value carries the customer-provided material value, so the
+        # e-Waybill total exceeds the bare Stock Entry amount.
+        ewb_taxable = sum(flt(item["taxableAmount"]) for item in data["itemList"])
+        se_amount = sum(flt(item.amount) for item in delivery.items)
+        self.assertGreater(ewb_taxable, se_amount)
+        self.assertEqual(
+            ewb_taxable,
+            sum(flt(item.taxable_value) for item in delivery.items),
+        )
+
+    def test_e_waybill_data_for_return_raw_material(self):
+        rm_return = make_subcontracting_inward_rm_return()
+        self._set_transport_details(rm_return, "Return Raw Material")
+
+        data = EWaybillData(rm_return).get_data()
+
+        self._assert_outward_to_customer(data, "Return Raw Material", rm_return)
+
+        # e-Waybill value equals the customer's declared material value.
+        ewb_taxable = sum(flt(item["taxableAmount"]) for item in data["itemList"])
+        self.assertEqual(
+            ewb_taxable,
+            sum(flt(item.taxable_value) for item in rm_return.items),
+        )

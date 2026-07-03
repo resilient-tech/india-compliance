@@ -57,6 +57,18 @@ class GSTTransactionData:
 
         self.party_name = self.doc.get(self.party_name_field)
 
+        if (
+            self.doc.doctype == "Stock Entry"
+            and not self.party_name
+            and self.doc.get("subcontracting_inward_order")
+        ):
+            # for Subcontracting Inward, the party is the customer
+            self.party_name = frappe.db.get_value(
+                "Subcontracting Inward Order",
+                self.doc.subcontracting_inward_order,
+                "customer_name",
+            )
+
     def set_transaction_details(self):
         rounding_adjustment = self.rounded(self.doc.get("base_rounding_adjustment") or 0)
 
