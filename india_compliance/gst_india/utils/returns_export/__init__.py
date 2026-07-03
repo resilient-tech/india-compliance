@@ -27,6 +27,7 @@ from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
 SECTION_ORDER = ["B2B", "B2BA", "CDNR", "CDNRA", "ISD", "ISDA", "IMPG", "IMPGSEZ"]
 TAX_FIELDS = ("igst", "cgst", "sgst", "cess")
+SECTION_FIELDS = ("documents", "taxable_value", *TAX_FIELDS)
 
 
 def merge_raw(existing, new):
@@ -81,6 +82,44 @@ class ReturnExporter:
         stored = {names[row.name]: frappe.parse_json(row.summary) for row in rows if row.summary}
         return [{"period": period, **stored[period]} for period in periods if period in stored]
 
+    def get_range_summary(self, periods):
+        """Section-first summary for the range: each section summed across the selected
+        months with a per-month breakdown (for drill-down), the consolidated ITC, and a
+        per-month sync picker (last-synced + selectable). Built from the stored monthly
+        summaries — no re-aggregation over GST Inward Supply."""
+        stored = {s["period"]: s for s in self.get_summaries(periods)}
+
+        picker = [
+            {
+                "period": period,
+                "synced": period in stored,
+                "last_updated_on": stored[period]["last_updated_on"] if period in stored else None,
+            }
+            for period in periods
+        ]
+
+        sections = {}
+        for period in periods:
+            summary = stored.get(period)
+            if not summary:
+                continue
+            for section in summary["sections"]:
+                row = sections.setdefault(
+                    section["section"],
+                    {"section": section["section"], "months": [], **{f: 0 for f in SECTION_FIELDS}},
+                )
+                for field in SECTION_FIELDS:
+                    row[field] += flt(section[field])
+                row["months"].append({"period": period, **{f: flt(section[f]) for f in SECTION_FIELDS}})
+
+        cumulative = _cumulate(stored.values())
+        return {
+            "periods": picker,
+            "sections": sorted(sections.values(), key=lambda s: _section_rank(s["section"])),
+            "totals": cumulative["totals"],
+            "itc": cumulative["itc"],
+        }
+
     def _log_name(self, period):
         return f"{self.return_type}-{period}-{self.gstin}"
 
@@ -107,7 +146,6 @@ class GSTR2Exporter(ReturnExporter):
             .select(
                 GIS.classification,
                 Count(GIS.name).as_("documents"),
-                Count(GIS.supplier_gstin).distinct().as_("suppliers"),
                 Sum(GIS.taxable_value).as_("taxable_value"),
                 *(Sum(GIS[t]).as_(t) for t in TAX_FIELDS),
                 *self._itc_select(GIS),
@@ -119,7 +157,6 @@ class GSTR2Exporter(ReturnExporter):
         sections = [
             {
                 "section": row.classification,
-                "suppliers": cint(row.suppliers),
                 "documents": cint(row.documents),
                 "taxable_value": flt(row.taxable_value),
                 **{t: flt(row[t]) for t in TAX_FIELDS},
@@ -132,10 +169,6 @@ class GSTR2Exporter(ReturnExporter):
             "documents": sum(s["documents"] for s in sections),
             "taxable_value": sum(s["taxable_value"] for s in sections),
             **{t: sum(s[t] for s in sections) for t in TAX_FIELDS},
-            # distinct suppliers can span sections, so can't sum per-section counts
-            "suppliers": cint(
-                self._base_query(period).select(Count(GIS.supplier_gstin).distinct()).run()[0][0]
-            ),
         }
         return {"sections": sections, "totals": totals, "itc": self._itc(rows)}
 
@@ -189,6 +222,24 @@ EXPORTERS = {
     GSTR2AExporter.return_type: GSTR2AExporter,
     GSTR2BExporter.return_type: GSTR2BExporter,
 }
+
+
+def _cumulate(summaries):
+    """Consolidated headline for the range: sum per-period totals and ITC."""
+    summaries = list(summaries)
+    totals = {k: 0 for k in ("documents", "taxable_value", *TAX_FIELDS)}
+    for summary in summaries:
+        for key in totals:
+            totals[key] += flt(summary["totals"][key])
+
+    itc_parts = [s["itc"] for s in summaries if s.get("itc")]
+    itc = None
+    if itc_parts:
+        itc = {
+            bucket: sum(flt(part[bucket]) for part in itc_parts)
+            for bucket in ("available", "not_available", "reversal")
+        }
+    return {"totals": totals, "itc": itc}
 
 
 def _section_rank(section):

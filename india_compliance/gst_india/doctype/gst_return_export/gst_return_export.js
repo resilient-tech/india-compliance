@@ -8,18 +8,9 @@ const SAVE_PROGRESS = "update_2a_2b_transactions_progress";
 
 const TAX_FIELDS = ["igst", "cgst", "sgst", "cess"];
 
-// Drives the section-wise table header, body and total row from one definition.
-const SUMMARY_COLUMNS = [
-    { key: "section", label: "Section" },
-    { key: "suppliers", label: "Suppliers" },
-    { key: "documents", label: "Documents" },
-    { key: "taxable_value", label: "Taxable Value", currency: true },
-    ...TAX_FIELDS.map((field) => ({ key: field, label: field.toUpperCase(), currency: true })),
-];
-
 frappe.ui.form.on("GST Return Export", {
     setup(frm) {
-        frappe.require("gst_return_export.bundle.css");
+        frappe.require(["gst_return_export.bundle.css", "gst_return_export.bundle.js"]);
         frm.events.set_realtime_listeners(frm);
         frm.doc.company ||= frappe.defaults.get_user_default("Company");
         frm.trigger("company");
@@ -54,18 +45,8 @@ frappe.ui.form.on("GST Return Export", {
             frappe.throw(__("Select Company, GSTIN, GST Return and the period before syncing."));
         }
 
-        frm.events.show_progress(frm, 0, __("Fetching data from the GST Portal"));
-
-        const { message } = await frm.taxpayer_api_call("sync_return_data", {
-            company_gstin,
-            return_type: gst_return,
-            date_range: [from_date, to_date],
-        });
-
-        if (message?.message) {
-            frm.dashboard.hide();
-            frappe.show_alert({ message: message.message, indicator: message.indicator || "blue" });
-        }
+        const { message } = await fetch_summary(frm);
+        open_sync_dialog(frm, message?.periods || []);
     },
 
     set_realtime_listeners(frm) {
@@ -113,6 +94,14 @@ frappe.ui.form.on("GST Return Export", {
     },
 });
 
+function fetch_summary(frm) {
+    return frm.call("get_summary", {
+        company_gstin: frm.doc.company_gstin,
+        return_type: frm.doc.gst_return,
+        date_range: [frm.doc.from_date, frm.doc.to_date],
+    });
+}
+
 async function render_summary(frm) {
     const { company_gstin, gst_return, from_date, to_date } = frm.doc;
     if (!company_gstin || !gst_return || !from_date || !to_date) {
@@ -123,27 +112,138 @@ async function render_summary(frm) {
         return;
     }
 
-    const { message } = await frm.call("get_summary", {
-        company_gstin,
-        return_type: gst_return,
-        date_range: [from_date, to_date],
-    });
+    const { message } = await fetch_summary(frm);
+    render_range_summary(frm, message, gst_return);
+}
 
-    const summaries = message?.summaries || [];
-    if (!summaries.length) {
-        return render_summary_placeholder(
-            frm,
-            __("No summary found for this period yet. Click Sync to fetch it from the GST Portal."),
-        );
-    }
+function render_range_summary(frm, data, gst_return) {
+    const periods = data?.periods || [];
+    if (!periods.length) return render_summary_placeholder(frm);
 
-    const html = summaries.map((summary) => render_period_block(summary, gst_return)).join("");
-    set_summary_html(frm, html);
+    const is_2b = gst_return === "GSTR-2B";
+    const has_data = data.sections.length > 0;
+
+    set_summary_html(
+        frm,
+        (is_2b && data.itc ? `<div class="itc-summary"></div>` : "") +
+            (has_data
+                ? `<div class="section-table"></div>`
+                : `<p class="text-muted">${__(
+                      "No data synced yet — click Sync to fetch it from the GST Portal.",
+                  )}</p>`),
+    );
 
     const $wrapper = frm.get_field("summary_html").$wrapper;
-    summaries.forEach((summary) => {
-        if (!summary.itc) return;
-        mount_itc_cards($wrapper.find(`.itc-cards[data-period="${summary.period}"]`), summary.itc);
+    if (is_2b && data.itc) mount_itc_cards($wrapper.find(".itc-summary"), data.itc);
+    if (has_data) mount_section_table($wrapper.find(".section-table"), data.sections, data.totals);
+
+    const unsynced = periods.filter((p) => !p.synced).map((p) => format_period(p.period));
+    if (unsynced.length) {
+        frappe.show_alert({
+            message: __("Not synced yet: {0}. Use Sync to fetch.", [unsynced.join(", ")]),
+            indicator: "orange",
+        });
+    }
+}
+
+function open_sync_dialog(frm, periods) {
+    if (!periods.length) {
+        frappe.show_alert({ message: __("No months in the selected period."), indicator: "orange" });
+        return;
+    }
+
+    const dialog = new frappe.ui.Dialog({
+        title: __("Sync from GST Portal"),
+        fields: [
+            {
+                fieldname: "periods",
+                fieldtype: "MultiCheck",
+                label: __("Months"),
+                columns: 1,
+                sort_options: false,
+                options: periods.map((p) => ({
+                    value: p.period,
+                    checked: !p.synced,
+                    label: `${format_period(p.period)} · ${
+                        p.synced
+                            ? __("synced {0}", [frappe.datetime.str_to_user(p.last_updated_on)])
+                            : __("not synced")
+                    }`,
+                })),
+            },
+        ],
+        primary_action_label: __("Sync"),
+        async primary_action() {
+            const selected = dialog.get_value("periods") || [];
+            if (!selected.length) {
+                frappe.show_alert({ message: __("Select at least one month."), indicator: "orange" });
+                return;
+            }
+
+            dialog.hide();
+            frm.events.show_progress(frm, 0, __("Fetching data from the GST Portal"));
+
+            const { message } = await frm.taxpayer_api_call("sync_return_data", {
+                company_gstin: frm.doc.company_gstin,
+                return_type: frm.doc.gst_return,
+                periods: selected,
+            });
+
+            if (message?.message) {
+                frm.dashboard.hide();
+                frappe.show_alert({ message: message.message, indicator: message.indicator || "blue" });
+            }
+        },
+    });
+
+    dialog.show();
+}
+
+function mount_section_table($wrapper, sections, totals) {
+    const cells = (row) => ({
+        documents: row.documents,
+        taxable_value: row.taxable_value,
+        igst: row.igst,
+        cgst: row.cgst,
+        sgst: row.sgst,
+        cess: row.cess,
+    });
+
+    const data = [];
+    for (const section of sections) {
+        data.push({ section: section.section, indent: 0, ...cells(section) });
+        for (const month of section.months) {
+            data.push({ section: format_period(month.period), indent: 1, ...cells(month) });
+        }
+    }
+
+    new india_compliance.DataTableManager({
+        $wrapper,
+        data,
+        columns: [
+            { label: __("Section"), fieldname: "section", fieldtype: "Data", width: 240 },
+            { label: __("Documents"), fieldname: "documents", fieldtype: "Int", width: 110 },
+            { label: __("Taxable Value"), fieldname: "taxable_value", fieldtype: "Float", width: 160 },
+            ...TAX_FIELDS.map((field) => ({
+                label: field.toUpperCase(),
+                fieldname: field,
+                fieldtype: "Float",
+                width: 120,
+            })),
+        ],
+        options: {
+            checkboxColumn: false,
+            serialNoColumn: false,
+            inlineFilters: false,
+            treeView: true,
+            showTotalRow: true,
+            clusterize: false,
+            cellHeight: 34,
+            hooks: {
+                columnTotal: (_, row) =>
+                    row.column.fieldname === "section" ? __("Total") : totals[row.column.fieldname] ?? 0,
+            },
+        },
     });
 }
 
@@ -155,53 +255,22 @@ function set_summary_html(frm, inner_html) {
         </div>`);
 }
 
-function render_period_block(summary, gst_return) {
-    const is_2b = gst_return === "GSTR-2B";
-    const status = summary.last_updated_on
-        ? __("Last synced {0}", [frappe.datetime.str_to_user(summary.last_updated_on)])
-        : "";
-
-    return `
-        <div class="period-block">
-            <div class="period-title">${gst_return} &middot; ${format_period(summary.period)}</div>
-            ${is_2b ? `<div class="report-summary itc-cards" data-period="${summary.period}"></div>` : ""}
-            ${render_section_table(summary)}
-            <div class="text-muted sync-status">${status}</div>
-        </div>`;
-}
-
 function mount_itc_cards($wrapper, itc) {
-    const cards = [
-        { label: __("ITC Available"), value: itc.available },
-        { label: __("ITC Not Available"), value: itc.not_available },
-        { label: __("ITC Reversal"), value: itc.reversal },
-    ];
-    cards.forEach((card) =>
-        frappe.utils.build_summary_item({ ...card, datatype: "Float" }).appendTo($wrapper),
-    );
-}
-
-function render_section_table(summary) {
-    const cell = (row, col) => `<td>${col.currency ? format_number(row[col.key]) : row[col.key] ?? ""}</td>`;
-    const table_row = (row) => `<tr>${SUMMARY_COLUMNS.map((col) => cell(row, col)).join("")}</tr>`;
-
-    const header = SUMMARY_COLUMNS.map((col) => `<th>${__(col.label)}</th>`).join("");
-    const body = summary.sections.map(table_row).join("");
-    const total = table_row({ ...summary.totals, section: __("Total") });
-
-    return `
-        <table class="table table-bordered section-table">
-            <thead><tr>${header}</tr></thead>
-            <tbody>${body}</tbody>
-            <tfoot>${total}</tfoot>
-        </table>`;
+    new india_compliance.NumberCardManager({
+        $wrapper,
+        cards: [
+            { label: __("ITC Available"), value: itc.available, datatype: "Float" },
+            { label: __("ITC Not Available"), value: itc.not_available, datatype: "Float" },
+            { label: __("ITC Reversal"), value: itc.reversal, datatype: "Float" },
+        ],
+    });
 }
 
 function render_summary_placeholder(frm, message) {
     const default_message = __(
         "Click Show Summary to view the last synced data, or Sync to fetch it fresh from the GST Portal.",
     );
-    set_summary_html(frm, `<div class="text-muted summary-placeholder">${message || default_message}</div>`);
+    set_summary_html(frm, `<p class="text-muted">${message || default_message}</p>`);
 }
 
 function format_period(period) {

@@ -1,53 +1,15 @@
-// Styles for the GST Return Export tool summary view.
-// Scoped under .gst-return-summary (the wrapper the client injects into
-// the summary_html field). Loaded via frappe.require in gst_return_export.js.
+// GST Return Export summary. The number cards (NumberCardManager) and table
+// (DataTable) are stock Frappe components with no custom styling — same as GSTR-1.
+// Only the heading needs light styling, mirroring GSTR-1's .tab-title-text.
 
 .gst-return-summary {
     .summary-heading {
-        font-size: 15px;
-        font-weight: 600;
-        margin-bottom: 1rem;
+        font-size: 1.2rem;
+        margin-bottom: var(--margin-md);
     }
 
-    .period-block {
-        margin-bottom: 1.5rem;
-    }
-
-    .period-title {
-        font-weight: 600;
-        margin-bottom: 10px;
-    }
-
-    .sync-status {
-        font-size: 11px;
-        margin-top: 6px;
-    }
-
-    // ITC buckets (2B): native report-summary strip (build_summary_item)
-    .itc-cards.report-summary {
-        border-bottom: 0;
-        margin: 0 0 12px;
-    }
-
-    // Section-wise summary table
+    // Breathing room below the DataTable, before the section border.
     .section-table {
-        font-size: 13px;
-        margin: 0;
-
-        th:not(:first-child),
-        td:not(:first-child) {
-            text-align: right;
-        }
-
-        tfoot tr {
-            font-weight: 600;
-        }
-    }
-
-    .summary-placeholder {
-        padding: 2.5rem 1rem;
-        text-align: center;
-        border: 1px dashed var(--border-color);
-        border-radius: 8px;
+        margin-bottom: var(--margin-lg);
     }
 }
