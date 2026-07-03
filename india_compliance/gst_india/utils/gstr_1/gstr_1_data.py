@@ -474,9 +474,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
     def get_invoices_for_hsn_wise_summary(self):
         base = self.get_base_query()
 
-        # postgres rejects bare non-grouped columns in SELECT *. Group keys stay bare, the amounts
-        # are summed, everything else is Max()-wrapped: one row per group, same as MariaDB's loose
-        # output. (This path never passes additional_si_* columns, so the column set is fixed.)
+        # Explicitly select grouped, summed, and MAX()-wrapped columns for postgres GROUP BY compatibility.
         group_by = ("invoice_no", "gst_hsn_code", "gst_rate", "gst_treatment", "uom")
         summed = (
             "qty",
@@ -514,15 +512,23 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             *self.additional_si_item_columns,
         )
 
+        def field(column):
+            return getattr(base, column)
+
         query = (
             frappe.qb.from_(base)
             .select(
-                *(getattr(base, col) for col in group_by),
-                *(Sum(getattr(base, col)).as_(col) for col in summed),
-                *(Max(getattr(base, col)).as_(col) for col in wrapped),
+                *(field(col) for col in group_by),
+                *(Sum(field(col)).as_(col) for col in summed),
+                *(Max(field(col)).as_(col) for col in wrapped),
             )
-            .groupby(*(getattr(base, col) for col in group_by))
-            .orderby(Max(base.posting_date), base.invoice_no, Max(base.item_code), order=Order.desc)
+            .groupby(*(field(col) for col in group_by))
+            .orderby(
+                Max(field("posting_date")),
+                field("invoice_no"),
+                Max(field("item_code")),
+                order=Order.desc,
+            )
         )
 
         return query.run(as_dict=True)
@@ -777,7 +783,7 @@ class GSTR1DocumentIssuedSummary:
         return (
             query.join(self.sales_invoice_item)
             .on(self.sales_invoice.name == self.sales_invoice_item.parent)
-            # Max(): child col, not in GROUP BY (SI.name); invalid bare on postgres
+            # to support postgress group by
             .select(
                 Max(self.sales_invoice_item.gst_treatment).as_("gst_treatment"),
             )
@@ -999,7 +1005,7 @@ class GSTR11A11BData:
             .left_join(included_taxes_query)
             .on(included_taxes_query.parent == self.pe.name)
             .select(
-                # Max(): included_taxes from joined subquery, not FD on the pe PK grouped on
+                # use MAX() for joined subquery value to satisfy postgres GROUP BY rules
                 Max(self.pe.base_paid_amount - IfNull(included_taxes_query.included_taxes, 0)).as_(
                     "taxable_value"
                 )
@@ -1012,7 +1018,7 @@ class GSTR11A11BData:
             self.get_query("Adjustment")
             .join(self.pe_ref)
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
-            # Max(): grouped by voucher_detail_no, not the pe_ref PK
+            # use MAX() for joined fields to satisfy postgres GROUP BY rules
             .select(Max(self.pe_ref.allocated_amount).as_("taxable_value"))
             .groupby(self.gl_entry.voucher_detail_no)
         )
@@ -1027,7 +1033,7 @@ class GSTR11A11BData:
             .join(self.pe)
             .on(self.pe.name == self.gl_entry.voucher_no)
             .select(
-                # Max(): bare in the 11B path (groups by voucher_detail_no, not the pe PK)
+                # use MAX() for joined fields to satisfy postgres GROUP BY rules
                 Max(self.pe.place_of_supply).as_("place_of_supply"),
                 Sum(
                     Case()
