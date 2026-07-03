@@ -783,7 +783,7 @@ class GSTR1DocumentIssuedSummary:
         return (
             query.join(self.sales_invoice_item)
             .on(self.sales_invoice.name == self.sales_invoice_item.parent)
-            # to support postgress group by
+            # to support postgres group by
             .select(
                 Max(self.sales_invoice_item.gst_treatment).as_("gst_treatment"),
             )
