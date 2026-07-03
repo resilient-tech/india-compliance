@@ -1,6 +1,5 @@
 import json
 import re
-from typing import ClassVar
 
 import frappe
 from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import (
@@ -15,6 +14,7 @@ from erpnext.controllers.accounts_controller import (
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.controllers.taxes_and_totals import get_regional_round_off_accounts
 from erpnext.selling.doctype.sales_order.sales_order import (
+    make_delivery_note,
     make_purchase_order,
 )
 from erpnext.selling.doctype.sales_order.sales_order import (
@@ -42,6 +42,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.setup.property_setters import (
     ADDRESS_FIELDS_BY_DOCTYPE,
 )
+from india_compliance.gst_india.utils.jinja import get_gst_breakup
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
@@ -1887,26 +1888,23 @@ class TestRegionalOverrides(FrappeTestCase):
 
 
 class TestItemUpdate(FrappeTestCase):
-    DATA: ClassVar[dict] = {
-        "customer": "_Test Unregistered Customer",
-        "item_code": "_Test Trading Goods 1",
-        "qty": 1,
-        "rate": 100,
-        "is_in_state": 1,
-    }
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-
-    def create_order(self, doctype):
-        self.DATA["doctype"] = doctype
-        doc = create_transaction(**self.DATA)
-        return doc
-
-    def test_so_and_po_after_item_update(self):
-        for doctype in ["Sales Order", "Purchase Order"]:
-            doc = self.create_order(doctype)
+    def test_gst_details_recomputed_when_item_updated_after_submit(self):
+        for doctype in [
+            "Sales Order",
+            "Purchase Order",
+            "Quotation",
+            "Supplier Quotation",
+        ]:
+            # Quotation, needs an explicit customer.
+            party = {"customer": "_Test Registered Customer"} if doctype == "Quotation" else {}
+            doc = create_transaction(
+                doctype=doctype,
+                item_code="_Test Trading Goods 1",
+                qty=1,
+                rate=100,
+                is_in_state=1,
+                **party,
+            )
 
             self.assertDocumentEqual(
                 {
@@ -1956,6 +1954,63 @@ class TestItemUpdate(FrappeTestCase):
                 },
                 doc.items[1],
             )
+
+            breakup = json.loads(get_gst_breakup(doc))
+            total_taxable = sum(row["Taxable Amount"] for row in breakup)
+            self.assertEqual(total_taxable, doc.base_net_total)
+
+    def _assert_new_item_treatment(self, doc, expected_treatment):
+        item = doc.items[0]
+        item_to_update = [
+            {
+                "item_code": item.item_code,
+                "qty": item.qty,
+                "rate": item.rate,
+                "docname": item.name,
+                "name": item.name,
+                "idx": item.idx,
+            },
+            {"item_code": "_Test Trading Goods 1", "qty": 1, "rate": 50, "idx": 2},
+        ]
+
+        update_child_qty_rate(doc.doctype, json.dumps(item_to_update), doc.name)
+        doc = frappe.get_doc(doc.doctype, doc.name)
+
+        self.assertDocumentEqual(
+            {"gst_treatment": expected_treatment, "taxable_value": 50},
+            doc.items[1],
+        )
+        self.assertEqual(doc.items[0].gst_treatment, expected_treatment)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_sales_gst_treatment_recomputed_when_item_updated_after_submit(self):
+        for doctype in ["Sales Order", "Quotation"]:
+            doc = create_transaction(
+                doctype=doctype,
+                customer="_Test Foreign Customer",
+                party_name="_Test Foreign Customer",
+                item_code="_Test Trading Goods 1",
+                qty=1,
+                rate=100,
+                is_out_state=1,
+                is_export_with_gst=1,
+            )
+            self.assertEqual(doc.items[0].gst_treatment, "Zero-Rated")
+
+            self._assert_new_item_treatment(doc, "Zero-Rated")
+
+    def test_purchase_gst_treatment_recomputed_when_item_updated_after_submit(self):
+        for doctype in ["Purchase Order", "Supplier Quotation"]:
+            doc = create_transaction(
+                doctype=doctype,
+                supplier="_Test Registered Supplier",
+                item_code="_Test Trading Goods 1",
+                qty=1,
+                rate=100,
+            )
+            self.assertEqual(doc.items[0].gst_treatment, "Nil-Rated")
+
+            self._assert_new_item_treatment(doc, "Nil-Rated")
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_overseas_order_add_non_gst_item_after_submit(self):
@@ -2089,6 +2144,53 @@ class TestPlaceOfSupply(FrappeTestCase):
         self.assertEqual(po.gst_category, "Registered Regular")
         self.assertTrue(po.taxes_and_charges)
         self.assertTrue(po.taxes)
+
+    def test_gst_details_recomputed_through_sales_order_to_delivery_note(self):
+        # Mapper recalcs taxes outside validate; saved DN must recompute GST details.
+        so = create_transaction(
+            doctype="Sales Order",
+            customer="_Test Registered Customer",
+            item_code="_Test Trading Goods 1",
+            qty=1,
+            rate=100,
+            is_in_state=1,  # intra-state -> CGST + SGST
+        )
+        expected = {
+            "gst_treatment": "Taxable",
+            "taxable_value": 100,
+            "igst_amount": 0,
+            "cgst_amount": 9,
+            "sgst_amount": 9,
+        }
+        self.assertDocumentEqual(expected, so.items[0])
+
+        dn = make_delivery_note(so.name)
+        dn.insert()
+        self.assertDocumentEqual(expected, dn.items[0])
+
+    def test_gst_details_recomputed_on_cross_mapping_sales_order_to_purchase_order(self):
+        # Cross-mapping must reset GST to the purchase side; sales IGST must not leak.
+        so = create_transaction(
+            doctype="Sales Order",
+            customer="_Test Registered Composition Customer",
+            item_code="_Test Trading Goods 1",
+            qty=1,
+            rate=100,
+            is_out_state=1,  # inter-state -> IGST
+        )
+        self.assertEqual(so.place_of_supply, "29-Karnataka")
+        self.assertEqual({tax.gst_tax_type for tax in so.taxes}, {"igst"})
+
+        selected_items = [{"item_code": so.items[0].item_code, "supplier": "_Test Registered Supplier"}]
+        po = make_purchase_order(so.name, selected_items=selected_items)
+        self.assertTrue(po)
+
+        if not po.supplier:
+            self.skipTest("erpnext v15 make_purchase_order does not propagate selected_items supplier to PO")
+
+        # after_mapping resets to intra-state
+        self.assertEqual(po.place_of_supply, "24-Gujarat")
+        self.assertEqual({tax.gst_tax_type for tax in po.taxes}, {"cgst", "sgst"})
 
     def test_place_of_supply_when_sales_order_mapped_from_purchase_order(self):
         """

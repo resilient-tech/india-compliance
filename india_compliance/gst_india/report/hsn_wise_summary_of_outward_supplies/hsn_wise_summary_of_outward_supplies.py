@@ -179,17 +179,10 @@ def get_json(filters: str, report_name: str, data: str):
 
     gst_json["hsn"] = get_hsn_wise_json_data(report_data, filters)
 
-    return {"report_name": report_name, "data": gst_json}
-
-
-@frappe.whitelist()
-def download_json_file():
-    """download json content in a file"""
-    data = frappe._dict(frappe.local.form_dict)
-    frappe.response["filename"] = frappe.scrub("{}".format(data["report_name"])) + ".json"
-    frappe.response["filecontent"] = data["data"]
-    frappe.response["content_type"] = "application/json"
-    frappe.response["type"] = "download"
+    return {
+        "filename": frappe.scrub(report_name) + ".json",
+        "data": gst_json,
+    }
 
 
 def get_hsn_wise_json_data(report_data, filters):
