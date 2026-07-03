@@ -3,7 +3,7 @@ from erpnext.controllers.subcontracting_controller import make_rm_stock_entry
 from erpnext.manufacturing.doctype.work_order.work_order import (
     make_stock_entry as make_stock_entry_from_work_order,
 )
-from erpnext.selling.doctype.sales_order.mapper import (
+from erpnext.selling.doctype.sales_order.sales_order import (
     make_subcontracting_inward_order as map_subcontracting_inward_order,
 )
 from frappe.utils import getdate
