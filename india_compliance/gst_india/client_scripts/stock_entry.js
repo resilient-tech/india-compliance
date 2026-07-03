@@ -67,7 +67,7 @@ frappe.ui.form.on(DOCTYPE, {
         if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm))
             frappe.show_alert(
                 {
-                    message: __("Supplier Address is required to create e-Waybill"),
+                    message: __("Party Address is required to create e-Waybill"),
                     indicator: "yellow",
                 },
                 10,
@@ -99,7 +99,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     company(frm) {
-        if (frm.doc.company && frm.doc.purpose === "Send to Subcontractor") {
+        if (frm.doc.company && india_compliance.SUBCONTRACTING_PURPOSES.includes(frm.doc.purpose)) {
             frappe.call({
                 method: "frappe.contacts.doctype.address.address.get_default_address",
                 args: {
@@ -188,6 +188,13 @@ function get_field_and_label(frm, field) {
         field_label_dict = {
             party_field: ["bill_from_address", __("Bill From (same as Supplier Address)"), __("Bill From")],
             company_field: ["bill_to_address", __("Bill To")],
+        };
+    } else if (india_compliance.is_subcontracting_inward_entry(frm.doc)) {
+        // For Subcontracting Inward related entries
+        // company bills to the customer
+        field_label_dict = {
+            party_field: ["bill_to_address", __("Bill To (same as Customer Address)"), __("Bill To")],
+            company_field: ["bill_from_address", __("Bill From")],
         };
     } else {
         field_label_dict = {
