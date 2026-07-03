@@ -327,50 +327,26 @@ def get_decompressed_data(content):
 
 
 def store_raw_return_data(gstin, return_type, return_period, json_data, *, merge=False):
-    """Persist the GSTN payload (gzipped) on the period's return log row in the
-    `filed` field (what's on the government portal), for the GST Return Export tool.
+    """Persist the GSTN payload (gzipped) in the period's return log `filed` field
+    (what's on the government portal), for the GST Return Export tool.
 
     merge=True updates section keys into the existing payload; merge=False overwrites.
+    The lock guards concurrent queued-retry workers; the log is loaded inside it so
+    `update_json_for` sees the current file state (no duplicate attachment).
     """
     name = f"{return_type}-{return_period}-{gstin}"
 
-    if not frappe.db.exists(DOCTYPE, name):
-        get_gst_return_log(name)
-
     with filelock(frappe.scrub(f"raw_return_{name}")):
-        file = get_file_doc(DOCTYPE, name, "filed")
-
-        if merge and file and isinstance(json_data, dict):
-            existing = get_decompressed_data(file.get_content(encodings=[]))
-            if isinstance(existing, dict):
-                json_data = {**existing, **json_data}
-
-        content = get_compressed_data(json_data)
-
-        if file:
-            file.save_file(content=content, overwrite=True)
-        else:
-            file = frappe.get_doc(
-                {
-                    "doctype": "File",
-                    "attached_to_doctype": DOCTYPE,
-                    "attached_to_name": name,
-                    "attached_to_field": "filed",
-                    "file_name": frappe.scrub(f"{name}-filed.json.gz"),
-                    "is_private": 1,
-                    "content": content,
-                }
-            ).insert(ignore_permissions=True)
-            frappe.db.set_value(DOCTYPE, name, "filed", file.file_url)
+        get_gst_return_log(name).update_json_for("filed", json_data, overwrite=not merge)
 
 
 def get_raw_return_data(gstin, return_type, return_period):
     """Return the stored GSTN payload (parsed) from the `filed` field, or None."""
-    file = get_file_doc(DOCTYPE, f"{return_type}-{return_period}-{gstin}", "filed")
-    if not file:
+    name = f"{return_type}-{return_period}-{gstin}"
+    if not frappe.db.exists(DOCTYPE, name):
         return None
 
-    return get_decompressed_data(file.get_content(encodings=[]))
+    return get_gst_return_log(name).get_json_for("filed")
 
 
 def create_ims_return_log(company_gstin):

@@ -139,6 +139,12 @@ async function render_summary(frm) {
 
     const html = summaries.map((summary) => render_period_block(summary, gst_return)).join("");
     set_summary_html(frm, html);
+
+    const $wrapper = frm.get_field("summary_html").$wrapper;
+    summaries.forEach((summary) => {
+        if (!summary.itc) return;
+        mount_itc_cards($wrapper.find(`.itc-cards[data-period="${summary.period}"]`), summary.itc);
+    });
 }
 
 function set_summary_html(frm, inner_html) {
@@ -158,29 +164,21 @@ function render_period_block(summary, gst_return) {
     return `
         <div class="period-block">
             <div class="period-title">${gst_return} &middot; ${format_period(summary.period)}</div>
-            ${is_2b && summary.itc ? render_itc_cards(summary.itc) : ""}
+            ${is_2b ? `<div class="report-summary itc-cards" data-period="${summary.period}"></div>` : ""}
             ${render_section_table(summary)}
             <div class="text-muted sync-status">${status}</div>
         </div>`;
 }
 
-function render_itc_cards(itc) {
-    const breakup = (bucket) =>
-        TAX_FIELDS.map((f) => `<span>${f.toUpperCase()} ${format_number(bucket[f])}</span>`).join("");
-
-    const card = (label, bucket) => `
-        <div class="itc-card">
-            <div class="text-muted itc-card__label">${label}</div>
-            <div class="itc-card__total">${format_number(bucket.total)}</div>
-            <div class="text-muted itc-card__breakup">${breakup(bucket)}</div>
-        </div>`;
-
-    return `
-        <div class="itc-cards">
-            ${card(__("ITC Available"), itc.available)}
-            ${card(__("ITC Not Available"), itc.not_available)}
-            ${card(__("ITC Reversal"), itc.reversal)}
-        </div>`;
+function mount_itc_cards($wrapper, itc) {
+    const cards = [
+        { label: __("ITC Available"), value: itc.available },
+        { label: __("ITC Not Available"), value: itc.not_available },
+        { label: __("ITC Reversal"), value: itc.reversal },
+    ];
+    cards.forEach((card) =>
+        frappe.utils.build_summary_item({ ...card, datatype: "Float" }).appendTo($wrapper),
+    );
 }
 
 function render_section_table(summary) {

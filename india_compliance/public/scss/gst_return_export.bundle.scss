@@ -23,35 +23,10 @@
         margin-top: 6px;
     }
 
-    // ITC buckets (2B): Available / Not Available / Reversal
-    .itc-cards {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 12px;
-    }
-
-    .itc-card {
-        flex: 1;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 12px 14px;
-
-        &__label {
-            font-size: 12px;
-        }
-
-        &__total {
-            font-size: 18px;
-            font-weight: 600;
-            margin: 4px 0 8px;
-        }
-
-        &__breakup {
-            font-size: 12px;
-            display: flex;
-            gap: 14px;
-            flex-wrap: wrap;
-        }
+    // ITC buckets (2B): native report-summary strip (build_summary_item)
+    .itc-cards.report-summary {
+        border-bottom: 0;
+        margin: 0 0 12px;
     }
 
     // Section-wise summary table

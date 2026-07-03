@@ -68,21 +68,14 @@ class GSTReturnExport(Document):
         frappe.has_permission("GST Return Export", "export", throw=True)
         return_type = GST_RETURN_TO_RETURN_TYPE.get(return_type, return_type)
 
-        from india_compliance.gst_india.doctype.gst_return_summary.gst_return_summary import (
-            get_return_summary,
-        )
         from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
             BaseUtil,
         )
+        from india_compliance.gst_india.utils.returns_export import ReturnExporter
 
         periods = BaseUtil.get_periods(date_range, ReturnType(return_type), company_gstin)
-        summaries = []
-        for period in periods:
-            summary = get_return_summary(company_gstin, return_type, period)
-            if summary:
-                summaries.append({"period": period, **summary})
-
-        return {"return_type": return_type, "summaries": summaries}
+        exporter = ReturnExporter.for_return(return_type, company_gstin)
+        return {"return_type": return_type, "summaries": exporter.get_summaries(periods)}
 
 
 def get_periods_to_sync(company_gstin, return_type, date_range):
@@ -101,23 +94,13 @@ def get_periods_to_sync(company_gstin, return_type, date_range):
 
 def _sync_return_data(company_gstin, return_type, periods):
     """Background job: fetch the resolved periods, surfacing failures as a toast."""
-    from india_compliance.gst_india.utils.gstr_2 import (
-        download_gstr_2a,
-        download_gstr_2b,
-    )
+    from india_compliance.gst_india.utils.returns_export import ReturnExporter
 
+    exporter = ReturnExporter.for_return(return_type, company_gstin)
     try:
-        if return_type == ReturnType.GSTR2A.value:
-            download_gstr_2a(company_gstin, periods)
-        else:
-            download_gstr_2b(company_gstin, periods)
-
-        from india_compliance.gst_india.doctype.gst_return_summary.gst_return_summary import (
-            build_and_store_summary,
-        )
-
+        exporter.download(periods)
         for period in periods:
-            build_and_store_summary(company_gstin, return_type, period)
+            exporter.build_and_store_summary(period)
 
     except Exception as e:
         frappe.publish_realtime(

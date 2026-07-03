@@ -309,12 +309,7 @@ def save_gstr_2a(gstin, return_period, json_data, *, merge=False, empty_categori
         if action.lower() not in json_data:
             continue
 
-        create_import_log(
-            gstin,
-            return_type.value,
-            return_period,
-            classification=category.value,
-        )
+        create_import_log(gstin, return_type.value, return_period, classification=category.value)
 
         # making consistent with GSTR2b
         json_data[category.value.lower()] = json_data.pop(action.lower())
