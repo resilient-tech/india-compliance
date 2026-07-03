@@ -746,6 +746,20 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "hidden": 0,
         },
+        {
+            "fieldname": "additional_taxable_value",
+            "label": "Additional Taxable Value",
+            "fieldtype": "Currency",
+            "insert_after": "taxable_value",
+            "options": "Company:company:default_currency",
+            "read_only": 1,
+            "translatable": 0,
+            "no_copy": 1,
+            "print_hide": 1,
+            "hidden": 0,
+            "depends_on": "eval:india_compliance.SUBCONTRACTING_INWARD_PURPOSES.includes(parent.purpose)",
+            "description": "Value of customer-provided materials for Subcontracting Inward",
+        },
     ],
     "Subcontracting Receipt Item": [
         {
