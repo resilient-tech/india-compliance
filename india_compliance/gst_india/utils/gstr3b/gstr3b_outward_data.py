@@ -177,7 +177,7 @@ class GSTR3BOutwardInvoices(GSTR3BCategoryConditions):
             (
                 "get_11B_query",
                 (
-                    # Max(): 11B groups by voucher_detail_no, so these joined PE/PER cols aren't FD
+                    # use MAX() for joined PE fields to satisfy postgres GROUP BY rules (11B groups by voucher_detail_no)
                     Max(advance_data.pe.name).as_("invoice_no"),
                     Max(advance_data.pe.party).as_("customer_name"),
                     Max(advance_data.pe.posting_date).as_("posting_date"),

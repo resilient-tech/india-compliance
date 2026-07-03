@@ -2568,7 +2568,7 @@ class GSTR1BooksData(BooksDataMapper):
         elif type_of_business == "Adjustment":
             query = _class.get_11B_query()
             fields = (
-                # Max(): 11B groups by voucher_detail_no, so these joined PE/PER cols aren't FD
+                # use MAX() for joined PE fields to satisfy postgres GROUP BY rules (11B groups by voucher_detail_no)
                 Max(_class.pe.name).as_("name"),
                 Max(_class.pe.party).as_("party"),
                 Max(_class.pe.posting_date).as_("posting_date"),
