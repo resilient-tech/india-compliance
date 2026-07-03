@@ -1,8 +1,13 @@
 import frappe
 from erpnext.accounts.party import get_address_tax_category
 from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
+<<<<<<< HEAD
 from frappe import _
 from frappe.contacts.doctype.address.address import get_address_display, get_default_address
+=======
+from frappe import _, bold
+from frappe.contacts.doctype.address.address import get_default_address
+>>>>>>> 71324c6 (fix: resolve virtual fields using property instead of handling them manually using onload)
 from frappe.utils import flt
 from pypika import Order
 
@@ -92,8 +97,6 @@ def update_address_fields(doc, source_doc):
     doc.ship_from_address = address_map.ship_from
     doc.ship_to_address = address_map.ship_to
 
-    set_address_display(doc)
-
 
 def set_address_for_subcontracting_inward(doc, source_doc):
     """Set company (bill_from) -> customer (bill_to) addresses for Subcontracting Inward Stock Entries."""
@@ -102,8 +105,6 @@ def set_address_for_subcontracting_inward(doc, source_doc):
 
     if not doc.bill_to_address:
         doc.bill_to_address = get_default_address("Customer", source_doc.customer)
-
-    set_address_display(doc)
 
 
 def get_mapped_address(doc, source_doc):
@@ -219,8 +220,15 @@ def get_dashboard_data(data):
 
 
 def onload(doc, method=None):
+<<<<<<< HEAD
     SubcontractingReceiptController(doc).set_e_waybill_info()
 
+=======
+    if doc.doctype == "Stock Entry":
+        doc.company_gstin = doc.bill_from_gstin
+        doc.supplier_gstin = doc.bill_to_gstin
+        doc.gst_category = doc.bill_to_gst_category
+>>>>>>> 71324c6 (fix: resolve virtual fields using property instead of handling them manually using onload)
 
 class SubcontractingController(CustomEwaybillController):
     """Shared by every doctype behind the "e-Waybill for Subcontracting" switch.
@@ -288,6 +296,7 @@ def validate_doc_references(doc, method=None):
         frappe.msgprint(error_msg, alert=True, indicator="yellow")
 
 
+<<<<<<< HEAD
 def set_address_display(doc):
     adddress_fields = (
         "bill_from_address",
@@ -299,6 +308,142 @@ def set_address_display(doc):
     for address in adddress_fields:
         if doc.get(address):
             setattr(doc, address + "_display", get_address_display(doc.get(address)))
+=======
+def get_doctype_field_map(doc):
+    # Subcontracting Receipt and Subcontracting Order
+    doctype_field_map = frappe._dict(
+        {
+            "company_gstin_field": "company_gstin",
+            "party_gstin_field": "supplier_gstin",
+            "company_address_field": "billing_address",
+            "gst_category_field": "gst_category",
+        }
+    )
+
+    if doc.doctype == "Stock Entry":
+        if not doc.is_return:
+            doctype_field_map.update(
+                {
+                    "company_gstin_field": "bill_from_gstin",
+                    "party_gstin_field": "bill_to_gstin",
+                    "company_address_field": "bill_from_address",
+                    "gst_category_field": "bill_to_gst_category",
+                }
+            )
+        else:
+            doctype_field_map.update(
+                {
+                    "company_gstin_field": "bill_to_gstin",
+                    "party_gstin_field": "bill_from_gstin",
+                    "company_address_field": "bill_to_address",
+                    "gst_category_field": "bill_from_gst_category",
+                }
+            )
+
+    return doctype_field_map
+
+
+def validate_transaction(doc, method=None):
+    validate_items(doc)
+
+    doctype_field_map = get_doctype_field_map(doc)
+
+    company_gstin_field = doctype_field_map.company_gstin_field
+    party_gstin_field = doctype_field_map.party_gstin_field
+    company_address_field = doctype_field_map.company_address_field
+    gst_category_field = doctype_field_map.gst_category_field
+
+    if doc.place_of_supply:
+        validate_place_of_supply(doc)
+    else:
+        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+
+    if validate_company_address_field(doc, company_address_field) is False:
+        return False
+
+    if validate_mandatory_fields(doc, (company_gstin_field, "place_of_supply")) is False:
+        return False
+
+    if getattr(doc, company_address_field) and (
+        validate_mandatory_fields(
+            doc,
+            gst_category_field,
+            _(
+                "{0} is a mandatory field for GST Transactions. Please ensure that"
+                " it is set in the Party and / or Address."
+            ),
+        )
+        is False
+    ):
+        return False
+
+    elif not doc.get(gst_category_field):
+        setattr(doc, gst_category_field, "Unregistered")
+
+    gstin = getattr(doc, party_gstin_field)
+
+    validate_gstin_status(gstin, doc)
+    validate_gst_transporter_id(doc)
+    validate_gst_category(doc.get(gst_category_field), gstin)
+
+    SubcontractingGSTAccounts().validate(doc, True)
+
+
+def validate_company_address_field(doc, company_address_field):
+    if (
+        validate_mandatory_fields(
+            doc,
+            company_address_field,
+            _("Please set {0} to ensure Company GSTIN is fetched in the transaction.").format(
+                bold(doc.meta.get_label(company_address_field))
+            ),
+        )
+        is False
+    ):
+        return False
+
+
+class SubcontractingGSTAccounts(GSTAccounts):
+    def validate(self, doc, is_sales_transaction=False):
+        self.doc = doc
+        self.is_sales_transaction = is_sales_transaction
+
+        if not self.doc.taxes:
+            return
+
+        if not self.has_gst_tax_rows():
+            return
+
+        self.setup_defaults()
+
+        self.validate_invalid_account_for_transaction()  # Sales / Purchase
+        self.validate_for_same_party_gstin()
+        self.validate_for_invalid_account_type()  # CGST / SGST / IGST
+        self.validate_for_charge_type()
+
+    def validate_for_same_party_gstin(self):
+        if is_outward_stock_entry(self.doc):
+            return
+
+        doctype_field_map = get_doctype_field_map(self.doc)
+
+        company_gstin = self.doc.get(doctype_field_map.company_gstin_field)
+        party_gstin = self.doc.get(doctype_field_map.party_gstin_field)
+
+        if not party_gstin or company_gstin != party_gstin:
+            return
+
+        self._throw(
+            _("Cannot charge GST in Row #{0} since Bill From GSTIN and Bill To GSTIN are same").format(
+                self.first_gst_idx
+            )
+        )
+
+    def validate_for_charge_type(self):
+        for row in self.gst_tax_rows:
+            # validating charge type "On Item Quantity" and non_cess_advol_account
+            self.validate_charge_type_for_cess_non_advol_accounts(row)
+>>>>>>> 71324c6 (fix: resolve virtual fields using property instead of handling them manually using onload)
 
 
 @frappe.whitelist()
