@@ -21,8 +21,8 @@ from india_compliance.gst_india.overrides.subcontracting_transaction import (
     is_e_waybill_applicable,
 )
 from india_compliance.gst_india.utils import (
-    is_inward_stock_entry,
-    is_outward_stock_entry,
+    is_internal_stock_transfer,
+    is_job_worker_inward_entry,
 )
 from india_compliance.gst_india.utils.e_waybill import mark_e_waybill_as_generated
 from india_compliance.gst_india.utils.taxes_controller import (
@@ -855,8 +855,8 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
         doc = frappe.new_doc("Stock Entry")
         doc.purpose = "Material Transfer for Manufacture"
 
-        self.assertTrue(is_outward_stock_entry(doc))
-        self.assertFalse(is_inward_stock_entry(doc))
+        self.assertTrue(is_internal_stock_transfer(doc))
+        self.assertFalse(is_job_worker_inward_entry(doc))
         self.assertTrue(is_e_waybill_applicable(doc))
 
     def test_receive_from_customer_inward_orientation(self):
@@ -865,8 +865,8 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
         receipt = receive_customer_materials(scio)
 
         self.assertEqual(receipt.purpose, "Receive from Customer")
-        self.assertTrue(is_inward_stock_entry(receipt))
-        self.assertFalse(is_outward_stock_entry(receipt))
+        self.assertTrue(is_job_worker_inward_entry(receipt))
+        self.assertFalse(is_internal_stock_transfer(receipt))
 
         self.assertEqual(receipt.bill_from_address, get_default_address("Customer", scio.customer))
         self.assertEqual(receipt.bill_to_address, get_default_address("Company", scio.company))
@@ -886,7 +886,7 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
         sc_return.save()
 
         self.assertEqual(sc_return.purpose, "Subcontracting Return")
-        self.assertTrue(is_inward_stock_entry(sc_return))
+        self.assertTrue(is_job_worker_inward_entry(sc_return))
 
         self.assertEqual(sc_return.bill_from_address, get_default_address("Customer", scio.customer))
         self.assertEqual(sc_return.bill_to_address, get_default_address("Company", scio.company))

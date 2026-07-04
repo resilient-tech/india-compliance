@@ -189,13 +189,13 @@ function get_field_and_label(frm, field) {
             party_field: ["bill_from_address", __("Bill From (same as Supplier Address)"), __("Bill From")],
             company_field: ["bill_to_address", __("Bill To")],
         };
-    } else if (india_compliance.is_inward_stock_entry(frm.doc)) {
+    } else if (india_compliance.is_job_worker_inward_entry(frm.doc)) {
         // Company receives goods: counterparty (customer) is the consignor
         field_label_dict = {
             party_field: ["bill_from_address", __("Bill From (same as Customer Address)"), __("Bill From")],
             company_field: ["bill_to_address", __("Bill To")],
         };
-    } else if (india_compliance.is_subcontracting_inward_entry(frm.doc)) {
+    } else if (india_compliance.is_job_worker_outward_entry(frm.doc)) {
         // For Subcontracting Inward related entries
         // company bills to the customer
         field_label_dict = {

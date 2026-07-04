@@ -497,14 +497,14 @@ function get_generate_e_waybill_dialog(opts, frm) {
     return d;
 }
 
-const SUBCONTRACTING_INWARD_SUB_SUPPLY_DESC = {
+const JOB_WORKER_OUTWARD_SUB_SUPPLY_DESC = {
     "Subcontracting Delivery": "Job Work Delivery",
     "Return Raw Material to Customer": "Return Raw Material",
 };
 
 // Inward Stock Entries (company receives goods); "Others" + description is always
 // accepted by NIC for an inward supply, matching the SUBCONTRACTING_INWARD pattern.
-const INWARD_STOCK_ENTRY_SUB_SUPPLY_DESC = {
+const JOB_WORKER_INWARD_SUB_SUPPLY_DESC = {
     "Receive from Customer": "Job Work",
     "Subcontracting Return": "Return of Finished Goods",
 };
@@ -532,16 +532,16 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
         if (frm.doc.purpose === "Send to Subcontractor") {
             supply_type = "Outward";
             sub_supply_type = ["Job Work"];
-        } else if (india_compliance.is_subcontracting_inward_entry(frm.doc)) {
+        } else if (india_compliance.is_job_worker_outward_entry(frm.doc)) {
             supply_type = "Outward";
             sub_supply_type = ["Others"];
-            sub_supply_desc = SUBCONTRACTING_INWARD_SUB_SUPPLY_DESC[frm.doc.purpose];
-        } else if (india_compliance.is_inward_stock_entry(frm.doc)) {
+            sub_supply_desc = JOB_WORKER_OUTWARD_SUB_SUPPLY_DESC[frm.doc.purpose];
+        } else if (india_compliance.is_job_worker_inward_entry(frm.doc)) {
             // Company receives goods; the registered recipient generates the e-Waybill
             supply_type = "Inward";
             sub_supply_type = ["Others"];
-            sub_supply_desc = INWARD_STOCK_ENTRY_SUB_SUPPLY_DESC[frm.doc.purpose];
-        } else if (india_compliance.STOCK_ENTRY_TRANSFER_PURPOSES.includes(frm.doc.purpose)) {
+            sub_supply_desc = JOB_WORKER_INWARD_SUB_SUPPLY_DESC[frm.doc.purpose];
+        } else if (india_compliance.INTERNAL_STOCK_TRANSFER_PURPOSES.includes(frm.doc.purpose)) {
             // Options follow the NIC 4-bucket matrix: direction x GSTIN match.
             supply_type = frm.doc.is_return ? "Inward" : "Outward";
             const same_gstin = frm.doc.bill_from_gstin === frm.doc.bill_to_gstin;

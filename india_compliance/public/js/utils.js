@@ -51,10 +51,13 @@ Object.assign(india_compliance, {
 
     HSN_BIFURCATION_FROM: frappe.datetime.str_to_obj("2025-05-01"),
 
-    // Inward Order; goods physically move OUT of the company here.
-    SUBCONTRACTING_INWARD_PURPOSES: ["Subcontracting Delivery", "Return Raw Material to Customer"],
+    // Company is the JOB WORKER (Subcontracting Inward Order), split by goods direction:
+    //   OUTWARD: job worker sends goods out to the customer
+    //   INWARD:  job worker receives goods in from the customer
+    JOB_WORKER_OUTWARD_PURPOSES: ["Subcontracting Delivery", "Return Raw Material to Customer"],
+    JOB_WORKER_INWARD_PURPOSES: ["Receive from Customer", "Subcontracting Return"],
 
-    // Stock Entry purposes where goods move between subcontracting parties
+    // Purposes facing a subcontracting counterparty (the two GSTINs always differ)
     SUBCONTRACTING_PURPOSES: [
         "Send to Subcontractor",
         "Subcontracting Delivery",
@@ -62,15 +65,11 @@ Object.assign(india_compliance, {
     ],
 
     // Own-account transfers where the company ships goods out (same-GSTIN allowed)
-    STOCK_ENTRY_TRANSFER_PURPOSES: [
+    INTERNAL_STOCK_TRANSFER_PURPOSES: [
         "Material Transfer",
         "Material Transfer for Manufacture",
         "Material Issue",
     ],
-
-    // Stock Entry purposes where the company physically RECEIVES goods; the
-    // registered recipient generates the e-Waybill (consignor may be unregistered).
-    INWARD_STOCK_ENTRY_PURPOSES: ["Receive from Customer", "Subcontracting Return"],
 
     // Stock Entry purposes eligible for e-Waybill
     E_WAYBILL_STOCK_ENTRY_PURPOSES: [
@@ -84,12 +83,12 @@ Object.assign(india_compliance, {
         "Subcontracting Return",
     ],
 
-    is_subcontracting_inward_entry(doc) {
-        return this.SUBCONTRACTING_INWARD_PURPOSES.includes(doc.purpose);
+    is_job_worker_outward_entry(doc) {
+        return this.JOB_WORKER_OUTWARD_PURPOSES.includes(doc.purpose);
     },
 
-    is_inward_stock_entry(doc) {
-        return this.INWARD_STOCK_ENTRY_PURPOSES.includes(doc.purpose);
+    is_job_worker_inward_entry(doc) {
+        return this.JOB_WORKER_INWARD_PURPOSES.includes(doc.purpose);
     },
 
     get_month_year_from_period(period) {

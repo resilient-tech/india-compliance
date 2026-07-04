@@ -33,8 +33,8 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     is_api_enabled,
-    is_inward_stock_entry,
-    is_outward_stock_entry,
+    is_internal_stock_transfer,
+    is_job_worker_inward_entry,
 )
 from india_compliance.gst_india.utils import (
     validate_invoice_number as validate_transaction_name,
@@ -134,7 +134,7 @@ def set_address_for_subcontracting_inward(doc, source_doc):
     company_address = get_default_address("Company", source_doc.company)
     customer_address = get_default_address("Customer", source_doc.customer)
 
-    if is_inward_stock_entry(doc):
+    if is_job_worker_inward_entry(doc):
         bill_from_address, bill_to_address = customer_address, company_address
     else:
         bill_from_address, bill_to_address = company_address, customer_address
@@ -273,7 +273,7 @@ def onload(doc, method=None):
         # For e-Waybill data mapping. The company is the consignor (bill_from) for
         # outward movements, but the consignee (bill_to) for inward receipts, where
         # the registered recipient self-generates the e-Waybill.
-        if is_inward_stock_entry(doc):
+        if is_job_worker_inward_entry(doc):
             doc.company_gstin = doc.bill_to_gstin
             doc.supplier_gstin = doc.bill_from_gstin
             doc.gst_category = doc.bill_from_gst_category
@@ -373,7 +373,7 @@ def get_doctype_field_map(doc):
     if doc.doctype == "Stock Entry":
         # Company is the consignor (bill_from) for outward movements; for inward
         # receipts and returns it is the consignee (bill_to).
-        if not doc.is_return and not is_inward_stock_entry(doc):
+        if not doc.is_return and not is_job_worker_inward_entry(doc):
             doctype_field_map.update(
                 {
                     "company_gstin_field": "bill_from_gstin",
@@ -474,7 +474,7 @@ class SubcontractingGSTAccounts(GSTAccounts):
         self.validate_for_charge_type()
 
     def validate_for_same_party_gstin(self):
-        if is_outward_stock_entry(self.doc):
+        if is_internal_stock_transfer(self.doc):
             return
 
         doctype_field_map = get_doctype_field_map(self.doc)
@@ -658,10 +658,10 @@ def ignore_gst_validations_for_subcontracting(doc):
         return False
 
     # ignore if company address is not set
-    if is_outward_stock_entry(doc) and not doc.bill_from_address:
+    if is_internal_stock_transfer(doc) and not doc.bill_from_address:
         return True
 
-    if (doc.is_return or is_inward_stock_entry(doc)) and not doc.bill_to_address:
+    if (doc.is_return or is_job_worker_inward_entry(doc)) and not doc.bill_to_address:
         return True
 
 
