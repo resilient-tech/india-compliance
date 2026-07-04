@@ -502,35 +502,30 @@ const SUBCONTRACTING_INWARD_SUB_SUPPLY_DESC = {
     "Return Raw Material to Customer": "Return Raw Material",
 };
 
+// Inward Stock Entries (company receives goods); "Others" + description is always
+// accepted by NIC for an inward supply, matching the SUBCONTRACTING_INWARD pattern.
+const INWARD_STOCK_ENTRY_SUB_SUPPLY_DESC = {
+    "Receive from Customer": "Job Work",
+    "Subcontracting Return": "Return of Finished Goods",
+};
+
+// Type - Document Type" mapping. Key: "<supply_type>:<same_gstin>".
+const DELIVERY_CHALLAN_SUB_SUPPLY_BUCKETS = {
+    "Outward:false": ["Job Work", "SKD/CKD", "Others"], // different GSTIN, Self -> Other/URP
+    "Outward:true": ["For Own Use", "Exhibition or Fairs", "Line Sales", "Recipient Not Known", "Others"], // same GSTIN, Self -> Self
+    "Inward:false": ["Job Work Returns", "Sales Return", "SKD/CKD", "Others"], // different GSTIN, Other/URP -> Self
+    "Inward:true": ["For Own Use", "Exhibition or Fairs", "Others"], // same GSTIN, Self -> Self
+};
+
 function get_sub_suppy_type_options(frm, is_foreign_transaction) {
     let supply_type, sub_supply_type, sub_supply_desc, document_type;
 
     if (frm.doctype === "Delivery Note") {
+        // Options follow the NIC 4-bucket matrix: direction x GSTIN match.
         const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
-
-        if (frm.doc.is_return) {
-            supply_type = "Inward";
-            document_type = "Delivery Challan";
-            if (same_gstin) {
-                sub_supply_type = ["For Own Use", "Exhibition or Fairs", "Others"];
-            } else {
-                sub_supply_type = ["Job Work Returns", "SKD/CKD", "Others"];
-            }
-        } else {
-            supply_type = "Outward";
-            document_type = "Delivery Challan";
-            if (same_gstin) {
-                sub_supply_type = [
-                    "For Own Use",
-                    "Exhibition or Fairs",
-                    "Line Sales",
-                    "Recipient Not Known",
-                    "Others",
-                ];
-            } else {
-                sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
-            }
-        }
+        supply_type = frm.doc.is_return ? "Inward" : "Outward";
+        document_type = "Delivery Challan";
+        sub_supply_type = DELIVERY_CHALLAN_SUB_SUPPLY_BUCKETS[`${supply_type}:${same_gstin}`];
     } else if (frm.doctype === "Stock Entry") {
         document_type = "Delivery Challan";
 
@@ -541,25 +536,16 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
             supply_type = "Outward";
             sub_supply_type = ["Others"];
             sub_supply_desc = SUBCONTRACTING_INWARD_SUB_SUPPLY_DESC[frm.doc.purpose];
-        } else if (["Material Transfer", "Material Issue"].includes(frm.doc.purpose)) {
+        } else if (india_compliance.is_inward_stock_entry(frm.doc)) {
+            // Company receives goods; the registered recipient generates the e-Waybill
+            supply_type = "Inward";
+            sub_supply_type = ["Others"];
+            sub_supply_desc = INWARD_STOCK_ENTRY_SUB_SUPPLY_DESC[frm.doc.purpose];
+        } else if (india_compliance.STOCK_ENTRY_TRANSFER_PURPOSES.includes(frm.doc.purpose)) {
+            // Options follow the NIC 4-bucket matrix: direction x GSTIN match.
+            supply_type = frm.doc.is_return ? "Inward" : "Outward";
             const same_gstin = frm.doc.bill_from_gstin === frm.doc.bill_to_gstin;
-
-            if (frm.doc.is_return) {
-                supply_type = "Inward";
-                sub_supply_type = ["Job Work Returns"];
-            } else if (same_gstin) {
-                supply_type = "Outward";
-                sub_supply_type = [
-                    "For Own Use",
-                    "Exhibition or Fairs",
-                    "Line Sales",
-                    "Recipient Not Known",
-                    "Others",
-                ];
-            } else {
-                supply_type = "Outward";
-                sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
-            }
+            sub_supply_type = DELIVERY_CHALLAN_SUB_SUPPLY_BUCKETS[`${supply_type}:${same_gstin}`];
         }
     } else if (frm.doctype === "Sales Invoice" && frm.doc.is_return === 0 && is_foreign_transaction) {
         supply_type = "Outward";

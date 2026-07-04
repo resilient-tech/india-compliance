@@ -33,6 +33,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     is_api_enabled,
+    is_inward_stock_entry,
     is_outward_stock_entry,
 )
 from india_compliance.gst_india.utils import (
@@ -123,12 +124,26 @@ def update_address_fields(doc, source_doc):
 
 
 def set_address_for_subcontracting_inward(doc, source_doc):
-    """Set company (bill_from) -> customer (bill_to) addresses for Subcontracting Inward Stock Entries."""
+    """Set bill_from/bill_to addresses for Subcontracting Inward Order Stock Entries.
+
+    Outbound legs (Subcontracting Delivery, Return Raw Material to Customer): the company
+    ships to the customer -> bill_from = company, bill_to = customer.
+    Inbound legs (Receive from Customer, Subcontracting Return): the customer ships to the
+    company -> bill_from = customer, bill_to = company.
+    """
+    company_address = get_default_address("Company", source_doc.company)
+    customer_address = get_default_address("Customer", source_doc.customer)
+
+    if is_inward_stock_entry(doc):
+        bill_from_address, bill_to_address = customer_address, company_address
+    else:
+        bill_from_address, bill_to_address = company_address, customer_address
+
     if not doc.bill_from_address:
-        doc.bill_from_address = get_default_address("Company", source_doc.company)
+        doc.bill_from_address = bill_from_address
 
     if not doc.bill_to_address:
-        doc.bill_to_address = get_default_address("Customer", source_doc.customer)
+        doc.bill_to_address = bill_to_address
 
     set_address_display(doc)
 
@@ -255,10 +270,17 @@ def onload(doc, method=None):
     if doc.doctype == "Stock Entry":
         set_address_display(doc)
 
-        # For e-Waybill data mapping
-        doc.company_gstin = doc.bill_from_gstin
-        doc.supplier_gstin = doc.bill_to_gstin
-        doc.gst_category = doc.bill_to_gst_category
+        # For e-Waybill data mapping. The company is the consignor (bill_from) for
+        # outward movements, but the consignee (bill_to) for inward receipts, where
+        # the registered recipient self-generates the e-Waybill.
+        if is_inward_stock_entry(doc):
+            doc.company_gstin = doc.bill_to_gstin
+            doc.supplier_gstin = doc.bill_from_gstin
+            doc.gst_category = doc.bill_from_gst_category
+        else:
+            doc.company_gstin = doc.bill_from_gstin
+            doc.supplier_gstin = doc.bill_to_gstin
+            doc.gst_category = doc.bill_to_gst_category
 
     if not doc.get("ewaybill"):
         return
@@ -349,7 +371,9 @@ def get_doctype_field_map(doc):
     )
 
     if doc.doctype == "Stock Entry":
-        if not doc.is_return:
+        # Company is the consignor (bill_from) for outward movements; for inward
+        # receipts and returns it is the consignee (bill_to).
+        if not doc.is_return and not is_inward_stock_entry(doc):
             doctype_field_map.update(
                 {
                     "company_gstin_field": "bill_from_gstin",
@@ -637,7 +661,7 @@ def ignore_gst_validations_for_subcontracting(doc):
     if is_outward_stock_entry(doc) and not doc.bill_from_address:
         return True
 
-    if doc.is_return and not doc.bill_to_address:
+    if (doc.is_return or is_inward_stock_entry(doc)) and not doc.bill_to_address:
         return True
 
 

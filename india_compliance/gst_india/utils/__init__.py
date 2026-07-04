@@ -39,6 +39,7 @@ from india_compliance.gst_india.constants import (
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
+    INWARD_STOCK_ENTRY_PURPOSES,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
@@ -46,6 +47,7 @@ from india_compliance.gst_india.constants import (
     SHIP_TO_GSTIN_APPLICABLE_DATE,
     STATE_NUMBERS,
     STATE_PINCODE_MAPPING,
+    STOCK_ENTRY_TRANSFER_PURPOSES,
     TAX_TYPES,
     TCS,
     TIMEZONE,
@@ -1143,12 +1145,13 @@ def get_periods_between_dates(
 
 
 def is_outward_stock_entry(doc):
-    if (
-        doc.doctype == "Stock Entry"
-        and doc.purpose in ["Material Transfer", "Material Issue"]
-        and not doc.is_return
-    ):
+    if doc.doctype == "Stock Entry" and doc.purpose in STOCK_ENTRY_TRANSFER_PURPOSES and not doc.is_return:
         return True
+
+
+def is_inward_stock_entry(doc):
+    """True when the company physically receives goods and self-generates the e-Waybill."""
+    return doc.doctype == "Stock Entry" and doc.purpose in INWARD_STOCK_ENTRY_PURPOSES
 
 
 def create_notification(message_content, document_type, document_name=None, request_id=None):

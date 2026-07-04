@@ -39,6 +39,7 @@ from india_compliance.gst_india.utils import (
     has_changed,
     has_gst_taxes,
     is_import_transaction,
+    is_inward_stock_entry,
     is_overseas_doc,
     join_list_with_custom_separators,
     validate_gst_category,
@@ -576,7 +577,12 @@ def validate_place_of_supply(doc):
 
 def is_inter_state_supply(doc):
     if doc.doctype == "Stock Entry":
-        party_gst_category = doc.bill_from_gst_category if doc.is_return else doc.bill_to_gst_category
+        # The counterparty is on the bill_from side for returns and inward receipts.
+        party_gst_category = (
+            doc.bill_from_gst_category
+            if doc.is_return or is_inward_stock_entry(doc)
+            else doc.bill_to_gst_category
+        )
 
     else:
         party_gst_category = doc.gst_category

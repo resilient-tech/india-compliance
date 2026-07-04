@@ -20,6 +20,10 @@ from frappe.utils import add_to_date, flt, getdate, now_datetime
 from india_compliance.gst_india.overrides.subcontracting_transaction import (
     is_e_waybill_applicable,
 )
+from india_compliance.gst_india.utils import (
+    is_inward_stock_entry,
+    is_outward_stock_entry,
+)
 from india_compliance.gst_india.utils.e_waybill import mark_e_waybill_as_generated
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -815,23 +819,29 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
         for item in se.items:
             self.assertFalse(item.get("additional_taxable_value"))
 
-    def test_e_waybill_applicable_for_inward_purposes(self):
-        """e-Waybill is applicable for the inward purposes, not for Receive from Customer."""
+    def test_e_waybill_applicable_for_stock_entry_purposes(self):
+        """e-Waybill is applicable for outward transfers, subcontracting legs and inward
+        receipts, but not for same-premises operations."""
         applicable_purposes = (
             "Material Transfer",
+            "Material Transfer for Manufacture",
             "Material Issue",
             "Send to Subcontractor",
             "Subcontracting Delivery",
             "Return Raw Material to Customer",
+            "Receive from Customer",
+            "Subcontracting Return",
         )
         for purpose in applicable_purposes:
             doc = frappe.new_doc("Stock Entry")
             doc.purpose = purpose
             self.assertTrue(is_e_waybill_applicable(doc), purpose)
 
-        doc = frappe.new_doc("Stock Entry")
-        doc.purpose = "Receive from Customer"
-        self.assertFalse(is_e_waybill_applicable(doc))
+        # Same-premises operations do not move goods between locations.
+        for purpose in ("Manufacture", "Repack", "Material Consumption for Manufacture", "Disassemble"):
+            doc = frappe.new_doc("Stock Entry")
+            doc.purpose = purpose
+            self.assertFalse(is_e_waybill_applicable(doc), purpose)
 
     @change_settings("GST Settings", {"enable_e_waybill_for_sc": 0})
     def test_e_waybill_not_applicable_when_sc_disabled(self):
@@ -839,6 +849,48 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
         doc = frappe.new_doc("Stock Entry")
         doc.purpose = "Subcontracting Delivery"
         self.assertFalse(is_e_waybill_applicable(doc))
+
+    def test_material_transfer_for_manufacture_is_outward(self):
+        """MTfM is an outward own-account transfer, treated like Material Transfer."""
+        doc = frappe.new_doc("Stock Entry")
+        doc.purpose = "Material Transfer for Manufacture"
+
+        self.assertTrue(is_outward_stock_entry(doc))
+        self.assertFalse(is_inward_stock_entry(doc))
+        self.assertTrue(is_e_waybill_applicable(doc))
+
+    def test_receive_from_customer_inward_orientation(self):
+        """Inward receipt: bill_from = customer (consignor), bill_to = company (consignee)."""
+        scio = create_subcontracting_inward_order()
+        receipt = receive_customer_materials(scio)
+
+        self.assertEqual(receipt.purpose, "Receive from Customer")
+        self.assertTrue(is_inward_stock_entry(receipt))
+        self.assertFalse(is_outward_stock_entry(receipt))
+
+        self.assertEqual(receipt.bill_from_address, get_default_address("Customer", scio.customer))
+        self.assertEqual(receipt.bill_to_address, get_default_address("Company", scio.company))
+        # Company (recipient) self-generates -> its GSTIN is the required side.
+        self.assertTrue(receipt.bill_to_gstin)
+        self.assertTrue(is_e_waybill_applicable(receipt))
+
+    def test_subcontracting_return_inward_orientation(self):
+        """Subcontracting Return (FG back from customer) is oriented inward."""
+        scio = create_subcontracting_inward_order()
+        receive_customer_materials(scio)
+        manufacture_for_subcontracting_inward(scio)
+        make_subcontracting_inward_delivery(scio=scio)
+
+        scio.reload()
+        sc_return = frappe.new_doc("Stock Entry").update(scio.make_subcontracting_return())
+        sc_return.save()
+
+        self.assertEqual(sc_return.purpose, "Subcontracting Return")
+        self.assertTrue(is_inward_stock_entry(sc_return))
+
+        self.assertEqual(sc_return.bill_from_address, get_default_address("Customer", scio.customer))
+        self.assertEqual(sc_return.bill_to_address, get_default_address("Company", scio.company))
+        self.assertTrue(is_e_waybill_applicable(sc_return))
 
     def test_subcontracting_delivery_multi_rate_receipts(self):
         """Delivery uses the weighted-average receipt rate across multiple receipts."""

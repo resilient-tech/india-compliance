@@ -56,6 +56,7 @@ from india_compliance.gst_india.utils import (
     handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
+    is_inward_stock_entry,
     is_outward_stock_entry,
     is_ship_to_gstin_applicable,
     load_doc,
@@ -1641,6 +1642,16 @@ class EWaybillData(GSTTransactionData):
         self.transaction_details.update(
             default_supply_types.get((doc.doctype, doc.get("is_return") or 0), {})
         )
+
+        if is_inward_stock_entry(doc):
+            # Direction is by purpose, not is_return: the company is the consignee
+            # and self-generates the e-Waybill, so force an inward supply.
+            self.transaction_details.update(
+                supply_type="I",
+                sub_supply_type=doc.get("_sub_supply_type", ""),
+                sub_supply_desc=doc.get("_sub_supply_desc", ""),
+                document_type="CHL",
+            )
 
         if is_foreign_doc(self.doc):
             self.transaction_details.update(sub_supply_type=3)  # Export

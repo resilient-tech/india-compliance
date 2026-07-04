@@ -72,7 +72,7 @@ async function update_gst_details(frm, event) {
 
     const same_gstin_stock_entry =
         frm.doc.doctype === "Stock Entry" &&
-        ["Material Transfer", "Material Issue"].includes(frm.doc.purpose) &&
+        india_compliance.STOCK_ENTRY_TRANSFER_PURPOSES.includes(frm.doc.purpose) &&
         !frm.doc.is_return;
 
     if (!(party || same_gstin_stock_entry)) return;

@@ -215,13 +215,16 @@ class StockEntryEwaybill extends EwaybillApplicability {
         let is_ewb_applicable = true;
         let message_list = [];
         const is_return = this.frm.doc.is_return;
+        // The company (which self-generates the e-Waybill) sits on the bill_to side for
+        // returns and inward receipts, and on the bill_from side for outward movements.
+        const company_is_bill_to = is_return || india_compliance.is_inward_stock_entry(this.frm.doc);
 
-        if (is_return && !this.frm.doc.bill_to_gstin) {
+        if (company_is_bill_to && !this.frm.doc.bill_to_gstin) {
             is_ewb_applicable = false;
             message_list.push("Bill To GSTIN is not set. Ensure its set in Bill To Address.");
         }
 
-        if (!is_return && !this.frm.doc.bill_from_gstin) {
+        if (!company_is_bill_to && !this.frm.doc.bill_from_gstin) {
             is_ewb_applicable = false;
             message_list.push("Bill From GSTIN is not set. Ensure its set in Bill From Address.");
         }
@@ -260,7 +263,12 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
         let message_list = [];
 
-        if (!this.frm.doc.bill_to_address) {
+        if (india_compliance.is_inward_stock_entry(this.frm.doc)) {
+            if (!this.frm.doc.bill_from_address) {
+                is_ewb_generatable = false;
+                message_list.push("Bill From address is mandatory to generate e-Waybill.");
+            }
+        } else if (!this.frm.doc.bill_to_address) {
             is_ewb_generatable = false;
             message_list.push("Bill To address is mandatory to generate e-Waybill.");
         }
