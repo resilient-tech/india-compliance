@@ -1,37 +1,118 @@
 // Copyright (c) 2026, Resilient Tech and contributors
 // For license information, please see license.txt
 
-const ISD_SOURCE_ITEM_READONLY_FIELDS = [
-    "total_igst",
-    "total_cgst",
-    "total_sgst",
-    "total_cess",
-    "total_cess_non_advol",
-    "distributed_igst",
-    "distributed_cgst",
-    "distributed_sgst",
-    "distributed_cess",
-    "distributed_cess_non_advol",
-    "cost_center",
-    "project",
-    "expense_head",
-    "total_expense",
-    "distributed_expense",
-];
-
 frappe.ui.form.on("ISD Distribution Invoice", {
-    refresh(frm) {
-        const grid = frm.fields_dict.source_items.grid;
-        // ISD_SOURCE_ITEM_READONLY_FIELDS.forEach(field => grid.toggle_enable(field, false));
+    onload(frm) {
+        frm.isd_controller = new india_compliance.ISDController(frm);
+        if (frm.is_new() && !frm.doc.company) {
+            frm.set_value("company", frappe.defaults.get_user_default("Company"));
+        }
     },
-    branch_turnover: calculate_distribution_ratio,
-    total_turnover: calculate_distribution_ratio,
+
+    refresh(frm) {
+        // source_items are populated from the linked purchase invoice, never edited by hand
+        frm.set_df_property("source_items", "read_only", 1);
+        frm.isd_controller.set_provisional_labels();
+        frm.isd_controller.set_common_buttons();
+        if (
+            frm.doc.docstatus === 1 &&
+            frm.doc.is_against_party &&
+            frappe.model.can_create("ISD Recipient Invoice")
+        ) {
+            frm.add_custom_button(
+                __("ISD Recipient Invoice"),
+                () => {
+                    frappe.model.open_mapped_doc({
+                        method: "india_compliance.gst_india.doctype.isd_distribution_invoice.isd_distribution_invoice.create_isd_recipient_invoice",
+                        frm: frm,
+                    });
+                },
+                __("Create"),
+            );
+        }
+    },
+
+    async company(frm) {
+        await frm.isd_controller.load_company_defaults();
+        await frm.isd_controller.fetch_autofill("company");
+    },
+
+    is_against_party(frm) {
+        frm.isd_controller.set_provisional_labels();
+        if (frm.__updating_isd_autofill) return;
+        frm.isd_controller.fetch_autofill("is_against_party");
+    },
+
+    party_type(frm) {
+        if (frm.__updating_isd_autofill || !frm.doc.is_against_party) return;
+        frm.isd_controller.fetch_autofill("party_type");
+    },
+
+    party(frm) {
+        if (frm.__updating_isd_autofill || !frm.doc.is_against_party || !frm.doc.party) return;
+        frm.isd_controller.fetch_autofill("party");
+    },
+
+    async distribution_address(frm) {
+        frm.isd_controller.set_address_display("distribution_address", "distribution_address_display");
+        await frm.isd_controller.set_pos("distribution_address", "distribution_pos");
+        await frm.isd_controller.recalculate();
+    },
+
+    async recipient_address(frm) {
+        frm.isd_controller.set_address_display("recipient_address", "recipient_address_display");
+        await frm.isd_controller.set_pos("recipient_address", "recipient_pos");
+        if (!frm.__updating_isd_autofill) {
+            await frm.isd_controller.fetch_autofill("recipient_address");
+        }
+        await frm.isd_controller.recalculate();
+    },
+
+    async purchase_invoice(frm) {
+        frm.clear_table("source_items");
+        if (frm.doc.purchase_invoice) {
+            const { message: items } = await frappe.call({
+                method: "india_compliance.gst_india.utils.isd.get_source_items_from_purchase_invoice",
+                args: { purchase_invoice: frm.doc.purchase_invoice },
+            });
+            for (const item of items || []) frm.add_child("source_items", item);
+        }
+        frm.refresh_field("source_items");
+        await frm.isd_controller.recalculate();
+    },
+
+    branch_turnover(frm) {
+        calculate_distribution_ratio(frm);
+        frm.isd_controller.recalculate();
+    },
+
+    total_turnover(frm) {
+        calculate_distribution_ratio(frm);
+        frm.isd_controller.recalculate();
+    },
+
+    is_credit_note(frm) {
+        frm.isd_controller.recalculate();
+    },
+});
+
+frappe.ui.form.on("ISD Source Item", {
+    async source_items_remove(frm) {
+        await frm.isd_controller.recalculate();
+    },
+
+    is_ineligible_for_itc(frm) {
+        frm.isd_controller.calculate_taxes_and_totals();
+    },
 });
 
 function calculate_distribution_ratio(frm) {
     const { branch_turnover, total_turnover } = frm.doc;
 
     const distribution_ratio = total_turnover ? (flt(branch_turnover) / flt(total_turnover)) * 100 : 0;
+    if (distribution_ratio > 100) {
+        frappe.throw(__("Distribution Ratio cannot be greater than 100%"));
+    }
 
     frm.set_value("distribution_ratio", distribution_ratio);
 }

@@ -80,7 +80,7 @@
    "in_list_view": 1,
    "label": "Series",
    "no_copy": 1,
-   "options": "ISD-.YY.-",
+   "options": "ISDR-.YY.-",
    "print_hide": 1,
    "reqd": 1,
    "set_only_once": 1
@@ -441,7 +441,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-02 17:22:40.459116",
+ "modified": "2026-07-03 11:33:48.554482",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Recipient Invoice",

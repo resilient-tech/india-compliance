@@ -6,13 +6,18 @@ from operator import add
 
 import frappe
 from frappe import _
+from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import Coalesce, Sum
 from frappe.utils import flt, get_link_to_form, getdate
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.controllers.isd_controller import ISDController
+from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
+    upsert_turnover_record,
+)
 from india_compliance.gst_india.utils import validate_invoice_number
 from india_compliance.gst_india.utils.isd import (
+    ISD_GST_CATEGORY,
     calculate_distribution,
     sum_row_tax_by_type,
     throw_invalid_rows,
@@ -24,6 +29,7 @@ class ISDDistributionInvoice(ISDController):
     _DOCTYPE_NAME = "ISD Distribution Invoice"
 
     def validate(self):
+        # TODO: verify that validation of not allowing distribution of ineligible due to POS rules
         self.setup_precision()
         self.setup_party_fields()
         validate_invoice_number(self)
@@ -35,6 +41,47 @@ class ISDDistributionInvoice(ISDController):
         self.validate_distribution_limits()
         self.validate_accounts()
         self.set_taxes_and_totals()
+
+    def on_submit(self):
+        # GL first, so a posting failure aborts before the recipient invoice exists
+        self.make_document_gl_entries()
+
+        if not self.is_against_party:
+            self.create_recipient_invoice()
+
+        frappe.enqueue(self.upsert_turnover_record, enqueue_after_commit=True)
+
+    # on_cancel (reversing the GL entries) is inherited from ISDController. Frappe's link check
+    # forces the ISD Recipient Invoice (isd_distribution_invoice_reference) and any credit note
+    # (credit_note_against) to be cancelled before this document.
+
+    def upsert_turnover_record(self):
+        if not self.recipient_address:
+            return
+
+        gst_state = frappe.get_cached_value("Address", self.recipient_address, "gst_state")
+        if not (self.recipient_gstin or gst_state):
+            return
+
+        upsert_turnover_record(
+            gstin=self.recipient_gstin,
+            gst_state=gst_state,
+            amount=self.branch_turnover,
+            posting_date=self.posting_date,
+        )
+
+    def create_recipient_invoice(self):
+        recipient = create_isd_recipient_invoice(self.name)
+        recipient.insert(ignore_permissions=True)
+        recipient.submit()
+
+        frappe.msgprint(
+            _("ISD Recipient Invoice {0} created and submitted.").format(
+                get_link_to_form("ISD Recipient Invoice", recipient.name)
+            ),
+            alert=True,
+            indicator="green",
+        )
 
     def validate_purchase_invoice(self):
         if not self.purchase_invoice:
@@ -159,7 +206,7 @@ class ISDDistributionInvoice(ISDController):
             return
 
         precision = self._source_item_precision
-        tolerance = 0.1
+        tolerance = 0.01
 
         # self's totals are validated before this
         available_itc = flt(sum(sum_row_tax_by_type(row, "total") for row in self.source_items), precision)
@@ -183,11 +230,11 @@ class ISDDistributionInvoice(ISDController):
             if total > available + tolerance:
                 frappe.throw(
                     _(
-                        "Over-distribution: the total {0} distributed ({1}) for Purchase Invoice {2}"
-                        " exceeds the {0} available ({3})."
+                        "Over-distribution: distributing {0} amount {1} for Purchase Invoice {2}"
+                        " against available ({3})."
                     ).format(
                         label,
-                        frappe.bold(f"{total:.{precision}f}"),
+                        frappe.bold(f"{total - available:.{precision}f}"),
                         get_link_to_form("Purchase Invoice", self.purchase_invoice),
                         frappe.bold(f"{available:.{precision}f}"),
                     ),
@@ -239,3 +286,162 @@ class ISDDistributionInvoice(ISDController):
             itc=flt(row.get("itc"), precision),
             expense=flt(row.get("expense"), precision),
         )
+
+
+@frappe.whitelist()
+def create_isd_recipient_invoice(source_name: str):
+    frappe.has_permission("ISD Distribution Invoice", "read", throw=True)
+    frappe.has_permission("ISD Recipient Invoice", "write", throw=True)
+
+    source = frappe.get_doc("ISD Distribution Invoice", source_name)
+
+    if frappe.db.exists(
+        "ISD Recipient Invoice", {"isd_distribution_invoice_reference": source_name, "docstatus": ["<", 2]}
+    ):
+        frappe.throw(
+            _("ISD Recipient Invoice already exists for ISD Distribution Invoice {0}").format(
+                get_link_to_form("ISD Distribution Invoice", source_name)
+            )
+        )
+
+    field_no_map = [
+        "naming_series",
+        "amended_from",
+        "purchase_invoice",
+    ]
+
+    source_item_no_map = ["purchase_invoice_item"]
+
+    # Address / party determination — only for the inter-company (against-party) flow.
+    overrides = {}
+    row_overrides = {}
+    if source.is_against_party:
+        recipient_company = frappe.db.get_value(source.party_type, source.party, "represents_company")
+        if not recipient_company:
+            frappe.throw(
+                _(
+                    "{0} {1} does not represent a company, so an inter-company ISD Recipient"
+                    " Invoice cannot be created."
+                ).format(source.party_type, frappe.bold(source.party))
+            )
+
+        party_type = party = None
+        filters = [
+            ["gst_category", "=", ISD_GST_CATEGORY],
+            ["Dynamic Link", "link_doctype", "!=", "Company"],
+        ]
+        distribution_address = _guess_address(source.get("distribution_gstin"), extra_filters=filters)
+        if distribution_address:
+            link = frappe.db.get_value(
+                "Dynamic Link",
+                {
+                    "parent": distribution_address,
+                    "parenttype": "Address",
+                    "link_doctype": ["!=", "Company"],
+                },
+                ["link_doctype", "link_name"],
+                as_dict=True,
+            )
+            if link:
+                party_type, party = link.link_doctype, link.link_name
+
+        filters = [
+            ["gst_category", "!=", ISD_GST_CATEGORY],
+            ["Dynamic Link", "link_doctype", "=", "Company"],
+            ["Dynamic Link", "link_name", "=", recipient_company],
+        ]
+        recipient_address = _guess_address(source.recipient_gstin, extra_filters=filters)
+
+        # Accounts and accounting dimensions belong to the source company
+        # Re-default them for the new (recipient) company instead.
+        default_cost_center, default_expense_account, default_isd_provisional_account = (
+            frappe.get_cached_value(
+                "Company",
+                recipient_company,
+                ["cost_center", "default_expense_account", "default_isd_provisional_account"],
+            )
+        )
+
+        overrides = {
+            "company": recipient_company,
+            "is_against_party": 1,
+            "party_type": party_type,
+            "party": party,
+            "distribution_address": distribution_address,
+            "recipient_address": recipient_address,
+            # accounting dimensions — re-default / clear for the new company
+            "cost_center": default_cost_center,
+            "project": None,
+            "credit_note_against": None,
+            "isd_provisional_account": default_isd_provisional_account,
+        }
+        row_overrides = {
+            "expense_head": default_expense_account,
+            "cost_center": default_cost_center,
+            "project": None,
+        }
+
+        # re-derived above, so don't let get_mapped_doc copy the source values
+        field_no_map += [
+            "distribution_address",
+            "recipient_address",
+            "party_type",
+            "party",
+            "cost_center",
+            "project",
+            "credit_note_against",
+            "isd_provisional_account",
+        ]
+        source_item_no_map += ["expense_head", "cost_center", "project"]
+
+    def set_missing_values(source, target):
+        target.isd_distribution_invoice_reference = source.name
+        target.posting_date = source.posting_date
+
+        target.set("taxes", [])
+
+        for field, value in overrides.items():
+            target.set(field, value)
+
+        for row in target.source_items:
+            for field, value in row_overrides.items():
+                row.set(field, value)
+
+    return get_mapped_doc(
+        "ISD Distribution Invoice",
+        source_name,
+        {
+            "ISD Distribution Invoice": {
+                "doctype": "ISD Recipient Invoice",
+                "field_no_map": field_no_map,
+                "validation": {"docstatus": ["=", 1]},
+            },
+            "ISD Source Item": {
+                "doctype": "ISD Source Item",
+                "field_no_map": source_item_no_map,
+            },
+        },
+        postprocess=set_missing_values,
+    )
+
+
+def _guess_address(gstin, extra_filters=None):
+    "guess address internal function for creating inter company invoices"
+    if not gstin:
+        return None
+
+    filters = [
+        ["disabled", "=", 0],
+        ["gstin", "=", gstin],
+    ]
+    if extra_filters:
+        filters.extend(extra_filters)
+
+    names = frappe.get_list(
+        "Address",
+        filters=filters,
+        pluck="name",
+        order_by="is_primary_address DESC",
+        limit=1,
+    )
+    return names[0] if names else None

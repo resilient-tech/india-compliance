@@ -77,7 +77,7 @@
    "in_list_view": 1,
    "label": "Series",
    "no_copy": 1,
-   "options": "ISD-.YY.-",
+   "options": "ISDD-.YY.-",
    "print_hide": 1,
    "reqd": 1,
    "set_only_once": 1
@@ -91,6 +91,7 @@
   {
    "fieldname": "taxes",
    "fieldtype": "Table",
+   "no_copy": 1,
    "options": "ISD Tax Item"
   },
   {
@@ -426,7 +427,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-02 14:18:43.286222",
+ "modified": "2026-07-03 16:14:59.481571",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Distribution Invoice",

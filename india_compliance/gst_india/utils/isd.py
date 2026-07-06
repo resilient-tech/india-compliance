@@ -10,12 +10,13 @@ Imports only frappe / constants so it stays a leaf module that the ISD controlle
 import frappe
 from frappe import _
 from frappe.model.meta import get_field_precision
-from frappe.utils import flt
+from frappe.utils import cint, flt
 
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     IMPORT_GST_CATEGORIES,
 )
+from india_compliance.gst_india.doctype.turnover_record.turnover_record import get_turnover_amount
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 ISD_GST_CATEGORY = "Input Service Distributor"
@@ -120,6 +121,9 @@ def calculate_distribution(doc):
 def get_source_items_from_purchase_invoice(purchase_invoice: str):
     frappe.has_permission("Purchase Invoice", "read", doc=purchase_invoice, throw=True)
 
+    if not purchase_invoice:
+        return []
+
     pi_items = frappe.get_all(
         "Purchase Invoice Item",
         filters={"parent": purchase_invoice},
@@ -169,3 +173,122 @@ def get_source_items_from_purchase_invoice(purchase_invoice: str):
 @frappe.whitelist()
 def get_input_gst_accounts(company: str):
     return get_gst_accounts_by_type(company, "Input")
+
+
+# ---------------------------------------------------------------------------- autofill
+# The party chain both ISD doctypes share
+_PARTY_CHAIN = ("company", "is_against_party", "party_type", "party")
+
+
+def _resolve_isd_party_type(doc, is_company_isd):
+    if not doc.is_against_party:
+        return None
+    # by default distribution passes credit to an internal Customer; the recipient receives it from an internal Supplier
+    return "Customer" if is_company_isd else "Supplier"
+
+
+def _resolve_isd_party(doc):
+    if not (doc.is_against_party and doc.party_type):
+        return None
+
+    internal_field = "is_internal_customer" if doc.party_type == "Customer" else "is_internal_supplier"
+    parties = frappe.get_list(
+        doc.party_type, filters={internal_field: 1, "disabled": 0}, pluck="name", limit=1
+    )
+    return parties[0] if parties else None
+
+
+def _fetch_isd_address(link_doctype, link_name, *, isd):
+    """First enabled address of the owner, with the ISD / non-ISD gst_category as required."""
+    if not link_name:
+        return None
+
+    results = frappe.get_list(
+        "Address",
+        filters=[
+            ["disabled", "=", 0],
+            ["Dynamic Link", "link_doctype", "=", link_doctype],
+            ["Dynamic Link", "link_name", "=", link_name],
+            ["gst_category", "=" if isd else "!=", ISD_GST_CATEGORY],
+        ],
+        pluck="name",
+        order_by="is_primary_address DESC",
+        limit=1,
+    )
+    return results[0] if results else None
+
+
+def _resolve_isd_provisional_account(doc):
+    if not doc.company:
+        return None
+
+    if not doc.is_against_party:
+        return frappe.get_cached_value("Company", doc.company, "default_isd_provisional_account")
+
+    if not doc.party_type:
+        return None
+
+    # leaf module: import lazily to avoid pulling erpnext at import time
+    from erpnext.accounts.party import get_party_account
+
+    return get_party_account(doc.party_type, doc.party, doc.company)
+
+
+def _resolve_isd_addresses(doc, is_distribution_side):
+    """Return (distribution_address, recipient_address)."""
+    if not doc.company:
+        return None, None
+
+    # single-company setup: both addresses belong to the company
+    if not doc.is_against_party:
+        return (
+            _fetch_isd_address("Company", doc.company, isd=True),
+            _fetch_isd_address("Company", doc.company, isd=False),
+        )
+
+    company_isd_address = _fetch_isd_address("Company", doc.company, isd=is_distribution_side)
+
+    # counterparty side needs a party; still fill the company-owned side meanwhile
+    party_address = None
+    if doc.party_type and doc.party:
+        party_address = _fetch_isd_address(doc.party_type, doc.party, isd=not is_distribution_side)
+
+    if is_distribution_side:
+        # company -> distribution (ISD); party -> recipient (non-ISD)
+        return company_isd_address, party_address
+    # recipient invoice: company -> recipient (non-ISD); party -> distribution (ISD)
+    return party_address, company_isd_address
+
+
+def _resolve_recipient_branch_turnover(doc):
+    if not doc.recipient_address:
+        return doc.branch_turnover
+
+    gstin, gst_state = frappe.get_cached_value("Address", doc.recipient_address, ["gstin", "gst_state"])
+
+    return get_turnover_amount(gstin, gst_state, doc.posting_date)
+
+
+@frappe.whitelist()
+def get_isd_autofill_values(doctype: str, changed_field: str, doc: str | dict):
+    """Single-call autofill for both ISD doctypes"""
+    doc = frappe._dict(frappe.parse_json(doc))
+    doc.is_against_party = cint(doc.is_against_party)
+    is_distribution_side = doctype == "ISD Distribution Invoice"
+
+    if changed_field in _PARTY_CHAIN:
+        downstream = _PARTY_CHAIN[_PARTY_CHAIN.index(changed_field) + 1 :]
+        if "party_type" in downstream:
+            doc.party_type = _resolve_isd_party_type(doc, is_distribution_side)
+        if "party" in downstream:
+            doc.party = _resolve_isd_party(doc)
+
+        doc.isd_provisional_account = _resolve_isd_provisional_account(doc)
+        doc.distribution_address, doc.recipient_address = _resolve_isd_addresses(doc, is_distribution_side)
+
+    if is_distribution_side:
+        doc.branch_turnover = (
+            _resolve_recipient_branch_turnover(doc) or doc.branch_turnover
+        )  # if no turnover is found don't override
+
+    return doc

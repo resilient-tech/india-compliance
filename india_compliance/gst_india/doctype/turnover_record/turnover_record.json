@@ -57,14 +57,14 @@
    "fieldname": "gst_state",
    "fieldtype": "Autocomplete",
    "label": "GST State",
-   "mandatory_depends_on": "eval: !doc.gstin",
+   "reqd": 1,
    "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-17 11:56:18.768491",
+ "modified": "2026-07-03 18:44:29.236538",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Turnover Record",

@@ -68,7 +68,7 @@ class ISDController(Document):
     def validate_address_links(self):
         # Each address must be enabled and linked to the entity that owns it. self.company owns the
         # distribution address on the Distribution Invoice and the recipient address on the Recipient
-        # Invoice; the opposite address belongs to the counterparty (the company itself or the party).
+        # Invoice; Similar logic for recipient side.
         if self.is_distribution_side():
             company_address, company_label = self.distribution_address, _("Distribution Address")
             counterparty_address, counterparty_label = self.recipient_address, _("Recipient Address")
@@ -81,18 +81,25 @@ class ISDController(Document):
 
         if company_address and not self.is_linked(company_address, "Company", self.company):
             frappe.throw(
-                _("{0} {1} is not valid for this ISD distribution.").format(
-                    company_label, get_link_to_form("Address", company_address)
-                )
+                _(
+                    "{0} {1} is not valid for this ISD distribution.\n\n Address should be enabled and linked to Company {2}."
+                ).format(company_label, get_link_to_form("Address", company_address), self.company),
+                title=_("Invalid Address"),
             )
 
         if counterparty_address and not self.is_linked(
             counterparty_address, counterparty_type, counterparty_name
         ):
             frappe.throw(
-                _("{0} {1} is not valid for this ISD distribution.").format(
-                    counterparty_label, get_link_to_form("Address", counterparty_address)
-                )
+                _(
+                    "{0} {1} is not valid for this ISD distribution. Address should be enabled and linked to the {2} {3}."
+                ).format(
+                    counterparty_label,
+                    get_link_to_form("Address", counterparty_address),
+                    counterparty_type,
+                    counterparty_name,
+                ),
+                title=_("Invalid Address"),
             )
 
     def validate_isd_party(self):
