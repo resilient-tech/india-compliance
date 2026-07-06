@@ -73,6 +73,9 @@ frappe.ui.form.on(DOCTYPE, {
 
         await frappe.require("purchase_reconciliation_tool.bundle.js");
 
+        // Report-like tool; nothing is saved, so never show the "Not Saved" indicator
+        frm.disable_save();
+
         frm.doc.company = frappe.defaults.get_user_default("Company");
         frm.trigger("company");
 
