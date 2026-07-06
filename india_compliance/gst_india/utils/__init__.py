@@ -1145,8 +1145,9 @@ def get_periods_between_dates(
 
 
 def is_internal_stock_transfer(doc):
-    if doc.doctype == "Stock Entry" and doc.purpose in INTERNAL_STOCK_TRANSFER_PURPOSES and not doc.is_return:
-        return True
+    return (
+        doc.doctype == "Stock Entry" and doc.purpose in INTERNAL_STOCK_TRANSFER_PURPOSES and not doc.is_return
+    )
 
 
 def is_job_worker_inward_entry(doc):

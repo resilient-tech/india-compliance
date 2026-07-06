@@ -271,8 +271,8 @@ def onload(doc, method=None):
     if doc.doctype == "Stock Entry":
         set_address_display(doc)
 
-        # Map company/party GSTINs for the e-Waybill builder (company is bill_to for inward).
-        if is_job_worker_inward_entry(doc):
+        # Map company/party GSTINs for the e-Waybill builder. Company is on the bill_to
+        if company_is_bill_to(doc):
             doc.company_gstin = doc.bill_to_gstin
             doc.supplier_gstin = doc.bill_from_gstin
             doc.gst_category = doc.bill_from_gst_category

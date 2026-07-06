@@ -68,6 +68,8 @@ Object.assign(india_compliance, {
         "Send to Subcontractor",
         "Subcontracting Delivery",
         "Return Raw Material to Customer",
+        "Receive from Customer",
+        "Subcontracting Return",
     ],
 
     // Own-account outward movements; same-GSTIN allowed (unlike subcontracting).

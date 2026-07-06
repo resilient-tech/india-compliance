@@ -1625,6 +1625,7 @@ class EWaybillData(GSTTransactionData):
             ("Stock Entry", 1): {
                 "supply_type": "I",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "sub_supply_desc": doc.get("_sub_supply_desc", ""),
                 "document_type": "CHL",
             },
             ("Subcontracting Receipt", 0): {

@@ -265,6 +265,10 @@ class StockEntryEwaybill extends EwaybillApplicability {
                 is_ewb_generatable = false;
                 message_list.push("Bill From address is mandatory to generate e-Waybill.");
             }
+            if (!this.frm.doc.bill_to_address) {
+                is_ewb_generatable = false;
+                message_list.push("Bill To address is mandatory to generate e-Waybill.");
+            }
         } else if (!this.frm.doc.bill_to_address) {
             is_ewb_generatable = false;
             message_list.push("Bill To address is mandatory to generate e-Waybill.");
