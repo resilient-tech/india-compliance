@@ -24,6 +24,8 @@ from india_compliance.gst_india.utils import (
     get_validated_country_code,
     is_api_enabled,
     is_foreign_doc,
+    set_einvoice_status,
+    set_ewaybill_status,
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (
@@ -167,16 +169,24 @@ def on_submit(doc, method=None):
     if not is_api_enabled(gst_settings):
         return
 
+    # outage already flagged: skip per-invoice enqueue (would flood queue); 5-min drain handles it
+    retry_pending = (
+        gst_settings.enable_retry_einv_ewb_generation and gst_settings.is_retry_einv_ewb_generation_pending
+    )
+
     if (
         validate_e_invoice_applicability(doc, gst_settings, throw=False)
         and gst_settings.auto_generate_e_invoice
     ):
-        frappe.enqueue(
-            "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
-            enqueue_after_commit=True,
-            queue="short",
-            docname=doc.name,
-        )
+        if retry_pending:
+            set_einvoice_status(doc, "Auto-Retry", notify=bool(frappe.request))
+        else:
+            frappe.enqueue(
+                "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
+                enqueue_after_commit=True,
+                queue="short",
+                docname=doc.name,
+            )
 
         return
 
@@ -186,13 +196,16 @@ def on_submit(doc, method=None):
         and not doc.is_debit_note
         and not doc.is_return
     ):
-        frappe.enqueue(
-            "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
-            enqueue_after_commit=True,
-            queue="short",
-            doctype=doc.doctype,
-            docname=doc.name,
-        )
+        if retry_pending:
+            set_ewaybill_status(doc, "Auto-Retry", notify=bool(frappe.request))
+        else:
+            frappe.enqueue(
+                "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
+                enqueue_after_commit=True,
+                queue="short",
+                doctype=doc.doctype,
+                docname=doc.name,
+            )
 
 
 def before_cancel(doc, method=None):
