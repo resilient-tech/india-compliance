@@ -1012,11 +1012,12 @@ class EInvoiceData(GSTTransactionData):
 def cancel_e_invoice_e_waybill_after_commit(docname):
     """
     Cancel IRN / e-Waybill on the portal AFTER a Sales Invoice cancel commits. Enqueued via
-    `enqueue_after_commit=True` from `before_cancel`, so:
-    - runs only if the SI cancel commits (rollback -> job discarded -> portal untouched -> no divergence).
-    - runs in its own transaction, so the commit here can't revert unrelated work.
+    `enqueue_after_commit=True` from `before_cancel`, so it runs only if the SI cancel commits
+    (rollback -> job discarded -> portal untouched -> no divergence).
 
-    Never raises: on failure it logs and leaves `einvoice_status = "Pending Cancellation"` for retry.
+    No explicit commit/rollback: the job runner commits on success, rolls back + logs on failure,
+    and retries deadlocks. On failure the SI keeps `einvoice_status = "Pending Cancellation"` (set
+    by the cancel itself, already committed) for reconciliation.
     """
     doc = load_doc("Sales Invoice", docname, "cancel")
 
@@ -1025,23 +1026,9 @@ def cancel_e_invoice_e_waybill_after_commit(docname):
 
     gst_settings = frappe.get_cached_doc("GST Settings")
 
-    try:
-        # cancels e-Waybill + IRN together; else standalone e-Waybill
-        if not auto_cancel_e_invoice(doc, gst_settings=gst_settings):
-            auto_cancel_e_waybill(doc, gst_settings=gst_settings)
-
-        if not frappe.flags.in_test:
-            frappe.db.commit()  # nosemgrep -- own txn, safe to commit
-
-    except Exception:
-        frappe.db.rollback()
-        frappe.log_error(
-            title=_("Portal cancellation failed for cancelled Sales Invoice {0}").format(docname),
-            message=frappe.get_traceback(),
-            reference_doctype="Sales Invoice",
-            reference_name=docname,
-        )
-        frappe.clear_last_message()
+    # cancels e-Waybill + IRN together; else standalone e-Waybill
+    if not auto_cancel_e_invoice(doc, gst_settings=gst_settings):
+        auto_cancel_e_waybill(doc, gst_settings=gst_settings)
 
 
 def auto_cancel_e_invoice(doc, gst_settings=None):
