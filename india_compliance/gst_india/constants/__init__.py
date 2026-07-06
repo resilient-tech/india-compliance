@@ -41,7 +41,7 @@ JOB_WORKER_OUTWARD_PURPOSES = ("Subcontracting Delivery", "Return Raw Material t
 JOB_WORKER_INWARD_PURPOSES = ("Receive from Customer", "Subcontracting Return")
 SUBCONTRACTING_AS_JOB_WORKER = (*JOB_WORKER_OUTWARD_PURPOSES, *JOB_WORKER_INWARD_PURPOSES)
 
-# Same-GSTIN moves are allowed here (unlike subcontracting)
+# Own-account outward movements; same-GSTIN moves are allowed here.
 INTERNAL_STOCK_TRANSFER_PURPOSES = (
     "Material Transfer",
     "Material Transfer for Manufacture",
@@ -51,8 +51,7 @@ INTERNAL_STOCK_TRANSFER_PURPOSES = (
 # Stock Entry purposes eligible for e-Waybill
 E_WAYBILL_STOCK_ENTRY_PURPOSES = (
     *SUBCONTRACTING_AS_PRINCIPAL,
-    *JOB_WORKER_OUTWARD_PURPOSES,
-    *JOB_WORKER_INWARD_PURPOSES,
+    *SUBCONTRACTING_AS_JOB_WORKER,
     *INTERNAL_STOCK_TRANSFER_PURPOSES,
 )
 

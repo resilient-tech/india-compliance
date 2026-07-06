@@ -502,14 +502,15 @@ const JOB_WORKER_OUTWARD_SUB_SUPPLY_DESC = {
     "Return Raw Material to Customer": "Return Raw Material",
 };
 
-// Inward Stock Entries (company receives goods); "Others" + description is always
-// accepted by NIC for an inward supply, matching the SUBCONTRACTING_INWARD pattern.
+// NIC has no specific inward sub-supply type for job work receipts, so
+// "Others" + description is used, same as JOB_WORKER_OUTWARD_SUB_SUPPLY_DESC.
 const JOB_WORKER_INWARD_SUB_SUPPLY_DESC = {
     "Receive from Customer": "Job Work",
     "Subcontracting Return": "Return of Finished Goods",
 };
 
-// Type - Document Type" mapping. Key: "<supply_type>:<same_gstin>".
+// Delivery-Challan-valid sub-supply types per the NIC "Supply Type - Document Type"
+// mapping, bucketed by direction x GSTIN match. Key: "<supply_type>:<same_gstin>".
 const DELIVERY_CHALLAN_SUB_SUPPLY_BUCKETS = {
     "Outward:false": ["Job Work", "SKD/CKD", "Others"], // different GSTIN, Self -> Other/URP
     "Outward:true": ["For Own Use", "Exhibition or Fairs", "Line Sales", "Recipient Not Known", "Others"], // same GSTIN, Self -> Self
@@ -521,7 +522,6 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
     let supply_type, sub_supply_type, sub_supply_desc, document_type;
 
     if (frm.doctype === "Delivery Note") {
-        // Options follow the NIC 4-bucket matrix: direction x GSTIN match.
         const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
         supply_type = frm.doc.is_return ? "Inward" : "Outward";
         document_type = "Delivery Challan";
@@ -537,12 +537,10 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
             sub_supply_type = ["Others"];
             sub_supply_desc = JOB_WORKER_OUTWARD_SUB_SUPPLY_DESC[frm.doc.purpose];
         } else if (india_compliance.is_job_worker_inward_entry(frm.doc)) {
-            // Company receives goods; the registered recipient generates the e-Waybill
             supply_type = "Inward";
             sub_supply_type = ["Others"];
             sub_supply_desc = JOB_WORKER_INWARD_SUB_SUPPLY_DESC[frm.doc.purpose];
         } else if (india_compliance.INTERNAL_STOCK_TRANSFER_PURPOSES.includes(frm.doc.purpose)) {
-            // Options follow the NIC 4-bucket matrix: direction x GSTIN match.
             supply_type = frm.doc.is_return ? "Inward" : "Outward";
             const same_gstin = frm.doc.bill_from_gstin === frm.doc.bill_to_gstin;
             sub_supply_type = DELIVERY_CHALLAN_SUB_SUPPLY_BUCKETS[`${supply_type}:${same_gstin}`];

@@ -1155,6 +1155,14 @@ def is_job_worker_inward_entry(doc):
     return doc.doctype == "Stock Entry" and doc.purpose in JOB_WORKER_INWARD_PURPOSES
 
 
+def company_is_bill_to(doc):
+    """True when the company's address/GSTIN is on the bill_to side of a Stock Entry
+    (the counterparty being on bill_from): returns and job-worker inward receipts.
+    Purely positional -- makes no claim about goods direction, since a return can be
+    inward (sales/transfer) or outward (purchase). Stock Entry only."""
+    return doc.doctype == "Stock Entry" and (bool(doc.get("is_return")) or is_job_worker_inward_entry(doc))
+
+
 def create_notification(message_content, document_type, document_name=None, request_id=None):
     # request_id shows failure response
     if request_id and (doc_name := frappe.db.get_value("Integration Request", {"request_id": request_id})):

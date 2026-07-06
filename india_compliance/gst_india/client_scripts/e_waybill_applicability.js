@@ -214,10 +214,7 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
         let is_ewb_applicable = true;
         let message_list = [];
-        const is_return = this.frm.doc.is_return;
-        // The company (which self-generates the e-Waybill) sits on the bill_to side for
-        // returns and inward receipts, and on the bill_from side for outward movements.
-        const company_is_bill_to = is_return || india_compliance.is_job_worker_inward_entry(this.frm.doc);
+        const company_is_bill_to = india_compliance.company_is_bill_to(this.frm.doc);
 
         if (company_is_bill_to && !this.frm.doc.bill_to_gstin) {
             is_ewb_applicable = false;
@@ -231,7 +228,7 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
         const same_gstin = this.frm.doc.bill_from_gstin === this.frm.doc.bill_to_gstin;
         const applicable_for_same_gstin = !(
-            is_return || india_compliance.SUBCONTRACTING_PURPOSES.includes(this.frm.doc.purpose)
+            this.frm.doc.is_return || india_compliance.SUBCONTRACTING_PURPOSES.includes(this.frm.doc.purpose)
         );
 
         if (same_gstin && !applicable_for_same_gstin) {

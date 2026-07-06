@@ -892,6 +892,40 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
         self.assertEqual(sc_return.bill_to_address, get_default_address("Company", scio.company))
         self.assertTrue(is_e_waybill_applicable(sc_return))
 
+    def test_subcontracting_return_taxable_value(self):
+        """Returned FG carry the same customer-material value as the delivery (Rule 138)."""
+        scio = create_subcontracting_inward_order()
+        receive_customer_materials(scio)
+        manufacture_for_subcontracting_inward(scio)
+        make_subcontracting_inward_delivery(scio=scio)
+
+        scio.reload()
+        sc_return = frappe.new_doc("Stock Entry").update(scio.make_subcontracting_return())
+        sc_return.save()
+
+        priced_rows = 0
+        for item in sc_return.items:
+            if not item.get("scio_detail"):
+                continue
+
+            precision = sc_return.precision("additional_taxable_value", "items")
+            expected_additional = flt(self._expected_delivery_value(item), precision)
+
+            self.assertEqual(flt(item.additional_taxable_value), expected_additional)
+            self.assertEqual(
+                flt(item.taxable_value),
+                flt(item.amount) + flt(item.additional_taxable_value),
+            )
+            # Customer FG are zero-valued in the company's books (design invariant), so
+            # the consignment value comes entirely from additional_taxable_value and is
+            # not double-counted on top of an own-cost amount.
+            self.assertEqual(flt(item.amount), 0)
+            self.assertEqual(flt(item.taxable_value), expected_additional)
+            self.assertGreater(item.taxable_value, 0)
+            priced_rows += 1
+
+        self.assertTrue(priced_rows, "No finished-good rows were priced")
+
     def test_subcontracting_delivery_multi_rate_receipts(self):
         """Delivery uses the weighted-average receipt rate across multiple receipts."""
         scio = create_subcontracting_inward_order()

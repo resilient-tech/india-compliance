@@ -757,7 +757,7 @@ CUSTOM_FIELDS = {
             "no_copy": 1,
             "print_hide": 1,
             "hidden": 0,
-            "depends_on": "eval:india_compliance.JOB_WORKER_OUTWARD_PURPOSES.includes(parent.purpose)",
+            "depends_on": "eval:india_compliance.SUBCONTRACTING_AS_JOB_WORKER.includes(parent.purpose)",
             "description": "Value of customer-provided materials for Subcontracting Inward",
         },
     ],

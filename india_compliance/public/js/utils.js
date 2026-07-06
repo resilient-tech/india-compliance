@@ -56,6 +56,12 @@ Object.assign(india_compliance, {
     //   INWARD:  job worker receives goods in from the customer
     JOB_WORKER_OUTWARD_PURPOSES: ["Subcontracting Delivery", "Return Raw Material to Customer"],
     JOB_WORKER_INWARD_PURPOSES: ["Receive from Customer", "Subcontracting Return"],
+    SUBCONTRACTING_AS_JOB_WORKER: [
+        "Subcontracting Delivery",
+        "Return Raw Material to Customer",
+        "Receive from Customer",
+        "Subcontracting Return",
+    ],
 
     // Purposes facing a subcontracting counterparty (the two GSTINs always differ)
     SUBCONTRACTING_PURPOSES: [
@@ -64,7 +70,8 @@ Object.assign(india_compliance, {
         "Return Raw Material to Customer",
     ],
 
-    // Own-account transfers where the company ships goods out (same-GSTIN allowed)
+    // Own-account outward movements; same-GSTIN allowed (unlike subcontracting).
+    // MT / MTfM are warehouse-to-warehouse; Material Issue is an outward issue.
     INTERNAL_STOCK_TRANSFER_PURPOSES: [
         "Material Transfer",
         "Material Transfer for Manufacture",
@@ -89,6 +96,15 @@ Object.assign(india_compliance, {
 
     is_job_worker_inward_entry(doc) {
         return this.JOB_WORKER_INWARD_PURPOSES.includes(doc.purpose);
+    },
+
+    // True when the company's address/GSTIN is on the bill_to side of a Stock Entry
+    // (counterparty on bill_from): returns and job-worker inward receipts. Purely
+    // positional -- no goods-direction claim. Stock Entry only.
+    company_is_bill_to(doc) {
+        return (
+            doc.doctype === "Stock Entry" && (Boolean(doc.is_return) || this.is_job_worker_inward_entry(doc))
+        );
     },
 
     get_month_year_from_period(period) {

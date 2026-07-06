@@ -190,7 +190,6 @@ function get_field_and_label(frm, field) {
             company_field: ["bill_to_address", __("Bill To")],
         };
     } else if (india_compliance.is_job_worker_inward_entry(frm.doc)) {
-        // Company receives goods: counterparty (customer) is the consignor
         field_label_dict = {
             party_field: ["bill_from_address", __("Bill From (same as Customer Address)"), __("Bill From")],
             company_field: ["bill_to_address", __("Bill To")],

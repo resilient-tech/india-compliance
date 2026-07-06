@@ -1644,14 +1644,9 @@ class EWaybillData(GSTTransactionData):
         )
 
         if is_job_worker_inward_entry(doc):
-            # Direction is by purpose, not is_return: the company is the consignee
-            # and self-generates the e-Waybill, so force an inward supply.
-            self.transaction_details.update(
-                supply_type="I",
-                sub_supply_type=doc.get("_sub_supply_type", ""),
-                sub_supply_desc=doc.get("_sub_supply_desc", ""),
-                document_type="CHL",
-            )
+            # Inward by purpose (not is_return): the company receives the goods and
+            # self-generates the e-Waybill, so force an inward supply.
+            self.transaction_details.supply_type = "I"
 
         if is_foreign_doc(self.doc):
             self.transaction_details.update(sub_supply_type=3)  # Export
@@ -1719,7 +1714,9 @@ class EWaybillData(GSTTransactionData):
         if self.doc.doctype in BUYING_DOCTYPES:
             to_party, from_party = from_party, to_party
 
-        if self.doc.get("is_return"):
+        # Reverse the party/company sides when the movement is reversed: any return
+        # (runs for all doctypes) or a job-worker inward Stock Entry.
+        if self.doc.get("is_return") or is_job_worker_inward_entry(self.doc):
             to_party, from_party = from_party, to_party
 
         self.bill_to.legal_name = to_party or self.bill_to.address_title
@@ -1799,6 +1796,10 @@ class EWaybillData(GSTTransactionData):
                         ("Stock Entry", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
                     }
                 )
+
+            if is_job_worker_inward_entry(self.doc):
+                # Company is on the bill_to side; NIC requires userGstin == toGstin for inward.
+                sandbox_gstin.update({("Stock Entry", 0): (OTHER_GSTIN, REGISTERED_GSTIN)})
 
             def _get_sandbox_gstin(address, key):
                 if address.gstin == "URP":

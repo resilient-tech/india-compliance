@@ -28,6 +28,7 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
 )
 from india_compliance.gst_india.doctype.gstin.gstin import get_and_validate_gstin_status
 from india_compliance.gst_india.utils import (
+    company_is_bill_to,
     get_all_gst_accounts,
     get_changed_fields,
     get_gst_account_by_item_tax_template,
@@ -39,7 +40,6 @@ from india_compliance.gst_india.utils import (
     has_changed,
     has_gst_taxes,
     is_import_transaction,
-    is_job_worker_inward_entry,
     is_overseas_doc,
     join_list_with_custom_separators,
     validate_gst_category,
@@ -577,11 +577,8 @@ def validate_place_of_supply(doc):
 
 def is_inter_state_supply(doc):
     if doc.doctype == "Stock Entry":
-        # The counterparty is on the bill_from side for returns and inward receipts.
         party_gst_category = (
-            doc.bill_from_gst_category
-            if doc.is_return or is_job_worker_inward_entry(doc)
-            else doc.bill_to_gst_category
+            doc.bill_from_gst_category if company_is_bill_to(doc) else doc.bill_to_gst_category
         )
 
     else:
