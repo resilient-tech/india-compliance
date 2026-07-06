@@ -14,11 +14,10 @@ frappe.ui.form.on("ISD Distribution Invoice", {
         frm.set_df_property("source_items", "read_only", 1);
         frm.isd_controller.set_provisional_labels();
         frm.isd_controller.set_common_buttons();
-        if (
-            frm.doc.docstatus === 1 &&
-            frm.doc.is_against_party &&
-            frappe.model.can_create("ISD Recipient Invoice")
-        ) {
+
+        if (frm.doc.docstatus !== 1) return;
+
+        if (frm.doc.is_against_party && frappe.model.can_create("ISD Recipient Invoice")) {
             frm.add_custom_button(
                 __("ISD Recipient Invoice"),
                 () => {
@@ -28,6 +27,32 @@ frappe.ui.form.on("ISD Distribution Invoice", {
                     });
                 },
                 __("Create"),
+            );
+        }
+
+        if (!frm.doc.is_credit_note && frappe.model.can_create("ISD Distribution Invoice")) {
+            frm.add_custom_button(
+                __("Credit Note"),
+                () => {
+                    frappe.model.open_mapped_doc({
+                        method: "india_compliance.gst_india.doctype.isd_distribution_invoice.isd_distribution_invoice.create_credit_note",
+                        frm: frm,
+                    });
+                },
+                __("Create"),
+            );
+        }
+
+        if (frappe.model.can_read("ISD Recipient Invoice")) {
+            frm.add_custom_button(
+                __("Recipient Invoice"),
+                () => {
+                    frappe.route_options = {
+                        isd_distribution_invoice_reference: frm.doc.name,
+                    };
+                    frappe.set_route("List", "ISD Recipient Invoice");
+                },
+                __("View"),
             );
         }
     },

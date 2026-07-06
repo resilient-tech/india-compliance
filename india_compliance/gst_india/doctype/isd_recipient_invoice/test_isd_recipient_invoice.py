@@ -5,15 +5,25 @@ from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
+    COMPANY,
     RECIPIENT_KA_GSTIN,
     VALIDATION_ERROR,
+    account_totals,
+    assert_balanced_gl,
     build_distribution,
+    get_gl_rows,
+    link,
+    make_isd_address,
     make_isd_pi,
     make_recipient_invoice,
     make_source_item,
     setup_isd_fixtures,
     submit_distribution,
     teardown_isd_fixtures,
+)
+from india_compliance.gst_india.utils.isd import (
+    get_input_gst_accounts,
+    sum_row_tax_by_type,
 )
 
 # The recipient shares the distribution invoice's link chain (ISD Source Item -> Purchase Invoice
@@ -39,7 +49,7 @@ IGNORE_TEST_RECORD_DEPENDENCIES = [
 
 
 class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
-    """Basic validations for ISD Recipient Invoice (excludes bulk generation and GL entries)."""
+    """Basic validations and GL entries for ISD Recipient Invoice (excludes bulk generation)."""
 
     @classmethod
     def setUpClass(cls):
@@ -203,3 +213,85 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         doc.insert()
         self.assertEqual(doc.docstatus, 0)
         self.assertTrue(doc.get("taxes"))
+
+    # ------------------------------------------------------------------ GL entries
+    def test_manual_recipient_gl_entries(self):
+        doc = self._recipient(source_items=make_source_item(self.pi, ratio=0.25))
+        doc.insert()
+        doc.submit()
+
+        rows = get_gl_rows(doc)
+        assert_balanced_gl(self, rows)
+        totals = account_totals(rows)
+
+        # the received credit is debited on the input GST accounts
+        for tax in doc.taxes:
+            self.assertAlmostEqual(totals[tax.account_head]["debit"], tax.tax_amount, places=2)
+            self.assertEqual(totals[tax.account_head]["credit"], 0)
+
+        # the pro-rata expense is debited on the source item's expense head
+        source_row = doc.source_items[0]
+        self.assertAlmostEqual(
+            totals[source_row.expense_head]["debit"], source_row.distributed_expense, places=2
+        )
+
+        # the clearing account balances the document (isd_provisional_amount = taxes + expense)
+        self.assertAlmostEqual(
+            totals[doc.isd_provisional_account]["credit"], doc.isd_provisional_amount, places=2
+        )
+
+    def test_unregistered_recipient_absorbs_taxes_into_expense(self):
+        # an unregistered branch has no input GST accounts, so the distributed taxes are booked
+        # into the expense heads and the taxes table stays empty
+        unregistered_address = make_isd_address(
+            "_Test ISD Unregistered Branch Address",
+            None,
+            "Unregistered",
+            "Gujarat",
+            link("Company", COMPANY),
+        )
+
+        doc = self._recipient(
+            recipient_address=unregistered_address.name,
+            source_items=make_source_item(self.pi, ratio=0.25),
+        )
+        doc.insert()
+        doc.submit()
+
+        self.assertFalse(doc.taxes)
+        # the provisional amount still includes the absorbed taxes plus the expense
+        self.assertAlmostEqual(
+            doc.isd_provisional_amount,
+            doc.total_expense + doc.total_eligible + doc.total_ineligible,
+            places=2,
+        )
+
+        rows = get_gl_rows(doc)
+        assert_balanced_gl(self, rows)
+
+        input_accounts = set(get_input_gst_accounts(COMPANY).values()) - {None}
+        self.assertFalse([row for row in rows if row.account in input_accounts])
+
+        source_row = doc.source_items[0]
+        expense_debit = sum(row.debit for row in rows if row.account == source_row.expense_head)
+        self.assertAlmostEqual(
+            expense_debit,
+            source_row.distributed_expense + sum_row_tax_by_type(source_row, "distributed"),
+            places=2,
+        )
+
+        clearing_credit = sum(row.credit for row in rows if row.account == doc.isd_provisional_account)
+        self.assertAlmostEqual(
+            clearing_credit,
+            doc.total_expense + doc.total_eligible + doc.total_ineligible,
+            places=2,
+        )
+
+    def test_recipient_cancel_reverses_gl_entries(self):
+        doc = self._recipient(source_items=make_source_item(self.pi, ratio=0.25))
+        doc.insert()
+        doc.submit()
+        self.assertTrue(get_gl_rows(doc))
+
+        doc.cancel()
+        self.assertFalse(get_gl_rows(doc))  # originals and reversals are both cancelled

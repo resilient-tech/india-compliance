@@ -7,7 +7,12 @@ from frappe.utils import add_months, flt, today
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.company import create_company_fixtures
-from india_compliance.gst_india.utils.isd import ISD_GST_CATEGORY, get_input_gst_accounts
+from india_compliance.gst_india.utils.isd import (
+    ISD_GST_CATEGORY,
+    get_input_gst_accounts,
+    get_isd_autofill_values,
+    sum_row_tax_by_type,
+)
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
 # On IntegrationTestCase, the doctype test records and all link-field test record dependencies are
@@ -138,7 +143,7 @@ def make_source_item(pi, ratio=1.0, is_credit_note=0):
             {
                 "item_code": item.item_code,
                 "purchase_invoice_item": item.name,
-                "is_ineligible_for_itc": 0,
+                "is_ineligible_for_itc": item.get("is_ineligible_for_itc") or 0,
                 "expense_head": item.expense_account,
                 "total_expense": flt(item.base_net_amount),
                 "distributed_expense": sign * flt(item.base_net_amount) * ratio,
@@ -202,6 +207,64 @@ def submit_distribution(pi, distribution_address, recipient_address, **kwargs):
     return doc
 
 
+def make_ineligible_isd_pi(billing_address, **kwargs):
+    """An ISD-applicable Purchase Invoice whose single item is ineligible for ITC."""
+    items = [
+        {
+            "item_code": "_Test Service Item",
+            "qty": 1,
+            "rate": 10000,
+            "gst_hsn_code": "999900",
+            "cost_center": "Main - _TIRC",
+            "expense_account": PROFIT_AND_LOSS_ACCOUNT,
+            "is_ineligible_for_itc": 1,
+        }
+    ]
+    return make_isd_pi(billing_address, items=items, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# GL helpers (module level so the ISD Recipient Invoice tests can reuse them)
+# ---------------------------------------------------------------------------
+
+
+def get_gl_rows(doc):
+    """Active (non-cancelled) GL Entries posted by an ISD document."""
+    return frappe.get_all(
+        "GL Entry",
+        filters={"voucher_type": doc.doctype, "voucher_no": doc.name, "is_cancelled": 0},
+        fields=["account", "debit", "credit", "party_type", "party", "company_gstin"],
+    )
+
+
+def account_totals(rows):
+    """{account: {"debit": total, "credit": total}} for a set of GL rows."""
+    totals = {}
+    for row in rows:
+        entry = totals.setdefault(row.account, {"debit": 0.0, "credit": 0.0})
+        entry["debit"] += row.debit
+        entry["credit"] += row.credit
+    return totals
+
+
+def assert_balanced_gl(test, rows):
+    """The document posted something, debits equal credits, and no amount is negative."""
+    test.assertTrue(rows)
+    test.assertAlmostEqual(sum(row.debit for row in rows), sum(row.credit for row in rows), places=2)
+    for row in rows:
+        test.assertGreaterEqual(row.debit, 0)
+        test.assertGreaterEqual(row.credit, 0)
+
+
+def get_auto_recipient_invoice(distribution):
+    """The submitted ISD Recipient Invoice auto-created for a distribution invoice."""
+    name = frappe.db.get_value(
+        "ISD Recipient Invoice",
+        {"isd_distribution_invoice_reference": distribution.name, "docstatus": 1},
+    )
+    return frappe.get_doc("ISD Recipient Invoice", name)
+
+
 def make_branch_company(name=BRANCH_COMPANY, abbr=BRANCH_ABBR, gstin=BRANCH_GSTIN):
     if frappe.db.exists("Company", name):
         frappe.delete_doc("Company", name, force=True)
@@ -259,6 +322,13 @@ def make_internal_customer(
 def setup_isd_fixtures(cls):
     """Shared fixtures: addresses linked to _TIRC, a submitted ISD-applicable Purchase Invoice, and a
     branch company represented as an internal Customer (for the against-party workflow)."""
+    from india_compliance.gst_india.overrides.company import (
+        make_default_isd_provisional_account,
+    )
+
+    # the test company may predate this company fixture (idempotent)
+    make_default_isd_provisional_account(COMPANY)
+
     cls.company = COMPANY
     cls.isd_address = make_isd_address(
         "_Test ISD Distribution Address", ISD_GSTIN, ISD_GST_CATEGORY, "Gujarat", link("Company", COMPANY)
@@ -293,7 +363,7 @@ def teardown_isd_fixtures():
 
 
 class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
-    """Basic validations for ISD Distribution Invoice (excludes bulk generation and GL entries)."""
+    """Basic validations and GL entries for ISD Distribution Invoice (excludes bulk generation)."""
 
     @classmethod
     def setUpClass(cls):
@@ -345,6 +415,71 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         doc = make_distribution_invoice(total_turnover=100, branch_turnover=25)
         doc.validate_turnover_and_ratio()
         self.assertEqual(doc.distribution_ratio, 25.0)
+
+    def test_recipient_address_autofills_branch_turnover(self):
+        # The distribution side pulls the Recipient Branch Turnover from the Turnover Record matching
+        # the recipient's state (narrowed by GSTIN) for the invoice's fiscal year.
+        from erpnext.accounts.utils import get_fiscal_year
+
+        _, from_date, to_date = get_fiscal_year(today())
+
+        # one Turnover Record per state per period, so clear any overlapping Gujarat record first
+        frappe.db.delete(
+            "Turnover Record",
+            {"gst_state": "Gujarat", "from_date": ["<=", to_date], "to_date": [">=", from_date]},
+        )
+        record = frappe.get_doc(
+            {
+                "doctype": "Turnover Record",
+                "from_date": from_date,
+                "to_date": to_date,
+                "gstin": RECIPIENT_GSTIN,
+                "gst_state": "Gujarat",
+                "amount": 7000,
+            }
+        ).insert(ignore_permissions=True)
+        self.addCleanup(frappe.delete_doc, "Turnover Record", record.name, force=True)
+
+        def branch_turnover(recipient_address):
+            return get_isd_autofill_values(
+                "ISD Distribution Invoice",
+                "recipient_address",
+                {"company": COMPANY, "recipient_address": recipient_address, "posting_date": today()},
+            ).branch_turnover
+
+        # recipient in Gujarat -> its turnover is filled from the record
+        self.assertEqual(branch_turnover(self.recipient_address.name), 7000)
+
+        # recipient in a state with no record (Karnataka) -> left empty
+        self.assertIsNone(branch_turnover(self.recipient_address_ka.name))
+
+        # a manually entered turnover is kept when no record matches
+        self.assertEqual(
+            get_isd_autofill_values(
+                "ISD Distribution Invoice",
+                "recipient_address",
+                {
+                    "company": COMPANY,
+                    "recipient_address": self.recipient_address_ka.name,
+                    "posting_date": today(),
+                    "branch_turnover": 1234,
+                },
+            ).branch_turnover,
+            1234,
+        )
+
+        # the recipient side never autofills a branch turnover
+        self.assertIsNone(
+            get_isd_autofill_values(
+                "ISD Recipient Invoice",
+                "recipient_address",
+                {
+                    "company": COMPANY,
+                    "recipient_address": self.recipient_address.name,
+                    "posting_date": today(),
+                },
+            ).get("branch_turnover")
+        )
 
     # ------------------------------------------------------------------ addresses / ISD party / GSTIN
     def test_address_validations(self):
@@ -609,7 +744,9 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         submit_distribution(pi, self.isd_address.name, self.recipient_address.name, branch=100, total=100)
 
         second = self._full_distribution(pi=pi, branch=1, total=100)
-        self.assertRaisesRegex(VALIDATION_ERROR, "Over-distribution", second.insert)
+        self.assertRaisesRegex(
+            VALIDATION_ERROR, "Over-distribution: distributing .* against available", second.insert
+        )
 
     def test_credit_note_over_reversal_rejected(self):
         pi = make_isd_pi(self.isd_address.name)
@@ -621,3 +758,192 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             pi=pi, branch=60, total=100, is_credit_note=1, credit_note_against=first.name
         )
         self.assertRaisesRegex(VALIDATION_ERROR, "Over-reversal", credit_note.insert)
+
+    # ------------------------------------------------------------------ GL entries
+    def test_eligible_distribution_gl_entries(self):
+        pi = make_isd_pi(self.isd_address.name)
+        doc = submit_distribution(pi, self.isd_address.name, self.recipient_address.name)
+
+        rows = get_gl_rows(doc)
+        assert_balanced_gl(self, rows)
+        totals = account_totals(rows)
+
+        # the input GST accounts are credited (the credit leaves the ISD)
+        for tax in doc.taxes:
+            self.assertAlmostEqual(totals[tax.account_head]["credit"], tax.tax_amount, places=2)
+            self.assertEqual(totals[tax.account_head]["debit"], 0)
+
+        # the pro-rata expense is credited on the source item's expense head
+        source_row = doc.source_items[0]
+        self.assertAlmostEqual(
+            totals[source_row.expense_head]["credit"], source_row.distributed_expense, places=2
+        )
+
+        # the clearing account balances the document (isd_provisional_amount = taxes + expense)
+        self.assertAlmostEqual(
+            totals[doc.isd_provisional_account]["debit"], doc.isd_provisional_amount, places=2
+        )
+        self.assertAlmostEqual(
+            doc.isd_provisional_amount,
+            doc.total_eligible + doc.total_ineligible + doc.total_expense,
+            places=2,
+        )
+
+        # every row carries the distributor's GSTIN (mandatory on GST accounts)
+        self.assertTrue(all(row.company_gstin == ISD_GSTIN for row in rows))
+
+        # the auto-created recipient invoice posts the exact mirror
+        recipient = get_auto_recipient_invoice(doc)
+        recipient_rows = get_gl_rows(recipient)
+        assert_balanced_gl(self, recipient_rows)
+        recipient_totals = account_totals(recipient_rows)
+
+        for tax in recipient.taxes:
+            self.assertAlmostEqual(recipient_totals[tax.account_head]["debit"], tax.tax_amount, places=2)
+
+        self.assertAlmostEqual(
+            recipient_totals[recipient.isd_provisional_account]["credit"],
+            recipient.isd_provisional_amount,
+            places=2,
+        )
+        self.assertTrue(all(row.company_gstin == RECIPIENT_GSTIN for row in recipient_rows))
+
+    def test_ineligible_distribution_gl_entries(self):
+        pi = make_ineligible_isd_pi(self.isd_address.name)
+        doc = submit_distribution(pi, self.isd_address.name, self.recipient_address.name)
+
+        rows = get_gl_rows(doc)
+        assert_balanced_gl(self, rows)
+
+        source_row = doc.source_items[0]
+        ineligible_tax = sum_row_tax_by_type(source_row, "distributed")
+        self.assertTrue(ineligible_tax)
+
+        # gross pairs: each tax account keeps a distinct credit (distribution) AND debit (reversal)
+        for tax in doc.taxes:
+            tax_rows = [row for row in rows if row.account == tax.account_head]
+            self.assertEqual(len(tax_rows), 2)
+            self.assertAlmostEqual(sum(row.credit for row in tax_rows), tax.tax_amount, places=2)
+            self.assertAlmostEqual(sum(row.debit for row in tax_rows), tax.tax_amount, places=2)
+
+        # the expense head gives up the ineligible tax on top of the pro-rata expense
+        expense_credit = sum(row.credit for row in rows if row.account == source_row.expense_head)
+        self.assertAlmostEqual(expense_credit, source_row.distributed_expense + ineligible_tax, places=2)
+
+        # the clearing amount still includes the ineligible tax
+        clearing_debit = sum(row.debit for row in rows if row.account == doc.isd_provisional_account)
+        self.assertAlmostEqual(clearing_debit, doc.isd_provisional_amount, places=2)
+
+        # mirrored on the recipient: taxes received gross, expense head absorbs the ineligible tax
+        recipient = get_auto_recipient_invoice(doc)
+        recipient_rows = get_gl_rows(recipient)
+        assert_balanced_gl(self, recipient_rows)
+        recipient_row = recipient.source_items[0]
+        expense_debit = sum(row.debit for row in recipient_rows if row.account == recipient_row.expense_head)
+        self.assertAlmostEqual(expense_debit, recipient_row.distributed_expense + ineligible_tax, places=2)
+
+    def test_inter_state_distribution_gl_entries(self):
+        # CGST+SGST fuse into IGST for a different-state recipient: the distributor's GL still
+        # credits the source CGST+SGST while the recipient's GL debits IGST only.
+        pi = make_isd_pi(self.isd_address.name)
+        doc = submit_distribution(pi, self.isd_address.name, self.recipient_address_ka.name)
+
+        accounts = get_input_gst_accounts(COMPANY)
+        totals = account_totals(get_gl_rows(doc))
+        self.assertIn(accounts.cgst_account, totals)
+        self.assertIn(accounts.sgst_account, totals)
+        self.assertNotIn(accounts.igst_account, totals)
+
+        recipient = get_auto_recipient_invoice(doc)
+        recipient_rows = get_gl_rows(recipient)
+        assert_balanced_gl(self, recipient_rows)
+        recipient_totals = account_totals(recipient_rows)
+        self.assertNotIn(accounts.cgst_account, recipient_totals)
+        self.assertNotIn(accounts.sgst_account, recipient_totals)
+        self.assertAlmostEqual(
+            recipient_totals[accounts.igst_account]["debit"],
+            totals[accounts.cgst_account]["credit"] + totals[accounts.sgst_account]["credit"],
+            places=2,
+        )
+
+    def test_credit_note_gl_entries(self):
+        pi = make_isd_pi(self.isd_address.name)
+        first = submit_distribution(
+            pi, self.isd_address.name, self.recipient_address.name, branch=50, total=100
+        )
+
+        credit_note = build_distribution(
+            pi,
+            self.isd_address.name,
+            self.recipient_address.name,
+            branch=25,
+            total=100,
+            is_credit_note=1,
+            credit_note_against=first.name,
+        )
+        credit_note.insert()
+        credit_note.submit()
+
+        rows = get_gl_rows(credit_note)
+        # assert_balanced_gl also proves no negative amounts were stored
+        assert_balanced_gl(self, rows)
+        totals = account_totals(rows)
+
+        # all sides are flipped: the taxes come back to the ISD, the clearing account is credited
+        for tax in credit_note.taxes:
+            self.assertAlmostEqual(totals[tax.account_head]["debit"], abs(tax.tax_amount), places=2)
+            self.assertEqual(totals[tax.account_head]["credit"], 0)
+
+        self.assertAlmostEqual(
+            totals[credit_note.isd_provisional_account]["credit"],
+            abs(credit_note.isd_provisional_amount),
+            places=2,
+        )
+
+    def test_against_party_gl_entries(self):
+        pi = make_isd_pi(self.isd_address.name)
+        doc = self._full_distribution(
+            pi=pi,
+            recipient_address=self.branch_address.name,
+            is_against_party=1,
+            party_type="Customer",
+            party=self.branch_customer.name,
+        )
+        doc.insert()
+        doc.submit()
+
+        rows = get_gl_rows(doc)
+        assert_balanced_gl(self, rows)
+
+        # the clearing rows sit on the receivable party account and carry the party
+        clearing_rows = [row for row in rows if row.account == doc.isd_provisional_account]
+        self.assertTrue(clearing_rows)
+        for row in clearing_rows:
+            self.assertEqual(row.party_type, "Customer")
+            self.assertEqual(row.party, self.branch_customer.name)
+
+        # a Payment Ledger Entry is created for the receivable row
+        self.assertTrue(
+            frappe.db.exists("Payment Ledger Entry", {"voucher_type": doc.doctype, "voucher_no": doc.name})
+        )
+
+    def test_cancel_reverses_gl_entries(self):
+        pi = make_isd_pi(self.isd_address.name)
+        doc = submit_distribution(pi, self.isd_address.name, self.recipient_address.name)
+        recipient = get_auto_recipient_invoice(doc)
+
+        # The linked recipient invoice must be cancelled first. The back-link check runs after
+        # the docstatus write (rolled back with the request in production), so roll back to a
+        # savepoint here — test transactions do not roll back on their own.
+        frappe.db.savepoint("isd_blocked_cancel")
+        self.assertRaises(frappe.LinkExistsError, doc.cancel)
+        frappe.db.rollback(save_point="isd_blocked_cancel")
+        doc.reload()
+        self.assertEqual(doc.docstatus, 1)
+
+        recipient.cancel()
+        self.assertFalse(get_gl_rows(recipient))  # no active GL entries remain
+
+        doc.reload()
+        doc.cancel()
+        self.assertFalse(get_gl_rows(doc))

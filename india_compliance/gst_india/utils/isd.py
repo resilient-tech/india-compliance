@@ -80,11 +80,19 @@ def get_distribution_ratio(doc):
     return sign * flt(doc.branch_turnover / doc.total_turnover)
 
 
-def get_source_head_itc(row, ratio, precision):
-    """ITC drawn from each *source* GST account for this row: ``flt(total_<head> * ratio)``."""
+def get_row_itc(row, is_distribution, precision, ratio=None):
+    """Row-wise ITC per GST head.
+
+    distribution side -> drawn from the source heads: ``flt(total_<head> * ratio)``
+    recipient side    -> the already-converted amounts: ``flt(distributed_<head>)``
+    """
+    if is_distribution:
+        return {
+            gst_tax_type: flt(flt(row.get(f"total_{gst_tax_type}")) * ratio, precision)
+            for gst_tax_type in GST_TAX_TYPES
+        }
     return {
-        gst_tax_type: flt(flt(row.get(f"total_{gst_tax_type}")) * ratio, precision)
-        for gst_tax_type in GST_TAX_TYPES
+        gst_tax_type: flt(row.get(f"distributed_{gst_tax_type}"), precision) for gst_tax_type in GST_TAX_TYPES
     }
 
 
@@ -97,7 +105,7 @@ def calculate_distribution(doc):
     expense_precision = get_field_precision(meta.get_field("distributed_expense"))
 
     for row in doc.source_items or []:
-        credit = get_source_head_itc(row, ratio, precision)
+        credit = get_row_itc(row, True, precision, ratio)
 
         if inter_state:
             # inter-state -> the recipient receives everything as IGST (Rule 39(1)(e), (g)).

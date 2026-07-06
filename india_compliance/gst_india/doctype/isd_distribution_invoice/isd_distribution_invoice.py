@@ -308,6 +308,7 @@ def create_isd_recipient_invoice(source_name: str):
         "naming_series",
         "amended_from",
         "purchase_invoice",
+        "credit_note_against",
     ]
 
     source_item_no_map = ["purchase_invoice_item"]
@@ -372,6 +373,7 @@ def create_isd_recipient_invoice(source_name: str):
             # accounting dimensions — re-default / clear for the new company
             "cost_center": default_cost_center,
             "project": None,
+            # the inter-company recipient (credit note) invoice is created / linked manually
             "credit_note_against": None,
             "isd_provisional_account": default_isd_provisional_account,
         }
@@ -381,7 +383,6 @@ def create_isd_recipient_invoice(source_name: str):
             "project": None,
         }
 
-        # re-derived above, so don't let get_mapped_doc copy the source values
         field_no_map += [
             "distribution_address",
             "recipient_address",
@@ -389,10 +390,14 @@ def create_isd_recipient_invoice(source_name: str):
             "party",
             "cost_center",
             "project",
-            "credit_note_against",
             "isd_provisional_account",
         ]
         source_item_no_map += ["expense_head", "cost_center", "project"]
+    else:
+        # single-company flow (recipient invoice auto-created on submit): a distribution credit note
+        # carries `credit_note_against` = the original ISD Distribution Invoice, but the recipient side
+        # must instead point at the ISD Recipient Invoice created from that original distribution.
+        overrides["credit_note_against"] = _get_recipient_credit_note_reference(source)
 
     def set_missing_values(source, target):
         target.isd_distribution_invoice_reference = source.name
@@ -423,6 +428,56 @@ def create_isd_recipient_invoice(source_name: str):
         },
         postprocess=set_missing_values,
     )
+
+
+@frappe.whitelist()
+def create_credit_note(source_name: str):
+    frappe.has_permission("ISD Distribution Invoice", "read", doc=source_name, throw=True)
+    frappe.has_permission("ISD Distribution Invoice", "create", throw=True)
+
+    def set_missing_values(source, target):
+        target.is_credit_note = 1
+        target.credit_note_against = source.name
+
+    return get_mapped_doc(
+        "ISD Distribution Invoice",
+        source_name,
+        {
+            "ISD Distribution Invoice": {
+                "doctype": "ISD Distribution Invoice",
+                "field_no_map": ["naming_series", "amended_from"],
+                "validation": {"docstatus": ["=", 1], "is_credit_note": ["=", 0]},
+            },
+            "ISD Source Item": {
+                "doctype": "ISD Source Item",
+            },
+        },
+        postprocess=set_missing_values,
+    )
+
+
+def _get_recipient_credit_note_reference(source):
+    if not (source.is_credit_note and source.credit_note_against):
+        return None
+
+    original_recipient = frappe.db.get_value(
+        "ISD Recipient Invoice",
+        {
+            "isd_distribution_invoice_reference": source.credit_note_against,
+            "is_credit_note": 0,
+            "docstatus": 1,
+        },
+    )
+
+    if not original_recipient:
+        frappe.throw(
+            _(
+                "No submitted ISD Recipient Invoice was found for ISD Distribution Invoice {0}."
+                " It is required to link this credit note on the recipient side."
+            ).format(get_link_to_form("ISD Distribution Invoice", source.credit_note_against))
+        )
+
+    return original_recipient
 
 
 def _guess_address(gstin, extra_filters=None):

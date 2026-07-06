@@ -2,7 +2,9 @@
 # For license information, please see license.txt
 
 import frappe
+from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
 from erpnext.accounts.party import get_party_account
+from erpnext.controllers.accounts_controller import AccountsController
 from frappe import _
 from frappe.contacts.doctype.address.address import get_address_display
 from frappe.model.document import Document
@@ -15,7 +17,7 @@ from india_compliance.gst_india.utils.isd import (
     ISD_GST_CATEGORY,
     get_distribution_ratio,
     get_input_gst_accounts,
-    get_source_head_itc,
+    get_row_itc,
     is_inter_state_distribution,
     sum_row_tax_by_type,
     throw_invalid_rows,
@@ -26,8 +28,26 @@ from india_compliance.gst_india.utils.isd import (
 class ISDController(Document):
     """Shared functionality for ISD doctypes"""
 
+    get_gl_dict = AccountsController.get_gl_dict
+    get_value_in_transaction_currency = AccountsController.get_value_in_transaction_currency
+    get_voucher_subtype = AccountsController.get_voucher_subtype
+    company_currency = AccountsController.company_currency
+
     def is_distribution_side(self):
         return self.doctype == "ISD Distribution Invoice"
+
+    def is_recipient_side_and_unregistered(self):
+        if self.is_distribution_side():
+            return False
+
+        if not self.recipient_gstin:
+            return True
+
+        return (
+            frappe.get_cached_value("Address", self.recipient_address, "gst_category") == "Unregistered"
+            if self.recipient_address
+            else False
+        )
 
     def setup_precision(self):
         self._tax_precision = self.precision("tax_amount", "taxes")
@@ -260,7 +280,7 @@ class ISDController(Document):
         ratio = get_distribution_ratio(self)
         credit_by_type = dict.fromkeys(GST_TAX_TYPES, 0.0)
         for row in self.source_items:
-            credit = get_source_head_itc(row, ratio, self._source_item_precision)
+            credit = get_row_itc(row, True, self._source_item_precision, ratio)
             for gst_tax_type in GST_TAX_TYPES:
                 credit_by_type[gst_tax_type] += credit[gst_tax_type]
         return credit_by_type
@@ -269,10 +289,9 @@ class ISDController(Document):
         """Aggregate ITC types being received"""
         distributed_by_type = dict.fromkeys(GST_TAX_TYPES, 0.0)
         for row in self.source_items:
+            credit = get_row_itc(row, False, self._source_item_precision)
             for gst_tax_type in GST_TAX_TYPES:
-                distributed_by_type[gst_tax_type] += flt(
-                    row.get(f"distributed_{gst_tax_type}"), self._source_item_precision
-                )
+                distributed_by_type[gst_tax_type] += credit[gst_tax_type]
         return distributed_by_type
 
     def set_taxes_and_totals(self):
@@ -280,6 +299,13 @@ class ISDController(Document):
         self.set_gst_tax_type()
         self.setup_tax_amounts()
         self.validate_gst_tax_rows()
+
+        if self.is_recipient_side_and_unregistered():
+            self.taxes = []
+            self.set_tax_totals()
+            self.set_provisional_values()
+            return
+
         self.validate_missing_gst_account()
         self.set_tax_accounts()
         self.set_tax_totals()
@@ -295,13 +321,9 @@ class ISDController(Document):
             tax.gst_tax_type = gst_tax_account_map.get(tax.account_head)
 
     def validate_gst_tax_rows(self):
-        # only input GST accounts for tax types that actually carry an amount may appear
+        # only input GST accounts allowed
         accounts = get_input_gst_accounts(self.company)
-        valid_accounts = {
-            accounts.get(f"{gst_tax_type}_account")
-            for gst_tax_type in GST_TAX_TYPES
-            if flt(self._tax_amounts_by_head.get(gst_tax_type), self._source_item_precision)
-        } - {None}
+        valid_accounts = {accounts.get(f"{gst_tax_type}_account") for gst_tax_type in GST_TAX_TYPES} - {None}
         invalid_rows = [
             [tax.idx, tax.account_head] for tax in self.taxes if tax.account_head not in valid_accounts
         ]
@@ -337,10 +359,6 @@ class ISDController(Document):
         existing_taxes = {tax.gst_tax_type: tax for tax in self.taxes}
 
         for gst_tax_type in GST_TAX_TYPES:
-            # Book only the heads that actually carry an amount.
-            if not flt(self._tax_amounts_by_head.get(gst_tax_type), self._source_item_precision):
-                continue
-
             account_head = accounts.get(f"{gst_tax_type}_account")
             if not account_head:
                 continue
@@ -352,7 +370,7 @@ class ISDController(Document):
                 self.append("taxes", {"account_head": account_head, "gst_tax_type": gst_tax_type})
 
     def set_tax_totals(self):
-        """Set tax amounts and total eligible/ineligible amounts."""
+        """Set tax amounts and total eligible/ineligible amounts from source items"""
         totals = {"eligible": 0, "ineligible": 0}
 
         for row in self.source_items:
@@ -360,8 +378,18 @@ class ISDController(Document):
             totals[key] += sum_row_tax_by_type(row, "distributed")
 
         for tax in self.taxes:
+            calculated_amount = flt(
+                self._tax_amounts_by_head.get(tax.gst_tax_type), self._source_item_precision
+            )
+            existing_amount = flt(tax.tax_amount, self._source_item_precision)
+
+            # throw error on wrong tax types
+            if not calculated_amount and existing_amount:
+                frappe.throw(_("Invalid Tax Entry in tax table for {0}").format(tax.gst_tax_type.upper()))
+
             tax.tax_amount = flt(self._tax_amounts_by_head.get(tax.gst_tax_type, 0), self._tax_precision)
 
+        # remove taxes with zero amount
         self.taxes = [tax for tax in self.taxes if tax.tax_amount]
 
         total_precision = self.precision("total_eligible")
@@ -395,13 +423,175 @@ class ISDController(Document):
             throw_row_table(_("Invalid Taxes"), [_("Component"), _("Issue")], invalid_rows)
 
     def set_provisional_values(self):
-        self.isd_provisional_amount = flt(sum(flt(tax.tax_amount) for tax in self.taxes), self._tax_precision)
 
         if self.isd_provisional_account:
-            return
-        elif self.is_against_party:
-            self.isd_provisional_account = self._party_account
+            self._validate_account(self.isd_provisional_account, _("ISD Provisional Account"))
         else:
-            self.isd_provisional_account = frappe.get_cached_value(
-                "Company", self.company, "default_isd_provisional_account"
+            self.isd_provisional_account = (
+                self._party_account
+                if self.is_against_party
+                else frappe.get_cached_value("Company", self.company, "default_isd_provisional_account")
             )
+
+        self.isd_provisional_amount = flt(
+            self.total_eligible + self.total_ineligible + self.total_expense, self._tax_precision
+        )
+
+    # ------------------------------------------------------------------ GL entries
+    def on_cancel(self):
+        self.ignore_linked_doctypes = ("GL Entry", "Payment Ledger Entry")
+        make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
+
+    def make_document_gl_entries(self):
+        gl_entries = self.get_gl_entries()
+        if not gl_entries:
+            return
+
+        make_gl_entries(gl_entries, merge_entries=False)
+
+    def get_gl_entries(self):
+        self.setup_precision()
+
+        self.company_gstin = self.distribution_gstin if self.is_distribution_side() else self.recipient_gstin
+
+        # distribution side: move itc and expense from tax account to isd provisional account
+        self.dr_or_cr = "credit" if self.is_distribution_side() else "debit"
+        self.cr_or_dr = "debit" if self.is_distribution_side() else "credit"
+
+        gl_entries = []
+        self.add_tax_gl_entries(gl_entries)
+        self.add_expense_gl_entries(gl_entries)
+        self.add_ineligible_itc_gl_entries(gl_entries)
+        self.validate_gl_balance(gl_entries)
+
+        return gl_entries
+
+    def add_gl_entry(self, gl_entries, account, amount, side, *, row=None, party_type=None, party=None):
+        """Append a single-sided GL entry."""
+        amount = flt(amount, self._tax_precision)
+        if not amount:
+            return
+
+        gl_entries.append(
+            self.get_gl_dict(
+                {
+                    "account": account,
+                    side: amount,
+                    f"{side}_in_account_currency": amount,
+                    "cost_center": (row and row.get("cost_center")) or self.cost_center,
+                    "project": (row and row.get("project")) or self.project,
+                    "voucher_detail_no": row and row.get("name"),
+                    "party_type": party_type,
+                    "party": party,
+                    "remarks": _("ISD Credit Distribution"),
+                },
+            )
+        )
+
+    def add_tax_gl_entries(self, gl_entries):
+        """Tax entries(if any) from/to ISD provisional account"""
+        if self.is_recipient_side_and_unregistered():
+            return
+
+        total = 0
+        for tax in self.taxes:
+            self.add_gl_entry(gl_entries, tax.account_head, tax.tax_amount, self.dr_or_cr, row=tax)
+            total += flt(tax.tax_amount)
+
+        self.add_gl_entry(
+            gl_entries,
+            self.isd_provisional_account,
+            total,
+            self.cr_or_dr,
+            party_type=self.party_type if self.is_against_party else None,
+            party=self.party if self.is_against_party else None,
+        )
+
+    def add_expense_gl_entries(self, gl_entries):
+        """For expense gl entries, and unregistered recipient"""
+        # when unregistered recipient isd invoice or distribution isd invoice with ineligible items
+        absorb_taxes = self.is_recipient_side_and_unregistered()
+
+        total = 0
+        for row in self.source_items:
+            amount = flt(row.distributed_expense)
+            if absorb_taxes:
+                amount += sum_row_tax_by_type(row, "distributed")
+
+            self.add_gl_entry(gl_entries, row.expense_head, amount, self.dr_or_cr, row=row)
+            total += amount
+
+        self.add_gl_entry(
+            gl_entries,
+            self.isd_provisional_account,
+            total,
+            self.cr_or_dr,
+            party_type=self.party_type if self.is_against_party else None,
+            party=self.party if self.is_against_party else None,
+        )
+
+    def add_ineligible_itc_gl_entries(self, gl_entries):
+        """reverse the ineligible ITC from expense head"""
+        if self.is_recipient_side_and_unregistered():
+            return
+
+        ineligible_rows = [row for row in self.source_items if row.is_ineligible_for_itc]
+        if not ineligible_rows:
+            return
+
+        tax_accounts = {tax.gst_tax_type: tax.account_head for tax in self.taxes}
+        ratio = get_distribution_ratio(self)
+
+        for row in ineligible_rows:
+            # the distributor reverses its source heads
+            if self.is_distribution_side():
+                amounts = {
+                    gst_tax_type: flt(row.get(f"total_{gst_tax_type}") * ratio, self._source_item_precision)
+                    for gst_tax_type in GST_TAX_TYPES
+                }
+            else:
+                amounts = {
+                    gst_tax_type: flt(row.get(f"distributed_{gst_tax_type}"), self._source_item_precision)
+                    for gst_tax_type in GST_TAX_TYPES
+                }
+
+            for gst_tax_type, amount in amounts.items():
+                if not amount:
+                    continue
+                self.add_gl_entry(
+                    gl_entries,
+                    tax_accounts[gst_tax_type],
+                    amount,
+                    self.cr_or_dr,
+                    row=row,
+                )
+
+            self.add_gl_entry(
+                gl_entries,
+                row.expense_head,
+                sum_row_tax_by_type(row, "distributed"),
+                self.dr_or_cr,
+                row=row,
+            )
+
+    def validate_gl_balance(self, gl_entries):
+        # each add_* step is self-balancing, so the document balances by construction. Still assert
+        # (a) the ISD clearing total matches the stored provisional amount, and (b) debit == credit
+        clearing_total = flt(
+            sum(
+                flt(entry.get(self.cr_or_dr))
+                for entry in gl_entries
+                if entry.get("account") == self.isd_provisional_account
+            ),
+            self._tax_precision,
+        )
+        if abs(clearing_total - flt(self.isd_provisional_amount, self._tax_precision)) > 0.01:
+            frappe.throw(
+                _("GL entries for {0} do not add up to the ISD provisional and expense totals.").format(
+                    self.name
+                )
+            )
+
+        diff = flt(sum(flt(entry.debit) - flt(entry.credit) for entry in gl_entries), self._tax_precision)
+        if diff:
+            frappe.throw(_("Debit and Credit not equal for {0} (difference: {1}).").format(self.name, diff))

@@ -22,6 +22,9 @@ class ISDRecipientInvoice(ISDController):
         self.validate_accounts()
         self.set_taxes_and_totals()
 
+    def on_submit(self):
+        self.make_document_gl_entries()
+
     def validate_reference_distribution_invoice(self):
         """When linked to an on-site ISD Distribution Invoice, reconcile against it. Skipped for pure
         manual entry (no reference)."""
@@ -67,7 +70,7 @@ class ISDRecipientInvoice(ISDController):
     def reconcile_distributed_amounts(self, reference, ref_link):
         """The credit received per tax head must match what the distribution invoice allotted."""
         precision = self._source_item_precision
-        tolerance = 0.1
+        tolerance = 0.01
 
         distributed = frappe.get_all(
             "ISD Source Item",
