@@ -72,7 +72,7 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
 
     onload: function (query_report) {
         const handle_download = (response) => {
-            india_compliance.trigger_file_download(JSON.stringify(response.data), response.filename);
+            india_compliance.trigger_file_download(JSON.stringify(response.data, null, 2), response.filename);
         };
 
         query_report.page.add_inner_button(__("Export JSON"), function () {
