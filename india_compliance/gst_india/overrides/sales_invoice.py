@@ -169,9 +169,12 @@ def on_submit(doc, method=None):
     if not is_api_enabled(gst_settings):
         return
 
-    # outage already flagged: skip per-invoice enqueue (would flood queue); 5-min drain handles it
+    # outage flagged: skip enqueue, let 5-min drain handle it. gated on non-sandbox
+    # (drain no-ops in sandbox) to match handle_server_errors, else docs stick at Auto-Retry
     retry_pending = (
-        gst_settings.enable_retry_einv_ewb_generation and gst_settings.is_retry_einv_ewb_generation_pending
+        gst_settings.enable_retry_einv_ewb_generation
+        and gst_settings.is_retry_einv_ewb_generation_pending
+        and (not gst_settings.sandbox_mode or frappe.flags.in_test)
     )
 
     if (
