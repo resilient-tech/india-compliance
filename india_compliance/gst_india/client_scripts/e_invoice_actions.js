@@ -155,21 +155,14 @@ function show_cancel_e_invoice_dialog(frm, callback) {
                 },
                 callback: function () {
                     // SI cancel = separate request -> its failure can't revert the portal cancel.
-                    // IRN now cleared, so this won't re-trigger a portal call.
+                    // IRN now cleared (synced in place), so before_cancel early-returns: no re-dialog.
                     if (callback) {
                         // from before_cancel: frappe issues the cancel itself once validated
                         callback();
                     } else {
-                        // standalone button: no native cancel follows, so cancel the SI ourselves
-                        frappe.call({
-                            method: "frappe.client.cancel",
-                            args: {
-                                doctype: frm.doc.doctype,
-                                name: frm.doc.name,
-                            },
-                            callback: () => frm.reload_doc(),
-                            error: () => frm.reload_doc(), // e-Invoice already cancelled; user retries SI cancel
-                        });
+                        // standalone button: run the normal form cancel (sets validated, handles
+                        // linked docs, after_cancel, refresh)
+                        frm.savecancel();
                     }
                 },
             });
