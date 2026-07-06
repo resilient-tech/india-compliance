@@ -30,6 +30,7 @@ from india_compliance.gst_india.overrides.test_subcontracting_transaction import
 )
 from india_compliance.gst_india.utils import load_doc, parse_datetime
 from india_compliance.gst_india.utils.e_invoice import (
+    cancel_e_invoice_e_waybill_after_commit,
     retry_e_invoice_e_waybill_generation,
 )
 from india_compliance.gst_india.utils.e_waybill import (
@@ -428,7 +429,11 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         si.reload()
-        si.cancel()
+        # cancel the SI without dispatching the deferred job to a worker, then run it in this
+        # transaction so its writes (clearing si.ewaybill) are visible to the assertions below
+        with patch("frappe.enqueue"):
+            si.cancel()
+        cancel_e_invoice_e_waybill_after_commit(si.name)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
