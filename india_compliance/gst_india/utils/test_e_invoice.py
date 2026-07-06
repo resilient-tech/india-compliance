@@ -1318,7 +1318,17 @@ class TestEInvoice(IntegrationTestCase):
             api="ei/api/invoice/cancel",
         )
 
+        # Step 1 (portal-first): cancel the IRN / e-Waybill on the portal. This does NOT cancel
+        # the Sales Invoice — the document stays submitted with the IRN cleared.
         cancel_e_invoice(doc.name, values=values)
+
+        portal_cancelled = frappe.get_doc("Sales Invoice", doc.name)
+        self.assertEqual(portal_cancelled.docstatus, 1)
+        self.assertEqual(portal_cancelled.irn, "")
+        self.assertEqual(portal_cancelled.einvoice_status, "Cancelled")
+
+        # Step 2: the frontend cancels the Sales Invoice as a separate request.
+        portal_cancelled.cancel()
         return frappe.get_doc("Sales Invoice", doc.name)
 
     def _mock_e_invoice_response(self, data, api="ei/api/invoice"):

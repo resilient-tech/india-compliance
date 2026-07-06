@@ -145,6 +145,9 @@ function show_cancel_e_invoice_dialog(frm, callback) {
             ? __("Cancel IRN, e-Waybill & Invoice")
             : __("Cancel IRN & Invoice"),
         primary_action(values) {
+            d.hide();
+            // Step 1 (irreversible): cancel the IRN / e-Waybill on the portal. This runs as its
+            // own request and does NOT cancel the Sales Invoice.
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_invoice.cancel_e_invoice",
                 args: {
@@ -152,11 +155,30 @@ function show_cancel_e_invoice_dialog(frm, callback) {
                     values: values,
                 },
                 callback: function () {
-                    frm.refresh();
-                    callback && callback();
+                    // Step 2: cancel the Sales Invoice as a SEPARATE request, so a cancellation
+                    // failure (linked docs, frozen period, ...) cannot roll back the portal
+                    // cancellation already committed in step 1. The IRN is already cleared, so
+                    // this cancel won't re-trigger a portal call.
+                    if (callback) {
+                        // Called from the form's before_cancel hook: let the pending native
+                        // cancellation proceed — it cancels the Sales Invoice.
+                        callback();
+                    } else {
+                        // Standalone "Cancel e-Invoice" button: cancel the Sales Invoice now.
+                        frappe.call({
+                            method: "frappe.client.cancel",
+                            args: {
+                                doctype: frm.doc.doctype,
+                                name: frm.doc.name,
+                            },
+                            // On failure the e-Invoice is already cancelled and cleared; Frappe
+                            // shows the error and the user can resolve it and cancel manually.
+                            callback: () => frm.reload_doc(),
+                            error: () => frm.reload_doc(),
+                        });
+                    }
                 },
             });
-            d.hide();
         },
     });
 

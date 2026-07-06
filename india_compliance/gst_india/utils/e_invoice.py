@@ -413,39 +413,19 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
 
 @frappe.whitelist()
 def cancel_e_invoice(docname: str, values: str | dict | frappe._dict):
+    """
+    Cancel the e-Waybill (if any) and IRN on the government portal and record it locally.
+
+    This is IRREVERSIBLE and runs as its own request/transaction. It deliberately does NOT cancel
+    the Sales Invoice: the frontend issues a separate, standard document-cancel request afterwards
+    (see the cancel dialog in e_invoice_actions.js). Keeping the two as independent transactions
+    means a failure while cancelling the Sales Invoice can never roll back this (already committed)
+    portal cancellation, so the portal and this document can no longer diverge.
+    """
     doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
 
-    # Irreversible: cancels the e-Waybill (if any) + IRN on the portal and records it locally.
     _cancel_e_invoice(doc, values)
-
-    # Cancelling the Sales Invoice itself can fail for reasons unrelated to the e-Invoice
-    # (linked Payment Entry, frozen accounting period, stock reposting, ...). That failure must
-    # NOT roll back the portal cancellation recorded above (the IRN is already gone on the portal),
-    # so we wrap it in a savepoint and roll back ONLY the failed doc.cancel() attempt.
-    save_point = "before_sales_invoice_cancel"
-    frappe.db.savepoint(save_point)
-    try:
-        doc.cancel()
-    except Exception:
-        frappe.db.rollback(save_point=save_point)
-        # in-memory doc tried to move to docstatus 2; resync with what actually persisted
-        doc.reload()
-        frappe.log_error(
-            title=_("Sales Invoice {0} could not be cancelled after e-Invoice cancellation").format(doc.name),
-            message=frappe.get_traceback(),
-            reference_doctype="Sales Invoice",
-            reference_name=doc.name,
-        )
-        frappe.msgprint(
-            _(
-                "The e-Invoice/e-Waybill was cancelled on the portal and cleared from this document, "
-                "but the Sales Invoice could not be cancelled.<br><br>"
-                "Please resolve the issue reported in the Error Log and cancel the Sales Invoice manually."
-            ),
-            title=_("Sales Invoice Not Cancelled"),
-            indicator="orange",
-        )
 
     return send_updated_doc(doc)
 
@@ -456,8 +436,8 @@ def _cancel_e_invoice(doc, values):
     locally. This is the IRREVERSIBLE part of cancellation.
 
     It deliberately does NOT cancel the Sales Invoice — the document lifecycle is owned by callers:
-    - Manual "Cancel IRN & Invoice" button: `cancel_e_invoice` cancels the SI afterwards, guarded
-      so its failure cannot revert this portal cancellation.
+    - Manual "Cancel IRN & Invoice" button: the frontend issues a separate document-cancel request
+      once this portal cancellation has committed.
     - Auto cancel on SI cancellation: `cancel_e_invoice_e_waybill_after_commit` runs this from an
       after-commit job, once the SI cancellation has already committed.
     """
