@@ -229,6 +229,27 @@ def _generate_e_waybill(doc, throw=True, force=False):
             data = EWaybillData(doc).get_data(with_irn=with_irn)
             result = EWaybillAPI.create(doc).generate_e_waybill(data)
 
+        # 604: already generated for this document at NIC (e.g. a prior attempt
+        # timed out after generating it). Fetch & link the existing e-Waybill.
+        if result.error_code == "604":
+            if not link_matching_e_waybill(doc, getdate()):
+                frappe.throw(
+                    _("{0}<br><br>Try fetching active e-Waybills by date if already generated.").format(
+                        result.error_message or ""
+                    ),
+                    title=_("e-Waybill Already Generated"),
+                )
+
+            if not frappe.request:
+                return
+
+            frappe.msgprint(
+                _("e-Waybill was already generated for this document; linked the existing one."),
+                indicator="green",
+                alert=True,
+            )
+            return send_updated_doc(doc)
+
         if not result.get("ewayBillNo" if not with_irn else "EwbNo"):
             frappe.throw(_("e-Waybill generation failed"))
 
@@ -305,13 +326,6 @@ def _generate_e_waybill(doc, throw=True, force=False):
         )
 
         raise
-
-    if result.error_code == "604":
-        error_message = (
-            result.error_message
-            + """<br/><br/> Try to fetch active e-waybills by Date if already generated."""
-        )
-        frappe.throw(error_message, title=_("API Request Failed"))
 
     log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
 
@@ -820,6 +834,25 @@ def find_matching_e_waybill(*, doctype: str, docname: str, e_waybill_date: str):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "submit")
 
+    if not link_matching_e_waybill(doc, e_waybill_date):
+        frappe.msgprint(
+            _(
+                "We couldn't find a matching e-Waybill for the date {0}. Please verify the date and try again."
+            ).format(frappe.bold(format_date(e_waybill_date))),
+            _("Warning"),
+            indicator="yellow",
+        )
+        return
+
+    return send_updated_doc(doc)
+
+
+def link_matching_e_waybill(doc, e_waybill_date):
+    """Fetch active e-Waybills for the date and link the one matching this doc.
+
+    Returns True if a match was found and linked. Shared by the manual
+    "fetch if already generated" action and 604 auto-recovery.
+    """
     response = EWaybillAPI.create(doc).get_e_waybills_by_date(format_date(e_waybill_date, "dd/mm/yyyy"))
 
     result = {
@@ -830,21 +863,14 @@ def find_matching_e_waybill(*, doctype: str, docname: str, e_waybill_date: str):
     }
 
     if not result:
-        frappe.msgprint(
-            _(
-                "We couldn't find a matching e-Waybill for the date {0}. Please verify the date and try again."
-            ).format(frappe.bold(format_date(e_waybill_date))),
-            _("Warning"),
-            indicator="yellow",
-        )
-        return
+        return False
 
     # To log and process e_waybill generation Without IRN
     result["ewayBillNo"] = result["ewbNo"]
     result["ewayBillDate"] = result["ewbDate"]
 
     log_and_process_e_waybill_generation(doc, result)
-    return send_updated_doc(doc)
+    return True
 
 
 @frappe.whitelist()
