@@ -182,10 +182,10 @@ class BaseAPI:
                 response = requests.request(method, timeout=self.get_request_timeout(), **request_args)
             except requests.exceptions.Timeout as e:
                 # no response in time -> gateway timeout (routes to auto-retry, not a hang)
-                raise GatewayTimeoutError from e
+                raise GatewayTimeoutError(str(e)) from e
             except requests.exceptions.ConnectionError as e:
                 # unreachable / reset -> GSP down
-                raise GSPServerError from e
+                raise GSPServerError(str(e)) from e
 
             if api_request_id := response.headers.get("x-amzn-RequestId"):
                 self.request_id = api_request_id
