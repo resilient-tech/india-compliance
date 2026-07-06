@@ -240,17 +240,8 @@ def cancel_e_waybill_e_invoice(doc, method=None):
     Defer the irreversible portal cancel to an after-commit job: if this cancel rolls back the job
     is discarded and the portal stays untouched, so they can't diverge.
     """
-    gst_settings = frappe.get_cached_doc("GST Settings")
-
-    if not is_api_enabled(gst_settings):
-        return
-
-    should_cancel_e_invoice = doc.irn and gst_settings.enable_e_invoice and gst_settings.auto_cancel_e_invoice
-    should_cancel_e_waybill = (
-        doc.ewaybill and gst_settings.enable_e_waybill and gst_settings.auto_cancel_e_waybill
-    )
-
-    if not (should_cancel_e_invoice or should_cancel_e_waybill):
+    # settings / auto-cancel gating lives in the job; here just skip when there's nothing to cancel
+    if not (doc.irn or doc.ewaybill) or not is_api_enabled():
         return
 
     frappe.enqueue(
