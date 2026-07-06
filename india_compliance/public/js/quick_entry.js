@@ -98,6 +98,10 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
 
                     india_compliance.check_duplicate_gstin(d.doc._gstin, this.doctype);
 
+                    // Auto-select the State from the GSTIN's state code
+                    const state = india_compliance.get_state_from_gstin(d.doc._gstin);
+                    if (state && d.fields_dict.state) d.set_value("state", state);
+
                     if (["Customer", "Supplier"].includes(this.doctype)) {
                         d.set_value(
                             `${this.doctype.toLowerCase()}_type`,
