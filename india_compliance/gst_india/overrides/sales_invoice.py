@@ -237,11 +237,8 @@ def validate_cancellation_based_on_e_invoice(doc):
 
 def cancel_e_waybill_e_invoice(doc, method=None):
     """
-    Called from `before_cancel`. Portal cancel is irreversible, so defer it to run AFTER this
-    cancel commits (own transaction) instead of inside it — on rollback (bulk cancel, linked docs,
-    frozen period) the job is discarded and the portal stays untouched, so no divergence.
-    `validate_fields_and_set_status_for_e_invoice` marks `einvoice_status = "Pending Cancellation"`
-    meanwhile; the job clears it once the portal confirms.
+    Defer the irreversible portal cancel to an after-commit job: if this cancel rolls back the job
+    is discarded and the portal stays untouched, so they can't diverge.
     """
     gst_settings = frappe.get_cached_doc("GST Settings")
 

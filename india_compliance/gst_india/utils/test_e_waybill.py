@@ -457,8 +457,7 @@ class TestEWaybill(IntegrationTestCase):
     )
     @responses.activate
     def test_portal_cancel_not_triggered_when_si_cancel_rolls_back(self):
-        """SI cancel rolls back (e.g. bulk-cancel failure) -> e-Waybill must NOT be cancelled on
-        the portal. Portal call is deferred to after commit, so a rollback leaves it untouched."""
+        """SI cancel rollback must not cancel the e-Waybill on the portal (deferred to after commit)."""
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
         self._generate_e_waybill(si.name)
         si.reload()
@@ -473,10 +472,9 @@ class TestEWaybill(IntegrationTestCase):
             with self.assertRaises(Exception):
                 si.cancel()
 
-        # no new API call -> portal untouched (job only enqueued for after commit, never committed)
+        # no new API call -> portal untouched
         self.assertEqual(len(responses.calls), api_calls_before_cancel)
 
-        # SI + e-Waybill intact
         si.reload()
         self.assertEqual(si.docstatus, 1)
         self.assertNotEqual(si.ewaybill, "")

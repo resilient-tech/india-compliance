@@ -413,12 +413,7 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
 
 @frappe.whitelist()
 def cancel_e_invoice(docname: str, values: str | dict | frappe._dict):
-    """
-    Cancel e-Waybill + IRN on the portal and record it. Irreversible; own request/transaction.
-
-    Never cancels the Sales Invoice — the frontend cancels it in a separate request. Separate
-    transactions => a doc-cancel failure can't roll back this (committed) portal cancel.
-    """
+    """Cancel e-Waybill + IRN on the portal only; the SI is cancelled by a separate request."""
     doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
 
@@ -428,11 +423,7 @@ def cancel_e_invoice(docname: str, values: str | dict | frappe._dict):
 
 
 def _cancel_e_invoice(doc, values):
-    """
-    Cancel e-Waybill (if any) + IRN on the portal and record it. Never cancels the SI — callers do:
-    - manual button: frontend cancels the SI in a separate request.
-    - auto cancel: `cancel_e_invoice_e_waybill_after_commit`, after the SI cancel commits.
-    """
+    """Cancel e-Waybill (if any) + IRN on the portal and record it. Never cancels the SI."""
     validate_if_e_invoice_can_be_cancelled(doc)
 
     if doc.get("ewaybill"):
@@ -1010,15 +1001,7 @@ class EInvoiceData(GSTTransactionData):
 
 
 def cancel_e_invoice_e_waybill_after_commit(docname):
-    """
-    Cancel IRN / e-Waybill on the portal AFTER a Sales Invoice cancel commits. Enqueued via
-    `enqueue_after_commit=True` from `before_cancel`, so it runs only if the SI cancel commits
-    (rollback -> job discarded -> portal untouched -> no divergence).
-
-    No explicit commit/rollback: the job runner commits on success, rolls back + logs on failure,
-    and retries deadlocks. On failure the SI keeps `einvoice_status = "Pending Cancellation"` (set
-    by the cancel itself, already committed) for reconciliation.
-    """
+    """Cancel IRN / e-Waybill on the portal; enqueued after the SI cancel commits (see before_cancel)."""
     doc = load_doc("Sales Invoice", docname, "cancel")
 
     if not (doc.irn or doc.ewaybill):

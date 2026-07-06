@@ -146,7 +146,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
             : __("Cancel IRN & Invoice"),
         primary_action(values) {
             d.hide();
-            // portal cancel only; does NOT cancel the SI
+            // portal cancel only; the SI is cancelled by a separate request
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_invoice.cancel_e_invoice",
                 args: {
@@ -154,14 +154,11 @@ function show_cancel_e_invoice_dialog(frm, callback) {
                     values: values,
                 },
                 callback: function () {
-                    // SI cancel = separate request -> its failure can't revert the portal cancel.
-                    // IRN now cleared (synced in place), so before_cancel early-returns: no re-dialog.
                     if (callback) {
-                        // from before_cancel: frappe issues the cancel itself once validated
+                        // from before_cancel: frappe runs the cancel itself once validated
                         callback();
                     } else {
-                        // standalone button: run the normal form cancel (sets validated, handles
-                        // linked docs, after_cancel, refresh)
+                        // standalone button: IRN already cleared, so savecancel won't reopen this dialog
                         frm.savecancel();
                     }
                 },
