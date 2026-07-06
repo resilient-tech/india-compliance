@@ -2210,7 +2210,7 @@ class FiledTab extends GSTR1_TabManager {
                     },
                     callback: (r) => {
                         india_compliance.trigger_file_download(
-                            JSON.stringify(r.message.data),
+                            JSON.stringify(r.message.data, null, 2),
                             r.message.filename,
                         );
                         dialog.hide();
