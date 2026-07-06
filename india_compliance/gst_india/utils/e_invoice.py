@@ -1009,6 +1009,10 @@ def cancel_e_invoice_e_waybill_after_commit(docname):
 
     gst_settings = frappe.get_cached_doc("GST Settings")
 
+    # API may have been disabled between enqueue and now
+    if not is_api_enabled(gst_settings):
+        return
+
     # cancels e-Waybill + IRN together; else standalone e-Waybill
     if not auto_cancel_e_invoice(doc, gst_settings=gst_settings):
         auto_cancel_e_waybill(doc, gst_settings=gst_settings)

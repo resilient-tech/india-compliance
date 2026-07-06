@@ -22,6 +22,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     SUB_SUPPLY_TYPES,
 )
 from india_compliance.gst_india.overrides.sales_invoice import (
+    cancel_e_waybill_e_invoice,
     is_e_waybill_applicable,
 )
 from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
@@ -29,7 +30,6 @@ from india_compliance.gst_india.overrides.test_subcontracting_transaction import
 )
 from india_compliance.gst_india.utils import load_doc, parse_datetime
 from india_compliance.gst_india.utils.e_invoice import (
-    cancel_e_invoice_e_waybill_after_commit,
     retry_e_invoice_e_waybill_generation,
 )
 from india_compliance.gst_india.utils.e_waybill import (
@@ -430,15 +430,6 @@ class TestEWaybill(IntegrationTestCase):
         si.reload()
         si.cancel()
 
-        # portal cancel is deferred to an after-commit job -> not cancelled synchronously here
-        ewaybill_log.reload()
-        self.assertFalse(ewaybill_log.is_cancelled)
-        si.reload()
-        self.assertNotEqual(si.ewaybill, "")
-
-        # run the after-commit worker
-        cancel_e_invoice_e_waybill_after_commit(si.name)
-
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
         self.assertEqual(ewaybill_log.cancel_reason_code, "3")  # Data Entry Mistake
@@ -456,30 +447,28 @@ class TestEWaybill(IntegrationTestCase):
         },
     )
     @responses.activate
-    def test_portal_cancel_not_triggered_when_si_cancel_rolls_back(self):
-        """SI cancel rollback must not cancel the e-Waybill on the portal (deferred to after commit)."""
+    def test_portal_cancel_is_deferred_to_after_commit(self):
+        """Portal cancel is deferred to an after-commit job (so a rolled-back SI cancel discards it),
+        never run synchronously inside before_cancel."""
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
         self._generate_e_waybill(si.name)
         si.reload()
 
-        api_calls_before_cancel = len(responses.calls)
+        api_calls_before = len(responses.calls)
 
-        # force the SI cancel to fail (stands in for linked docs / frozen period / bulk rollback)
-        with patch(
-            "india_compliance.gst_india.overrides.sales_invoice.validate_backdated_transaction",
-            side_effect=Exception("forced Sales Invoice cancel failure"),
-        ):
-            with self.assertRaises(Exception):
-                si.cancel()
+        with patch("frappe.enqueue") as mock_enqueue:
+            cancel_e_waybill_e_invoice(si)
 
-        # no new API call -> portal untouched
-        self.assertEqual(len(responses.calls), api_calls_before_cancel)
+        # nothing cancelled on the portal synchronously
+        self.assertEqual(len(responses.calls), api_calls_before)
 
-        si.reload()
-        self.assertEqual(si.docstatus, 1)
-        self.assertNotEqual(si.ewaybill, "")
-        ewaybill_log = frappe.get_doc("e-Waybill Log", {"reference_name": si.name})
-        self.assertFalse(ewaybill_log.is_cancelled)
+        # scheduled to run only after the cancel commits
+        mock_enqueue.assert_called_once()
+        self.assertEqual(
+            mock_enqueue.call_args.args[0],
+            "india_compliance.gst_india.utils.e_invoice.cancel_e_invoice_e_waybill_after_commit",
+        )
+        self.assertTrue(mock_enqueue.call_args.kwargs.get("enqueue_after_commit"))
 
     @change_settings("GST Settings", {"auto_cancel_e_waybill": 0})
     @responses.activate
