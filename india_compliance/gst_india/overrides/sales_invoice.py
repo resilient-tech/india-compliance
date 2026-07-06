@@ -27,14 +27,12 @@ from india_compliance.gst_india.utils import (
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (
-    auto_cancel_e_invoice,
     get_e_invoice_info,
     validate_e_invoice_applicability,
     validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import (
     _get_e_waybill_threshold,
-    auto_cancel_e_waybill,
     get_e_waybill_info,
 )
 from india_compliance.gst_india.utils.transaction_data import (
@@ -238,15 +236,36 @@ def validate_cancellation_based_on_e_invoice(doc):
 
 
 def cancel_e_waybill_e_invoice(doc, method=None):
+    """
+    Called from `before_cancel`. The actual portal cancellation is IRREVERSIBLE, so instead of
+    doing it synchronously inside the ongoing Sales Invoice cancel transaction (where a later
+    failure — bulk cancel, linked docs, frozen period — would roll it back and leave the portal
+    and this document out of sync), we DEFER it to run after this cancellation commits.
+
+    `enqueue_after_commit=True` means the job is discarded if the cancellation rolls back, and runs
+    in its own isolated transaction otherwise. `validate_fields_and_set_status_for_e_invoice` will
+    mark `einvoice_status = "Pending Cancellation"` (irn is still set), which the job clears once
+    the portal confirms cancellation.
+    """
     gst_settings = frappe.get_cached_doc("GST Settings")
 
     if not is_api_enabled(gst_settings):
         return
 
-    if auto_cancel_e_invoice(doc, gst_settings=gst_settings):
+    should_cancel_e_invoice = doc.irn and gst_settings.enable_e_invoice and gst_settings.auto_cancel_e_invoice
+    should_cancel_e_waybill = (
+        doc.ewaybill and gst_settings.enable_e_waybill and gst_settings.auto_cancel_e_waybill
+    )
+
+    if not (should_cancel_e_invoice or should_cancel_e_waybill):
         return
 
-    auto_cancel_e_waybill(doc, gst_settings=gst_settings)
+    frappe.enqueue(
+        "india_compliance.gst_india.utils.e_invoice.cancel_e_invoice_e_waybill_after_commit",
+        enqueue_after_commit=True,
+        queue="short",
+        docname=doc.name,
+    )
 
 
 def is_e_waybill_applicable(doc, gst_settings=None):

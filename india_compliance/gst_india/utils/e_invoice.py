@@ -57,6 +57,7 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.e_waybill import (
     _cancel_e_waybill,
     _get_e_waybill_threshold,
+    auto_cancel_e_waybill,
     generate_pending_e_waybills,
     log_and_process_e_waybill_generation,
 )
@@ -415,12 +416,51 @@ def cancel_e_invoice(docname: str, values: str | dict | frappe._dict):
     doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
 
+    # Irreversible: cancels the e-Waybill (if any) + IRN on the portal and records it locally.
     _cancel_e_invoice(doc, values)
+
+    # Cancelling the Sales Invoice itself can fail for reasons unrelated to the e-Invoice
+    # (linked Payment Entry, frozen accounting period, stock reposting, ...). That failure must
+    # NOT roll back the portal cancellation recorded above (the IRN is already gone on the portal),
+    # so we wrap it in a savepoint and roll back ONLY the failed doc.cancel() attempt.
+    save_point = "before_sales_invoice_cancel"
+    frappe.db.savepoint(save_point)
+    try:
+        doc.cancel()
+    except Exception:
+        frappe.db.rollback(save_point=save_point)
+        # in-memory doc tried to move to docstatus 2; resync with what actually persisted
+        doc.reload()
+        frappe.log_error(
+            title=_("Sales Invoice {0} could not be cancelled after e-Invoice cancellation").format(doc.name),
+            message=frappe.get_traceback(),
+            reference_doctype="Sales Invoice",
+            reference_name=doc.name,
+        )
+        frappe.msgprint(
+            _(
+                "The e-Invoice/e-Waybill was cancelled on the portal and cleared from this document, "
+                "but the Sales Invoice could not be cancelled.<br><br>"
+                "Please resolve the issue reported in the Error Log and cancel the Sales Invoice manually."
+            ),
+            title=_("Sales Invoice Not Cancelled"),
+            indicator="orange",
+        )
 
     return send_updated_doc(doc)
 
 
 def _cancel_e_invoice(doc, values):
+    """
+    Cancel the e-Waybill (if any) and the IRN on the government portal, and record the outcome
+    locally. This is the IRREVERSIBLE part of cancellation.
+
+    It deliberately does NOT cancel the Sales Invoice — the document lifecycle is owned by callers:
+    - Manual "Cancel IRN & Invoice" button: `cancel_e_invoice` cancels the SI afterwards, guarded
+      so its failure cannot revert this portal cancellation.
+    - Auto cancel on SI cancellation: `cancel_e_invoice_e_waybill_after_commit` runs this from an
+      after-commit job, once the SI cancellation has already committed.
+    """
     validate_if_e_invoice_can_be_cancelled(doc)
 
     if doc.get("ewaybill"):
@@ -435,8 +475,6 @@ def _cancel_e_invoice(doc, values):
     result = EInvoiceAPI.create(doc).cancel_irn(data)
 
     log_and_process_e_invoice_cancellation(doc, values, result, "e-Invoice cancelled successfully")
-
-    doc.cancel()
 
 
 def log_and_process_e_invoice_cancellation(doc, values, result, message):
@@ -997,6 +1035,50 @@ class EInvoiceData(GSTTransactionData):
 #######################################################################################
 ### Auto Cancel e-Invoice Functions ###################################################
 #######################################################################################
+
+
+def cancel_e_invoice_e_waybill_after_commit(docname):
+    """
+    Cancel the IRN / e-Waybill on the government portal AFTER a Sales Invoice cancellation has
+    committed. Enqueued with `enqueue_after_commit=True` from `before_cancel`, which gives two
+    guarantees that fix the "outer transaction rolled back" divergence:
+
+    1. It runs ONLY if the Sales Invoice cancellation actually commits. If that cancellation rolls
+       back (bulk-cancel failure, linked docs, frozen period, ...), the after-commit callback is
+       discarded and the portal is never touched -> no divergence.
+    2. It runs in its OWN transaction, containing nothing but this portal cancellation, so the
+       plain `frappe.db.commit()` here durably persists the irreversible outcome without being
+       able to revert any unrelated work.
+
+    It never raises: on failure it logs and leaves `einvoice_status = "Pending Cancellation"`
+    (already set during the cancel) so a retry / reconciliation can complete it later.
+    """
+    doc = load_doc("Sales Invoice", docname, "cancel")
+
+    if not (doc.irn or doc.ewaybill):
+        return
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    try:
+        # auto_cancel_e_invoice cancels e-Waybill + IRN together (returns True if it did);
+        # fall back to cancelling a standalone e-Waybill.
+        if not auto_cancel_e_invoice(doc, gst_settings=gst_settings):
+            auto_cancel_e_waybill(doc, gst_settings=gst_settings)
+
+        if not frappe.flags.in_test:
+            # Isolated transaction: safe to persist just this portal cancellation.
+            frappe.db.commit()  # nosemgrep
+
+    except Exception:
+        frappe.db.rollback()
+        frappe.log_error(
+            title=_("Portal cancellation failed for cancelled Sales Invoice {0}").format(docname),
+            message=frappe.get_traceback(),
+            reference_doctype="Sales Invoice",
+            reference_name=docname,
+        )
+        frappe.clear_last_message()
 
 
 def auto_cancel_e_invoice(doc, gst_settings=None):
