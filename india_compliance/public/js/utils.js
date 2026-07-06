@@ -328,6 +328,13 @@ Object.assign(india_compliance, {
         state_field.set_data(frappe.boot.india_state_options || []);
     },
 
+    get_state_from_gstin(gstin) {
+        if (!gstin || gstin.length < 2) return;
+
+        const state_number = gstin.substring(0, 2);
+        return (frappe.boot.gst_state_by_number || {})[state_number];
+    },
+
     can_enable_api(settings) {
         return settings.api_secret || frappe.boot.ic_api_enabled_from_conf;
     },
