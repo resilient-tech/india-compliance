@@ -414,13 +414,10 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
 @frappe.whitelist()
 def cancel_e_invoice(docname: str, values: str | dict | frappe._dict):
     """
-    Cancel the e-Waybill (if any) and IRN on the government portal and record it locally.
+    Cancel e-Waybill + IRN on the portal and record it. Irreversible; own request/transaction.
 
-    This is IRREVERSIBLE and runs as its own request/transaction. It deliberately does NOT cancel
-    the Sales Invoice: the frontend issues a separate, standard document-cancel request afterwards
-    (see the cancel dialog in e_invoice_actions.js). Keeping the two as independent transactions
-    means a failure while cancelling the Sales Invoice can never roll back this (already committed)
-    portal cancellation, so the portal and this document can no longer diverge.
+    Never cancels the Sales Invoice — the frontend cancels it in a separate request. Separate
+    transactions => a doc-cancel failure can't roll back this (committed) portal cancel.
     """
     doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
@@ -432,14 +429,9 @@ def cancel_e_invoice(docname: str, values: str | dict | frappe._dict):
 
 def _cancel_e_invoice(doc, values):
     """
-    Cancel the e-Waybill (if any) and the IRN on the government portal, and record the outcome
-    locally. This is the IRREVERSIBLE part of cancellation.
-
-    It deliberately does NOT cancel the Sales Invoice — the document lifecycle is owned by callers:
-    - Manual "Cancel IRN & Invoice" button: the frontend issues a separate document-cancel request
-      once this portal cancellation has committed.
-    - Auto cancel on SI cancellation: `cancel_e_invoice_e_waybill_after_commit` runs this from an
-      after-commit job, once the SI cancellation has already committed.
+    Cancel e-Waybill (if any) + IRN on the portal and record it. Never cancels the SI — callers do:
+    - manual button: frontend cancels the SI in a separate request.
+    - auto cancel: `cancel_e_invoice_e_waybill_after_commit`, after the SI cancel commits.
     """
     validate_if_e_invoice_can_be_cancelled(doc)
 
@@ -1019,19 +1011,12 @@ class EInvoiceData(GSTTransactionData):
 
 def cancel_e_invoice_e_waybill_after_commit(docname):
     """
-    Cancel the IRN / e-Waybill on the government portal AFTER a Sales Invoice cancellation has
-    committed. Enqueued with `enqueue_after_commit=True` from `before_cancel`, which gives two
-    guarantees that fix the "outer transaction rolled back" divergence:
+    Cancel IRN / e-Waybill on the portal AFTER a Sales Invoice cancel commits. Enqueued via
+    `enqueue_after_commit=True` from `before_cancel`, so:
+    - runs only if the SI cancel commits (rollback -> job discarded -> portal untouched -> no divergence).
+    - runs in its own transaction, so the commit here can't revert unrelated work.
 
-    1. It runs ONLY if the Sales Invoice cancellation actually commits. If that cancellation rolls
-       back (bulk-cancel failure, linked docs, frozen period, ...), the after-commit callback is
-       discarded and the portal is never touched -> no divergence.
-    2. It runs in its OWN transaction, containing nothing but this portal cancellation, so the
-       plain `frappe.db.commit()` here durably persists the irreversible outcome without being
-       able to revert any unrelated work.
-
-    It never raises: on failure it logs and leaves `einvoice_status = "Pending Cancellation"`
-    (already set during the cancel) so a retry / reconciliation can complete it later.
+    Never raises: on failure it logs and leaves `einvoice_status = "Pending Cancellation"` for retry.
     """
     doc = load_doc("Sales Invoice", docname, "cancel")
 
@@ -1041,14 +1026,12 @@ def cancel_e_invoice_e_waybill_after_commit(docname):
     gst_settings = frappe.get_cached_doc("GST Settings")
 
     try:
-        # auto_cancel_e_invoice cancels e-Waybill + IRN together (returns True if it did);
-        # fall back to cancelling a standalone e-Waybill.
+        # cancels e-Waybill + IRN together; else standalone e-Waybill
         if not auto_cancel_e_invoice(doc, gst_settings=gst_settings):
             auto_cancel_e_waybill(doc, gst_settings=gst_settings)
 
         if not frappe.flags.in_test:
-            # Isolated transaction: safe to persist just this portal cancellation.
-            frappe.db.commit()  # nosemgrep
+            frappe.db.commit()  # nosemgrep -- own txn, safe to commit
 
     except Exception:
         frappe.db.rollback()

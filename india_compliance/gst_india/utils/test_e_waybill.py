@@ -430,14 +430,13 @@ class TestEWaybill(IntegrationTestCase):
         si.reload()
         si.cancel()
 
-        # DECOUPLED: the portal cancellation is now deferred to an after-commit job, so it does
-        # NOT happen synchronously during si.cancel(). The e-Waybill is still active locally here.
+        # portal cancel is deferred to an after-commit job -> not cancelled synchronously here
         ewaybill_log.reload()
         self.assertFalse(ewaybill_log.is_cancelled)
         si.reload()
         self.assertNotEqual(si.ewaybill, "")
 
-        # Simulate the after-commit worker running once the cancellation has committed.
+        # run the after-commit worker
         cancel_e_invoice_e_waybill_after_commit(si.name)
 
         ewaybill_log.reload()
@@ -458,22 +457,15 @@ class TestEWaybill(IntegrationTestCase):
     )
     @responses.activate
     def test_portal_cancel_not_triggered_when_si_cancel_rolls_back(self):
-        """Outer-transaction rollback (e.g. a bulk-cancel failure) must NOT cancel the e-Waybill
-        on the portal.
-
-        This is the divergence the decoupling prevents: the portal call is deferred to an
-        after-commit job, so if the Sales Invoice cancellation fails and rolls back, the portal is
-        never touched and local state stays consistent (no "cancelled on portal, active locally").
-        """
+        """SI cancel rolls back (e.g. bulk-cancel failure) -> e-Waybill must NOT be cancelled on
+        the portal. Portal call is deferred to after commit, so a rollback leaves it untouched."""
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
         self._generate_e_waybill(si.name)
         si.reload()
 
         api_calls_before_cancel = len(responses.calls)
 
-        # Force the Sales Invoice cancellation to fail. In production this is a linked Payment
-        # Entry / frozen period / GL failure, or the bulk-cancel loop's own rollback; here we make
-        # a step in `before_cancel` raise, which aborts the whole cancellation the same way.
+        # force the SI cancel to fail (stands in for linked docs / frozen period / bulk rollback)
         with patch(
             "india_compliance.gst_india.overrides.sales_invoice.validate_backdated_transaction",
             side_effect=Exception("forced Sales Invoice cancel failure"),
@@ -481,11 +473,10 @@ class TestEWaybill(IntegrationTestCase):
             with self.assertRaises(Exception):
                 si.cancel()
 
-        # No new API call was made -> the e-Waybill was never cancelled on the portal. (The portal
-        # cancellation is only enqueued for after commit, and the cancellation never committed.)
+        # no new API call -> portal untouched (job only enqueued for after commit, never committed)
         self.assertEqual(len(responses.calls), api_calls_before_cancel)
 
-        # The document and its e-Waybill are intact (still submitted, e-Waybill retained).
+        # SI + e-Waybill intact
         si.reload()
         self.assertEqual(si.docstatus, 1)
         self.assertNotEqual(si.ewaybill, "")
