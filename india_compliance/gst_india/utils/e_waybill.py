@@ -229,10 +229,24 @@ def _generate_e_waybill(doc, throw=True, force=False):
             data = EWaybillData(doc).get_data(with_irn=with_irn)
             result = EWaybillAPI.create(doc).generate_e_waybill(data)
 
-        # 604: already generated for this document at NIC (e.g. a prior attempt
-        # timed out after generating it). Fetch & link the existing e-Waybill.
+        # 604: already generated at NIC (a prior attempt timed out after generating).
+        # search doc date(s) + today (a delayed retry may run later) and link it.
         if result.error_code == "604":
-            if not link_matching_e_waybill(doc, getdate()):
+            recovery_dates = {
+                getdate(date)
+                for date in (doc.get("posting_date"), doc.get("transaction_date"), getdate())
+                if date
+            }
+            if not any(link_matching_e_waybill(doc, date) for date in recovery_dates):
+                # exists at NIC but couldn't auto-link; log so it can be reconciled
+                # (the background/auto-retry path swallows the throw below)
+                frappe.log_error(
+                    title=_("e-Waybill 604 auto-recovery failed"),
+                    message=f"{doc.doctype} {doc.name}: {result.error_message or '604 already generated'}",
+                    reference_doctype=doc.doctype,
+                    reference_name=doc.name,
+                    defer_insert=True,
+                )
                 frappe.throw(
                     _("{0}<br><br>Try fetching active e-Waybills by date if already generated.").format(
                         result.error_message or ""
