@@ -652,14 +652,42 @@ class PurchaseReconciliationToolAction {
         this.setup_row_actions();
     }
 
+    validate_reco_filters() {
+        const doc = this.frm.doc;
+        const missing_labels = [];
+
+        if (!doc.company && !doc.company_gstin) {
+            missing_labels.push(__("Company or Company GSTIN"));
+        }
+
+        const mandatory_fields = [
+            "gst_return",
+            "purchase_from_date",
+            "purchase_to_date",
+            "inward_supply_from_date",
+            "inward_supply_to_date",
+        ];
+
+        for (const fieldname of mandatory_fields) {
+            if (!doc[fieldname]) {
+                missing_labels.push(__(frappe.meta.get_label(DOCTYPE, fieldname)));
+            }
+        }
+
+        if (missing_labels.length) {
+            frappe.throw(
+                __("Please set the following mandatory filters to generate the report: {0}", [
+                    missing_labels.join(", "),
+                ]),
+            );
+        }
+    }
+
     setup_document_actions() {
         // Primary Action
         this.frm.disable_save();
         this.frm.page.set_primary_action(__("Generate"), async () => {
-            if (!this.frm.doc.company && !this.frm.doc.company_gstin) {
-                frappe.throw(__("Please provide either a Company name or Company GSTIN."));
-            }
-
+            this.validate_reco_filters();
             this.get_reconciliation_data(this.frm);
         });
 
