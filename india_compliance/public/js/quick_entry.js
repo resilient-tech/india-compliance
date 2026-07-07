@@ -107,6 +107,11 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
 
                     if (this.api_enabled && !gst_settings.sandbox_mode) return autofill_fields(d);
 
+                    if (d.doc._gstin && d.fields_dict.state) {
+                        const state = india_compliance.get_state_from_gstin(d.doc._gstin);
+                        d.set_value("state", state);
+                    }
+
                     d.set_value(
                         "gst_category",
                         india_compliance.guess_gst_category(d.doc._gstin, d.doc.country),
