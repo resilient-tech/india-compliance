@@ -94,6 +94,9 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     refresh(frm) {
+        frm.disable_save();
+        frm.page.clear_indicator();
+
         frm.reco_tool_actions = new PurchaseReconciliationToolAction(frm);
         frm.reco_tool_actions.setup_actions();
     },
