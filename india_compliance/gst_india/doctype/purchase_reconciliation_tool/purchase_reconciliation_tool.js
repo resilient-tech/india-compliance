@@ -652,7 +652,7 @@ class PurchaseReconciliationToolAction {
         this.setup_row_actions();
     }
 
-    validate_reco_filters() {
+    validate_filters() {
         const doc = this.frm.doc;
         const missing_labels = [];
 
@@ -660,34 +660,34 @@ class PurchaseReconciliationToolAction {
             missing_labels.push(__("Company or Company GSTIN"));
         }
 
-        const mandatory_fields = [
-            "gst_return",
-            "purchase_from_date",
-            "purchase_to_date",
-            "inward_supply_from_date",
-            "inward_supply_to_date",
-        ];
+        if (!doc.gst_return) {
+            missing_labels.push(__(frappe.meta.get_label(DOCTYPE, "gst_return")));
+        }
 
-        for (const fieldname of mandatory_fields) {
-            if (!doc[fieldname]) {
+        const period_fields = ["purchase_period", "inward_supply_period"];
+
+        for (const fieldname of period_fields) {
+            const prefix = fieldname.replace("_period", "");
+            if (!doc[`${prefix}_from_date`] || !doc[`${prefix}_to_date`]) {
                 missing_labels.push(__(frappe.meta.get_label(DOCTYPE, fieldname)));
             }
         }
 
-        if (missing_labels.length) {
-            frappe.throw(
-                __("Please set the following mandatory filters to generate the report: {0}", [
-                    missing_labels.join(", "),
-                ]),
-            );
-        }
+        if (!missing_labels.length) return;
+
+        frappe.throw({
+            title: __("Missing Filters"),
+            message: __("Please set the following mandatory filters to generate the report:<br>{0}", [
+                `<ul>${missing_labels.map((label) => `<li>${label}</li>`).join("")}</ul>`,
+            ]),
+        });
     }
 
     setup_document_actions() {
         // Primary Action
         this.frm.disable_save();
         this.frm.page.set_primary_action(__("Generate"), async () => {
-            this.validate_reco_filters();
+            this.validate_filters();
             this.get_reconciliation_data(this.frm);
         });
 
