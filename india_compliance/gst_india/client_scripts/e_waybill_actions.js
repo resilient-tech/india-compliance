@@ -391,7 +391,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
         {
             label: "Distance (in km)",
             fieldname: "distance",
-            fieldtype: "Float",
+            fieldtype: "Int",
             default: frm.doc.distance || 0,
             description: "Set as zero to update distance as per the e-Waybill portal (if available)",
         },
@@ -976,7 +976,7 @@ async function show_extend_validity_dialog(frm) {
             {
                 label: "Remaining Distance (in km)",
                 fieldname: "remaining_distance",
-                fieldtype: "Float",
+                fieldtype: "Int",
                 default: frm.doc.distance,
                 reqd: 1,
             },
