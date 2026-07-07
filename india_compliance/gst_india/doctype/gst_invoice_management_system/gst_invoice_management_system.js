@@ -23,9 +23,6 @@ frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
         await frappe.require("ims.bundle.js");
 
-        // Report-like tool; nothing is saved, so never show the "Not Saved" indicator
-        frm.disable_save();
-
         frm.reconciliation_tabs = new IMS(
             frm,
             ["invoice", "match_summary", "action_summary"],
@@ -71,6 +68,9 @@ frappe.ui.form.on(DOCTYPE, {
     period: render_empty_state,
 
     refresh(frm) {
+        frm.disable_save();
+        frm.page.clear_indicator();
+
         show_download_invoices_message(frm);
 
         frm.ims_actions = new IMSAction(frm);
