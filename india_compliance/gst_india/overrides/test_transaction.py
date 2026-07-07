@@ -1950,7 +1950,7 @@ class TestItemUpdate(IntegrationTestCase):
                 doc.items[1],
             )
 
-            breakup = json.loads(get_gst_breakup(doc))
+            breakup = get_gst_breakup(doc)
             total_taxable = sum(row["Taxable Amount"] for row in breakup)
             self.assertEqual(total_taxable, doc.base_net_total)
 
