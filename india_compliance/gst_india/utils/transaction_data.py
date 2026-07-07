@@ -2,7 +2,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import format_date, get_link_to_form, getdate, rounded
+from frappe.utils import cint, format_date, get_link_to_form, getdate, rounded
 
 from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
@@ -201,9 +201,10 @@ class GSTTransactionData:
         return True
 
     def set_transporter_details(self):
-        self.transaction_details.distance = (
-            self.doc.distance if self.doc.distance and self.doc.distance < 4000 else 0
-        )
+        # Distance must be a whole number of km for the e-Waybill portal.
+        # cint() guards against a non-Int value (e.g. modified custom field).
+        distance = cint(self.doc.distance)
+        self.transaction_details.distance = distance if distance < 4000 else 0
 
         if self.validate_mode_of_transport(False):
             self.transaction_details.update(
