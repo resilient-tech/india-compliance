@@ -148,7 +148,7 @@ class GSTR3BCategoryConditions:
         return invoice.ineligibility_reason != "ITC restricted due to PoS rules"
 
     def is_itc_reversed(self, invoice):
-        return invoice.ineligibility_reason == "Ineligible As Per Section 17(5)"
+        return invoice.is_ineligible_for_itc
 
     def is_ineligible_itc(self, invoice):
         return invoice.ineligibility_reason == "ITC restricted due to PoS rules"
@@ -228,6 +228,7 @@ class GSTR3BInwardQuery:
                 self.PI.company_gstin,
                 IfNull(self.PI.supplier_gstin, "").as_("supplier_gstin"),
                 self.PI.is_reverse_charge,
+                self.PI_ITEM.is_ineligible_for_itc,
                 self.PI_ITEM.item_code,
                 IfNull(self.PI_ITEM.gst_treatment, "").as_("gst_treatment"),
                 self.PI_ITEM.gst_hsn_code,
