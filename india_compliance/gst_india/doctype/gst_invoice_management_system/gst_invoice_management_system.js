@@ -68,6 +68,9 @@ frappe.ui.form.on(DOCTYPE, {
     period: render_empty_state,
 
     refresh(frm) {
+        frm.disable_save();
+        frm.page.clear_indicator();
+
         show_download_invoices_message(frm);
 
         frm.ims_actions = new IMSAction(frm);
