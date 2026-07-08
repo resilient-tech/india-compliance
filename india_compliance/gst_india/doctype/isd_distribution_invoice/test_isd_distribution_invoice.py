@@ -6,6 +6,9 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_months, flt, today
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.doctype.isd_distribution_invoice.isd_distribution_invoice import (
+    create_isd_recipient_invoice,
+)
 from india_compliance.gst_india.overrides.company import create_company_fixtures
 from india_compliance.gst_india.utils.isd import (
     ISD_GST_CATEGORY,
@@ -204,6 +207,10 @@ def submit_distribution(pi, distribution_address, recipient_address, **kwargs):
     doc = build_distribution(pi, distribution_address, recipient_address, **kwargs)
     doc.insert()
     doc.submit()
+    # The recipient mirror is created client-side after submit in production (a confirm decides
+    # whether to auto-submit it); mirror that here so tests get the submitted intra-company recipient.
+    if not doc.is_against_party:
+        create_isd_recipient_invoice(doc.name, submit_on_creation=1)
     return doc
 
 
@@ -323,11 +330,17 @@ def setup_isd_fixtures(cls):
     """Shared fixtures: addresses linked to _TIRC, a submitted ISD-applicable Purchase Invoice, and a
     branch company represented as an internal Customer (for the against-party workflow)."""
     from india_compliance.gst_india.overrides.company import (
+        make_default_gst_expense_accounts,
         make_default_isd_provisional_account,
     )
 
-    # the test company may predate this company fixture (idempotent)
+    # the test company may predate these company fixtures (idempotent)
     make_default_isd_provisional_account(COMPANY)
+    make_default_gst_expense_accounts(COMPANY)
+
+    # tests assume the default behaviour (expense distributed with the ITC); the flag defaults to 1
+    # on a fresh install but an existing single may have it unset, so pin it explicitly
+    frappe.db.set_single_value("GST Settings", "distribute_expense_with_isd_credit", 1)
 
     cls.company = COMPANY
     cls.isd_address = make_isd_address(

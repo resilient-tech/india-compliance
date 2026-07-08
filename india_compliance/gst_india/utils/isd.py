@@ -20,7 +20,6 @@ from india_compliance.gst_india.doctype.turnover_record.turnover_record import g
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 ISD_GST_CATEGORY = "Input Service Distributor"
-ISD_DISTRIBUTION_PROVISIONAL_ACCOUNT = "ISD Distribution Provisional"
 
 
 def sum_row_tax_by_type(row, prefix):
@@ -80,6 +79,10 @@ def get_distribution_ratio(doc):
     return sign * flt(doc.branch_turnover / doc.total_turnover)
 
 
+def should_distribute_expense():
+    return cint(frappe.get_cached_value("GST Settings", "GST Settings", "distribute_expense_with_isd_credit"))
+
+
 def get_row_itc(row, is_distribution, precision, ratio=None):
     """Row-wise ITC per GST head.
 
@@ -99,6 +102,7 @@ def get_row_itc(row, is_distribution, precision, ratio=None):
 def calculate_distribution(doc):
     ratio = get_distribution_ratio(doc)
     inter_state = is_inter_state_distribution(doc)
+    distribute_expense = should_distribute_expense()
 
     meta = frappe.get_meta("ISD Source Item")
     precision = get_field_precision(meta.get_field("distributed_igst"))
@@ -122,7 +126,9 @@ def calculate_distribution(doc):
         # cess is never fused, whatever the place of supply
         row.distributed_cess = credit["cess"]
         row.distributed_cess_non_advol = credit["cess_non_advol"]
-        row.distributed_expense = flt(flt(row.total_expense) * ratio, expense_precision)
+        row.distributed_expense = (
+            flt(flt(row.total_expense) * ratio, expense_precision) if distribute_expense else 0.0
+        )
 
 
 @frappe.whitelist()

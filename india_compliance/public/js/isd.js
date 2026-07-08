@@ -28,6 +28,22 @@ india_compliance.ISDController = class ISDController {
         return this.frm.doctype === "ISD Distribution Invoice";
     }
 
+    get distribute_expense() {
+        return cint(gst_settings.distribute_expense_with_isd_credit);
+    }
+
+    toggle_expense_fields() {
+        const hidden = this.distribute_expense ? 0 : 1;
+        this.frm.toggle_display("total_expense", !hidden);
+
+        const grid = this.frm.fields_dict.source_items?.grid;
+        if (grid) {
+            grid.update_docfield_property("total_expense", "hidden", hidden);
+            grid.update_docfield_property("distributed_expense", "hidden", hidden);
+            this.frm.refresh_field("source_items");
+        }
+    }
+
     setup() {
         this.set_queries();
         this.load_company_defaults();
@@ -259,7 +275,7 @@ india_compliance.ISDController = class ISDController {
 
         row.distributed_cess = flt((row.total_cess || 0) * ratio, _p);
         row.distributed_cess_non_advol = flt((row.total_cess_non_advol || 0) * ratio, _p);
-        row.distributed_expense = flt((row.total_expense || 0) * ratio, _pe);
+        row.distributed_expense = this.distribute_expense ? flt((row.total_expense || 0) * ratio, _pe) : 0;
     }
 
     async recalculate() {

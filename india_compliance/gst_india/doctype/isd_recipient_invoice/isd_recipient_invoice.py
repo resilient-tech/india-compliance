@@ -34,6 +34,22 @@ class ISDRecipientInvoice(ISDController):
         reference = self.isd_distribution_invoice_reference
         ref_link = get_link_to_form("ISD Distribution Invoice", reference)
 
+        duplicate_check = frappe.db.exists(
+            "ISD Recipient Invoice",
+            {
+                "isd_distribution_invoice_reference": reference,
+                "name": ("!=", self.name),
+                "docstatus": 1,
+            },
+        )
+
+        if duplicate_check:
+            frappe.throw(
+                _(
+                    "ISD Distribution Invoice {0} is already linked to another submitted ISD Recipient Invoice."
+                ).format(ref_link)
+            )
+
         source = frappe.db.get_value(
             "ISD Distribution Invoice",
             reference,

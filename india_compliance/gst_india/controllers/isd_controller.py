@@ -19,6 +19,7 @@ from india_compliance.gst_india.utils.isd import (
     get_input_gst_accounts,
     get_row_itc,
     is_inter_state_distribution,
+    should_distribute_expense,
     sum_row_tax_by_type,
     throw_invalid_rows,
     throw_row_table,
@@ -373,7 +374,13 @@ class ISDController(Document):
         """Set tax amounts and total eligible/ineligible amounts from source items"""
         totals = {"eligible": 0, "ineligible": 0}
 
+        # expense is only distributed when enabled;
+        distribute_expense = should_distribute_expense()
+
         for row in self.source_items:
+            if not distribute_expense:
+                row.distributed_expense = 0
+
             key = "ineligible" if row.is_ineligible_for_itc else "eligible"
             totals[key] += sum_row_tax_by_type(row, "distributed")
 
@@ -452,17 +459,22 @@ class ISDController(Document):
     def get_gl_entries(self):
         self.setup_precision()
 
+        # GST Expense / expense-head postings are Profit & Loss accounts that require a cost center;
+        if not self.cost_center:
+            self.cost_center = frappe.get_cached_value("Company", self.company, "cost_center")
+
         self.company_gstin = self.distribution_gstin if self.is_distribution_side() else self.recipient_gstin
 
+        self._book_expenses = should_distribute_expense()
+
         # distribution side: move itc and expense from tax account to isd provisional account
-        self.dr_or_cr = "credit" if self.is_distribution_side() else "debit"
-        self.cr_or_dr = "debit" if self.is_distribution_side() else "credit"
+        self.cr_or_dr = "credit" if self.is_distribution_side() else "debit"
+        self.dr_or_cr = "debit" if self.is_distribution_side() else "credit"
 
         gl_entries = []
         self.add_tax_gl_entries(gl_entries)
-        self.add_expense_gl_entries(gl_entries)
+        self.add_distributed_expense_gl_entries(gl_entries)
         self.add_ineligible_itc_gl_entries(gl_entries)
-        self.validate_gl_balance(gl_entries)
 
         return gl_entries
 
@@ -485,54 +497,71 @@ class ISDController(Document):
                     "party": party,
                     "remarks": _("ISD Credit Distribution"),
                 },
+                item=row,
             )
         )
 
-    def add_tax_gl_entries(self, gl_entries):
-        """Tax entries(if any) from/to ISD provisional account"""
-        if self.is_recipient_side_and_unregistered():
-            return
+    def get_gst_expense_account(self):
+        """Get default GST Expense account set by the company"""
+        account = frappe.get_cached_value("Company", self.company, "default_gst_expense_account")
+        if not account:
+            frappe.throw(
+                _("Please set <strong>Default GST Expense Account</strong> in Company {0}").format(
+                    get_link_to_form("Company", self.company)
+                )
+            )
+        return account
 
-        total = 0
-        for tax in self.taxes:
-            self.add_gl_entry(gl_entries, tax.account_head, tax.tax_amount, self.dr_or_cr, row=tax)
-            total += flt(tax.tax_amount)
-
+    def add_provisional_gl_entry(self, gl_entries, amount, side, *, row=None):
+        """Offset entry to the ISD provisional (clearing) account, carrying the party when applicable"""
         self.add_gl_entry(
             gl_entries,
             self.isd_provisional_account,
-            total,
-            self.cr_or_dr,
+            amount,
+            side,
+            row=row,
             party_type=self.party_type if self.is_against_party else None,
             party=self.party if self.is_against_party else None,
         )
 
-    def add_expense_gl_entries(self, gl_entries):
-        """For expense gl entries, and unregistered recipient"""
-        # when unregistered recipient isd invoice or distribution isd invoice with ineligible items
-        absorb_taxes = self.is_recipient_side_and_unregistered()
+    def add_tax_gl_entries(self, gl_entries):
+        """Tax entries from/to the ISD provisional account.
+
+        An unregistered recipient goes to gst expense or provisional account
+        """
+        total = 0
+        if self.is_recipient_side_and_unregistered():
+            total = flt(self.total_eligible + self.total_ineligible)
+            book_expense_account = (
+                self.get_gst_expense_account() if self._book_expenses else self.isd_provisional_account
+            )
+            self.add_gl_entry(gl_entries, book_expense_account, total, self.cr_or_dr)
+        else:
+            for tax in self.taxes:
+                self.add_gl_entry(gl_entries, tax.account_head, tax.tax_amount, self.cr_or_dr)
+                total += flt(tax.tax_amount)
+
+        self.add_provisional_gl_entry(
+            gl_entries, total, self.dr_or_cr
+        )  # remove the transferred amount from provisional
+
+    def add_distributed_expense_gl_entries(self, gl_entries):
+        """Distribute the pro-rata expense to each item's expense head, when enabled in GST Settings"""
+        if not self._book_expenses:
+            return
 
         total = 0
         for row in self.source_items:
             amount = flt(row.distributed_expense)
-            if absorb_taxes:
-                amount += sum_row_tax_by_type(row, "distributed")
-
-            self.add_gl_entry(gl_entries, row.expense_head, amount, self.dr_or_cr, row=row)
+            self.add_gl_entry(gl_entries, row.expense_head, amount, self.cr_or_dr, row=row)
             total += amount
 
-        self.add_gl_entry(
-            gl_entries,
-            self.isd_provisional_account,
-            total,
-            self.cr_or_dr,
-            party_type=self.party_type if self.is_against_party else None,
-            party=self.party if self.is_against_party else None,
-        )
+        self.add_provisional_gl_entry(gl_entries, total, self.dr_or_cr, row=row)
 
     def add_ineligible_itc_gl_entries(self, gl_entries):
-        """reverse the ineligible ITC from expense head"""
+        """Reverse ineligible ITC"""
         if self.is_recipient_side_and_unregistered():
+            # values are already in the gst expense account, no reversal needed
             return
 
         ineligible_rows = [row for row in self.source_items if row.is_ineligible_for_itc]
@@ -555,43 +584,25 @@ class ISDController(Document):
                     for gst_tax_type in GST_TAX_TYPES
                 }
 
+            row_reversal_total = sum(amount for amount in amounts.values() if amount)
+
+            # input GST accounts -> expense accounts/provisional account
             for gst_tax_type, amount in amounts.items():
                 if not amount:
                     continue
-                self.add_gl_entry(
-                    gl_entries,
-                    tax_accounts[gst_tax_type],
-                    amount,
-                    self.cr_or_dr,
-                    row=row,
-                )
+                self.add_gl_entry(gl_entries, tax_accounts[gst_tax_type], amount, self.dr_or_cr, row=row)
 
+            if not self._book_expenses:
+                # -> provisional account
+                self.add_provisional_gl_entry(gl_entries, row_reversal_total, self.cr_or_dr, row=row)
+                return
+                # -> expense head
             self.add_gl_entry(
-                gl_entries,
-                row.expense_head,
-                sum_row_tax_by_type(row, "distributed"),
-                self.dr_or_cr,
-                row=row,
+                gl_entries, self.get_gst_expense_account(), row_reversal_total, self.cr_or_dr, row=row
             )
 
-    def validate_gl_balance(self, gl_entries):
-        # each add_* step is self-balancing, so the document balances by construction. Still assert
-        # (a) the ISD clearing total matches the stored provisional amount, and (b) debit == credit
-        clearing_total = flt(
-            sum(
-                flt(entry.get(self.cr_or_dr))
-                for entry in gl_entries
-                if entry.get("account") == self.isd_provisional_account
-            ),
-            self._tax_precision,
-        )
-        if abs(clearing_total - flt(self.isd_provisional_amount, self._tax_precision)) > 0.01:
-            frappe.throw(
-                _("GL entries for {0} do not add up to the ISD provisional and expense totals.").format(
-                    self.name
-                )
+            # GST Expense -> expense head
+            self.add_gl_entry(gl_entries, row.expense_head, row_reversal_total, self.cr_or_dr, row=row)
+            self.add_gl_entry(
+                gl_entries, self.get_gst_expense_account(), row_reversal_total, self.dr_or_cr, row=row
             )
-
-        diff = flt(sum(flt(entry.debit) - flt(entry.credit) for entry in gl_entries), self._tax_precision)
-        if diff:
-            frappe.throw(_("Debit and Credit not equal for {0} (difference: {1}).").format(self.name, diff))

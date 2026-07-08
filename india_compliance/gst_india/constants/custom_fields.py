@@ -1039,6 +1039,17 @@ CUSTOM_FIELDS = {
             "allow_on_submit": 1,
         },
         {
+            "fieldname": "isd_credit_distributed_percent",
+            "label": "ISD Credit Distributed (%)",
+            "fieldtype": "Float",
+            "insert_after": "itc_claim_period",
+            "print_hide": 1,
+            "read_only": 1,
+            "no_copy": 1,
+            "allow_on_submit": 1,
+            "depends_on": "eval:doc.is_isd_applicable",
+        },
+        {
             "fieldname": "is_boe_applicable",
             "label": "Is BOE Applicable",
             "fieldtype": "Check",

@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import Coalesce, Sum
-from frappe.utils import flt, get_link_to_form, getdate
+from frappe.utils import cint, flt, get_link_to_form, getdate
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.controllers.isd_controller import ISDController
@@ -43,17 +43,16 @@ class ISDDistributionInvoice(ISDController):
         self.set_taxes_and_totals()
 
     def on_submit(self):
-        # GL first, so a posting failure aborts before the recipient invoice exists
         self.make_document_gl_entries()
-
-        if not self.is_against_party:
-            self.create_recipient_invoice()
+        self.sync_distribution_percentage()
 
         frappe.enqueue(self.upsert_turnover_record, enqueue_after_commit=True)
 
-    # on_cancel (reversing the GL entries) is inherited from ISDController. Frappe's link check
-    # forces the ISD Recipient Invoice (isd_distribution_invoice_reference) and any credit note
-    # (credit_note_against) to be cancelled before this document.
+    def on_cancel(self):
+        super().on_cancel()
+        self.sync_distribution_percentage(include_current=False)
+
+    # on_cancel (reversing the GL entries) is inherited from ISDController
 
     def upsert_turnover_record(self):
         if not self.recipient_address:
@@ -70,17 +69,24 @@ class ISDDistributionInvoice(ISDController):
             posting_date=self.posting_date,
         )
 
-    def create_recipient_invoice(self):
-        recipient = create_isd_recipient_invoice(self.name)
-        recipient.insert(ignore_permissions=True)
-        recipient.submit()
+    def sync_distribution_percentage(self, include_current=True):
+        already = self.get_distributed_for_purchase_invoice()
 
-        frappe.msgprint(
-            _("ISD Recipient Invoice {0} created and submitted.").format(
-                get_link_to_form("ISD Recipient Invoice", recipient.name)
-            ),
-            alert=True,
-            indicator="green",
+        current_invoice_distributed_itc = sum(
+            sum_row_tax_by_type(row, "distributed") for row in self.source_items
+        )
+        total_itc_available = sum(sum_row_tax_by_type(row, "total") for row in self.source_items)
+
+        net_distributed_itc = already.itc
+        if include_current:
+            net_distributed_itc += current_invoice_distributed_itc
+
+        _p = frappe.get_precision("Purchase Invoice", "isd_credit_distributed_percent")
+        frappe.set_value(
+            "Purchase Invoice",
+            self.purchase_invoice,
+            "isd_credit_distributed_percent",
+            flt((net_distributed_itc / total_itc_available) * 100, _p),
         )
 
     def validate_purchase_invoice(self):
@@ -281,19 +287,130 @@ class ISDDistributionInvoice(ISDController):
             .run(as_dict=True)
         )
         row = result[0] if result else {}
-        precision = self._source_item_precision
         return frappe._dict(
-            itc=flt(row.get("itc"), precision),
-            expense=flt(row.get("expense"), precision),
+            itc=row.get("itc"),
+            expense=row.get("expense"),
         )
 
 
+def _guess_address(gstin, extra_filters=None):
+    "guess address internal function for creating inter company invoices"
+    if not gstin:
+        return None
+
+    filters = [
+        ["disabled", "=", 0],
+        ["gstin", "=", gstin],
+    ]
+    if extra_filters:
+        filters.extend(extra_filters)
+
+    names = frappe.get_list(
+        "Address",
+        filters=filters,
+        pluck="name",
+        order_by="is_primary_address DESC",
+        limit=1,
+    )
+    return names[0] if names else None
+
+
+def apply_against_party_overrides(source, recipient):
+    recipient_company = frappe.db.get_value(source.party_type, source.party, "represents_company")
+    if not recipient_company:
+        frappe.throw(
+            _(
+                "{0} {1} does not represent a company, so an inter-company ISD Recipient"
+                " Invoice cannot be created."
+            ).format(source.party_type, frappe.bold(source.party))
+        )
+
+    party_type = party = None
+    filters = [
+        ["gst_category", "=", ISD_GST_CATEGORY],
+        ["Dynamic Link", "link_doctype", "!=", "Company"],
+    ]
+
+    distribution_address = _guess_address(source.get("distribution_gstin"), extra_filters=filters)
+    if distribution_address:
+        link = frappe.db.get_value(
+            "Dynamic Link",
+            {
+                "parent": distribution_address,
+                "parenttype": "Address",
+                "link_doctype": ["!=", "Company"],
+            },
+            ["link_doctype", "link_name"],
+            as_dict=True,
+        )
+        if link:
+            party_type, party = link.link_doctype, link.link_name
+
+    filters = [
+        ["gst_category", "!=", ISD_GST_CATEGORY],
+        ["Dynamic Link", "link_doctype", "=", "Company"],
+        ["Dynamic Link", "link_name", "=", recipient_company],
+    ]
+    recipient_address = _guess_address(source.recipient_gstin, extra_filters=filters)
+
+    # Accounts and accounting dimensions belong to the source company; re-default them for the new
+    # (recipient) company instead.
+    default_cost_center, default_expense_account, default_isd_provisional_account = frappe.get_cached_value(
+        "Company",
+        recipient_company,
+        ["cost_center", "default_expense_account", "default_isd_provisional_account"],
+    )
+
+    recipient.update(
+        {
+            "company": recipient_company,
+            "is_against_party": 1,
+            "party_type": party_type,
+            "party": party,
+            "distribution_address": distribution_address,
+            "recipient_address": recipient_address,
+            "cost_center": default_cost_center,
+            "project": None,
+            "isd_provisional_account": default_isd_provisional_account,
+        }
+    )
+
+    for row in recipient.source_items:
+        row.update(
+            {
+                "expense_head": default_expense_account,
+                "cost_center": default_cost_center,
+                "project": None,
+            }
+        )
+
+
+def set_missing_values(source, target):
+    """Postprocess for the ISD Distribution -> ISD Recipient mapping"""
+    target.isd_distribution_invoice_reference = source.name
+    target.posting_date = source.posting_date
+    target.set("taxes", [])
+
+    if source.is_credit_note and source.credit_note_against:
+        target.credit_note_against = frappe.db.get_value(
+            "ISD Recipient Invoice",
+            {
+                "isd_distribution_invoice_reference": source.credit_note_against,
+                "is_credit_note": 0,
+                "docstatus": 1,
+            },
+        )
+
+    if source.is_against_party:
+        apply_against_party_overrides(source, target)
+
+
 @frappe.whitelist()
-def create_isd_recipient_invoice(source_name: str):
+def create_isd_recipient_invoice(source_name: str, submit_on_creation: bool | None = None):
+    """creating a isd recipient invoice from a isd distrubiion invocie"""
+    # submit on creation -> None, assume open_mapped_doc called it
     frappe.has_permission("ISD Distribution Invoice", "read", throw=True)
     frappe.has_permission("ISD Recipient Invoice", "write", throw=True)
-
-    source = frappe.get_doc("ISD Distribution Invoice", source_name)
 
     if frappe.db.exists(
         "ISD Recipient Invoice", {"isd_distribution_invoice_reference": source_name, "docstatus": ["<", 2]}
@@ -304,130 +421,47 @@ def create_isd_recipient_invoice(source_name: str):
             )
         )
 
-    field_no_map = [
-        "naming_series",
-        "amended_from",
-        "purchase_invoice",
-        "credit_note_against",
-    ]
-
-    source_item_no_map = ["purchase_invoice_item"]
-
-    # Address / party determination — only for the inter-company (against-party) flow.
-    overrides = {}
-    row_overrides = {}
-    if source.is_against_party:
-        recipient_company = frappe.db.get_value(source.party_type, source.party, "represents_company")
-        if not recipient_company:
-            frappe.throw(
-                _(
-                    "{0} {1} does not represent a company, so an inter-company ISD Recipient"
-                    " Invoice cannot be created."
-                ).format(source.party_type, frappe.bold(source.party))
-            )
-
-        party_type = party = None
-        filters = [
-            ["gst_category", "=", ISD_GST_CATEGORY],
-            ["Dynamic Link", "link_doctype", "!=", "Company"],
-        ]
-        distribution_address = _guess_address(source.get("distribution_gstin"), extra_filters=filters)
-        if distribution_address:
-            link = frappe.db.get_value(
-                "Dynamic Link",
-                {
-                    "parent": distribution_address,
-                    "parenttype": "Address",
-                    "link_doctype": ["!=", "Company"],
-                },
-                ["link_doctype", "link_name"],
-                as_dict=True,
-            )
-            if link:
-                party_type, party = link.link_doctype, link.link_name
-
-        filters = [
-            ["gst_category", "!=", ISD_GST_CATEGORY],
-            ["Dynamic Link", "link_doctype", "=", "Company"],
-            ["Dynamic Link", "link_name", "=", recipient_company],
-        ]
-        recipient_address = _guess_address(source.recipient_gstin, extra_filters=filters)
-
-        # Accounts and accounting dimensions belong to the source company
-        # Re-default them for the new (recipient) company instead.
-        default_cost_center, default_expense_account, default_isd_provisional_account = (
-            frappe.get_cached_value(
-                "Company",
-                recipient_company,
-                ["cost_center", "default_expense_account", "default_isd_provisional_account"],
-            )
-        )
-
-        overrides = {
-            "company": recipient_company,
-            "is_against_party": 1,
-            "party_type": party_type,
-            "party": party,
-            "distribution_address": distribution_address,
-            "recipient_address": recipient_address,
-            # accounting dimensions — re-default / clear for the new company
-            "cost_center": default_cost_center,
-            "project": None,
-            # the inter-company recipient (credit note) invoice is created / linked manually
-            "credit_note_against": None,
-            "isd_provisional_account": default_isd_provisional_account,
-        }
-        row_overrides = {
-            "expense_head": default_expense_account,
-            "cost_center": default_cost_center,
-            "project": None,
-        }
-
-        field_no_map += [
-            "distribution_address",
-            "recipient_address",
-            "party_type",
-            "party",
-            "cost_center",
-            "project",
-            "isd_provisional_account",
-        ]
-        source_item_no_map += ["expense_head", "cost_center", "project"]
-    else:
-        # single-company flow (recipient invoice auto-created on submit): a distribution credit note
-        # carries `credit_note_against` = the original ISD Distribution Invoice, but the recipient side
-        # must instead point at the ISD Recipient Invoice created from that original distribution.
-        overrides["credit_note_against"] = _get_recipient_credit_note_reference(source)
-
-    def set_missing_values(source, target):
-        target.isd_distribution_invoice_reference = source.name
-        target.posting_date = source.posting_date
-
-        target.set("taxes", [])
-
-        for field, value in overrides.items():
-            target.set(field, value)
-
-        for row in target.source_items:
-            for field, value in row_overrides.items():
-                row.set(field, value)
-
-    return get_mapped_doc(
+    recipient = get_mapped_doc(
         "ISD Distribution Invoice",
         source_name,
         {
             "ISD Distribution Invoice": {
                 "doctype": "ISD Recipient Invoice",
-                "field_no_map": field_no_map,
+                "field_no_map": [
+                    "naming_series",
+                    "amended_from",
+                    "purchase_invoice",
+                    "credit_note_against",
+                ],
                 "validation": {"docstatus": ["=", 1]},
             },
             "ISD Source Item": {
                 "doctype": "ISD Source Item",
-                "field_no_map": source_item_no_map,
+                "field_no_map": ["purchase_invoice_item"],
             },
         },
         postprocess=set_missing_values,
     )
+
+    # when using open_mapped_doc must return the draft document without running validations
+    if submit_on_creation is not None:
+        recipient.insert(ignore_permissions=True)
+
+        if cint(submit_on_creation):
+            recipient.submit()
+            status = _("created and submitted")
+        else:
+            status = _("saved as a draft")
+
+        frappe.msgprint(
+            _("ISD Recipient Invoice {0} {1}.").format(
+                get_link_to_form("ISD Recipient Invoice", recipient.name), status
+            ),
+            alert=True,
+            indicator="green",
+        )
+
+    return recipient
 
 
 @frappe.whitelist()
@@ -454,49 +488,3 @@ def create_credit_note(source_name: str):
         },
         postprocess=set_missing_values,
     )
-
-
-def _get_recipient_credit_note_reference(source):
-    if not (source.is_credit_note and source.credit_note_against):
-        return None
-
-    original_recipient = frappe.db.get_value(
-        "ISD Recipient Invoice",
-        {
-            "isd_distribution_invoice_reference": source.credit_note_against,
-            "is_credit_note": 0,
-            "docstatus": 1,
-        },
-    )
-
-    if not original_recipient:
-        frappe.throw(
-            _(
-                "No submitted ISD Recipient Invoice was found for ISD Distribution Invoice {0}."
-                " It is required to link this credit note on the recipient side."
-            ).format(get_link_to_form("ISD Distribution Invoice", source.credit_note_against))
-        )
-
-    return original_recipient
-
-
-def _guess_address(gstin, extra_filters=None):
-    "guess address internal function for creating inter company invoices"
-    if not gstin:
-        return None
-
-    filters = [
-        ["disabled", "=", 0],
-        ["gstin", "=", gstin],
-    ]
-    if extra_filters:
-        filters.extend(extra_filters)
-
-    names = frappe.get_list(
-        "Address",
-        filters=filters,
-        pluck="name",
-        order_by="is_primary_address DESC",
-        limit=1,
-    )
-    return names[0] if names else None

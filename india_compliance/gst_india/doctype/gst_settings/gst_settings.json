@@ -17,6 +17,7 @@
   "min_hsn_digits",
   "enable_rcm_for_unregistered_supplier",
   "rcm_threshold",
+  "distribute_expense_with_isd_credit",
   "api_section",
   "enable_api",
   "enable_retry_einv_ewb_generation",
@@ -377,6 +378,13 @@
    "fieldname": "rcm_threshold",
    "fieldtype": "Currency",
    "label": "Invoice Value Threshold for Reverse Charge"
+  },
+  {
+    "fieldname": "distribute_expense_with_isd_credit",
+    "label": "Distribute Expense with ISD Credit",
+    "fieldtype": "Check",
+    "default": "1",
+    "description": "The expense of the ISD applicable Purchase Invoice is distributed to the recipient branch along with the Input Tax Credit"
   },
   {
    "default": "0",

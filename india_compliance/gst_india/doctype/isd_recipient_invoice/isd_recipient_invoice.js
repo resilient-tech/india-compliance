@@ -11,6 +11,7 @@ frappe.ui.form.on("ISD Recipient Invoice", {
 
     refresh(frm) {
         frm.isd_controller.set_provisional_labels();
+        frm.isd_controller.toggle_expense_fields();
         frm.isd_controller.set_common_buttons();
     },
 

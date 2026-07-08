@@ -9,10 +9,35 @@ frappe.ui.form.on("ISD Distribution Invoice", {
         }
     },
 
+    on_submit(frm) {
+        if (frm.doc.is_against_party) return;
+
+        const create_recipient = (submit_on_creation) => {
+            frappe.call({
+                method: "india_compliance.gst_india.doctype.isd_distribution_invoice.isd_distribution_invoice.create_isd_recipient_invoice",
+                args: { source_name: frm.doc.name, submit_on_creation },
+                freeze: true,
+                freeze_message: __("Creating ISD Recipient Invoice..."),
+                callback: (r) => {
+                    if (r.message) {
+                        frappe.set_route("Form", "ISD Recipient Invoice", r.message.name);
+                    }
+                },
+            });
+        };
+
+        frappe.confirm(
+            __("Do you wish to auto-submit the ISD Recipient Invoice?"),
+            () => create_recipient(1),
+            () => create_recipient(0),
+        );
+    },
+
     refresh(frm) {
         // source_items are populated from the linked purchase invoice, never edited by hand
         frm.set_df_property("source_items", "read_only", 1);
         frm.isd_controller.set_provisional_labels();
+        frm.isd_controller.toggle_expense_fields();
         frm.isd_controller.set_common_buttons();
 
         if (frm.doc.docstatus !== 1) return;
@@ -46,11 +71,20 @@ frappe.ui.form.on("ISD Distribution Invoice", {
         if (frappe.model.can_read("ISD Recipient Invoice")) {
             frm.add_custom_button(
                 __("Recipient Invoice"),
-                () => {
-                    frappe.route_options = {
-                        isd_distribution_invoice_reference: frm.doc.name,
-                    };
-                    frappe.set_route("List", "ISD Recipient Invoice");
+                async () => {
+                    // one active (non-cancelled) recipient invoice per distribution invoice
+                    const { message } = await frappe.db.get_value(
+                        "ISD Recipient Invoice",
+                        { isd_distribution_invoice_reference: frm.doc.name, docstatus: ["<", 2] },
+                        "name",
+                    );
+
+                    if (!message?.name) {
+                        frappe.msgprint(__("No ISD Recipient Invoice found for {0}.", [frm.doc.name]));
+                        return;
+                    }
+
+                    frappe.set_route("Form", "ISD Recipient Invoice", message.name);
                 },
                 __("View"),
             );
