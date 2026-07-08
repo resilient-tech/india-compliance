@@ -92,6 +92,8 @@ def _get_gstin_info(gstin, *, doc=None, throw_error=True):
     gstin_info = frappe._dict(
         gstin=response.gstin,
         business_name=titlecase(business_name or ""),
+        legal_name=response.lgnm or "",
+        trade_name=response.tradeNam or "",
         gst_category=GST_CATEGORIES.get(response.dty, ""),
         status=response.sts,
     )

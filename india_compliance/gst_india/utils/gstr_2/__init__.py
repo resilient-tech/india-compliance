@@ -34,13 +34,18 @@ class GSTRCategory(Enum):
     IMPG = "IMPG"
     IMPGSEZ = "IMPGSEZ"
 
+    # GSTR-2A only; fetched for the export tool, not mapped into GST Inward Supply
+    ECO = "ECO"
+    ECOA = "ECOA"
+    TDS = "TDS"
+    TCS = "TCS"
+
     # IMS
     B2BCN = "B2BCN"
     B2BCNA = "B2BCNA"
     B2BDN = "B2BDN"
     B2BDNA = "B2BDNA"
 
-    # GSTR 2A only
     ECOM = "ECOM"
     ECOMA = "ECOMA"
     TDS = "TDS"
@@ -60,6 +65,8 @@ GSTR_2A_ACTIONS = {
     "TDS": GSTRCategory.TDS,
     "TCS": GSTRCategory.TCS,
 }
+
+GSTR_2A_RESPONSE_KEYS = {"TCS": "tcs_data"}
 
 IMS_ACTIONS = {
     "B2B": GSTRCategory.B2B,
@@ -220,13 +227,17 @@ def download_gstr_2b(gstin, return_periods):
 
         # Handle multiple files for GSTR2B
         if response.data and (file_count := response.data.get("fc")):
+            full_payload = {}
             merged_docdata = {}
             for file_num in range(1, file_count + 1):
                 r = api.get_data(return_period, file_num=file_num)
                 merged_docdata = merge_raw(merged_docdata, r.data.get("docdata") or {})
+                if not full_payload:
+                    full_payload = dict(r.data)
                 save_gstr_2b(gstin, return_period, r, store_raw=False)
 
-            store_raw_return_data(gstin, ReturnType.GSTR2B.value, return_period, merged_docdata)
+            full_payload["docdata"] = merged_docdata
+            store_raw_return_data(gstin, ReturnType.GSTR2B.value, return_period, full_payload)
             continue  # skip first response if file_count is greater than 1
 
         save_gstr_2b(gstin, return_period, response)
@@ -337,7 +348,7 @@ def save_gstr_2b(gstin, return_period, json_data, *, store_raw=True):
     create_import_log(gstin, return_type.value, return_period)
 
     if store_raw:
-        store_raw_return_data(gstin, return_type.value, return_period, json_data.get("docdata") or {})
+        store_raw_return_data(gstin, return_type.value, return_period, dict(json_data))
 
     save_gstr(
         gstin,

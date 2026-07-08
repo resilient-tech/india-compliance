@@ -187,7 +187,7 @@ class GSTR2AExporter(GSTR2Exporter):
     def download(self, periods):
         from india_compliance.gst_india.utils.gstr_2 import download_gstr_2a
 
-        download_gstr_2a(self.gstin, periods)
+        download_gstr_2a(self.gstin, periods, include_export_sections=True)
 
 
 class GSTR2BExporter(GSTR2Exporter):

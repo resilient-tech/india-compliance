@@ -32,6 +32,7 @@ frappe.ui.form.on("GST Return Export", {
 
     setup_actions(frm) {
         frm.add_custom_button(__("Show Summary"), () => render_summary(frm));
+        frm.add_custom_button(__("Export to Excel"), () => export_return_excel(frm));
         frm.add_custom_button(__("Sync"), () => frm.events.sync_return_data(frm)).addClass("btn-primary");
     },
 
@@ -64,6 +65,20 @@ frappe.ui.form.on("GST Return Export", {
                 message: __("GSTR-2B for {0} isn't generated on the portal yet.", [return_period]),
                 indicator: "orange",
             });
+        });
+
+        frappe.realtime.on("gst_return_export_ready", ({ file_url, file_name, error }) => {
+            if (error) {
+                frappe.show_alert({ message: __("Export failed: {0}", [error]), indicator: "red" });
+                return;
+            }
+            frappe.show_alert({ message: __("Export ready: {0}", [file_name]), indicator: "green" });
+            const link = document.createElement("a");
+            link.href = file_url;
+            link.download = file_name;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
         });
     },
 
@@ -100,6 +115,21 @@ function fetch_summary(frm) {
         return_type: frm.doc.gst_return,
         date_range: [frm.doc.from_date, frm.doc.to_date],
     });
+}
+
+async function export_return_excel(frm) {
+    const { company_gstin, gst_return, from_date, to_date } = frm.doc;
+    if (!company_gstin || !gst_return || !from_date || !to_date) {
+        frappe.throw(__("Select Company, GSTIN, GST Return and the period before exporting."));
+    }
+
+    const { message } = await frappe.call({
+        method: "india_compliance.gst_india.doctype.gst_return_export.gstr_2_export.export_return_as_excel",
+        args: { company_gstin, return_type: gst_return, date_range: [from_date, to_date] },
+    });
+    if (message?.message) {
+        frappe.show_alert({ message: message.message, indicator: "blue" });
+    }
 }
 
 async function render_summary(frm) {
