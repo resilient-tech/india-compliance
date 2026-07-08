@@ -17,7 +17,8 @@ frappe.ui.form.on("GST Return Export", {
     },
 
     refresh(frm) {
-        frm.disable_save();
+        frm.disable_save(); // for `Not Saved` and Doctype behaves like a report
+        frm.page.clear_indicator();
         frm.events.setup_actions(frm);
         render_summary_placeholder(frm);
     },
