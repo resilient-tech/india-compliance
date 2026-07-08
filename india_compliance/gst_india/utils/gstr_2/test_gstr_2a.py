@@ -6,6 +6,9 @@ from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 from frappe.utils import get_datetime
 
+from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+    get_raw_return_data,
+)
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import (
     GSTRCategory,
@@ -81,6 +84,38 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
         mock_gstr_2a_api.return_value.get_data.side_effect = mock_get_data
         mock_save_gstr.side_effect = mock_save_gstr_func
         download_gstr_2a(self.gstin, (self.return_period,))
+
+    def test_save_gstr_2a_persists_raw(self):
+        """save_gstr_2a persists the raw section payload for the export tool."""
+        raw = get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, self.return_period)
+        self.assertIsNotNone(raw)
+        self.assertIn("b2b", raw)
+
+    @patch("india_compliance.gst_india.utils.gstr_2.save_gstr")
+    @patch("india_compliance.gst_india.utils.gstr_2.GSTR2aAPI")
+    def test_download_gstr_2a_stores_export_sections(self, mock_gstr_2a_api, mock_save_gstr):
+        """include_export_sections merges ECO/ECOA/TDS/TCS into raw; a failing section is
+        skipped, not fatal."""
+        period = "042020"
+        export_data = {"ecom": [{"e": 1}], "ecoma": [{"e": 2}], "tds": [{"t": 3}], "tcs_data": [{"c": 4}]}
+
+        def mock_get_data(action, return_period):
+            if action == "TDS":
+                raise Exception("resource not found")
+            key = {"TCS": "tcs_data"}.get(action, action.lower())
+            if key in export_data:
+                return frappe._dict({key: export_data[key]})
+            return frappe._dict(error_type="no_docs_found")
+
+        mock_gstr_2a_api.return_value = Mock()
+        mock_gstr_2a_api.return_value.get_data.side_effect = mock_get_data
+        download_gstr_2a(self.gstin, (period,), include_export_sections=True)
+
+        raw = get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period)
+        self.assertEqual(raw["eco"], [{"e": 1}])
+        self.assertEqual(raw["ecoa"], [{"e": 2}])
+        self.assertEqual(raw["tcs"], [{"c": 4}])
+        self.assertNotIn("tds", raw)
 
     def test_gstr2a_b2b(self):
         doc = self.get_doc(GSTRCategory.B2B)

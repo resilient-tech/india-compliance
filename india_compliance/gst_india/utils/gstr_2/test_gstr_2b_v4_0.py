@@ -4,10 +4,14 @@ import frappe
 from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 
+from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+    get_raw_return_data,
+)
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
+from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
 
 class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
@@ -338,6 +342,13 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         doc.reload()
         self.assertEqual(doc.return_period_2b, self.return_period)
         self.assertEqual(doc.is_downloaded_from_2b, 1)
+
+    def test_save_gstr_2b_persists_raw(self):
+        """save_gstr_2b persists the full raw payload (docdata + itcsumm) for the export tool."""
+        raw = get_raw_return_data(self.gstin, ReturnType.GSTR2B.value, self.return_period)
+        self.assertIsNotNone(raw)
+        self.assertIn("b2b", raw.get("docdata", raw))  # same access the exporter uses
+        self.assertIn("itcsumm", raw)
 
 
 class TestGetUniqueKey(IntegrationTestCase):
