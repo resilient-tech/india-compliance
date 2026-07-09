@@ -42,6 +42,13 @@ class ISDDistributionInvoice(ISDController):
         self.validate_accounts()
         self.set_taxes_and_totals()
 
+    def build_for_bulk(self):
+        """used by bulk_create_isd_distribution_invoices"""
+        self.setup_precision()
+        self.setup_party_fields()
+        calculate_distribution(self)
+        self.set_taxes_and_totals()
+
     def on_submit(self):
         self.make_document_gl_entries()
         self.sync_distribution_percentage()
@@ -119,7 +126,7 @@ class ISDDistributionInvoice(ISDController):
         if pi.company != self.company:
             frappe.throw(_("Purchase Invoice {0} belongs to a different company.").format(pi_link))
 
-        if pi.company_gstin != self.distribution_gstin:
+        if pi.company_gstin != frappe.get_cached_value("Address", self.distribution_address, "gstin"):
             frappe.throw(
                 _("Purchase Invoice {0} is booked under a different Distribution GSTIN.").format(pi_link)
             )
@@ -351,7 +358,7 @@ def apply_against_party_overrides(source, recipient):
         ["Dynamic Link", "link_doctype", "=", "Company"],
         ["Dynamic Link", "link_name", "=", recipient_company],
     ]
-    recipient_address = _guess_address(source.recipient_gstin, extra_filters=filters)
+    recipient_address = _guess_address(source.get("recipient_gstin"), extra_filters=filters)
 
     # Accounts and accounting dimensions belong to the source company; re-default them for the new
     # (recipient) company instead.

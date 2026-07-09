@@ -7,10 +7,14 @@ Imports only frappe / constants so it stays a leaf module that the ISD controlle
 (one-directional).
 """
 
+from functools import reduce
+from operator import add
+
 import frappe
 from frappe import _
 from frappe.model.meta import get_field_precision
-from frappe.utils import cint, flt
+from frappe.query_builder.functions import Coalesce, Date, IfNull, Sum
+from frappe.utils import add_months, cint, flt, getdate
 
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
@@ -342,3 +346,168 @@ def get_isd_autofill_values(doctype: str, changed_field: str, doc: str | dict):
         )  # if no turnover is found don't override
 
     return doc
+
+
+# ---------------------------------------------------------------------------- bulk distribution dialog
+@frappe.whitelist()
+def get_distribution_addresses(party_type: str, party: str, posting_date: str, address: str | None = None):
+    """Non-ISD addresses of the party, each with its turnover for (posting_date - 1 month).
+
+    Powers the bulk-distribution dialog: prefilling the recipient grid
+    and, when `address` is given, fetching the turnover of a single selected address.
+    """
+    if not party_type or not party:
+        frappe.throw(_("Party Type and Party are mandatory"))
+
+    frappe.has_permission(party_type, doc=party, ptype="read", throw=True)
+    frappe.has_permission("Address", ptype="read", throw=True)
+
+    addr = frappe.qb.DocType("Address")
+    dynamic_link = frappe.qb.DocType("Dynamic Link")
+    turnover_record = frappe.qb.DocType("Turnover Record")
+
+    query = (
+        frappe.qb.from_(addr)
+        .join(dynamic_link)
+        .on(dynamic_link.parent == addr.name)
+        .left_join(turnover_record)
+        .on(
+            (IfNull(turnover_record.gstin, "") == IfNull(addr.gstin, ""))
+            & (IfNull(turnover_record.gst_state, "") == IfNull(addr.gst_state, ""))
+        )
+        .select(
+            addr.name,
+            addr.gstin,
+            addr.gst_state,
+            addr.gst_category,
+            Coalesce(turnover_record.amount, 0).as_("turnover_amount"),
+        )
+        .where(
+            (dynamic_link.link_doctype == party_type)
+            & (dynamic_link.link_name == party)
+            & (addr.gst_category != ISD_GST_CATEGORY)
+        )
+        .where(
+            (turnover_record.from_date.isnull())
+            | (Date(add_months(posting_date, -1))).between(turnover_record.from_date, turnover_record.to_date)
+        )
+    )
+
+    if address:
+        query = query.where(addr.name == address)
+
+    return query.run(as_dict=True)
+
+
+@frappe.whitelist()
+def get_purchase_invoice_distribution_summary(purchase_invoice: str):
+    frappe.has_permission("Purchase Invoice", "read", doc=purchase_invoice, throw=True)
+
+    pi_item = frappe.qb.DocType("Purchase Invoice Item")
+    total_tax = flt(
+        (
+            frappe.qb.from_(pi_item)
+            .where(pi_item.parent == purchase_invoice)
+            .select(reduce(add, (Coalesce(Sum(getattr(pi_item, f"{t}_amount")), 0) for t in GST_TAX_TYPES)))
+            .run()
+        )[0][0]
+    )
+
+    isd_source_item = frappe.qb.DocType("ISD Source Item")
+    isd_invoice = frappe.qb.DocType("ISD Distribution Invoice")
+    distributed_tax = flt(
+        (
+            frappe.qb.from_(isd_source_item)
+            .join(isd_invoice)
+            .on(isd_source_item.parent == isd_invoice.name)
+            .where(isd_invoice.purchase_invoice == purchase_invoice)
+            .where(isd_invoice.docstatus == 1)
+            .select(
+                reduce(
+                    add,
+                    (Coalesce(Sum(getattr(isd_source_item, f"distributed_{t}")), 0) for t in GST_TAX_TYPES),
+                )
+            )
+            .run()
+        )[0][0]
+    )
+
+    posting_date, supplier = frappe.db.get_value(
+        "Purchase Invoice", purchase_invoice, ["posting_date", "supplier"]
+    )
+
+    return {
+        "purchase_invoice": purchase_invoice,
+        "posting_date": posting_date,
+        "supplier": supplier,
+        "total_tax": total_tax,
+        "distributed_tax": distributed_tax,
+        "available_tax": total_tax - distributed_tax,
+    }
+
+
+@frappe.whitelist()
+def bulk_create_isd_distribution_invoices(
+    purchase_invoice: str, distribution_table: list | str, posting_date: str
+):
+    frappe.has_permission("ISD Distribution Invoice", "write", throw=True)
+    frappe.has_permission("Purchase Invoice", "read", doc=purchase_invoice, throw=True)
+
+    if isinstance(distribution_table, str):
+        distribution_table = frappe.parse_json(distribution_table)
+    posting_date = getdate(posting_date)
+
+    # only rows with turnover distribute any credit
+    distribution_table = [row for row in distribution_table if flt(row.get("turnover_amount"))]
+    if not distribution_table:
+        frappe.throw(_("No rows with turnover to distribute."))
+
+    total_turnover = sum(flt(row["turnover_amount"]) for row in distribution_table)
+
+    company = frappe.db.get_value("Purchase Invoice", purchase_invoice, ["company"])
+    distribution_address = frappe.get_value("Purchase Invoice", purchase_invoice, "billing_address")
+    source_items = get_source_items_from_purchase_invoice(purchase_invoice)
+
+    invoices, invalid = [], []
+    for row in distribution_table:
+        party_type = row.get("party_type")
+        is_against_party = 1 if party_type and party_type != "Company" and row.get("party") else 0
+        turnover = flt(row["turnover_amount"])
+
+        doc = frappe.new_doc("ISD Distribution Invoice")
+        doc.update(
+            {
+                "company": company,
+                "posting_date": posting_date,
+                "purchase_invoice": purchase_invoice,
+                "distribution_address": distribution_address,
+                "recipient_address": row.get("address"),
+                "is_against_party": is_against_party,
+                "party_type": party_type if is_against_party else None,
+                "party": row.get("party") if is_against_party else None,
+                "branch_turnover": turnover,
+                "total_turnover": total_turnover,
+                "distribution_ratio": flt(turnover / total_turnover * 100) if total_turnover else 0,
+            }
+        )
+        doc.extend("source_items", [dict(item) for item in source_items])
+        doc.build_for_bulk()
+
+        is_invalid = False
+        messages_before = len(frappe.message_log)
+        try:
+            doc.validate_addresses()
+            doc.validate_purchase_invoice()
+            doc.validate_distribution_limits()
+        except frappe.ValidationError:
+            del frappe.message_log[messages_before:]
+            is_invalid = True
+
+        doc.flags.ignore_validate = True
+        doc.insert()
+
+        invoices.append(doc.name)
+        if is_invalid:
+            invalid.append(doc.name)
+
+    return invoices, invalid

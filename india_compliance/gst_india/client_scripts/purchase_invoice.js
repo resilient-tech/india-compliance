@@ -67,6 +67,25 @@ frappe.ui.form.on(DOCTYPE, {
                 __("Create"),
             );
         }
+
+        if (
+            frm.doc.docstatus === 1 &&
+            frm.doc.is_isd_applicable &&
+            frm.doc.isd_credit_distributed_percent < 100 &&
+            frappe.model.can_create("ISD Distribution Invoice")
+        ) {
+            frm.add_custom_button(
+                __("ISD Distribution Invoices"),
+                () => {
+                    india_compliance.show_isd_invoice_distribution_dialog({
+                        name: frm.doc.name,
+                        posting_date: frm.doc.posting_date,
+                        company: frm.doc.company,
+                    });
+                },
+                __("Create"),
+            );
+        }
     },
 
     before_save(frm) {
