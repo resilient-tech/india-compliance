@@ -133,6 +133,10 @@ def update_gst_settings(company):
         )
     )
 
+    if not gst_accounts:
+        frappe.msgprint("GST Settings not updated as default GST accounts are missing for the company.")
+        return
+
     add_accounts_in_gst_settings(
         company,
         input_account_names,
