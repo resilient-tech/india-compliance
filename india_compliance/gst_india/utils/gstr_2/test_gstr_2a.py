@@ -61,7 +61,7 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
     @patch("india_compliance.gst_india.utils.gstr_2.GSTR2aAPI")
     def test_download_gstr_2a(self, mock_gstr_2a_api, mock_save_gstr):
         def mock_get_data(action, return_period):
-            if action in ["B2B", "B2BA", "CDN", "CDNA"]:
+            if action in ["B2B", "B2BA", "CDN", "CDNA", "ECOM", "ECOMA", "TDS", "TCS"]:
                 return frappe._dict({action.lower(): self.test_data[action.lower()]})
             else:
                 return frappe._dict(error_type="no_docs_found")
@@ -73,6 +73,9 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
             self.assertTrue("cdnra" in json_data)
             self.assertTrue("isd" not in json_data)
             self.assertListEqual(json_data.cdnr, self.test_data.cdn)
+            for category in ("ecom", "ecoma", "tds", "tcs"):
+                self.assertTrue(category in json_data)
+                self.assertListEqual(json_data[category], self.test_data[category])
 
         mock_gstr_2a_api.return_value = Mock()
         mock_gstr_2a_api.return_value.get_data.side_effect = mock_get_data
