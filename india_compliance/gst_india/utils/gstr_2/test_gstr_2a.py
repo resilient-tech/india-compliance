@@ -312,3 +312,179 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
             },
             doc,
         )
+
+    def test_gstr2a_ecom(self):
+        doc = self.get_doc(GSTRCategory.ECOM)
+        self.assertImportLog(GSTRCategory.ECOM)
+        self.assertDocumentEqual(
+            {
+                "bill_no": "ECO-001",
+                "bill_date": date(2019, 11, 24),
+                "doc_type": "Invoice",
+                "supplier_gstin": self.gstin,
+                "supply_type": "Regular",
+                "place_of_supply": "06-Haryana",
+                "document_value": 1180,
+                "taxable_value": 1000,
+                "igst": 0,
+                "cgst": 90,
+                "sgst": 90,
+                "cess": 0,
+                "is_downloaded_from_2a": 1,
+                "items": [
+                    {
+                        "item_number": 1,
+                        "rate": 18,
+                        "taxable_value": 1000,
+                        "igst": 0,
+                        "cgst": 90,
+                        "sgst": 90,
+                        "cess": 0,
+                    }
+                ],
+            },
+            doc,
+        )
+
+    def test_gstr2a_ecoma(self):
+        doc = self.get_doc(GSTRCategory.ECOMA)
+        self.assertImportLog(GSTRCategory.ECOMA)
+        self.assertDocumentEqual(
+            {
+                "bill_no": "ECO-001-A",
+                "bill_date": date(2019, 11, 25),
+                "original_bill_no": "ECO-001",
+                "original_bill_date": date(2019, 11, 24),
+                "doc_type": "Invoice",
+                "supplier_gstin": self.gstin,
+                "amendment_type": "Receiver GSTIN Amended",
+                "document_value": 1180,
+                "taxable_value": 1000,
+                "cgst": 90,
+                "sgst": 90,
+                "is_downloaded_from_2a": 1,
+            },
+            doc,
+        )
+
+    def test_gstr2a_tds(self):
+        doc = self.get_doc(GSTRCategory.TDS)
+        self.assertImportLog(GSTRCategory.TDS)
+        self.assertDocumentEqual(
+            {
+                "supplier_gstin": self.gstin,
+                "sup_return_period": self.return_period,
+                "taxable_value": 10000,
+                "igst": 0,
+                "cgst": 100,
+                "sgst": 100,
+                "document_value": 10000,
+                "is_downloaded_from_2a": 1,
+            },
+            doc,
+        )
+
+    def test_gstr2a_tcs(self):
+        doc = self.get_doc(GSTRCategory.TCS)
+        self.assertImportLog(GSTRCategory.TCS)
+        self.assertDocumentEqual(
+            {
+                "supplier_gstin": self.gstin,
+                "sup_return_period": self.return_period,
+                "taxable_value": 48000,
+                "igst": 0,
+                "cgst": 240,
+                "sgst": 240,
+                "cess": 0,
+                "document_value": 50000,
+                "is_downloaded_from_2a": 1,
+            },
+            doc,
+        )
+
+    def test_gstr2a_tds_tcs_across_periods(self):
+        # TDS/TCS records have no bill number/date. Downloading the same deductor
+        # (TDS) / collector (TCS) across multiple periods must yield one distinct
+        # record per period, not a single record overwritten by the latest period.
+        deductor = "24AANFA2543R1ZG"
+        periods = ("052020", "062020")
+        section_data = {
+            "tds": {"gstin_ded": deductor, "amt_ded": 10000, "iamt": 0, "camt": 100, "samt": 100},
+            "tcs": {
+                "etin": deductor,
+                "sup_val": 50000,
+                "tx_val": 48000,
+                "iamt": 0,
+                "camt": 240,
+                "samt": 240,
+                "csamt": 0,
+            },
+        }
+
+        for section, record in section_data.items():
+            for period in periods:
+                save_gstr_2a(
+                    self.gstin,
+                    period,
+                    frappe._dict({"gstin": self.gstin, "fp": period, section: [record]}),
+                )
+
+            classification = section.upper()
+            stored_periods = frappe.get_all(
+                "GST Inward Supply",
+                filters={
+                    "company_gstin": self.gstin,
+                    "classification": classification,
+                    "supplier_gstin": deductor,
+                },
+                pluck="sup_return_period",
+            )
+            self.assertCountEqual(
+                stored_periods,
+                periods,
+                msg=f"{classification}: expected one record per period, got {stored_periods}",
+            )
+
+    def test_gstr2a_ecom_skips_amendment_linking(self):
+        # Download-only categories must not run the reconciliation amendment machinery.
+        # An ECOM invoice that carries an amendment period (aspd) would otherwise be
+        # stamped match_status="Amended"; the guard in before_save must keep it clean.
+        save_gstr_2a(
+            self.gstin,
+            "072020",
+            frappe._dict(
+                {
+                    "gstin": self.gstin,
+                    "fp": "072020",
+                    "ecom": [
+                        {
+                            "ctin": self.gstin,
+                            "inv": [
+                                {
+                                    "inum": "ECO-AMD-001",
+                                    "idt": "24-07-2020",
+                                    "val": 1180,
+                                    "pos": "06",
+                                    "rchrg": "N",
+                                    "inv_typ": "R",
+                                    "aspd": "May-20",
+                                    "itms": [
+                                        {
+                                            "num": 1,
+                                            "itm_det": {"rt": 18, "txval": 1000, "camt": 90, "samt": 90},
+                                        }
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ),
+        )
+
+        doc = frappe.get_doc(
+            "GST Inward Supply",
+            {"company_gstin": self.gstin, "classification": "ECOM", "bill_no": "ECO-AMD-001"},
+        )
+        self.assertEqual(doc.other_return_period, "052020")
+        self.assertNotEqual(doc.match_status, "Amended")

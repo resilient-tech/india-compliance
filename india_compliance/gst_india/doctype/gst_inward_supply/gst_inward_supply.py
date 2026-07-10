@@ -22,7 +22,11 @@ class GSTInwardSupply(Document):
             self.ims_action = self.previous_ims_action
 
         if self.match_status != "Amended" and (self.other_return_period or self.is_amended):
-            update_docs_for_amendment(self)
+            from india_compliance.gst_india.utils.gstr_2 import NON_RECONCILE_CATEGORY
+
+            # download-only categories are never reconciled: skip amendment linking
+            if self.classification not in NON_RECONCILE_CATEGORY:
+                update_docs_for_amendment(self)
 
     def on_trash(self):
         if self.link_doctype and self.link_name:
@@ -41,6 +45,11 @@ def create_inward_supply(transaction):
         "classification": transaction.classification,
         "supplier_gstin": transaction.supplier_gstin,
     }
+
+    # flat records (TDS/TCS) have no bill no/date; key them by period so a later
+    # period doesn't overwrite an earlier one
+    if not transaction.bill_no:
+        filters["sup_return_period"] = transaction.sup_return_period
 
     if name := frappe.get_value("GST Inward Supply", filters):
         gst_inward_supply = frappe.get_doc("GST Inward Supply", name)

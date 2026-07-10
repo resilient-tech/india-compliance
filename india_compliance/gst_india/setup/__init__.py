@@ -232,8 +232,6 @@ def set_default_gst_settings():
         "inward_supply_period": 2,
         "reconcile_on_tuesday": 1,
         "reconcile_on_friday": 1,
-        "reconcile_for_b2b": 1,
-        "reconcile_for_cdnr": 1,
         # GSTR-1
         "enable_gstr_1_api": 1,
         "compare_unfiled_data": 1,
