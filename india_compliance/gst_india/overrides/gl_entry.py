@@ -8,7 +8,7 @@ from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
 def validate(doc, method=None):
-    if doc.company_gstin or not is_indian_registered_company(doc):
+    if doc.is_cancelled or doc.company_gstin or not is_indian_registered_company(doc):
         return
 
     gst_accounts = get_all_gst_accounts(doc.company)
