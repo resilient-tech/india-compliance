@@ -212,6 +212,7 @@ class Gstr1Report(object):
                         # B2C Large
                         default_key = (rate, place_of_supply, invoice_number)
 
+<<<<<<< HEAD
                     b2c_output.setdefault(
                         default_key,
                         {
@@ -231,6 +232,23 @@ class Gstr1Report(object):
                             "applicable_tax_rate": 0,
                         },
                     )
+=======
+                b2c_row = b2c_output.setdefault(
+                    default_key,
+                    {
+                        "place_of_supply": place_of_supply,
+                        "ecommerce_gstin": ecommerce_gstin,
+                        "rate": rate,
+                        "taxable_value": 0,
+                        "cess_amount": 0,
+                        "type": "",
+                        "invoice_number": invoice_number,
+                        "posting_date": invoice_details.get("posting_date").strftime("%d-%b-%Y"),
+                        "invoice_value": flt(invoice_details.get("base_grand_total"), 2),
+                        "applicable_tax_rate": 0,
+                    },
+                )
+>>>>>>> a1a6f3c4 (fix: correct posting date in b2cl json export)
 
                     row = b2c_output.get(default_key)
                     row["taxable_value"] += flt(item["taxable_value"])

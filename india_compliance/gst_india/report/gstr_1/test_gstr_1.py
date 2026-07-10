@@ -226,6 +226,48 @@ class TestGSTR1B2CL(FrappeTestCase):
         self.assertEqual(result[0]["inv"][0]["itms"][0]["num"], 1)
         self.assertEqual(result[0]["inv"][1]["itms"][0]["num"], 1)
 
+    def test_b2cl_json_export_preserves_posting_date(self):
+        posting_date = getdate("2026-07-05")
+        invoice = create_sales_invoice(
+            customer="_Test Unregistered Customer",
+            place_of_supply="27-Maharashtra",
+            is_out_state=True,
+            rate=100000.0,
+            posting_date=posting_date,
+            set_posting_time=1,
+        )
+        self.addCleanup(invoice.cancel)
+
+        filters = {
+            "company": "_Test Indian Registered Company",
+            "company_gstin": "24AAQCA8719H1ZC",
+            "from_date": str(posting_date),
+            "to_date": str(posting_date),
+            "type_of_business": "B2C Large",
+        }
+        result = get_gstr1_json(json.dumps(filters))
+
+        self.assertIn("b2cl", result["data"])
+        b2cl_data = result["data"]["b2cl"]
+
+        pos_block = next((pos for pos in b2cl_data if pos["pos"] == "27"), None)
+        self.assertIsNotNone(pos_block)
+
+        invoice_data = next((inv for inv in pos_block["inv"] if inv["inum"] == invoice.name), None)
+
+        self.assertEqual(invoice_data["idt"], "05-07-2026")
+        self.assertEqual(invoice_data["val"], 118000.0)
+
+        self.assertEqual(len(invoice_data["itms"]), 1)
+        item = invoice_data["itms"][0]
+        self.assertEqual(item["num"], 1)
+
+        item_det = item["itm_det"]
+        self.assertEqual(item_det["txval"], 100000.0)
+        self.assertEqual(item_det["rt"], 18.0)
+        self.assertEqual(item_det["iamt"], 18000.0)
+        self.assertEqual(item_det["csamt"], 0)
+
 
 def create_test_items():
     """Create Sales Invoices for testing GSTR1 Document Issued Summary."""
