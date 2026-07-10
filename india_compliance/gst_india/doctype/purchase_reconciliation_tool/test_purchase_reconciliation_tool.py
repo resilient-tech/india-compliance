@@ -10,11 +10,6 @@ from frappe.tests.utils import FrappeTestCase
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
 )
-from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
-    RECO_2A_CATEGORIES_KEY,
-    VALID_2A_CATEGORIES,
-    set_category_preference,
-)
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     format_period,
@@ -509,6 +504,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         self.assertIsInstance(result, list)
 
 
+<<<<<<< HEAD
 class TestCategoryPreference(FrappeTestCase):
     """Tests for the GSTR-2A download category user-preference (set_category_preference)."""
 
@@ -572,6 +568,8 @@ class TestCategoryPreference(FrappeTestCase):
             self.assertRaises(frappe.PermissionError, set_category_preference, ["B2B"])
 
 
+=======
+>>>>>>> 2d855922 (fix: download all categories for gstr 2a)
 def create_purchase_invoice(**kwargs):
     args = PURCHASE_INVOICE_DEFAULT_ARGS.copy()
     args.update(kwargs)
