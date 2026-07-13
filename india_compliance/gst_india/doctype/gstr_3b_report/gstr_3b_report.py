@@ -98,7 +98,8 @@ class GSTR3BReport(Document):
             raise e
 
         finally:
-            frappe.publish_realtime("gstr3b_report_generation", doctype=self.doctype, docname=self.name)
+            if self.enqueue_report:
+                frappe.publish_realtime("gstr3b_report_generation", doctype=self.doctype, docname=self.name)
 
     def _get_filters(self):
         return frappe._dict(

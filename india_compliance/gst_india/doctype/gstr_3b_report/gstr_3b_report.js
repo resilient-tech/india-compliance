@@ -15,6 +15,8 @@ frappe.ui.form.on("GSTR 3B Report", {
             });
         }
 
+        // off realtime event to avoid multiple triggers
+        frappe.realtime.off("gstr3b_report_generation");
         frappe.realtime.on("gstr3b_report_generation", function () {
             frm.reload_doc();
         });
@@ -26,6 +28,8 @@ frappe.ui.form.on("GSTR 3B Report", {
         const is_filed = frm.doc.filing_status === "Filed";
         frm.page.set_indicator(is_filed ? __("Filed") : __("Not Filed"), is_filed ? "green" : "orange");
 
+        // NOTE: Temporary fix for duplicate intro message on first save
+        frm.set_intro("");
         frm.set_intro(__("Please save the report again to rebuild or update"));
         frm.doc.__unsaved = 1;
 
