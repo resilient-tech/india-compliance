@@ -1,0 +1,11 @@
+<style>
+	.print-format {
+		orientation: landscape;
+	}
+</style>
+{% if doc.json_output %}
+	{% set __ = _ %}
+	{% set flt = frappe.utils.flt %}
+	{% set data = json.loads(doc.json_output) %}
+	{% include "india_compliance/gst_india/doctype/gstr_3b_report/gstr_3b_report.html" %}
+{% endif %}
