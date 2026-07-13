@@ -242,14 +242,6 @@ def format_values(data, precision=2):
 
 
 @frappe.whitelist()
-def view_report(name: str):
-    frappe.has_permission("GSTR 3B Report", throw=True)
-
-    json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
-    return json.loads(json_data)
-
-
-@frappe.whitelist()
 def make_json(name: str):
     frappe.has_permission("GSTR 3B Report", throw=True)
 
