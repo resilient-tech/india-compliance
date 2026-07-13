@@ -71,28 +71,30 @@ frappe.ui.form.on("GSTR 3B Report", {
             __("Download"),
         );
 
-        // View Form Button
-        frm.add_custom_button(__("View Form"), function () {
-            frappe.call({
-                method: "india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.view_report",
-                args: {
-                    name: frm.doc.name,
-                },
-                callback: function (r) {
-                    let data = r.message;
+        // Download PDF Button
+        frm.add_custom_button(
+            __("Download PDF"),
+            function () {
+                var w = window.open(
+                    frappe.urllib.get_full_url(
+                        "/api/method/frappe.utils.print_format.download_pdf?" +
+                            "doctype=" +
+                            encodeURIComponent(frm.doc.doctype) +
+                            "&name=" +
+                            encodeURIComponent(frm.doc.name) +
+                            "&format=" +
+                            encodeURIComponent("GSTR-3B") +
+                            "&no_letterhead=1",
+                    ),
+                );
 
-                    frappe.ui.get_print_settings(false, (print_settings) => {
-                        frappe.render_grid({
-                            template: "gstr_3b_report",
-                            title: __(this.doctype),
-                            print_settings: print_settings,
-                            data: data,
-                            columns: [],
-                        });
-                    });
-                },
-            });
-        });
+                if (!w) {
+                    frappe.msgprint(__("Please enable pop-ups"));
+                    return;
+                }
+            },
+            __("Download"),
+        );
 
         append_form(frm);
 
