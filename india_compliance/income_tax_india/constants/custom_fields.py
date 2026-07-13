@@ -25,45 +25,62 @@ supplier_msme_fields = [
         "collapsible": 1,
     },
     {
-        "fieldname": "is_msme_registered",
-        "label": "Is MSME Registered",
-        "fieldtype": "Check",
+        "fieldname": "msme_registration",
+        "label": "MSME Registration",
+        "fieldtype": "Link",
+        "options": "MSME",
         "insert_after": "msme_section",
-        "description": "Supplier is registered as a Micro, Small or Medium Enterprise (UDYAM).",
+        "description": "UDYAM registration of the supplier.",
     },
     {
-        "fieldname": "udyam_number",
-        "label": "UDYAM Registration Number",
+        "fieldname": "msme_enterprise_type",
+        "label": "Enterprise Type",
         "fieldtype": "Data",
-        "insert_after": "is_msme_registered",
-        "depends_on": "eval:doc.is_msme_registered",
-        "mandatory_depends_on": "eval:doc.is_msme_registered",
+        "insert_after": "msme_registration",
+        "depends_on": "eval:doc.msme_registration",
+        "is_virtual": 1,
+        "read_only": 1,
         "translatable": 0,
-        "description": "Format: UDYAM-XX-00-0000000",
     },
     {
-        "fieldname": "msme_is_trader",
-        "label": "Is Trader (Wholesale/Retail)",
-        "fieldtype": "Check",
-        "insert_after": "udyam_number",
-        "depends_on": "eval:doc.is_msme_registered",
-        "description": (
-            "Traders are excluded from Section 43B(h) even if UDYAM-registered."
-            " Tick if the supplier's UDYAM activity is wholesale/retail trading."
-        ),
-    },
-    {
-        "fieldname": "msme_classification_column",
+        "fieldname": "msme_column_break",
         "fieldtype": "Column Break",
-        "insert_after": "msme_is_trader",
+        "insert_after": "msme_enterprise_type",
     },
     {
-        "fieldname": "india_msme_classification",
-        "label": "MSME Classification",
-        "fieldtype": "Table",
-        "options": "India MSME Classification",
-        "insert_after": "msme_classification_column",
-        "depends_on": "eval:doc.is_msme_registered",
+        "fieldname": "msme_activity",
+        "label": "Activity",
+        "fieldtype": "Data",
+        "insert_after": "msme_column_break",
+        "depends_on": "eval:doc.msme_registration",
+        "is_virtual": 1,
+        "read_only": 1,
+        "translatable": 0,
+    },
+    {
+        "fieldname": "msme_is_cancelled",
+        "label": "Registration Cancelled",
+        "fieldtype": "Check",
+        "insert_after": "msme_activity",
+        "hidden": 1,
+        "is_virtual": 1,
+        "read_only": 1,
+    },
+]
+
+
+purchase_invoice_msme_fields = [
+    {
+        "fieldname": "msme_registration",
+        "label": "MSME Registration",
+        "fieldtype": "Link",
+        "options": "MSME",
+        "insert_after": "gst_category",
+        "fetch_from": "supplier.msme_registration",
+        "fetch_if_empty": 1,
+        "read_only": 1,
+        "print_hide": 1,
+        "translatable": 0,
     },
 ]
 
@@ -72,6 +89,7 @@ CUSTOM_FIELDS = {
     "Company": party_fields,
     "Customer": party_fields,
     "Supplier": party_fields + supplier_msme_fields,
+    "Purchase Invoice": purchase_invoice_msme_fields,
     "Finance Book": [
         {
             "fieldname": "for_income_tax",

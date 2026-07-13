@@ -1,20 +1,48 @@
 # Copyright (c) 2026, Resilient Tech and contributors
 # For license information, please see license.txt
 
+import collections
+
 import frappe
-from frappe.utils import add_days, add_years, flt, getdate, today
+from frappe.utils import add_days, add_years, flt, get_first_day, getdate, today
 
 from india_compliance.income_tax_india.constants import (
+    FISCAL_YEAR_START_MONTH,
     MSME_APPLICABLE_TYPES,
     MSME_PAYMENT_DAYS,
+    TRADING_ACTIVITY,
 )
 
 
-def get_indian_fiscal_year(date) -> str:
-    """Return the Indian income-tax FY (April-March) for a date, e.g. "2024-2025"."""
-    date = getdate(date)
-    start_year = date.year if date.month >= 4 else date.year - 1
-    return f"{start_year}-{start_year + 1}"
+def get_fiscal_year_dates(date=None) -> tuple:
+    """(start_date, end_date) of the Indian income-tax FY containing a date.
+
+    The FY definition lives here alone; every other helper derives from these
+    dates, so a change to the statutory year does not have to be chased across
+    the app.
+    """
+    date = getdate(date or today())
+
+    # months elapsed since the FY began; negative before the start month, in
+    # which case the date still belongs to the FY that began the previous year
+    months_from_start = (date.month - FISCAL_YEAR_START_MONTH) % 12
+    start_date = get_first_day(date, d_months=-months_from_start)
+
+    return start_date, add_days(add_years(start_date, 1), -1)
+
+
+def get_indian_fiscal_year(date=None) -> str:
+    """Indian income-tax FY for a date, e.g. "2024-2025"."""
+    start_date, end_date = get_fiscal_year_dates(date)
+    return f"{start_date.year}-{end_date.year}"
+
+
+def get_financial_year_dates(financial_year: str) -> tuple:
+    """(start_date, end_date) of an FY named like "2024-2025"."""
+    start_year = int(financial_year.split("-")[0])
+
+    # any date inside the FY resolves it; its start month is the FY's own
+    return get_fiscal_year_dates(getdate(f"{start_year}-{FISCAL_YEAR_START_MONTH:02d}-01"))
 
 
 def get_msme_due_date(posting_date):
@@ -22,42 +50,69 @@ def get_msme_due_date(posting_date):
     return add_days(getdate(posting_date), MSME_PAYMENT_DAYS)
 
 
-def is_section_43_b_msme_applicable(enterprise_type, is_trader) -> bool:
+def is_section_43_b_msme_applicable(enterprise_type, activity) -> bool:
     """Section 43B(h) applies only to Micro/Small enterprises that are not traders."""
-    return bool(enterprise_type in MSME_APPLICABLE_TYPES and not is_trader)
+    return bool(enterprise_type in MSME_APPLICABLE_TYPES and activity != TRADING_ACTIVITY)
+
+
+def get_msme_classification(msme_registration: str, on_date=None) -> dict | None:
+    """Classification of a registration for the FY of ``on_date`` (default: today).
+
+    None = not classified for that year, i.e. not MSME.
+    """
+    if not msme_registration:
+        return None
+
+    classification = frappe.db.get_value(
+        "India MSME Classification",
+        {
+            "parenttype": "MSME",
+            "parent": msme_registration,
+            "financial_year": get_indian_fiscal_year(on_date or today()),
+        },
+        ["enterprise_type", "activity"],
+        as_dict=True,
+    )
+
+    if classification:
+        classification.msme_applicable = is_section_43_b_msme_applicable(
+            classification.enterprise_type, classification.activity
+        )
+
+    return classification
 
 
 def get_classification_map(
-    suppliers: list[str], financial_years: list[str] | None = None
+    registrations: list[str], financial_years: list[str] | None = None
 ) -> dict[tuple, dict]:
-    """Bulk-load classification rows for suppliers, keyed by (supplier, fy).
+    """Bulk-load classification rows, keyed by (msme_registration, fy).
 
     Pass ``financial_years`` to fetch only the years actually needed (e.g. the
     FYs spanned by the invoices under report) instead of every year on record.
     """
-    filters = {"parenttype": "Supplier", "parent": ("in", suppliers)}
+    filters = {"parenttype": "MSME", "parent": ("in", registrations)}
     if financial_years:
         filters["financial_year"] = ("in", financial_years)
 
     rows = frappe.get_all(
         "India MSME Classification",
         filters=filters,
-        fields=["parent as supplier", "financial_year", "enterprise_type"],
+        fields=["parent as msme_registration", "financial_year", "enterprise_type", "activity"],
     )
-    return {(row.supplier, row.financial_year): row for row in rows}
-
-
-def get_fiscal_year_dates(financial_year: str) -> tuple:
-    """Return (start_date, end_date) for an Indian FY string like "2024-2025"."""
-    start = getdate(f"{int(financial_year.split('-')[0])}-04-01")
-    return start, add_days(add_years(start, 1), -1)  # 1 Apr -> 31 Mar next year
+    return {(row.msme_registration, row.financial_year): row for row in rows}
 
 
 def get_financial_years_between(from_date, to_date) -> list[str]:
     """Indian FY strings spanned by a date range, e.g. ["2023-2024", "2024-2025"]."""
-    start_year = int(get_indian_fiscal_year(from_date).split("-")[0])
-    end_year = int(get_indian_fiscal_year(to_date).split("-")[0])
-    return [f"{year}-{year + 1}" for year in range(start_year, end_year + 1)]
+    financial_years = []
+    date = get_fiscal_year_dates(from_date)[0]
+    to_date = getdate(to_date)
+
+    while date <= to_date:
+        financial_years.append(get_indian_fiscal_year(date))
+        date = add_years(date, 1)
+
+    return financial_years
 
 
 def get_settlement_summary(settlements, due_date, from_date=None, to_date=None) -> dict:
@@ -159,7 +214,7 @@ def get_msme_payables(
     from_date = getdate(from_date) if from_date else None
     to_date = getdate(to_date)
 
-    supplier_filters = {"is_msme_registered": 1}
+    supplier_filters = {"msme_registration": ("is", "set")}
     if supplier:
         supplier_filters["name"] = supplier
 
@@ -168,7 +223,7 @@ def get_msme_payables(
         for d in frappe.get_all(
             "Supplier",
             filters=supplier_filters,
-            fields=["name", "supplier_name", "pan", "udyam_number", "msme_is_trader"],
+            fields=["name", "supplier_name", "pan", "msme_registration"],
         )
     }
     if not supplier_details:
@@ -202,7 +257,7 @@ def get_msme_payables(
         as_on_date,
     )
     classification_map = get_classification_map(
-        suppliers=list({group.party for group in anchored.values()}),
+        registrations=list({d.msme_registration for d in supplier_details.values()}),
         financial_years=financial_years,
     )
 
@@ -215,12 +270,10 @@ def get_msme_payables(
         # Applicability is derived at read time (single source of truth), so
         # reports stay correct even if a persisted child-row flag is stale.
         classification = None
-        if row := classification_map.get((group.party, fy)):
+        if row := classification_map.get((details.msme_registration, fy)):
             classification = {
                 "enterprise_type": row.enterprise_type,
-                "msme_applicable": is_section_43_b_msme_applicable(
-                    row.enterprise_type, details.msme_is_trader
-                ),
+                "msme_applicable": is_section_43_b_msme_applicable(row.enterprise_type, row.activity),
             }
 
         if not is_classification_included(classification, enterprise_type, only_43b_applicable):
@@ -231,7 +284,8 @@ def get_msme_payables(
             "supplier": group.party,
             "supplier_name": details.supplier_name,
             "pan": details.pan,
-            "udyam_number": details.udyam_number,
+            # the registration is named after the UDYAM number
+            "udyam_number": details.msme_registration,
             "enterprise_type": classification["enterprise_type"],
             "voucher_type": voucher_type,
             "voucher_no": voucher_no,
@@ -332,41 +386,53 @@ def is_classification_included(classification, enterprise_type, only_43b_applica
 
 
 def update_msme_classification():
+    """Carry classifications forward into the new FY, so users only update the
+    registrations that actually changed. Idempotent: never overwrites a year
+    that is already classified.
     """
-    Update MSME classifications for the new financial year by copying rows from the previous year.
-    Will be used in new year patch
-    """
-    new_fy = get_indian_fiscal_year(today())
-    prev_start_year = int(new_fy.split("-")[0]) - 1
-    prev_fy = f"{prev_start_year}-{prev_start_year + 1}"
+    start_date = get_fiscal_year_dates()[0]
+    new_fy = get_indian_fiscal_year(start_date)
+    prev_fy = get_indian_fiscal_year(add_years(start_date, -1))
 
     prev_rows = frappe.get_all(
         "India MSME Classification",
-        filters={"parenttype": "Supplier", "financial_year": prev_fy},
-        fields=["parent as supplier", "enterprise_type"],
+        filters={"parenttype": "MSME", "financial_year": prev_fy},
+        fields=["parent", "enterprise_type", "activity"],
     )
     if not prev_rows:
         return
 
-    existing = set(
+    classified = set(
         frappe.get_all(
             "India MSME Classification",
-            filters={"parenttype": "Supplier", "financial_year": new_fy},
+            filters={"parenttype": "MSME", "financial_year": new_fy},
+            pluck="parent",
+        )
+    )
+
+    # idx continues after the rows the registration already has
+    row_count = collections.Counter(
+        frappe.get_all(
+            "India MSME Classification",
+            filters={"parenttype": "MSME", "parent": ("in", [row.parent for row in prev_rows])},
             pluck="parent",
         )
     )
 
     for row in prev_rows:
-        if row.supplier in existing:
+        if row.parent in classified:
             continue
 
-        supplier = frappe.get_doc("Supplier", row.supplier)
-        supplier.append(
-            "india_msme_classification",
+        new_row = frappe.new_doc("India MSME Classification")
+        new_row.update(
             {
+                "parenttype": "MSME",
+                "parentfield": "classifications",
+                "parent": row.parent,
+                "idx": row_count[row.parent] + 1,
                 "financial_year": new_fy,
                 "enterprise_type": row.enterprise_type,
-            },
+                "activity": row.activity,
+            }
         )
-        supplier.save(ignore_permissions=True)
-        existing.add(row.supplier)
+        new_row.db_insert()

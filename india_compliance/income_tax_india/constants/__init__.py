@@ -607,6 +607,9 @@ NEW_TDS_SECTIONS = (
 TDS_ENTITY_TYPE = ["Individual", "Company", "Company Assessee", "No PAN / Invalid PAN"]
 
 
+FISCAL_YEAR_START_MONTH = 4
+
+
 # MSME
 
 MSME_PAYMENT_DAYS = 45
@@ -619,6 +622,10 @@ FINANCIAL_YEAR_REGEX = re.compile(r"^\d{4}-\d{4}$")
 
 # Only Micro and Small enterprises are covered by Section 43B(h); Medium is not.
 MSME_APPLICABLE_TYPES = ("Micro", "Small")
+
+# Traders are registered on UDYAM only for Priority Sector Lending, and are
+# excluded from Section 43B(h) (MSME Ministry OM dated 02-07-2021).
+TRADING_ACTIVITY = "Trading"
 
 
 def get_tds_section_value(entry: dict) -> str:

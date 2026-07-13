@@ -385,6 +385,70 @@ class ItemQuickEntryForm extends frappe.ui.form.QuickEntryForm {
 
 frappe.ui.form.ItemQuickEntryForm = ItemQuickEntryForm;
 
+class MSMEQuickEntryForm extends frappe.ui.form.QuickEntryForm {
+    /**
+     * Frappe skips Quick Entry for doctypes with a child table, so the first
+     * classification is captured as plain fields and appended before insert.
+     * Creating a registration this way keeps it classified from the start.
+     */
+    render_dialog() {
+        this.mandatory = [...this.mandatory, ...this.get_classification_fields()];
+        super.render_dialog();
+    }
+
+    get_classification_fields() {
+        return [
+            {
+                fieldname: "classification_section",
+                label: __("Classification"),
+                fieldtype: "Section Break",
+                collapsible: 0,
+            },
+            {
+                fieldname: "_financial_year",
+                label: __("Financial Year"),
+                fieldtype: "Autocomplete",
+                options: india_compliance.get_indian_fiscal_year_options(),
+                default: india_compliance.get_indian_fiscal_year(),
+                reqd: 1,
+            },
+            {
+                fieldname: "_enterprise_type",
+                label: __("Enterprise Type"),
+                fieldtype: "Select",
+                options: ["", "Micro", "Small", "Medium", "Not MSME"],
+                reqd: 1,
+            },
+            {
+                fieldtype: "Column Break",
+            },
+            {
+                fieldname: "_activity",
+                label: __("Activity"),
+                fieldtype: "Select",
+                options: ["", "Manufacturing", "Service", "Trading"],
+                reqd: 1,
+                description: __("Traders are excluded from Section 43B(h)."),
+            },
+        ];
+    }
+
+    update_doc() {
+        const doc = super.update_doc();
+
+        doc.udyam_number = india_compliance.validate_udyam_number(doc.udyam_number);
+
+        const classification = frappe.model.add_child(doc, "India MSME Classification", "classifications");
+        classification.financial_year = doc._financial_year;
+        classification.enterprise_type = doc._enterprise_type;
+        classification.activity = doc._activity;
+
+        return doc;
+    }
+}
+
+frappe.ui.form.MSMEQuickEntryForm = MSMEQuickEntryForm;
+
 async function autofill_fields(dialog) {
     const gstin = dialog.doc._gstin;
     const gstin_field = dialog.get_field("_gstin");
