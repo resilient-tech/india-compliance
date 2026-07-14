@@ -222,7 +222,7 @@ class TestGSTR3BReport(FrappeTestCase):
         )
 
         exporter = GSTR3BExcelExporter(output)
-        exporter.generate_excel()
+        exporter.generate_excel("GSTR-3B-test")
 
     def test_gst_rounding(self):
         gst_settings = frappe.get_cached_doc("GST Settings")

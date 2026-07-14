@@ -251,13 +251,22 @@ def format_values(data, precision=2):
     return data
 
 
+def get_file_name(name):
+    report = frappe.db.get_value(
+        "GSTR 3B Report",
+        name,
+        ["company_gstin", "month_or_quarter", "year"],
+        as_dict=True,
+    )
+    return f"GSTR-3B-{report.company_gstin}-{report.month_or_quarter.replace(' ', '')}-{report.year}"
+
+
 @frappe.whitelist()
 def make_json(name: str):
     frappe.has_permission("GSTR 3B Report", throw=True)
 
     json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
-    file_name = "GST3B.json"
-    frappe.local.response.filename = file_name
+    frappe.local.response.filename = f"{get_file_name(name)}.json"
     frappe.local.response.filecontent = json_data
     frappe.local.response.type = "download"
 
@@ -273,7 +282,19 @@ def download_gstr3b_as_excel(name: str):
 
     data = json.loads(json_data)
     exporter = GSTR3BExcelExporter(data)
-    exporter.generate_excel()
+    exporter.generate_excel(get_file_name(name))
+
+
+@frappe.whitelist()
+def download_gstr3b_as_pdf(name: str):
+    """Download GSTR 3B report as PDF file"""
+    frappe.has_permission("GSTR 3B Report", throw=True)
+
+    frappe.local.response.filename = f"{get_file_name(name)}.pdf"
+    frappe.local.response.filecontent = frappe.get_print(
+        "GSTR 3B Report", name, print_format="GSTR-3B", as_pdf=True, no_letterhead=True
+    )
+    frappe.local.response.type = "pdf"
 
 
 class GSTR3BExcelExporter:
@@ -388,7 +409,7 @@ class GSTR3BExcelExporter:
         self.month = None
         self.fiscal_year = None
 
-    def generate_excel(self):
+    def generate_excel(self, file_name):
         """Generate and export Excel file"""
         if not os.path.exists(self.TEMPLATE_FILE):
             frappe.throw(_("GSTR 3B Excel template not found"))
@@ -396,11 +417,7 @@ class GSTR3BExcelExporter:
         excel = ExcelExporter(file=self.TEMPLATE_FILE)
         self._update_worksheet(excel)
 
-        file_name = self._get_filename()
         excel.export(file_name)
-
-    def _get_filename(self):
-        return f"GSTR-3B-{self.gstin}-{self.month}-{self.fiscal_year}"
 
     def _update_worksheet(self, excel):
         self.worksheet = excel.wb[self.WORKSHEET_NAME]
