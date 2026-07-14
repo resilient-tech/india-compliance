@@ -169,8 +169,9 @@ def update_gstr3b_filing_status(
         )
 
     frappe.msgprint(
-        _("GSTR-3B for {0} {1} marked as {2}.").format(month_or_quarter, year, FILING_STATUS[status]),
+        _("GSTR-3B for {0} {1} marked as {2}").format(month_or_quarter, year, FILING_STATUS[status]),
         indicator="green",
+        alert=True,
     )
 
 
