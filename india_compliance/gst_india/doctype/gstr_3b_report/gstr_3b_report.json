@@ -42,8 +42,8 @@
   {
    "fieldname": "json_output",
    "fieldtype": "Code",
-   "hidden": 1,
-   "label": "JSON Output"
+   "label": "JSON Output",
+   "read_only": 1
   },
   {
    "default": "0",
@@ -118,7 +118,7 @@
   }
  ],
  "links": [],
- "modified": "2026-07-14 09:54:15.988862",
+ "modified": "2026-07-14 10:50:19.330148",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
