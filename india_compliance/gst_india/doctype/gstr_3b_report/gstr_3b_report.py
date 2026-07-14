@@ -58,6 +58,16 @@ class GSTR3BReport(Document):
         if not self.company_gstin:
             frappe.throw(_("Please enter GSTIN for Company {0}").format(self.company))
 
+        if self.is_new() and frappe.db.exists("GSTR 3B Report", self.name):
+            frappe.throw(
+                _("GSTR-3B Report for {0} {1} already exists: {2}").format(
+                    self.month_or_quarter,
+                    self.year,
+                    frappe.utils.get_link_to_form("GSTR 3B Report", self.name),
+                ),
+                title=_("Report Already Exists"),
+            )
+
         self.generation_status = "In Process"
 
         if self.enqueue_report:
