@@ -53,12 +53,7 @@ frappe.ui.form.on("GSTR 3B Report", {
 
         frm.add_custom_button(
             __("PDF"),
-            () =>
-                open_download(
-                    `frappe.utils.print_format.download_pdf?doctype=${encodeURIComponent(
-                        frm.doc.doctype,
-                    )}&name=${docname}&format=GSTR-3B&no_letterhead=1`,
-                ),
+            () => open_download(`${report_method}.download_gstr3b_as_pdf?name=${docname}`),
             download_group,
         );
 
