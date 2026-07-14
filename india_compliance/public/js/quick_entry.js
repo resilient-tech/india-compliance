@@ -385,7 +385,7 @@ class ItemQuickEntryForm extends frappe.ui.form.QuickEntryForm {
 
 frappe.ui.form.ItemQuickEntryForm = ItemQuickEntryForm;
 
-class MSMEQuickEntryForm extends frappe.ui.form.QuickEntryForm {
+class MSMERegistrationQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     /**
      * Frappe skips Quick Entry for doctypes with a child table, so the first
      * classification is captured as plain fields and appended before insert.
@@ -447,7 +447,7 @@ class MSMEQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     }
 }
 
-frappe.ui.form.MSMEQuickEntryForm = MSMEQuickEntryForm;
+frappe.ui.form.MSMERegistrationQuickEntryForm = MSMERegistrationQuickEntryForm;
 
 async function autofill_fields(dialog) {
     const gstin = dialog.doc._gstin;

@@ -3,7 +3,7 @@
 
 const UDYAM_NUMBER_LENGTH = 19;
 
-frappe.ui.form.on("MSME", {
+frappe.ui.form.on("MSME Registration", {
     refresh(frm) {
         india_compliance.setup_indian_fiscal_year_options(frm, "classifications");
 

@@ -28,7 +28,7 @@ class MSMEDetailsExt:
         if not self.msme_registration:
             return 0
 
-        return frappe.db.get_value("MSME", self.msme_registration, "is_cancelled")
+        return frappe.db.get_value("MSME Registration", self.msme_registration, "is_cancelled")
 
     def get_msme_details(self):
         return get_msme_classification(self.msme_registration) or {}

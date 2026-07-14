@@ -13,7 +13,7 @@ from india_compliance.income_tax_india.constants import (
 from india_compliance.income_tax_india.utils.msme import get_financial_year_dates
 
 
-class MSME(Document):
+class MSMERegistration(Document):
     def before_naming(self):
         self.validate_udyam_number()
 

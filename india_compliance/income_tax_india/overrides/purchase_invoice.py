@@ -25,7 +25,7 @@ def get_valid_msme_registrations(
     remains selectable on invoices backdated to when it was still valid.
     """
     posting_date = getdate((filters or {}).get("posting_date") or today())
-    msme = frappe.qb.DocType("MSME")
+    msme = frappe.qb.DocType("MSME Registration")
 
     return (
         frappe.qb.from_(msme)
@@ -77,7 +77,7 @@ def validate_msme_registration_status(doc) -> bool:
     by the posting date, or that did not exist yet. Returns True in either case,
     so the caller can skip the 43B(h) payment terms.
     """
-    registration_date = frappe.db.get_value("MSME", doc.msme_registration, "registration_date")
+    registration_date = frappe.db.get_value("MSME Registration", doc.msme_registration, "registration_date")
 
     if registration_date and getdate(doc.posting_date) < getdate(registration_date):
         frappe.msgprint(

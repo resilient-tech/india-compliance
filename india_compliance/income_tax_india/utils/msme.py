@@ -72,7 +72,7 @@ def get_msme_classification(msme_registration: str, on_date=None) -> dict | None
     classification = frappe.db.get_value(
         "India MSME Classification",
         {
-            "parenttype": "MSME",
+            "parenttype": "MSME Registration",
             "parent": msme_registration,
             "from_date": ("<=", on_date),
             "to_date": (">=", on_date),
@@ -96,7 +96,7 @@ def get_msme_cancellation(msme_registration: str, on_date) -> dict | None:
     report *when* it was cancelled.
     """
     registration = frappe.db.get_value(
-        "MSME", msme_registration, ["is_cancelled", "cancelled_date"], as_dict=True
+        "MSME Registration", msme_registration, ["is_cancelled", "cancelled_date"], as_dict=True
     )
     if not registration or not registration.is_cancelled:
         return None
@@ -122,7 +122,7 @@ def get_classification_map(
     Pass ``financial_years`` to fetch only the years actually needed (e.g. the
     FYs spanned by the invoices under report) instead of every year on record.
     """
-    filters = {"parenttype": "MSME", "parent": ("in", registrations)}
+    filters = {"parenttype": "MSME Registration", "parent": ("in", registrations)}
     if financial_years:
         filters["financial_year"] = ("in", financial_years)
 
@@ -428,7 +428,7 @@ def update_msme_classification():
 
     prev_rows = frappe.get_all(
         "India MSME Classification",
-        filters={"parenttype": "MSME", "financial_year": prev_fy},
+        filters={"parenttype": "MSME Registration", "financial_year": prev_fy},
         fields=["parent", "enterprise_type", "activity"],
     )
     if not prev_rows:
@@ -437,7 +437,7 @@ def update_msme_classification():
     classified = set(
         frappe.get_all(
             "India MSME Classification",
-            filters={"parenttype": "MSME", "financial_year": new_fy},
+            filters={"parenttype": "MSME Registration", "financial_year": new_fy},
             pluck="parent",
         )
     )
@@ -446,7 +446,7 @@ def update_msme_classification():
     row_count = collections.Counter(
         frappe.get_all(
             "India MSME Classification",
-            filters={"parenttype": "MSME", "parent": ("in", [row.parent for row in prev_rows])},
+            filters={"parenttype": "MSME Registration", "parent": ("in", [row.parent for row in prev_rows])},
             pluck="parent",
         )
     )
@@ -458,7 +458,7 @@ def update_msme_classification():
         new_row = frappe.new_doc("India MSME Classification")
         new_row.update(
             {
-                "parenttype": "MSME",
+                "parenttype": "MSME Registration",
                 "parentfield": "classifications",
                 "parent": row.parent,
                 "idx": row_count[row.parent] + 1,
