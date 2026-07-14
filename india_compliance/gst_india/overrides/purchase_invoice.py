@@ -194,6 +194,7 @@ def get_dashboard_data(data):
         transactions.append(reference_section)
 
     reference_section["items"].append("Bill of Entry")
+    reference_section["items"].append("ISD Distribution Invoice")
 
     update_dashboard_with_gst_logs(
         "Purchase Invoice",

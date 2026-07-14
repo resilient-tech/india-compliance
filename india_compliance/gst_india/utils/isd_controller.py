@@ -103,7 +103,7 @@ class ISDController(Document):
         if company_address and not self.is_linked(company_address, "Company", self.company):
             frappe.throw(
                 _(
-                    "{0} {1} is not valid for this ISD distribution.\n\n Address should be enabled and linked to Company {2}."
+                    "{0} {1} is not valid for this ISD distribution. Address should be enabled and linked to Company {2}."
                 ).format(company_label, get_link_to_form("Address", company_address), self.company),
                 title=_("Invalid Address"),
             )

@@ -6,8 +6,8 @@ from frappe import _
 from frappe.utils import flt, get_link_to_form
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
-from india_compliance.gst_india.controllers.isd_controller import ISDController
 from india_compliance.gst_india.utils.isd import throw_row_table
+from india_compliance.gst_india.utils.isd_controller import ISDController
 
 
 class ISDRecipientInvoice(ISDController):

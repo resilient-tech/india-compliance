@@ -11,7 +11,6 @@ from frappe.query_builder.functions import Coalesce, Sum
 from frappe.utils import cint, flt, get_link_to_form, getdate
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
-from india_compliance.gst_india.controllers.isd_controller import ISDController
 from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
     upsert_turnover_record,
 )
@@ -23,6 +22,7 @@ from india_compliance.gst_india.utils.isd import (
     throw_invalid_rows,
     throw_row_table,
 )
+from india_compliance.gst_india.utils.isd_controller import ISDController
 
 
 class ISDDistributionInvoice(ISDController):
