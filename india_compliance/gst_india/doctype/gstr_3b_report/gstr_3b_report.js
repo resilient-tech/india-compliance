@@ -22,15 +22,13 @@ frappe.ui.form.on("GSTR 3B Report", {
 
     refresh: function (frm) {
         frm.toggle_display("json_output", 0);
+        set_primary_action_label(frm);
 
         if (frm.is_new()) return;
 
         const is_filed = frm.doc.filing_status === "Filed";
         frm.page.set_indicator(is_filed ? __("Filed") : __("Not Filed"), is_filed ? "green" : "orange");
 
-        // NOTE: Temporary fix for duplicate intro message on first save
-        frm.set_intro("");
-        frm.set_intro(__("Please save the report again to rebuild or update"));
         frm.doc.__unsaved = 1;
 
         // Download JSON Button
@@ -163,6 +161,16 @@ frappe.ui.form.on("GSTR 3B Report", {
         frm.set_value("company_gstin", options[0]);
     },
 });
+
+function set_primary_action_label(frm) {
+    const apply = () =>
+        frm.page.set_primary_action(frm.is_new() ? __("Generate") : __("Re-generate"), () => frm.save());
+
+    apply();
+
+    // Re-applied on "dirty" because the framework resets it to "Save" on any edit.
+    $(frm.wrapper).off("dirty.gstr3b").on("dirty.gstr3b", apply);
+}
 
 function append_form(frm) {
     if (frm.is_new()) return;
