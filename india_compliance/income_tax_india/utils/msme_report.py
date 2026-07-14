@@ -104,13 +104,22 @@ class MSMEReport:
         return list({invoice.msme_registration for invoice in self.invoices.values()})
 
     def get_classifications(self) -> dict:
-        """Classification rows keyed by (registration, financial_year)."""
-        rows = frappe.get_all(
+        """Classification rows by registration, each with the dates it covers.
+
+        Keyed on the dates rather than the financial_year string - the same rule
+        the document layer applies, so the desk and the reports can never
+        disagree about whether a supply was MSME.
+        """
+        classifications = {}
+
+        for row in frappe.get_all(
             "India MSME Classification",
             filters={"parenttype": "MSME Registration", "parent": ("in", self.registrations)},
-            fields=["parent", "financial_year", "enterprise_type", "activity"],
-        )
-        return {(row.parent, row.financial_year): row for row in rows}
+            fields=["parent", "from_date", "to_date", "enterprise_type", "activity"],
+        ):
+            classifications.setdefault(row.parent, []).append(row)
+
+        return classifications
 
     def get_cancellations(self) -> dict:
         """Cancellation date by registration, for the ones that are cancelled."""
@@ -124,7 +133,7 @@ class MSMEReport:
     def get_classification(self, invoice: str, posting_date):
         """Classification covering the supply this invoice was accepted for.
 
-        None = not MSME then: unclassified for that year, or already cancelled.
+        None = not MSME then: unclassified for that period, or already cancelled.
         """
         registration = self.invoices[invoice].msme_registration
         posting_date = getdate(posting_date)
@@ -132,7 +141,9 @@ class MSMEReport:
         if self.is_cancelled(registration, posting_date):
             return None
 
-        return self.classifications.get((registration, get_indian_fiscal_year(posting_date)))
+        for classification in self.classifications.get(registration, []):
+            if getdate(classification.from_date) <= posting_date <= getdate(classification.to_date):
+                return classification
 
     def is_cancelled(self, registration: str, posting_date) -> bool:
         if registration not in self.cancellations:

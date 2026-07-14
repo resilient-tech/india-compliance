@@ -4,13 +4,12 @@
 import frappe
 from frappe import _, bold
 from frappe.model.document import Document, bulk_insert
-from frappe.utils import getdate, now, random_string
+from frappe.utils import format_date, getdate, now, random_string, today
 
 from india_compliance.income_tax_india.constants import (
     FINANCIAL_YEAR_REGEX,
     UDYAM_NUMBER_REGEX,
 )
-from india_compliance.income_tax_india.utils.msme import get_financial_year_dates
 
 
 class MSMERegistration(Document):
@@ -47,7 +46,9 @@ class MSMERegistration(Document):
 
             seen_years.add(row.financial_year)
 
-            row.from_date, row.to_date = get_financial_year_dates(row.financial_year)
+            # a row is resolved by date; frappe does not run hooks on child rows,
+            # so the period has to be set from here
+            row.set_period()
 
     def validate_financial_year(self, row):
         financial_year = row.financial_year or ""
@@ -70,14 +71,28 @@ class MSMERegistration(Document):
     def mark_as_cancelled(self, cancelled_date: str, unlink_suppliers: bool = False):
         """Cancellation is a registration-level event: set the flag and date together."""
         self.check_permission("write")
-
-        if getdate(cancelled_date) < getdate(self.registration_date or cancelled_date):
-            frappe.throw(_("Cancelled Date cannot be before the Registration Date"))
+        self.validate_cancellation(cancelled_date)
 
         self.db_set({"is_cancelled": 1, "cancelled_date": getdate(cancelled_date)})
 
         if unlink_suppliers:
             self.unlink_suppliers()
+
+    def validate_cancellation(self, cancelled_date):
+        if self.is_cancelled:
+            frappe.throw(
+                _("{0} was already cancelled on {1}").format(
+                    bold(self.name), bold(format_date(self.cancelled_date))
+                )
+            )
+
+        if getdate(cancelled_date) < getdate(self.registration_date or cancelled_date):
+            frappe.throw(_("Cancelled Date cannot be before the Registration Date"))
+
+        # a future date would keep every supply until then covered by 43B(h),
+        # for a supplier who is no longer an MSE
+        if getdate(cancelled_date) > getdate(today()):
+            frappe.throw(_("Cancelled Date cannot be in the future"))
 
     def unlink_suppliers(self):
         """Remove this registration from every supplier linked to it.
@@ -96,6 +111,10 @@ class MSMERegistration(Document):
             {"msme_registration": None, "modified": timestamp},
             update_modified=False,
         )
+
+        # a bulk update leaves the cached documents stale
+        for supplier in suppliers:
+            frappe.clear_document_cache("Supplier", supplier)
 
         add_comment_to_suppliers(suppliers, self.name, timestamp)
 

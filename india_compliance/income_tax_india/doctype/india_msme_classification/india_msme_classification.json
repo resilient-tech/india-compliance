@@ -28,6 +28,7 @@
    "reqd": 1
   },
   {
+   "default": "Manufacturing",
    "description": "Major Activity as per the UDYAM certificate. Traders are excluded from Section 43B(h).",
    "fieldname": "activity",
    "fieldtype": "Select",

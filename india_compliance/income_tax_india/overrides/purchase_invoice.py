@@ -24,6 +24,10 @@ def get_valid_msme_registrations(
     Registered by then, and not cancelled before it - so a cancelled registration
     remains selectable on invoices backdated to when it was still valid.
     """
+    # validate_and_sanitize_search_inputs sanitises the inputs, it does not check
+    # permission on the target doctype
+    frappe.has_permission("MSME Registration", "read", throw=True)
+
     posting_date = getdate((filters or {}).get("posting_date") or today())
     msme = frappe.qb.DocType("MSME Registration")
 
@@ -47,9 +51,9 @@ def get_msme_details(party_details: str | dict | frappe._dict):
     save: the user must be able to clear it for a backdated invoice that predates
     the registration, or set another for one the supplier no longer holds.
     """
-    party_details = frappe.parse_json(party_details)
     frappe.has_permission("Supplier", "read", throw=True)
 
+    party_details = frappe.parse_json(party_details)
     supplier = party_details.get("supplier")
     if not supplier:
         return {"msme_registration": None}
@@ -77,10 +81,13 @@ def set_msme_registration(doc):
 
     The client script does this on party change, but an invoice can also arrive
     by API, data import or a background job - and an invoice with no registration
-    is invisible to every MSME report. Only on insert: once the invoice exists,
-    a cleared field is the user saying this was not an MSME supply.
+    is invisible to every MSME report.
+
+    Only ever seeded, never re-derived. A cleared field is the user saying this
+    was not an MSME supply, and an amendment inherits that decision: it is the
+    same supply, so re-seeding it would silently overrule them.
     """
-    if not doc.is_new() or doc.msme_registration:
+    if doc.amended_from or not doc.is_new() or doc.msme_registration:
         return
 
     doc.msme_registration = frappe.db.get_value("Supplier", doc.supplier, "msme_registration")
@@ -151,7 +158,9 @@ def validate_msme_payment_terms(doc):
 
 def get_effective_due_date(doc):
     """The last date by which the invoice must be fully paid."""
-    if doc.payment_schedule:
-        return max(getdate(row.due_date) for row in doc.payment_schedule if row.due_date)
+    # a schedule row's due_date is not mandatory, so it may be blank on every row
+    instalments = [getdate(row.due_date) for row in doc.payment_schedule if row.due_date]
+    if instalments:
+        return max(instalments)
 
     return getdate(doc.due_date) if doc.due_date else None

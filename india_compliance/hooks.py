@@ -466,6 +466,11 @@ scheduler_events = {
             "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_reconcile",
         ],
         "0 1 * * *": ["india_compliance.gst_india.utils.e_waybill.extend_scheduled_e_waybills"],
+        # carry MSME classifications into the new financial year. Idempotent, so
+        # a daily run is self-healing if the 1 April run is missed - without it
+        # every registration is unclassified from 1 April and its invoices
+        # silently drop out of all three MSME reports.
+        "0 3 * * *": ["india_compliance.income_tax_india.utils.msme.update_msme_classification"],
     }
 }
 

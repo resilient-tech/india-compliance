@@ -69,6 +69,9 @@ def get_msme_classification(msme_registration: str, on_date=None) -> dict | None
     if get_msme_cancellation(msme_registration, on_date):
         return None
 
+    # keyed on the dates, not the financial_year string: the dates are what a
+    # supply is actually tested against, and they survive a change to the
+    # statutory year. financial_year is the label the user picks.
     classification = frappe.db.get_value(
         "India MSME Classification",
         {
@@ -170,8 +173,10 @@ def update_msme_classification():
                 "financial_year": new_fy,
                 "enterprise_type": row.enterprise_type,
                 "activity": row.activity,
-                "from_date": from_date,
-                "to_date": to_date,
             }
         )
+
+        # db_insert bypasses the document hooks, and a row without a period is
+        # invisible to every lookup
+        new_row.set_period()
         new_row.db_insert()

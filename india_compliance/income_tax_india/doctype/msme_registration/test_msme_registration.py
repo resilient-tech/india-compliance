@@ -5,7 +5,7 @@ import random
 
 import frappe
 from frappe.tests import IntegrationTestCase, UnitTestCase
-from frappe.utils import getdate, today
+from frappe.utils import add_days, getdate, today
 
 from india_compliance.income_tax_india.utils.msme import (
     get_financial_year_dates,
@@ -229,6 +229,53 @@ class IntegrationTestMSME(IntegrationTestCase):
             ),
             2,
         )
+
+    def test_carried_row_is_resolvable_by_date(self):
+        """The bump uses db_insert, which bypasses the document hooks. A row with
+        no period is invisible to every lookup, so it must set one itself.
+        """
+        previous_year = int(get_indian_fiscal_year(today()).split("-")[0]) - 1
+
+        msme = create_msme_registration(
+            classifications=[
+                {
+                    "financial_year": f"{previous_year}-{previous_year + 1}",
+                    "enterprise_type": "Micro",
+                }
+            ]
+        )
+        update_msme_classification()
+
+        from_date, to_date = get_fiscal_year_dates()
+        carried = frappe.db.get_value(
+            "India MSME Classification",
+            {"parent": msme.name, "financial_year": get_indian_fiscal_year(today())},
+            ["from_date", "to_date"],
+            as_dict=True,
+        )
+
+        self.assertEqual(getdate(carried.from_date), from_date)
+        self.assertEqual(getdate(carried.to_date), to_date)
+
+    def test_classification_period_is_derived_on_save(self):
+        """A row is resolved by date, so saving one must always give it a period."""
+        msme = create_msme_registration(classifications=[{"financial_year": FY, "enterprise_type": "Micro"}])
+        row = msme.classifications[0]
+
+        self.assertEqual(getdate(row.from_date), getdate("2023-04-01"))
+        self.assertEqual(getdate(row.to_date), getdate("2024-03-31"))
+        self.assertTrue(get_msme_classification(msme.name, "2023-06-01").msme_applicable)
+
+    def test_future_cancellation_date_rejected(self):
+        msme = create_msme_registration(registration_date="2023-04-01")
+        self.assertRaises(frappe.ValidationError, msme.mark_as_cancelled, add_days(today(), 1))
+
+    def test_cancelling_twice_rejected(self):
+        msme = create_msme_registration(registration_date="2023-04-01")
+        msme.mark_as_cancelled("2023-10-15")
+        msme.reload()
+
+        self.assertRaises(frappe.ValidationError, msme.mark_as_cancelled, "2023-11-01")
 
     def _is_applicable(self, msme_registration, financial_year):
         # any date inside the FY resolves that year's classification

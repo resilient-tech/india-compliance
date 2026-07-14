@@ -28,12 +28,6 @@ frappe.query_reports["MSME 43B(h) Disallowance"] = {
             default: fy_bounds.to_date,
         },
         {
-            fieldname: "as_on_date",
-            label: __("As On Date"),
-            fieldtype: "Date",
-            default: frappe.datetime.get_today(),
-        },
-        {
             fieldname: "supplier",
             label: __("Supplier"),
             fieldtype: "Link",

@@ -16,22 +16,23 @@ REPORT_PATH = "india_compliance.income_tax_india.report.msme_43b(h)_disallowance
 
 
 class _TestMSME43BHBase(MSMEReportTestCase):
-    def _run(self, supplier, as_on_date, **extra_filters):
+    def _run(self, supplier, **extra_filters):
+        """Run for FY 2023-2024. The position is always taken at to_date, so
+        there is no as-on date to pass - see MSME43BHDisallowance.validate_filters.
+        """
         execute = frappe.get_attr(f"{REPORT_PATH}.execute")
         _columns, data = execute(
             {
                 "company": COMPANY,
-                # FY 2023-2024 date bounds
                 "from_date": "2023-04-01",
                 "to_date": "2024-03-31",
-                "as_on_date": as_on_date,
                 "supplier": supplier,
                 **extra_filters,
             }
         )
         return {row["voucher_no"]: row for row in data}
 
-    def _count_queries(self, supplier, as_on_date):
+    def _count_queries(self, supplier):
         queries = []
         original = frappe.db.sql
 
@@ -41,7 +42,7 @@ class _TestMSME43BHBase(MSMEReportTestCase):
 
         frappe.db.sql = spy
         try:
-            self._run(supplier, as_on_date)
+            self._run(supplier)
         finally:
             frappe.db.sql = original
 
@@ -56,14 +57,14 @@ class TestMSME43BHPerformance(_TestMSME43BHBase):
         for _ in range(3):
             self._pi(supplier, "2023-05-01", 1000)
 
-        few = self._count_queries(supplier, "2024-03-31")
+        few = self._count_queries(supplier)
 
         for _ in range(12):
             self._pi(supplier, "2023-05-01", 1000)
 
-        many = self._count_queries(supplier, "2024-03-31")
+        many = self._count_queries(supplier)
 
-        self.assertEqual(len(self._run(supplier, "2024-03-31")), 15)
+        self.assertEqual(len(self._run(supplier)), 15)
         self.assertEqual(few, many, "query count scales with row count - an N+1 has crept in")
 
 
@@ -71,7 +72,7 @@ class TestMSME43BHReport(_TestMSME43BHBase):
     def test_unpaid_overdue_is_disallowed(self):
         # Posted 2023-05-01 -> due 2023-06-15. Unpaid as on 2024-03-31 -> disallowed.
         pi = self._pi(self.supplier, "2023-05-01", 10000)
-        rows = self._run(self.supplier, "2024-03-31")
+        rows = self._run(self.supplier)
         row = rows[pi.name]
         self.assertEqual(row["payment_status"], "Unpaid - Overdue")
         self.assertEqual(flt(row["disallowable_amount"]), 10000)
@@ -84,16 +85,18 @@ class TestMSME43BHReport(_TestMSME43BHBase):
         # (visible in Form-1's invoice-wise view instead).
         pi = self._pi(self.supplier, "2023-05-01", 5000)
         self._pay(pi, "2023-08-01")
-        rows = self._run(self.supplier, "2024-03-31")
+        rows = self._run(self.supplier)
         self.assertNotIn(pi.name, rows)
 
     def test_unpaid_at_year_end_disallowed_even_if_paid_next_fy(self):
         # Due 2023-06-15, still unpaid at FY-end 2024-03-31 -> disallowed in
-        # 2023-24. The later-FY payment does not change FY 2023-24's add-back.
+        # 2023-24. A payment in a LATER year does not undo that add-back: the
+        # position is taken at to_date, never as on today.
         pi = self._pi(self.supplier, "2023-05-01", 7000)
         self._pay(pi, "2024-05-01")  # paid in FY 2024-25, after the FY-end
-        rows = self._run(self.supplier, "2024-03-31")
-        row = rows[pi.name]
+
+        row = self._run(self.supplier)[pi.name]
+
         self.assertEqual(flt(row["outstanding"]), 7000)
         self.assertEqual(flt(row["disallowable_amount"]), 7000)
 
@@ -101,20 +104,20 @@ class TestMSME43BHReport(_TestMSME43BHBase):
         # Due 2023-06-15, paid 2023-06-01 (on time) -> not in the statement.
         pi = self._pi(self.supplier, "2023-05-01", 3000)
         self._pay(pi, "2023-06-01")
-        rows = self._run(self.supplier, "2024-03-31")
+        rows = self._run(self.supplier)
         self.assertNotIn(pi.name, rows)
 
     def test_medium_supplier_excluded(self):
         medium = self._create_msme_supplier(enterprise_type="Medium")
         pi = self._pi(medium, "2023-05-01", 9000)
-        rows = self._run(medium, "2024-03-31")
+        rows = self._run(medium)
         # Medium is not 43B(h)-applicable -> no rows.
         self.assertNotIn(pi.name, rows)
 
     def test_trader_excluded(self):
         trader = self._create_msme_supplier(enterprise_type="Small", activity="Trading")
         pi = self._pi(trader, "2023-05-01", 9000)
-        rows = self._run(trader, "2024-03-31")
+        rows = self._run(trader)
         self.assertNotIn(pi.name, rows)
 
     def test_enterprise_type_filter_narrows_within_applicable(self):
@@ -122,10 +125,10 @@ class TestMSME43BHReport(_TestMSME43BHBase):
         # past 43B(h) applicability (a Medium filter shows nothing).
         medium = self._create_msme_supplier(enterprise_type="Medium")
         self._pi(medium, "2023-05-01", 9000)
-        self.assertEqual(self._run(medium, "2024-03-31", enterprise_type="Medium"), {})
+        self.assertEqual(self._run(medium, enterprise_type="Medium"), {})
 
         micro_pi = self._pi(self.supplier, "2023-05-01", 6000)
-        rows = self._run(self.supplier, "2024-03-31", enterprise_type="Micro")
+        rows = self._run(self.supplier, enterprise_type="Micro")
         self.assertIn(micro_pi.name, rows)
         self.assertTrue(all(row["enterprise_type"] == "Micro" for row in rows.values()))
 
@@ -134,7 +137,7 @@ class TestMSME43BHReport(_TestMSME43BHBase):
         # MSME that year -> the invoice is excluded entirely.
         supplier = self._create_msme_supplier(enterprise_type="Micro", financial_year="2024-2025")
         pi = self._pi(supplier, "2023-05-01", 4000)
-        rows = self._run(supplier, "2024-03-31")
+        rows = self._run(supplier)
         self.assertNotIn(pi.name, rows)
 
 
@@ -151,7 +154,7 @@ class TestMSME43BHPaymentScenarios(_TestMSME43BHBase):
         pi = self._pi(self.supplier, "2023-05-01", 10000)
         self._pay(pi, "2023-06-01", amount=4000)  # on time
         self._pay(pi, "2023-08-01", amount=3000)  # late, same FY
-        rows = self._run(self.supplier, "2024-03-31")
+        rows = self._run(self.supplier)
         row = rows[pi.name]
         self.assertEqual(flt(row["outstanding"]), 3000)
         self.assertEqual(flt(row["paid_amount"]), 7000)
@@ -163,7 +166,7 @@ class TestMSME43BHPaymentScenarios(_TestMSME43BHBase):
         # time -> not in the disallowance statement.
         pi = self._pi(self.supplier, "2023-05-01", 8000)
         self._pay(pi, "2023-05-10")  # well within the 45-day window
-        rows = self._run(self.supplier, "2024-03-31")
+        rows = self._run(self.supplier)
         self.assertNotIn(pi.name, rows)
 
     def test_unadjusted_advance_does_not_reduce_the_disallowance(self):
@@ -175,7 +178,7 @@ class TestMSME43BHPaymentScenarios(_TestMSME43BHBase):
         pi = self._pi(supplier, "2023-05-01", 10000)
         pe = self._make_advance(supplier, pi.credit_to, "2023-06-01", 2000)
 
-        rows = self._run(supplier, "2024-03-31")
+        rows = self._run(supplier)
 
         self.assertEqual(flt(rows[pi.name]["disallowable_amount"]), 10000)
         self.assertNotIn(pe.name, rows)
@@ -187,7 +190,7 @@ class TestMSME43BHPaymentScenarios(_TestMSME43BHBase):
         pi = self._pi(supplier, "2023-05-01", 10000)
         self._pay(pi, "2023-09-01", amount=2000)  # late, but allocated
 
-        row = self._run(supplier, "2024-03-31")[pi.name]
+        row = self._run(supplier)[pi.name]
 
         self.assertEqual(flt(row["disallowable_amount"]), 8000)
         self.assertEqual(flt(row["outstanding"]), 8000)
@@ -210,7 +213,7 @@ class TestMSME43BHPaymentScenarios(_TestMSME43BHBase):
             rate=4000,
         )
 
-        rows = self._run(supplier, "2024-03-31")
+        rows = self._run(supplier)
 
         self.assertNotIn(debit_note.name, rows)
         self.assertEqual(
@@ -245,7 +248,7 @@ class TestMSME43BHPaymentScenarios(_TestMSME43BHBase):
             ],
         )
 
-        self.assertNotIn(je.name, self._run(supplier, "2024-03-31"))
+        self.assertNotIn(je.name, self._run(supplier))
 
     def test_disallowance_always_tracks_authoritative_outstanding(self):
         # The compliance guarantee: for an applicable, overdue invoice the
@@ -255,7 +258,7 @@ class TestMSME43BHPaymentScenarios(_TestMSME43BHBase):
         # reconciliation does to outstanding, the disallowance follows it 1:1.
         pi = self._pi(self.supplier, "2023-05-01", 10000)
         self._pay(pi, "2023-09-01", amount=3500)
-        row = self._run(self.supplier, "2024-03-31")[pi.name]
+        row = self._run(self.supplier)[pi.name]
         authoritative = frappe.db.get_value("Purchase Invoice", pi.name, "outstanding_amount")
         self.assertEqual(flt(row["outstanding"]), flt(authoritative))
         self.assertEqual(flt(row["disallowable_amount"]), flt(authoritative))
@@ -283,5 +286,5 @@ class TestMSME43BHPaymentScenarios(_TestMSME43BHBase):
         )
 
         # settled in full via JE -> nothing disallowable -> not in the statement
-        rows = self._run(self.supplier, "2024-03-31")
+        rows = self._run(self.supplier)
         self.assertNotIn(pi.name, rows)

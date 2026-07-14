@@ -29,6 +29,12 @@ class MSME43BHDisallowance(MSMEPayablesReport):
         if getdate(self.filters.from_date) > getdate(self.filters.to_date):
             frappe.throw(_("From Date cannot be after To Date"))
 
+        # 43B(h) is tested at the year end: an amount unpaid on that date is
+        # added back, and a payment made in a later year does not undo it. As on
+        # today, that payment would zero the outstanding and the add-back would
+        # silently vanish.
+        self.filters.as_on_date = getdate(self.filters.to_date)
+
     def get_data(self):
         return [row for row in self.get_payables() if row["disallowable_amount"]]
 
