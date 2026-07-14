@@ -2,10 +2,13 @@ import frappe
 from erpnext.accounts.party import get_address_tax_category
 from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
 from frappe import _, bold
-from frappe.contacts.doctype.address.address import get_address_display
+from frappe.contacts.doctype.address.address import get_address_display, get_default_address
 from frappe.utils import flt
 from pypika import Order
 
+from india_compliance.gst_india.constants import (
+    E_WAYBILL_STOCK_ENTRY_PURPOSES,
+)
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
     ADDRESS_GSTIN_FIELD_MAP,
@@ -94,7 +97,12 @@ def after_mapping_stock_entry(doc, method, source_doc):
         doc.taxes = []
 
     set_item_tax_template(doc, source_doc)
-    update_address_fields(doc, source_doc)
+
+    # set_address_fields
+    if source_doc.doctype == "Subcontracting Inward Order":
+        set_address_for_subcontracting_inward(doc, source_doc)
+    else:
+        update_address_fields(doc, source_doc)
 
 
 def update_address_fields(doc, source_doc):
@@ -110,6 +118,17 @@ def update_address_fields(doc, source_doc):
     doc.bill_to_gstin = address_map.bill_to_gstin
     doc.ship_from_address = address_map.ship_from
     doc.ship_to_address = address_map.ship_to
+
+    set_address_display(doc)
+
+
+def set_address_for_subcontracting_inward(doc, source_doc):
+    """Set company (bill_from) -> customer (bill_to) addresses for Subcontracting Inward Stock Entries."""
+    if not doc.bill_from_address:
+        doc.bill_from_address = get_default_address("Company", source_doc.company)
+
+    if not doc.bill_to_address:
+        doc.bill_to_address = get_default_address("Customer", source_doc.customer)
 
     set_address_display(doc)
 
@@ -599,11 +618,9 @@ def is_e_waybill_applicable(doc):
     if doc.doctype != "Stock Entry":
         return True
 
-    if doc.purpose not in [
-        "Material Transfer",
-        "Material Issue",
-        "Send to Subcontractor",
-    ]:
+    # Inward purposes (Delivery, RM Return) carry only an e-Waybill; the
+    # principal reports them in ITC-04 / GSTR-1, not the company (job worker).
+    if doc.purpose not in E_WAYBILL_STOCK_ENTRY_PURPOSES:
         return False
 
     return True
@@ -622,3 +639,109 @@ def ignore_gst_validations_for_subcontracting(doc):
 
     if doc.is_return and not doc.bill_to_address:
         return True
+
+
+def set_subcontracting_inward_taxable_value(doc):
+    """Add the value of customer-provided materials to the e-Waybill taxable value
+    of Subcontracting Inward Stock Entries."""
+    if doc.purpose == "Subcontracting Delivery":
+        _set_subcontracting_delivery_additional_value(doc)
+    elif doc.purpose == "Return Raw Material to Customer":
+        _set_return_raw_material_additional_value(doc)
+
+
+def _set_subcontracting_delivery_additional_value(doc):
+    """Add the value of consumed customer materials to the delivered finished goods.
+
+    additional = SUM(order_rate * consumed_qty) / produced_qty * delivered transfer_qty.
+    Quantities are all in stock UOM (consumed_qty, produced_qty, transfer_qty), so
+    the value is consistent with the row amount. Left at 0 for secondary items,
+    no consumption, or no production yet.
+    """
+    scio_details = {item.scio_detail for item in doc.items if item.get("scio_detail")}
+    if not scio_details:
+        return
+
+    # Customer-provided received items for the finished goods being delivered.
+    received_items = frappe.get_all(
+        "Subcontracting Inward Order Received Item",
+        filters={"reference_name": ("in", list(scio_details)), "is_customer_provided_item": 1},
+        fields=["reference_name", "rate", "consumed_qty"],
+    )
+    if not received_items:
+        return
+
+    produced_qty = frappe._dict(
+        frappe.get_all(
+            "Subcontracting Inward Order Item",
+            filters={"name": ("in", list(scio_details))},
+            fields=["name", "produced_qty"],
+            as_list=True,
+        )
+    )
+
+    # Total consumed customer-material value per finished good, using the order rate.
+    fg_material_cost = {}
+    for row in received_items:
+        cost = flt(row.rate) * flt(row.consumed_qty)
+        fg_material_cost[row.reference_name] = fg_material_cost.get(row.reference_name, 0) + cost
+
+    precision = doc.precision("additional_taxable_value", "items")
+    rows_without_produced_qty = []
+
+    for item in doc.items:
+        scio_detail = item.get("scio_detail")
+        material_cost = fg_material_cost.get(scio_detail)
+        if not material_cost:
+            continue
+
+        if not produced_qty.get(scio_detail):
+            rows_without_produced_qty.append(item.idx)
+            continue
+
+        item.additional_taxable_value = flt(
+            material_cost / flt(produced_qty.get(scio_detail)) * flt(item.transfer_qty), precision
+        )
+
+    if rows_without_produced_qty:
+        frappe.msgprint(
+            _(
+                "Row #{0}: Value of customer-provided materials could not be added to the"
+                " taxable value as no production has been reported yet"
+            ).format(", ".join(str(idx) for idx in rows_without_produced_qty)),
+            alert=True,
+            indicator="yellow",
+        )
+
+
+def _set_return_raw_material_additional_value(doc):
+    """Set the returned RM taxable value to the customer's declared value (Rule 55).
+
+    additional = rate * qty - amount, and may be negative to correct the SE
+    amount. A return moves on-hand material, so the SCIO Received Item rate is used;
+    self-procured items (no rate) are skipped.
+    """
+    scio_details = {item.scio_detail for item in doc.items if item.get("scio_detail")}
+    if not scio_details:
+        return
+
+    rates = frappe._dict(
+        frappe.get_all(
+            "Subcontracting Inward Order Received Item",
+            filters={"name": ("in", list(scio_details)), "is_customer_provided_item": 1},
+            fields=["name", "rate"],
+            as_list=True,
+        )
+    )
+    if not rates:
+        return
+
+    precision = doc.precision("additional_taxable_value", "items")
+
+    for item in doc.items:
+        scio_detail = item.get("scio_detail")
+        if scio_detail not in rates:
+            continue
+
+        declared_value = flt(rates[scio_detail]) * flt(item.transfer_qty)
+        item.additional_taxable_value = flt(declared_value - flt(item.amount), precision)

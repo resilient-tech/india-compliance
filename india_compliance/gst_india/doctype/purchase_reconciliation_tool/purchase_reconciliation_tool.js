@@ -94,6 +94,9 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     refresh(frm) {
+        frm.disable_save();
+        frm.page.clear_indicator();
+
         frm.reco_tool_actions = new PurchaseReconciliationToolAction(frm);
         frm.reco_tool_actions.setup_actions();
     },
@@ -652,14 +655,42 @@ class PurchaseReconciliationToolAction {
         this.setup_row_actions();
     }
 
+    validate_filters() {
+        const doc = this.frm.doc;
+        const missing_labels = [];
+
+        if (!doc.company && !doc.company_gstin) {
+            missing_labels.push(__("Company or Company GSTIN"));
+        }
+
+        if (!doc.gst_return) {
+            missing_labels.push(__(frappe.meta.get_label(DOCTYPE, "gst_return")));
+        }
+
+        const period_fields = ["purchase_period", "inward_supply_period"];
+
+        for (const fieldname of period_fields) {
+            const prefix = fieldname.replace("_period", "");
+            if (!doc[`${prefix}_from_date`] || !doc[`${prefix}_to_date`]) {
+                missing_labels.push(__(frappe.meta.get_label(DOCTYPE, fieldname)));
+            }
+        }
+
+        if (!missing_labels.length) return;
+
+        frappe.throw({
+            title: __("Missing Filters"),
+            message: __("Please set the following mandatory filters to generate the report:<br>{0}", [
+                `<ul>${missing_labels.map((label) => `<li>${label}</li>`).join("")}</ul>`,
+            ]),
+        });
+    }
+
     setup_document_actions() {
         // Primary Action
         this.frm.disable_save();
         this.frm.page.set_primary_action(__("Generate"), async () => {
-            if (!this.frm.doc.company && !this.frm.doc.company_gstin) {
-                frappe.throw(__("Please provide either a Company name or Company GSTIN."));
-            }
-
+            this.validate_filters();
             this.get_reconciliation_data(this.frm);
         });
 
