@@ -39,23 +39,25 @@ frappe.ui.form.on("GSTR 3B Report", {
         const docname = encodeURIComponent(frm.doc.name);
         const download_group = __("Download");
 
-        frm.add_custom_button(
-            __("JSON"),
-            () => open_download(`${report_method}.make_json?name=${docname}`),
-            download_group,
-        );
+        if (frappe.model.can_print(frm.doctype, frm)) {
+            frm.add_custom_button(
+                __("JSON"),
+                () => open_download(`${report_method}.make_json?name=${docname}`),
+                download_group,
+            );
 
-        frm.add_custom_button(
-            __("Excel"),
-            () => open_download(`${report_method}.download_gstr3b_as_excel?name=${docname}`),
-            download_group,
-        );
+            frm.add_custom_button(
+                __("Excel"),
+                () => open_download(`${report_method}.download_gstr3b_as_excel?name=${docname}`),
+                download_group,
+            );
 
-        frm.add_custom_button(
-            __("PDF"),
-            () => open_download(`${report_method}.download_gstr3b_as_pdf?name=${docname}`),
-            download_group,
-        );
+            frm.add_custom_button(
+                __("PDF"),
+                () => open_download(`${report_method}.download_gstr3b_as_pdf?name=${docname}`),
+                download_group,
+            );
+        }
 
         // Regenerate Button
         frm.add_custom_button(__("Regenerate 2B"), function () {
