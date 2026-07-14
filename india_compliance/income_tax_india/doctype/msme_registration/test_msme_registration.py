@@ -230,6 +230,27 @@ class IntegrationTestMSME(IntegrationTestCase):
             2,
         )
 
+    def test_annual_bump_skips_cancelled_registration(self):
+        """A cancelled registration covers no new supplies, so its classification
+        must not be carried into the new FY.
+        """
+        previous_year = int(get_indian_fiscal_year(today()).split("-")[0]) - 1
+
+        msme = create_msme_registration(
+            classifications=[
+                {"financial_year": f"{previous_year}-{previous_year + 1}", "enterprise_type": "Micro"}
+            ]
+        )
+        msme.mark_as_cancelled(today())
+
+        update_msme_classification()
+        self.assertEqual(
+            frappe.db.count(
+                "India MSME Classification", {"parenttype": "MSME Registration", "parent": msme.name}
+            ),
+            1,
+        )
+
     def test_carried_row_is_resolvable_by_date(self):
         """The bump uses db_insert, which bypasses the document hooks. A row with
         no period is invisible to every lookup, so it must set one itself.

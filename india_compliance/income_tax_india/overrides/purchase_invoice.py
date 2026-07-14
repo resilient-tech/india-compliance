@@ -83,9 +83,10 @@ def set_msme_registration(doc):
     by API, data import or a background job - and an invoice with no registration
     is invisible to every MSME report.
 
-    Only ever seeded, never re-derived. A cleared field is the user saying this
-    was not an MSME supply, and an amendment inherits that decision: it is the
-    same supply, so re-seeding it would silently overrule them.
+    Seeded on the first insert only, never re-derived after that. Once the
+    invoice exists, a cleared field is the user saying this was not an MSME
+    supply - and an amendment inherits that decision: it is the same supply, so
+    re-seeding it would silently overrule them.
     """
     if doc.amended_from or not doc.is_new() or doc.msme_registration:
         return

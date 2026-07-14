@@ -130,9 +130,9 @@ def update_msme_classification():
     registrations that actually changed. Idempotent: never overwrites a year
     that is already classified.
     """
-    from_date, to_date = get_fiscal_year_dates()
-    new_fy = get_indian_fiscal_year(from_date)
-    prev_fy = get_indian_fiscal_year(add_years(from_date, -1))
+    start_date = get_fiscal_year_dates()[0]
+    new_fy = get_indian_fiscal_year(start_date)
+    prev_fy = get_indian_fiscal_year(add_years(start_date, -1))
 
     prev_rows = frappe.get_all(
         "India MSME Classification",
@@ -141,6 +141,16 @@ def update_msme_classification():
     )
     if not prev_rows:
         return
+
+    # a cancelled registration covers no new supplies, so carrying its
+    # classification forward would only accrete rows no lookup can use
+    cancelled = set(
+        frappe.get_all(
+            "MSME Registration",
+            filters={"name": ("in", [row.parent for row in prev_rows]), "is_cancelled": 1},
+            pluck="name",
+        )
+    )
 
     classified = set(
         frappe.get_all(
@@ -160,7 +170,7 @@ def update_msme_classification():
     )
 
     for row in prev_rows:
-        if row.parent in classified:
+        if row.parent in classified or row.parent in cancelled:
             continue
 
         new_row = frappe.new_doc("India MSME Classification")

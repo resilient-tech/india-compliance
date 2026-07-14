@@ -35,7 +35,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "TDS Computation Summary-India",
    "link_count": 0,
    "link_to": "TDS Computation Summary-India",
@@ -65,7 +65,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "MSME Form-1",
    "link_count": 0,
    "link_to": "MSME Form-1",

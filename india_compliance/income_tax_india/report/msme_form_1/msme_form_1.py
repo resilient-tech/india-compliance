@@ -10,7 +10,7 @@ and the filter lets the accountant decide otherwise.
 
 import frappe
 from frappe import _
-from frappe.utils import add_months, get_last_day
+from frappe.utils import add_months, cint, get_last_day
 
 from india_compliance.income_tax_india.utils.msme import get_financial_year_dates
 from india_compliance.income_tax_india.utils.msme_report import MSMEPayablesReport
@@ -50,8 +50,9 @@ class MSMEForm1(MSMEPayablesReport):
         self.filters.as_on_date = self.filters.period_end
         self.settlement_from_date = self.filters.period_start
 
-        # MSMED Act covers traders; 43B(h) is what excludes them
-        self.exclude_traders = not self.filters.include_traders
+        # MSMED Act covers traders; 43B(h) is what excludes them. cint, because
+        # a filter set via route options arrives as the string "0"
+        self.exclude_traders = not cint(self.filters.include_traders)
 
     def get_data(self):
         rows = self.get_invoice_rows()

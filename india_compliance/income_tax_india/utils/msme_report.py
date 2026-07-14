@@ -142,6 +142,11 @@ class MSMEReport:
             return None
 
         for classification in self.classifications.get(registration, []):
+            # a row without a period is invisible, exactly as it is to the SQL
+            # date filters on the document layer (getdate(None) would be today)
+            if not (classification.from_date and classification.to_date):
+                continue
+
             if getdate(classification.from_date) <= posting_date <= getdate(classification.to_date):
                 return classification
 
