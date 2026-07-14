@@ -21,6 +21,8 @@ frappe.ui.form.on("GSTR 3B Report", {
     },
 
     refresh: function (frm) {
+        frm.toggle_display("json_output", 0);
+
         if (frm.is_new()) return;
 
         const is_filed = frm.doc.filing_status === "Filed";
