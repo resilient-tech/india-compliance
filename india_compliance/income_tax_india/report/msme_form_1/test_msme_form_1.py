@@ -4,17 +4,18 @@
 from frappe.utils import flt
 
 from india_compliance.income_tax_india.report.msme_form_1.msme_form_1 import execute
-from india_compliance.income_tax_india.utils.test_msme import COMPANY, MSMEReportTestCase
+from india_compliance.income_tax_india.utils.test_msme_utils import COMPANY, MSMEReportTestCase
 
 
 class TestMSMEForm1(MSMEReportTestCase):
-    def _run_form1(self, group_by="Supplier Wise", period="Apr-Sep"):
+    def _run_form1(self, group_by="Supplier Wise", period="Apr-Sep", include_traders=1):
         _columns, data = execute(
             {
                 "company": COMPANY,
                 "period_fy": "2023-2024",
                 "period": period,
                 "group_by": group_by,
+                "include_traders": include_traders,
             }
         )
         return data
@@ -67,3 +68,14 @@ class TestMSMEForm1(MSMEReportTestCase):
         self._pi(medium, "2023-05-01", 9000)
         rows = [row for row in self._run_form1() if row["supplier"] == medium]
         self.assertEqual(rows, [])
+
+    def test_traders_are_included_by_default(self):
+        """Form-1 is filed under the MSMED Act, which has no trader carve-out."""
+        trader = self._create_msme_supplier(enterprise_type="Micro", activity="Trading")
+        self._pi(trader, "2023-05-01", 9000)
+
+        included = [row for row in self._run_form1() if row["supplier"] == trader]
+        self.assertEqual(len(included), 1)
+
+        excluded = [row for row in self._run_form1(include_traders=0) if row["supplier"] == trader]
+        self.assertEqual(excluded, [])

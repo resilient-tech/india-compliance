@@ -48,7 +48,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "MSME Reports",
-   "link_count": 2,
+   "link_count": 3,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -69,6 +69,17 @@
    "label": "MSME Form-1",
    "link_count": 0,
    "link_to": "MSME Form-1",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Purchase Invoice",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "MSME Payables Due Within 45 Days",
+   "link_count": 0,
+   "link_to": "MSME Payables Due Within 45 Days",
    "link_type": "Report",
    "onboard": 0,
    "report_ref_doctype": "Purchase Invoice",

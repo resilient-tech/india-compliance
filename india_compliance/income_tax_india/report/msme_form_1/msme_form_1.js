@@ -33,5 +33,14 @@ frappe.query_reports["MSME Form-1"] = {
             options: ["Invoice Wise", "Supplier Wise"],
             default: "Invoice Wise",
         },
+        {
+            fieldname: "include_traders",
+            label: __("Include Traders"),
+            fieldtype: "Check",
+            default: 1,
+            description: __(
+                "Form-1 is filed under the MSMED Act, which covers traders." + " Section 43B(h) does not.",
+            ),
+        },
     ],
 };

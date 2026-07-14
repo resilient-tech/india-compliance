@@ -60,6 +60,8 @@ def get_msme_details(party_details: str | dict | frappe._dict):
 
 
 def validate(doc, method=None):
+    set_msme_registration(doc)
+
     if not doc.msme_registration:
         return
 
@@ -68,6 +70,20 @@ def validate(doc, method=None):
         return
 
     validate_msme_payment_terms(doc)
+
+
+def set_msme_registration(doc):
+    """Seed the supplier's registration onto a new invoice.
+
+    The client script does this on party change, but an invoice can also arrive
+    by API, data import or a background job - and an invoice with no registration
+    is invisible to every MSME report. Only on insert: once the invoice exists,
+    a cleared field is the user saying this was not an MSME supply.
+    """
+    if not doc.is_new() or doc.msme_registration:
+        return
+
+    doc.msme_registration = frappe.db.get_value("Supplier", doc.supplier, "msme_registration")
 
 
 def validate_msme_registration_status(doc) -> bool:
