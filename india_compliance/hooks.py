@@ -176,7 +176,10 @@ doc_events = {
         "before_validate": [
             "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         ],
-        "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
+        "validate": [
+            "india_compliance.gst_india.overrides.purchase_invoice.validate",
+            "india_compliance.income_tax_india.overrides.purchase_invoice.validate",
+        ],
         "before_save": "india_compliance.gst_india.overrides.transaction.update_valuation_rate",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_valuation_rate",
         "before_update_after_submit": "india_compliance.gst_india.overrides.purchase_invoice.before_update_after_submit",

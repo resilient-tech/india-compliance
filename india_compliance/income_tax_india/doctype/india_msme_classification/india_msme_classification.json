@@ -7,7 +7,9 @@
  "field_order": [
   "financial_year",
   "enterprise_type",
-  "activity"
+  "activity",
+  "from_date",
+  "to_date"
  ],
  "fields": [
   {
@@ -33,6 +35,19 @@
    "label": "Activity",
    "options": "Manufacturing\nService\nTrading",
    "reqd": 1
+  },
+  {
+   "description": "Derived from the Financial Year, so a classification can be resolved by date.",
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,

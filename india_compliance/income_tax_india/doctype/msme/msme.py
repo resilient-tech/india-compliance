@@ -10,6 +10,7 @@ from india_compliance.income_tax_india.constants import (
     FINANCIAL_YEAR_REGEX,
     UDYAM_NUMBER_REGEX,
 )
+from india_compliance.income_tax_india.utils.msme import get_financial_year_dates
 
 
 class MSME(Document):
@@ -45,6 +46,8 @@ class MSME(Document):
                 )
 
             seen_years.add(row.financial_year)
+
+            row.from_date, row.to_date = get_financial_year_dates(row.financial_year)
 
     def validate_financial_year(self, row):
         financial_year = row.financial_year or ""

@@ -56,11 +56,17 @@ def is_section_43_b_msme_applicable(enterprise_type, activity) -> bool:
 
 
 def get_msme_classification(msme_registration: str, on_date=None) -> dict | None:
-    """Classification of a registration for the FY of ``on_date`` (default: today).
+    """Classification of a registration as on a date (default: today).
 
-    None = not classified for that year, i.e. not MSME.
+    None = not MSME on that date: either unclassified for the year, or the
+    registration was already cancelled.
     """
     if not msme_registration:
+        return None
+
+    on_date = getdate(on_date or today())
+
+    if is_msme_registration_cancelled(msme_registration, on_date):
         return None
 
     classification = frappe.db.get_value(
@@ -68,7 +74,8 @@ def get_msme_classification(msme_registration: str, on_date=None) -> dict | None
         {
             "parenttype": "MSME",
             "parent": msme_registration,
-            "financial_year": get_indian_fiscal_year(on_date or today()),
+            "from_date": ("<=", on_date),
+            "to_date": (">=", on_date),
         },
         ["enterprise_type", "activity"],
         as_dict=True,
@@ -80,6 +87,21 @@ def get_msme_classification(msme_registration: str, on_date=None) -> dict | None
         )
 
     return classification
+
+
+def is_msme_registration_cancelled(msme_registration: str, on_date) -> bool:
+    """A supply accepted after cancellation is not from an MSME."""
+    registration = frappe.db.get_value(
+        "MSME", msme_registration, ["is_cancelled", "cancelled_date"], as_dict=True
+    )
+    if not registration or not registration.is_cancelled:
+        return False
+
+    # a cancelled registration with no date on record is treated as never valid
+    if not registration.cancelled_date:
+        return True
+
+    return getdate(on_date) > getdate(registration.cancelled_date)
 
 
 def get_classification_map(
@@ -390,9 +412,9 @@ def update_msme_classification():
     registrations that actually changed. Idempotent: never overwrites a year
     that is already classified.
     """
-    start_date = get_fiscal_year_dates()[0]
-    new_fy = get_indian_fiscal_year(start_date)
-    prev_fy = get_indian_fiscal_year(add_years(start_date, -1))
+    from_date, to_date = get_fiscal_year_dates()
+    new_fy = get_indian_fiscal_year(from_date)
+    prev_fy = get_indian_fiscal_year(add_years(from_date, -1))
 
     prev_rows = frappe.get_all(
         "India MSME Classification",
@@ -433,6 +455,8 @@ def update_msme_classification():
                 "financial_year": new_fy,
                 "enterprise_type": row.enterprise_type,
                 "activity": row.activity,
+                "from_date": from_date,
+                "to_date": to_date,
             }
         )
         new_row.db_insert()
