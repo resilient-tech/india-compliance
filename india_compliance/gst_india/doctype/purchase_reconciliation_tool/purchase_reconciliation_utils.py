@@ -51,6 +51,7 @@ def unlink_documents(data):
     inward_supplies = set()
     purchases = set()
     boe = set()
+    isd = set()
 
     for row in data:
         inward_supplies.add(row.get("inward_supply_name"))
@@ -62,14 +63,18 @@ def unlink_documents(data):
         elif purchase_doctype == "Bill of Entry":
             boe.add(row.get("purchase_invoice_name"))
 
+        elif purchase_doctype == "ISD Recipient Invoice":
+            isd.add(row.get("purchase_invoice_name"))
+
     set_reconciliation_status("Purchase Invoice", purchases, "Unreconciled")
     set_reconciliation_status("Bill of Entry", boe, "Unreconciled")
+    set_reconciliation_status("ISD Recipient Invoice", isd, "Unreconciled")
     _unlink_documents(inward_supplies)
 
     # Note: We do NOT clear itc_claim_period on unlink
     # User can manually change it if needed
 
-    return purchases.union(boe), inward_supplies
+    return purchases.union(boe).union(isd), inward_supplies
 
 
 def _unlink_documents(inward_supplies):

@@ -101,7 +101,7 @@ frappe.ui.form.on(DOCTYPE, {
     async company(frm) {
         render_empty_state(frm);
         if (!frm.doc.company) return;
-        const options = await india_compliance.set_gstin_options(frm, true, true);
+        const options = await india_compliance.set_gstin_options(frm, true);
 
         frm.set_value("company_gstin", options[0]);
     },
@@ -299,7 +299,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 label: "DocType",
                 fieldname: "purchase_doctype",
                 fieldtype: "Select",
-                options: ["Purchase Invoice", "Bill of Entry"],
+                options: ["Purchase Invoice", "Bill of Entry", "ISD Recipient Invoice"],
             },
         );
 
@@ -782,11 +782,13 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         if (this.row.match_status == "Missing in 2A/2B") this.missing_doctype = "GST Inward Supply";
         else if (this.row.match_status == "Missing in PI")
             if (["IMPG", "IMPGSEZ"].includes(this.row.classification)) this.missing_doctype = "Bill of Entry";
+            else if (["ISD", "ISDA"].includes(this.row.classification))
+                this.missing_doctype = "ISD Recipient Invoice";
             else this.missing_doctype = "Purchase Invoice";
         else return;
 
         if (this.missing_doctype == "GST Inward Supply") this.doctype_options = ["GST Inward Supply"];
-        else this.doctype_options = ["Purchase Invoice", "Bill of Entry"];
+        else this.doctype_options = ["Purchase Invoice", "Bill of Entry", "ISD Recipient Invoice"];
     }
 
     _get_default_date_range() {
@@ -1029,7 +1031,7 @@ class ImportDialog {
                 get_query: async () => {
                     let { message: gstin_list } = await frappe.call({
                         method: "india_compliance.gst_india.utils.get_gstin_list",
-                        args: { party: this.frm.doc.company, exclude_isd: true },
+                        args: { party: this.frm.doc.company },
                     });
 
                     gstin_list.unshift("All");

@@ -23,7 +23,7 @@ from frappe.utils import (
 from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
 from india_compliance.gst_india.utils import get_period, get_periods_between_dates
 
-SUPPORTED_DOCTYPES = frozenset(("Purchase Invoice", "Bill of Entry"))
+SUPPORTED_DOCTYPES = frozenset(("Purchase Invoice", "Bill of Entry", "ISD Recipient Invoice"))
 SUPPORTED_TABLE_NAMES = frozenset(get_table_name(dt) for dt in SUPPORTED_DOCTYPES)
 ITC_CLAIM_PERIOD_DEFERRED = "Deferred"
 FILING_STATUS = {
@@ -433,12 +433,13 @@ def _bulk_update(updates: dict[str, set[str]], doctype: str, source: str) -> Non
 
 def _fetch_document_data(doctype: str, names: list[str], only_claim_period_set: bool = False) -> list[dict]:
     doc = frappe.qb.DocType(doctype)
+    company_gstin = doc.recipient_gstin if doctype == "ISD Recipient Invoice" else doc.company_gstin
     query = (
         frappe.qb.from_(doc)
         .select(
             doc.name,
             doc.posting_date,
-            doc.company_gstin,
+            company_gstin.as_("company_gstin"),
             doc.itc_claim_period,
         )
         .where(doc.name.isin(names))

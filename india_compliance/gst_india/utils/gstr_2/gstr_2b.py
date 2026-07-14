@@ -169,18 +169,50 @@ class GSTR2bISD(GSTR2b):
         super().setup()
         self.set_key("invoice_key", "doclist")
 
+    def get_supplier_transactions(self, supplier):
+        transactions = super().get_supplier_transactions(supplier)
+        return self.group_transactions_by_docnum(transactions)
+
+    def group_transactions_by_docnum(self, transactions):
+        grouped = {}
+        for transaction in transactions:
+            existing = grouped.get(transaction.bill_no)
+            if not existing:
+                grouped[transaction.bill_no] = transaction
+                continue
+
+            existing["items"].extend(transaction["items"])
+
+        for transaction in grouped.values():
+            self.update_totals(transaction)
+            transaction.document_value = (
+                transaction.igst + transaction.cgst + transaction.sgst + transaction.cess
+            )
+
+        return list(grouped.values())
+
     def get_invoice_details(self, invoice):
         return {
             "doc_type": get_mapped_value(invoice.doctyp, self.VALUE_MAPS.isd_type_2b),
             "bill_no": invoice.docnum,
             "bill_date": parse_datetime(invoice.docdt, day_first=True),
-            "itc_availability": get_mapped_value(invoice.itcelg, self.VALUE_MAPS.yes_no),
             "igst": invoice.igst,
             "cgst": invoice.cgst,
             "sgst": invoice.sgst,
             "cess": invoice.cess,
             "document_value": invoice.igst + invoice.cgst + invoice.sgst + invoice.cess,
         }
+
+    def get_transaction_items(self, invoice):
+        return [
+            {
+                "igst": invoice.igst,
+                "cgst": invoice.cgst,
+                "sgst": invoice.sgst,
+                "cess": invoice.cess,
+                "itcelg": invoice.itcelg,
+            }
+        ]
 
 
 class GSTR2bISDA(GSTR2bISD):

@@ -46,16 +46,14 @@
   "column_break_xsms",
   "isd_provisional_amount",
   "column_break_sbcz",
+  "reconciliation_status",
+  "itc_claim_period",
   "totals_section",
   "total_eligible",
   "total_ineligible_column_break",
   "total_ineligible",
   "column_break_mfrl",
   "total_expense",
-  "totals_summary_section",
-  "grand_total",
-  "column_break_yjqx",
-  "column_break_mcdg",
   "address_tab",
   "address_section",
   "column_break_upnr",
@@ -328,19 +326,6 @@
    "reqd": 1
   },
   {
-   "fetch_from": "recipient_address.gstin",
-   "fieldname": "recipient_gstin",
-   "fieldtype": "Data",
-   "label": "Recipient GSTIN",
-   "read_only": 1
-  },
-  {
-   "fieldname": "recipient_pos",
-   "fieldtype": "Data",
-   "label": "Recipient Place of Supply",
-   "read_only": 1
-  },
-  {
    "fieldname": "recipient_address_display",
    "fieldtype": "Text Editor",
    "label": "Recipient Address",
@@ -375,24 +360,6 @@
    "label": "Total Expense",
    "options": "Company:company:default_currency",
    "read_only": 1
-  },
-  {
-   "fieldname": "totals_summary_section",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "grand_total",
-   "fieldtype": "Currency",
-   "is_virtual": 1,
-   "label": "Grand Total"
-  },
-  {
-   "fieldname": "column_break_yjqx",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "column_break_mcdg",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "provisional_accounts_section",
@@ -436,12 +403,44 @@
   {
    "fieldname": "column_break_fxgr",
    "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "GSTR-3B period for claiming ITC (MMYYYY) or 'Deferred' to postpone.",
+   "fieldname": "itc_claim_period",
+   "fieldtype": "Autocomplete",
+   "label": "ITC Claim Period",
+   "no_copy": 1,
+   "print_hide": 1
+  },
+  {
+   "fetch_from": "recipient_address.gstin",
+   "fieldname": "recipient_gstin",
+   "fieldtype": "Data",
+   "label": "Recipient GSTIN",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recipient_pos",
+   "fieldtype": "Data",
+   "label": "Recipient Place of Supply",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval: doc.docstatus == 1",
+   "fieldname": "reconciliation_status",
+   "fieldtype": "Select",
+   "label": "2A/2B Reconciliation Status",
+   "no_copy": 1,
+   "options": "\nNot Applicable\nReconciled\nUnreconciled\nIgnored",
+   "print_hide": 1,
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-03 11:33:48.554482",
+ "modified": "2026-07-14 09:32:15.891619",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Recipient Invoice",

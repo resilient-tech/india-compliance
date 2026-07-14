@@ -22,6 +22,7 @@ from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
     BillOfEntry,
+    ISDInvoice,
     PurchaseInvoice,
     ReconciledData,
     Reconciler,
@@ -300,6 +301,7 @@ class PurchaseReconciliationTool(Document):
         inward_supplies = []
         purchases = []
         boe = []
+        isd = []
 
         for doc in data:
             if action == "Ignore" and "Missing" not in doc.get("match_status"):
@@ -318,11 +320,15 @@ class PurchaseReconciliationTool(Document):
             elif purchase_doctype == "Bill of Entry":
                 boe.append(doc.get("purchase_invoice_name"))
 
+            elif purchase_doctype == "ISD Recipient Invoice":
+                isd.append(doc.get("purchase_invoice_name"))
+
         if inward_supplies:
             frappe.db.set_value("GST Inward Supply", {"name": ("in", inward_supplies)}, "action", action)
 
         set_reconciliation_status("Purchase Invoice", purchases, status)
         set_reconciliation_status("Bill of Entry", boe, status)
+        set_reconciliation_status("ISD Recipient Invoice", isd, status)
 
     @frappe.whitelist()
     def get_link_options(self, doctype: str, filters: dict | frappe._dict):
@@ -339,6 +345,9 @@ class PurchaseReconciliationTool(Document):
 
         elif doctype == "Bill of Entry":
             return self.get_bill_of_entry_options(filters)
+
+        elif doctype == "ISD Recipient Invoice":
+            return self.get_isd_recipient_invoice_options(filters)
 
     def get_purchase_invoice_options(self, filters):
         PI = frappe.qb.DocType("Purchase Invoice")
@@ -362,9 +371,11 @@ class PurchaseReconciliationTool(Document):
         )
 
         if filters.get("purchase_doctype") == "Purchase Invoice":
-            query = query.where(GSTR2.classification.notin(IMPORT_CATEGORY))
+            query = query.where(GSTR2.classification.notin((*IMPORT_CATEGORY, "ISD", "ISDA")))
         elif filters.get("purchase_doctype") == "Bill of Entry":
             query = query.where(GSTR2.classification.isin(IMPORT_CATEGORY))
+        elif filters.get("purchase_doctype") == "ISD Recipient Invoice":
+            query = query.where(GSTR2.classification.isin(("ISD", "ISDA")))
 
         if not filters.show_matched:
             query = query.where(IfNull(GSTR2.link_name, "") == "")
@@ -379,6 +390,19 @@ class PurchaseReconciliationTool(Document):
 
         if not filters.show_matched:
             query = query.where(BOE.name.notin(BillOfEntry.query_matched_bill_of_entry()))
+
+        return get_formatted_options(query.run(as_dict=True))
+
+    def get_isd_recipient_invoice_options(self, filters):
+        ISD = frappe.qb.DocType("ISD Recipient Invoice")
+        query = (
+            self.ReconciledData.query_isd_invoice()
+            .where(IfNull(ISD.distribution_gstin, "").like(f"%{filters.supplier_gstin}%"))
+            .where(ISD.posting_date[filters.bill_from_date : filters.bill_to_date])
+        )
+
+        if not filters.show_matched:
+            query = query.where(ISD.name.notin(ISDInvoice.query_match_isd_invoices()))
 
         return get_formatted_options(query.run(as_dict=True))
 

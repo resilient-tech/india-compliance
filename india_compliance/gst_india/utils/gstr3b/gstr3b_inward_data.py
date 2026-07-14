@@ -11,7 +11,7 @@ from india_compliance.gst_india.utils.itc_claim import (
     apply_period_filter as _apply_itc_period_filter,
 )
 
-PURCHASE_INVOICE_DOCTYPES = ("Purchase Invoice", "Bill of Entry", "Journal Entry")
+PURCHASE_INVOICE_DOCTYPES = ("Purchase Invoice", "Bill of Entry", "Journal Entry", "ISD Recipient Invoice")
 
 ITC_AMOUNT_KEYS = {
     "iamt": "igst_amount",
@@ -114,10 +114,22 @@ JE_CATEGORY_CONDITIONS = {
     },
 }
 
+ISD_CATEGORY_CONDITIONS = {
+    "ITC Available": {
+        "category": "is_itc_available_for_isd",
+        "sub_category": "set_for_itc_available_isd",
+    },
+    "ITC Reversed": {
+        "category": "is_itc_reversed_for_isd",
+        "sub_category": "set_for_itc_reversed",
+    },
+}
+
 INWARD_DOCTYPE_CONDITION_MAP = {
     "Purchase Invoice": PURCHASE_CATEGORY_CONDITIONS,
     "Bill of Entry": BOE_CATEGORY_CONDITIONS,
     "Journal Entry": JE_CATEGORY_CONDITIONS,
+    "ISD Recipient Invoice": ISD_CATEGORY_CONDITIONS,
 }
 
 AMOUNT_FIELDS = (
@@ -159,6 +171,12 @@ class GSTR3BCategoryConditions:
     def is_itc_reversed_for_boe(self, invoice):
         return invoice.is_ineligible_for_itc
 
+    def is_itc_available_for_isd(self, invoice):
+        return True
+
+    def is_itc_reversed_for_isd(self, invoice):
+        return invoice.is_ineligible_for_itc
+
     def is_itc_reversed_for_je(self, invoice):
         return invoice.ineligibility_type == "Reversal Of ITC"
 
@@ -192,6 +210,9 @@ class GSTR3BSubcategory(GSTR3BCategoryConditions):
     def set_for_itc_reclaimed(self, invoice):
         invoice.invoice_sub_category = "Reclaim of ITC Reversal"
 
+    def set_for_itc_available_isd(self, invoice):
+        invoice.invoice_sub_category = "Input Service Distributor"
+
 
 class GSTR3BInwardQuery:
     def __init__(self, filters):
@@ -201,6 +222,8 @@ class GSTR3BInwardQuery:
         self.BOE_ITEM = frappe.qb.DocType("Bill of Entry Item")
         self.JE = frappe.qb.DocType("Journal Entry")
         self.JE_ACCOUNT = frappe.qb.DocType("Journal Entry Account")
+        self.ISD = frappe.qb.DocType("ISD Recipient Invoice")
+        self.ISD_ITEM = frappe.qb.DocType("ISD Source Item")
         self.filters = frappe._dict(filters or {})
 
     def apply_itc_period_filter(self, query, doc):
@@ -352,7 +375,48 @@ class GSTR3BInwardQuery:
 
         return self.get_query_with_common_filters(query, self.JE)
 
-    def get_query_with_common_filters(self, query, doc):
+    def get_base_isd_query(self):
+        query = (
+            frappe.qb.from_(self.ISD)
+            .inner_join(self.ISD_ITEM)
+            .on(self.ISD_ITEM.parent == self.ISD.name)
+            .select(
+                ConstantColumn("ISD Recipient Invoice").as_("voucher_type"),
+                self.ISD.name.as_("voucher_no"),
+                self.ISD.posting_date,
+                ConstantColumn("Input Service Distributor").as_("itc_classification"),
+                self.ISD.recipient_gstin.as_("company_gstin"),
+                self.ISD_ITEM.is_ineligible_for_itc,
+                self.ISD_ITEM.item_code,
+                self.ISD_ITEM.gst_hsn_code,
+                self.ISD_ITEM.distributed_expense.as_("taxable_value"),
+                self.ISD_ITEM.distributed_cgst.as_("cgst_amount"),
+                self.ISD_ITEM.distributed_sgst.as_("sgst_amount"),
+                self.ISD_ITEM.distributed_igst.as_("igst_amount"),
+                (self.ISD_ITEM.distributed_cess + self.ISD_ITEM.distributed_cess_non_advol).as_(
+                    "cess_amount"
+                ),
+                (
+                    self.ISD_ITEM.distributed_cgst
+                    + self.ISD_ITEM.distributed_sgst
+                    + self.ISD_ITEM.distributed_igst
+                    + self.ISD_ITEM.distributed_cess
+                    + self.ISD_ITEM.distributed_cess_non_advol
+                ).as_("total_tax"),
+                (
+                    self.ISD_ITEM.distributed_expense
+                    + self.ISD_ITEM.distributed_cgst
+                    + self.ISD_ITEM.distributed_sgst
+                    + self.ISD_ITEM.distributed_igst
+                    + self.ISD_ITEM.distributed_cess
+                    + self.ISD_ITEM.distributed_cess_non_advol
+                ).as_("total_amount"),
+            )
+        )
+        # gstin_field for isd recipient invoice is recipient_gstin
+        return self.get_query_with_common_filters(query, self.ISD, gstin_field="recipient_gstin")
+
+    def get_query_with_common_filters(self, query, doc, gstin_field="company_gstin"):
         """
         Apply common filters to the query.
         """
@@ -361,7 +425,7 @@ class GSTR3BInwardQuery:
         query = self.apply_itc_period_filter(query, doc)
 
         if self.filters.company_gstin:
-            query = query.where(doc.company_gstin == self.filters.company_gstin)
+            query = query.where(getattr(doc, gstin_field) == self.filters.company_gstin)
 
         return query
 
@@ -409,6 +473,8 @@ class GSTR3BInwardInvoices(GSTR3BInwardQuery, GSTR3BSubcategory):
             query = self.get_base_boe_query()
         elif doctype == "Journal Entry":
             query = self.get_base_je_query()
+        elif doctype == "ISD Recipient Invoice":
+            query = self.get_base_isd_query()
         else:
             frappe.throw(f"Unsupported doctype for GSTR-3B inward data: {doctype}")
 
