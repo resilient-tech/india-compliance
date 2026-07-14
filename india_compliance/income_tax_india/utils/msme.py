@@ -89,19 +89,29 @@ def get_msme_classification(msme_registration: str, on_date=None) -> dict | None
     return classification
 
 
-def is_msme_registration_cancelled(msme_registration: str, on_date) -> bool:
-    """A supply accepted after cancellation is not from an MSME."""
+def get_msme_cancellation(msme_registration: str, on_date) -> dict | None:
+    """The registration's cancellation, if it applies to a supply on ``on_date``.
+
+    None = still registered on that date. Otherwise the MSME row, so callers can
+    report *when* it was cancelled.
+    """
     registration = frappe.db.get_value(
         "MSME", msme_registration, ["is_cancelled", "cancelled_date"], as_dict=True
     )
     if not registration or not registration.is_cancelled:
-        return False
+        return None
 
     # a cancelled registration with no date on record is treated as never valid
     if not registration.cancelled_date:
-        return True
+        return registration
 
-    return getdate(on_date) > getdate(registration.cancelled_date)
+    if getdate(on_date) > getdate(registration.cancelled_date):
+        return registration
+
+
+def is_msme_registration_cancelled(msme_registration: str, on_date) -> bool:
+    """A supply accepted after cancellation is not from an MSME."""
+    return bool(get_msme_cancellation(msme_registration, on_date))
 
 
 def get_classification_map(

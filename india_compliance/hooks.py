@@ -70,6 +70,7 @@ doctype_js = {
         "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/purchase_invoice.js",
+        "income_tax_india/client_scripts/purchase_invoice.js",
     ],
     "Purchase Receipt": [
         "gst_india/client_scripts/e_waybill_applicability.js",

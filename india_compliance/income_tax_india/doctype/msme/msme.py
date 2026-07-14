@@ -3,8 +3,8 @@
 
 import frappe
 from frappe import _, bold
-from frappe.model.document import Document
-from frappe.utils import getdate
+from frappe.model.document import Document, bulk_insert
+from frappe.utils import getdate, now, random_string
 
 from india_compliance.income_tax_india.constants import (
     FINANCIAL_YEAR_REGEX,
@@ -63,8 +63,11 @@ class MSME(Document):
             title=_("Invalid Financial Year"),
         )
 
+    def get_linked_suppliers(self) -> list[str]:
+        return frappe.get_all("Supplier", filters={"msme_registration": self.name}, pluck="name")
+
     @frappe.whitelist()
-    def mark_as_cancelled(self, cancelled_date: str):
+    def mark_as_cancelled(self, cancelled_date: str, unlink_suppliers: bool = False):
         """Cancellation is a registration-level event: set the flag and date together."""
         self.check_permission("write")
 
@@ -72,3 +75,55 @@ class MSME(Document):
             frappe.throw(_("Cancelled Date cannot be before the Registration Date"))
 
         self.db_set({"is_cancelled": 1, "cancelled_date": getdate(cancelled_date)})
+
+        if unlink_suppliers:
+            self.unlink_suppliers()
+
+    def unlink_suppliers(self):
+        """Remove this registration from every supplier linked to it.
+
+        Bulk updated, so the change is recorded as a Comment on each supplier
+        rather than by saving each document.
+        """
+        suppliers = self.get_linked_suppliers()
+        if not suppliers:
+            return
+
+        timestamp = now()
+        frappe.db.set_value(
+            "Supplier",
+            {"name": ("in", suppliers)},
+            {"msme_registration": None, "modified": timestamp},
+            update_modified=False,
+        )
+
+        add_comment_to_suppliers(suppliers, self.name, timestamp)
+
+
+def add_comment_to_suppliers(suppliers, msme_registration, timestamp=None):
+    """Record the unlink on each supplier, since a bulk update leaves no version."""
+    timestamp = timestamp or now()
+    user = frappe.session.user
+    content = _("removed MSME Registration {0}, as it was cancelled").format(msme_registration)
+
+    comments = []
+    for supplier in suppliers:
+        comment = frappe.new_doc("Comment")
+        comment.update(
+            {
+                "name": random_string(10),
+                "comment_type": "Info",
+                "comment_email": user,
+                "comment_by": user,
+                "creation": timestamp,
+                "modified": timestamp,
+                "modified_by": user,
+                "owner": user,
+                "reference_doctype": "Supplier",
+                "reference_name": supplier,
+                "content": content,
+            }
+        )
+        comments.append(comment)
+
+    bulk_insert("Comment", comments)

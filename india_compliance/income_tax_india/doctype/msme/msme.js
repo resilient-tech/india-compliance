@@ -33,6 +33,13 @@ function show_cancellation_dialog(frm) {
                 fieldtype: "Date",
                 reqd: 1,
                 default: frappe.datetime.get_today(),
+                description: __("Supplies accepted after this date are not covered by MSME."),
+            },
+            {
+                fieldname: "unlink_suppliers",
+                label: __("Remove from linked Suppliers"),
+                fieldtype: "Check",
+                default: 0,
             },
         ],
         primary_action_label: __("Mark as Cancelled"),

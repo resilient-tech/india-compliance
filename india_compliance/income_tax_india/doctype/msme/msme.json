@@ -40,6 +40,7 @@
    "hidden": 1,
    "in_standard_filter": 1,
    "label": "Is Cancelled",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -48,6 +49,7 @@
    "fieldtype": "Date",
    "label": "Cancelled Date",
    "mandatory_depends_on": "eval:doc.is_cancelled",
+   "no_copy": 1,
    "read_only": 1
   },
   {
