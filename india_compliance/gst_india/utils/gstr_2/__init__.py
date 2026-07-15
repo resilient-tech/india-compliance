@@ -449,7 +449,7 @@ def end_transaction_progress(return_period):
 
 
 @frappe.whitelist()
-@validate_gstin_permission
+@validate_gstin_permission(doctype="GST Inward Supply")
 @otp_handler
 def regenerate_gstr_2b(gstin: str, return_period: str, doctype: str):
     frappe.has_permission(doctype, throw=True)
@@ -464,7 +464,7 @@ def regenerate_gstr_2b(gstin: str, return_period: str, doctype: str):
 
 
 @frappe.whitelist()
-@validate_gstin_permission
+@validate_gstin_permission(doctype="GST Inward Supply")
 def check_regenerate_status(gstin: str, reference_id: str, doctype: str):
     frappe.has_permission(doctype, throw=True)
 
