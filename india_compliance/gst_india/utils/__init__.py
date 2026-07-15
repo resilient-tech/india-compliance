@@ -179,7 +179,7 @@ def validate_company_gstin_access(company_gstin, doctype="GST Inward Supply"):
     if not company:
         frappe.throw(
             _("GSTIN {0} is not linked to any Company.").format(company_gstin),
-            frappe.PermissionError,
+            frappe.ValidationError,
         )
 
     validate_company_access(company, doctype)
@@ -214,7 +214,13 @@ def validate_gstin_permission(fn=None, *, doctype=None):
 
         company_gstin = bound.arguments.get(field)
         if company_gstin == "All":
-            validate_company_access(bound.arguments.get("company"), resolved_doctype)
+            company = bound.arguments.get("company") or getattr(bound.arguments.get("self"), "company", None)
+            if not company:
+                frappe.throw(
+                    _("Company is required to validate access for all GSTINs."),
+                    frappe.PermissionError,
+                )
+            validate_company_access(company, resolved_doctype)
         else:
             validate_company_gstin_access(company_gstin, resolved_doctype)
 

@@ -103,6 +103,31 @@ class TestGstinPermission(IntegrationTestCase):
             with self.assertRaises(frappe.PermissionError):
                 action(company_gstin="All", company=self.other_company)
 
+    def test_all_sentinel_resolves_company_from_bound_method(self):
+        class Tool:
+            def __init__(self, company):
+                self.company = company
+
+            @validate_gstin_permission
+            def action(self, company_gstin):
+                return "ran"
+
+        self.restrict_user_to_own_company()
+        with self.set_user(TEST_USER):
+            self.assertEqual(Tool("_Test Indian Registered Company").action(company_gstin="All"), "ran")
+            with self.assertRaises(frappe.PermissionError):
+                Tool(self.other_company).action(company_gstin="All")
+
+    def test_all_sentinel_fails_closed_without_company(self):
+        @validate_gstin_permission
+        def action(company_gstin):
+            return "ran"
+
+        self.restrict_user_to_own_company()
+        with self.set_user(TEST_USER):
+            with self.assertRaises(frappe.PermissionError):
+                action(company_gstin="All")
+
     def test_decorator_requires_gstin_parameter(self):
         with self.assertRaises(ValueError):
 
