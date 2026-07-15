@@ -42,6 +42,7 @@ from india_compliance.gst_india.utils import (
     get_party_for_gstin,
     get_timespan_date_range,
     is_api_enabled,
+    validate_gstin_permission,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstin_info import (
@@ -135,6 +136,7 @@ class PurchaseReconciliationTool(Document):
             return save_gstr_2b(self.company_gstin, period, json_data)
 
     @frappe.whitelist()
+    @validate_gstin_permission
     @otp_handler
     def download_gstr(
         self,
@@ -174,6 +176,7 @@ class PurchaseReconciliationTool(Document):
         )
 
     @frappe.whitelist()
+    @validate_gstin_permission
     def get_import_history(
         self,
         company_gstin: str,
