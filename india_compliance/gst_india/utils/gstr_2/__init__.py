@@ -17,7 +17,7 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
-from india_compliance.gst_india.utils import get_party_for_gstin
+from india_compliance.gst_india.utils import get_party_for_gstin, validate_gstin_permission
 from india_compliance.gst_india.utils.gstr_2 import gstr_2a, gstr_2b, ims
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
@@ -449,6 +449,7 @@ def end_transaction_progress(return_period):
 
 
 @frappe.whitelist()
+@validate_gstin_permission
 @otp_handler
 def regenerate_gstr_2b(gstin: str, return_period: str, doctype: str):
     frappe.has_permission(doctype, throw=True)
@@ -463,6 +464,7 @@ def regenerate_gstr_2b(gstin: str, return_period: str, doctype: str):
 
 
 @frappe.whitelist()
+@validate_gstin_permission
 def check_regenerate_status(gstin: str, reference_id: str, doctype: str):
     frappe.has_permission(doctype, throw=True)
 
