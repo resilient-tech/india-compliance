@@ -7,6 +7,10 @@ frappe.ui.form.on("ISD Distribution Invoice", {
         if (frm.is_new() && !frm.doc.company) {
             frm.set_value("company", frappe.defaults.get_user_default("Company"));
         }
+
+        frm.set_query("credit_note_against", () => ({
+            filters: { docstatus: 1, is_credit_note: 0 },
+        }));
     },
 
     on_submit(frm) {
@@ -18,11 +22,6 @@ frappe.ui.form.on("ISD Distribution Invoice", {
                 args: { source_name: frm.doc.name, submit_on_creation },
                 freeze: true,
                 freeze_message: __("Creating ISD Recipient Invoice..."),
-                callback: (r) => {
-                    if (r.message) {
-                        frappe.set_route("Form", "ISD Recipient Invoice", r.message.name);
-                    }
-                },
             });
         };
 

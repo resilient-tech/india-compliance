@@ -11,16 +11,21 @@ from functools import reduce
 from operator import add
 
 import frappe
+from erpnext.accounts.utils import get_fiscal_year
 from frappe import _
 from frappe.model.meta import get_field_precision
-from frappe.query_builder.functions import Coalesce, Date, IfNull, Sum
-from frappe.utils import add_months, cint, flt, getdate
+from frappe.query_builder.functions import Coalesce, IfNull, Sum
+from frappe.utils import cint, flt, getdate
 
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     IMPORT_GST_CATEGORIES,
 )
-from india_compliance.gst_india.doctype.turnover_record.turnover_record import get_turnover_amount
+from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
+    get_turnover_amount,
+    get_turnover_from_sales_invoices,
+    upsert_turnover_record,
+)
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 ISD_GST_CATEGORY = "Input Service Distributor"
@@ -350,17 +355,16 @@ def get_isd_autofill_values(doctype: str, changed_field: str, doc: str | dict):
 
 # ---------------------------------------------------------------------------- bulk distribution dialog
 @frappe.whitelist()
-def get_distribution_addresses(party_type: str, party: str, posting_date: str, address: str | None = None):
-    """Non-ISD addresses of the party, each with its turnover for (posting_date - 1 month).
+def get_distribution_addresses(party_type: str, party: str, pi_posting_date: str, address: str | None = None):
+    """For distribution addresses table in bulk distribution dialog"""
 
-    Powers the bulk-distribution dialog: prefilling the recipient grid
-    and, when `address` is given, fetching the turnover of a single selected address.
-    """
     if not party_type or not party:
         frappe.throw(_("Party Type and Party are mandatory"))
 
     frappe.has_permission(party_type, doc=party, ptype="read", throw=True)
     frappe.has_permission("Address", ptype="read", throw=True)
+
+    _fy_name, fy_from, fy_to = get_fiscal_year(pi_posting_date)
 
     addr = frappe.qb.DocType("Address")
     dynamic_link = frappe.qb.DocType("Dynamic Link")
@@ -374,6 +378,8 @@ def get_distribution_addresses(party_type: str, party: str, posting_date: str, a
         .on(
             (IfNull(turnover_record.gstin, "") == IfNull(addr.gstin, ""))
             & (IfNull(turnover_record.gst_state, "") == IfNull(addr.gst_state, ""))
+            & (turnover_record.from_date <= fy_to)
+            & (turnover_record.to_date >= fy_from)
         )
         .select(
             addr.name,
@@ -387,16 +393,19 @@ def get_distribution_addresses(party_type: str, party: str, posting_date: str, a
             & (dynamic_link.link_name == party)
             & (addr.gst_category != ISD_GST_CATEGORY)
         )
-        .where(
-            (turnover_record.from_date.isnull())
-            | (Date(add_months(posting_date, -1))).between(turnover_record.from_date, turnover_record.to_date)
-        )
     )
 
     if address:
         query = query.where(addr.name == address)
 
-    return query.run(as_dict=True)
+    data = query.run(as_dict=True)
+    if not frappe.db.exists("Turnover Record"):
+        company = party if party_type == "Company" else None
+        for row in data:
+            if not flt(row.turnover_amount):
+                row.turnover_amount = get_turnover_from_sales_invoices(row.gstin, fy_from, fy_to, company)
+
+    return data
 
 
 @frappe.whitelist()
@@ -448,7 +457,10 @@ def get_purchase_invoice_distribution_summary(purchase_invoice: str):
 
 @frappe.whitelist()
 def bulk_create_isd_distribution_invoices(
-    purchase_invoice: str, distribution_table: list | str, posting_date: str
+    purchase_invoice: str,
+    distribution_table: list | str,
+    posting_date: str,
+    total_turnover: float | str | None = None,
 ):
     frappe.has_permission("ISD Distribution Invoice", "write", throw=True)
     frappe.has_permission("Purchase Invoice", "read", doc=purchase_invoice, throw=True)
@@ -462,13 +474,16 @@ def bulk_create_isd_distribution_invoices(
     if not distribution_table:
         frappe.throw(_("No rows with turnover to distribute."))
 
-    total_turnover = sum(flt(row["turnover_amount"]) for row in distribution_table)
+    total_turnover = flt(total_turnover) or sum(flt(row["turnover_amount"]) for row in distribution_table)
 
-    company = frappe.db.get_value("Purchase Invoice", purchase_invoice, ["company"])
+    company, pi_posting_date = frappe.db.get_value(
+        "Purchase Invoice", purchase_invoice, ["company", "posting_date"]
+    )
     distribution_address = frappe.get_value("Purchase Invoice", purchase_invoice, "billing_address")
     source_items = get_source_items_from_purchase_invoice(purchase_invoice)
 
     invoices, invalid = [], []
+    turnover_data = []
     for row in distribution_table:
         party_type = row.get("party_type")
         is_against_party = 1 if party_type and party_type != "Company" and row.get("party") else 0
@@ -498,7 +513,6 @@ def bulk_create_isd_distribution_invoices(
         try:
             doc.validate_addresses()
             doc.validate_purchase_invoice()
-            doc.validate_distribution_limits()
         except frappe.ValidationError:
             del frappe.message_log[messages_before:]
             is_invalid = True
@@ -506,8 +520,27 @@ def bulk_create_isd_distribution_invoices(
         doc.flags.ignore_validate = True
         doc.insert()
 
+        turnover_data.append((row.get("gstin"), row.get("gst_state"), turnover, pi_posting_date))
+
         invoices.append(doc.name)
         if is_invalid:
             invalid.append(doc.name)
 
+    frappe.enqueue(
+        "india_compliance.gst_india.utils.isd._upsert_turnover_records",
+        data=turnover_data,
+        enqueue_after_commit=True,
+    )
+
     return invoices, invalid
+
+
+def _upsert_turnover_records(data):
+    """Data = [(gstin, gst_state, turnover, posting_date), ...]"""
+    for gstin, gst_state, turnover, date in data:
+        upsert_turnover_record(
+            gstin=gstin,
+            gst_state=gst_state,
+            amount=turnover,
+            posting_date=date,
+        )

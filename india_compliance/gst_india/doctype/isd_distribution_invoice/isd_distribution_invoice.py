@@ -11,9 +11,6 @@ from frappe.query_builder.functions import Coalesce, Sum
 from frappe.utils import cint, flt, get_link_to_form, getdate
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
-from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
-    upsert_turnover_record,
-)
 from india_compliance.gst_india.utils import validate_invoice_number
 from india_compliance.gst_india.utils.isd import (
     ISD_GST_CATEGORY,
@@ -38,9 +35,9 @@ class ISDDistributionInvoice(ISDController):
         self.validate_purchase_invoice()
         self.validate_source_items()
         calculate_distribution(self)  # override js calculations
-        self.validate_distribution_limits()
         self.validate_accounts()
         self.set_taxes_and_totals()
+        self.clamp_to_distribution_limits()
 
     def build_for_bulk(self):
         """used by bulk_create_isd_distribution_invoices"""
@@ -53,28 +50,19 @@ class ISDDistributionInvoice(ISDController):
         self.make_document_gl_entries()
         self.sync_distribution_percentage()
 
-        frappe.enqueue(self.upsert_turnover_record, enqueue_after_commit=True)
+        gstin, gst_state = frappe.get_cached_value("Address", self.recipient_address, ["gstin", "gst_state"])
+        turnover_record_data = [(gstin, gst_state, self.branch_turnover, self.posting_date)]
 
+        frappe.enqueue(
+            "india_compliance.gst_india.utils.isd._upsert_turnover_records",
+            data=turnover_record_data,
+            enqueue_after_commit=True,
+        )
+
+    # on_cancel (reversing the GL entries) is inherited from ISDController
     def on_cancel(self):
         super().on_cancel()
         self.sync_distribution_percentage(include_current=False)
-
-    # on_cancel (reversing the GL entries) is inherited from ISDController
-
-    def upsert_turnover_record(self):
-        if not self.recipient_address:
-            return
-
-        gst_state = frappe.get_cached_value("Address", self.recipient_address, "gst_state")
-        if not (self.recipient_gstin or gst_state):
-            return
-
-        upsert_turnover_record(
-            gstin=self.recipient_gstin,
-            gst_state=gst_state,
-            amount=self.branch_turnover,
-            posting_date=self.posting_date,
-        )
 
     def sync_distribution_percentage(self, include_current=True):
         already = self.get_distributed_for_purchase_invoice()
@@ -89,11 +77,26 @@ class ISDDistributionInvoice(ISDController):
             net_distributed_itc += current_invoice_distributed_itc
 
         _p = frappe.get_precision("Purchase Invoice", "isd_credit_distributed_percent")
+
+        # edge case of 99.9999% distribution rounded to misleading 100% distribution
+        distribution_percentage = flt((net_distributed_itc / total_itc_available) * 100, _p)
+        if distribution_percentage == flt(100, _p) and (
+            (net_distributed_itc / total_itc_available) * 100 != 100
+        ):
+            distribution_percentage = flt(100 - 10**-_p, _p)
+
+        if distribution_percentage > 100:
+            frappe.throw(
+                _("Distributed ITC ({0}%) exceeds the available ITC on Purchase Invoice {1}.").format(
+                    distribution_percentage, get_link_to_form("Purchase Invoice", self.purchase_invoice)
+                )
+            )
+
         frappe.set_value(
             "Purchase Invoice",
             self.purchase_invoice,
             "isd_credit_distributed_percent",
-            flt((net_distributed_itc / total_itc_available) * 100, _p),
+            distribution_percentage,
         )
 
     def validate_purchase_invoice(self):
@@ -211,61 +214,99 @@ class ISDDistributionInvoice(ISDController):
                 invalid_totals,
             )
 
-    def validate_distribution_limits(self):
-        """The credit (and expense) distributed for a Purchase Invoice - across every ISD Distribution
-        Invoice that points to it, including this one - must not exceed the credit (or expense)
-        available on that Purchase Invoice (Rule 39(1)(b))."""
-        if not self.purchase_invoice:
+    # ------------------------------------------------------------------ distribution limits
+    def clamp_to_distribution_limits(self):
+        if not self.source_items:
             return
 
-        precision = self._source_item_precision
-        tolerance = 0.01
+        itc_surplus, expense_surplus = self.get_distribution_surplus()
+        if itc_surplus:
+            self.clamp_itc_surplus(itc_surplus)
+        if expense_surplus:
+            self.clamp_expense_surplus(expense_surplus)
 
-        # self's totals are validated before this
-        available_itc = flt(sum(sum_row_tax_by_type(row, "total") for row in self.source_items), precision)
-        available_expense = flt(sum(flt(row.total_expense) for row in self.source_items), precision)
+        if itc_surplus or expense_surplus:
+            self.isd_provisional_amount = flt(
+                self.total_eligible + self.total_ineligible + self.total_expense, self._tax_precision
+            )
+            self.set_tax_totals()
+            self._notify_adjustment(itc_surplus + expense_surplus)
 
+    def get_distribution_surplus(self):
+
+        current_itc = sum(sum_row_tax_by_type(row, "distributed") for row in self.source_items)
+        current_expense = sum(flt(row.distributed_expense) for row in self.source_items)
+
+        if self.is_credit_note and self.credit_note_against:
+            against_values = frappe.get_value(
+                "ISD Distribution Invoice",
+                self.credit_note_against,
+                ["total_eligible", "total_ineligible", "total_expense"],
+                as_dict=True,
+            )
+            # a reversal may not exceed what the targeted invoice distributed
+            return (
+                min(
+                    0.0,
+                    flt(
+                        against_values.total_eligible + against_values.total_ineligible + current_itc,
+                        self._source_item_precision,
+                    ),
+                ),
+                min(
+                    0.0,
+                    flt(against_values.total_expense + current_expense, self._source_item_precision),
+                ),
+            )
+
+        available_itc = sum(sum_row_tax_by_type(row, "total") for row in self.source_items)
+        available_expense = sum(flt(row.total_expense) for row in self.source_items)
         already = self.get_distributed_for_purchase_invoice()
 
-        current_itc = flt(
-            sum(sum_row_tax_by_type(row, "distributed") for row in self.source_items), precision
+        # only a genuine over-distribution (distributed more than what remains available)
+        # is a surplus to clamp; a partial branch share is not (mirrors the credit-note min(0.0, ...))
+        return (
+            max(0.0, flt(already.itc + current_itc - available_itc, self._source_item_precision)),
+            max(
+                0.0,
+                flt(already.expense + current_expense - available_expense, self._source_item_precision),
+            ),
         )
-        current_expense = flt(sum(flt(row.distributed_expense) for row in self.source_items), precision)
 
-        total_itc = flt(already.itc + current_itc, precision)
-        total_expense = flt(already.expense + current_expense, precision)
+    def clamp_itc_surplus(self, surplus):
+        row = self.source_items[0]
 
-        for label, total, available in (
-            (_("ITC"), total_itc, available_itc),
-            (_("expense"), total_expense, available_expense),
-        ):
-            # distribution can't over-distribute
-            if total > available + tolerance:
-                frappe.throw(
-                    _(
-                        "Over-distribution: distributing {0} amount {1} for Purchase Invoice {2}"
-                        " against available ({3})."
-                    ).format(
-                        label,
-                        frappe.bold(f"{total - available:.{precision}f}"),
-                        get_link_to_form("Purchase Invoice", self.purchase_invoice),
-                        frappe.bold(f"{available:.{precision}f}"),
-                    ),
-                    title=_("Over Distribution"),
-                )
-            # credit notes can't reverse more than was distributed (net can't drop below zero)
-            if total < -tolerance:
-                frappe.throw(
-                    _(
-                        "Over-reversal: the {0} reversed exceeds the {0} distributed for Purchase"
-                        " Invoice {1} (net distributed {2})."
-                    ).format(
-                        label,
-                        get_link_to_form("Purchase Invoice", self.purchase_invoice),
-                        frappe.bold(f"{total:.{precision}f}"),
-                    ),
-                    title=_("Over Reversal"),
-                )
+        # source item carries the converted heads (IGST inter-state, CGST/SGST intra-state)
+        if flt(row.distributed_cgst) or flt(row.distributed_sgst):
+            row.distributed_cgst = flt(flt(row.distributed_cgst) - surplus / 2, self._source_item_precision)
+            row.distributed_sgst = flt(flt(row.distributed_sgst) - surplus / 2, self._source_item_precision)
+        else:
+            row.distributed_igst = flt(flt(row.distributed_igst) - surplus, self._source_item_precision)
+
+        # taxes table carries the source heads being reduced
+        cgst_tax = next((t for t in self.taxes if t.gst_tax_type == "cgst"), None)
+        sgst_tax = next((t for t in self.taxes if t.gst_tax_type == "sgst"), None)
+        if cgst_tax or sgst_tax:
+            cgst_tax.tax_amount = flt(flt(cgst_tax.tax_amount) - surplus / 2, self._tax_precision)
+            sgst_tax.tax_amount = flt(flt(sgst_tax.tax_amount) - surplus / 2, self._tax_precision)
+        else:
+            igst_tax = next((t for t in self.taxes if t.gst_tax_type == "igst"), None)
+            igst_tax.tax_amount = flt(flt(igst_tax.tax_amount) - surplus, self._tax_precision)
+
+    def clamp_expense_surplus(self, surplus):
+        row = self.source_items[0]
+        row.distributed_expense = flt(flt(row.distributed_expense) - surplus, self._source_item_precision)
+
+    def _notify_adjustment(self, surplus):
+        frappe.msgprint(
+            _("{0} was {1} for Purchase Invoice {2}. It has been adjusted on row #1.").format(
+                frappe.bold(f"{abs(surplus):.{self._source_item_precision}f}"),
+                _("over-distributed") if surplus > 0 else _("over-reversed"),
+                get_link_to_form("Purchase Invoice", self.purchase_invoice),
+            ),
+            title=_("Distribution Adjusted"),
+            indicator="blue",
+        )
 
     def get_distributed_for_purchase_invoice(self):
         """Sum of distributed ITC and expense on every other submitted ISD Distribution Invoice

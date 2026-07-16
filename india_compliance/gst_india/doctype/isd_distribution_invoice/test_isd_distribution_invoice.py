@@ -751,26 +751,37 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         self.assertEqual(doc.docstatus, 1)
         self.assertTrue(doc.get("taxes"))
 
-    def test_over_distribution_rejected(self):
-        # A fresh Purchase Invoice keeps this test's submitted distribution from leaking into others.
+    def test_over_distribution_is_clamped_to_available(self):
         pi = make_isd_pi(self.isd_address.name)
-        submit_distribution(pi, self.isd_address.name, self.recipient_address.name, branch=100, total=100)
-
-        second = self._full_distribution(pi=pi, branch=1, total=100)
-        self.assertRaisesRegex(
-            VALIDATION_ERROR, "Over-distribution: distributing .* against available", second.insert
+        first = submit_distribution(
+            pi, self.isd_address.name, self.recipient_address.name, branch=60, total=100
         )
 
-    def test_credit_note_over_reversal_rejected(self):
+        available = sum(sum_row_tax_by_type(row, "total") for row in first.source_items)
+        already = sum(sum_row_tax_by_type(row, "distributed") for row in first.source_items)
+
+        # a further 60% would take the total past 100%; only the remaining 40% may be drawn
+        second = self._full_distribution(pi=pi, branch=60, total=100)
+        second.insert()
+
+        distributed = sum(sum_row_tax_by_type(row, "distributed") for row in second.source_items)
+        self.assertAlmostEqual(distributed, available - already, places=2)
+
+    def test_credit_note_over_reversal_is_clamped(self):
         pi = make_isd_pi(self.isd_address.name)
         first = submit_distribution(
             pi, self.isd_address.name, self.recipient_address.name, branch=50, total=100
         )
+        distributed = sum(sum_row_tax_by_type(row, "distributed") for row in first.source_items)
 
+        # reversing 60% against a 50% distribution is capped at the 50% actually distributed
         credit_note = self._full_distribution(
             pi=pi, branch=60, total=100, is_credit_note=1, credit_note_against=first.name
         )
-        self.assertRaisesRegex(VALIDATION_ERROR, "Over-reversal", credit_note.insert)
+        credit_note.insert()
+
+        reversed_itc = sum(sum_row_tax_by_type(row, "distributed") for row in credit_note.source_items)
+        self.assertAlmostEqual(reversed_itc, -distributed, places=2)
 
     # ------------------------------------------------------------------ GL entries
     def test_eligible_distribution_gl_entries(self):

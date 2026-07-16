@@ -196,6 +196,7 @@ class GSTR2bISD(GSTR2b):
             "doc_type": get_mapped_value(invoice.doctyp, self.VALUE_MAPS.isd_type_2b),
             "bill_no": invoice.docnum,
             "bill_date": parse_datetime(invoice.docdt, day_first=True),
+            "itc_availability": None,
             "igst": invoice.igst,
             "cgst": invoice.cgst,
             "sgst": invoice.sgst,

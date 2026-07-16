@@ -169,6 +169,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
             doc,
         )
 
+    # for ISD, itc eligibility is now tracked per item (itcelg), not on the header
     def test_gstr2b_isd(self):
         doc = self.get_doc(GSTRCategory.ISD)
         self.assertDocumentEqual(
@@ -182,12 +183,21 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 "doc_type": "ISD Invoice",
                 "bill_no": "S0080",
                 "bill_date": date(2016, 3, 3),
-                "itc_availability": "Yes",
+                "itc_availability": "",
                 "document_value": 400,
                 "igst": 0,
                 "cgst": 200,
                 "sgst": 200,
                 "cess": 0,
+                "items": [
+                    {
+                        "igst": 0,
+                        "cgst": 200,
+                        "sgst": 200,
+                        "cess": 0,
+                        "itcelg": "Y",
+                    }
+                ],
                 "is_downloaded_from_2b": 1,
                 "is_supplier_return_filed": 1,
             },
@@ -210,12 +220,21 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 "doc_type": "ISD Invoice",
                 "bill_no": "S0080",
                 "bill_date": date(2016, 3, 3),
-                "itc_availability": "Yes",
+                "itc_availability": "",
                 "document_value": 400,
                 "igst": 0,
                 "cgst": 200,
                 "sgst": 200,
                 "cess": 0,
+                "items": [
+                    {
+                        "igst": 0,
+                        "cgst": 200,
+                        "sgst": 200,
+                        "cess": 0,
+                        "itcelg": "Y",
+                    }
+                ],
                 "is_downloaded_from_2b": 1,
                 "is_supplier_return_filed": 1,
             },

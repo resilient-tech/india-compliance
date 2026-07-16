@@ -7,9 +7,11 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.model.meta import get_field_precision
 from frappe.model.naming import make_autoname
+from frappe.query_builder.functions import Sum
 from frappe.utils import flt, nowdate
 
 from india_compliance.gst_india.utils import get_state, validate_gstin
+from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Query
 
 
 class TurnoverRecord(Document):
@@ -69,9 +71,8 @@ def upsert_turnover_record(gstin, gst_state, amount, posting_date=None):
     amount_precision = get_field_precision(frappe.get_meta("Turnover Record").get_field("amount"))
     amount = flt(amount, amount_precision)
 
-    existing = frappe.db.get_value(
-        "Turnover Record", {"from_date": from_date, "to_date": to_date, "gst_state": gst_state}
-    )
+    existing_filters = {"from_date": from_date, "to_date": to_date, "gst_state": gst_state}
+    existing = frappe.db.get_value("Turnover Record", existing_filters)
 
     try:
         if existing:
@@ -91,3 +92,19 @@ def upsert_turnover_record(gstin, gst_state, amount, posting_date=None):
                 "Failed to upsert Turnover Record for from_date={0}, to_date={1}, gst_state={2}, gstin={3}"
             ).format(from_date, to_date, gst_state, gstin),
         )
+
+
+def get_turnover_from_sales_invoices(gstin, from_date, to_date, company=None):
+    """Used by distribution dialog when no Turnover Records exists"""
+
+    if not gstin:
+        return 0
+
+    filters = {"company_gstin": gstin, "from_date": from_date, "to_date": to_date}
+    if company:
+        filters["company"] = company
+
+    base_query = GSTR1Query(filters).get_base_query()
+    amount = frappe.qb.from_(base_query).select(Sum(base_query.taxable_value)).run()[0][0]
+
+    return flt(amount)

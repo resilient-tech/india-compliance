@@ -27,6 +27,13 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
             { fieldtype: "HTML", fieldname: "purchase_invoice_summary" },
             { fieldtype: "Section Break" },
             {
+                fieldtype: "Date",
+                fieldname: "posting_date",
+                label: __("Posting Date"),
+                default: frappe.datetime.get_today(),
+                reqd: 1,
+            },
+            {
                 fieldtype: "Check",
                 fieldname: "is_against_party",
                 label: __("Against Party"),
@@ -41,12 +48,16 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
             },
             { fieldtype: "Column Break" },
             {
-                fieldtype: "Date",
-                fieldname: "posting_date",
-                label: __("Posting Date"),
-                default: frappe.datetime.get_today(),
-                reqd: 1,
+                fieldtype: "Currency",
+                fieldname: "total_turnover",
+                label: __("Total Turnover"),
+                default: 0,
+                options: "Company:company:default_currency",
+                change() {
+                    calculate_distribution_ratios();
+                },
             },
+
             { fieldtype: "Section Break" },
             {
                 label: __("Distribution Table"),
@@ -100,7 +111,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
 
                             frappe.call({
                                 method: "india_compliance.gst_india.utils.isd.get_distribution_addresses",
-                                args: { party_type, party, posting_date, address },
+                                args: { party_type, party, pi_posting_date: posting_date, address },
                                 callback: ({ message: [row] = [] }) => {
                                     if (!row) return;
                                     const { gstin, gst_category, gst_state, turnover_amount } = row;
@@ -110,6 +121,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                                         gst_state,
                                         turnover_amount,
                                     });
+                                    fill_total_turnover();
                                     calculate_distribution_ratios();
                                     distribution_grid.refresh_row(this.doc.idx);
                                 },
@@ -142,6 +154,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                         columns: 2,
                         options: "Company:company:default_currency",
                         change() {
+                            fill_total_turnover();
                             calculate_distribution_ratios();
                         },
                     },
@@ -161,7 +174,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
         primary_action() {
             const values = dialog.get_values();
             if (!values) return;
-            const { distribution_table = [], is_against_party, posting_date } = values;
+            const { distribution_table = [], is_against_party, posting_date, total_turnover } = values;
             const rows = distribution_table.filter((row) => row.turnover_amount);
             if (!rows.length) {
                 frappe.msgprint(__("Enter turnover for at least one branch."));
@@ -173,6 +186,8 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
             const payload = rows.map((row) => ({
                 turnover_amount: parseFloat(row.turnover_amount) || 0,
                 address: row.address,
+                gstin: row.gstin,
+                gst_state: row.gst_state,
                 party_type: is_against_party ? row.party_type : null,
                 party: is_against_party ? row.party : null,
             }));
@@ -183,6 +198,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     purchase_invoice: purchase_invoice.name,
                     distribution_table: payload,
                     posting_date,
+                    total_turnover,
                 },
                 freeze: true,
                 freeze_message: __("Creating ISD Distribution Invoices..."),
@@ -244,22 +260,24 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
 
     // frappe does not fire a grid trigger on row removal
     distribution_grid.wrapper.on("click", ".grid-remove-rows", () => {
-        setTimeout(calculate_distribution_ratios, 1000); // frappe takes ~1s to remove the rows
+        setTimeout(() => {
+            fill_total_turnover();
+            calculate_distribution_ratios();
+        }, 1000); // frappe takes ~1s to remove the rows
     });
 
     frappe.call({
         method: "india_compliance.gst_india.utils.isd.get_purchase_invoice_distribution_summary",
         args: { purchase_invoice: purchase_invoice.name },
+        async: true,
         callback: ({ message }) => message && render_summary(message),
     });
 
     function fetch_and_prefill_grid() {
-        // runs right after dialog.show(), before the async default-setting resolves, so read the
-        // single value with a fallback instead of get_values()
         const posting_date = dialog.get_value("posting_date") || frappe.datetime.get_today();
         frappe.call({
             method: "india_compliance.gst_india.utils.isd.get_distribution_addresses",
-            args: { party_type: "Company", party: company, posting_date },
+            args: { party_type: "Company", party: company, pi_posting_date: posting_date },
             callback({ message: rows = [] }) {
                 if (!rows.length) return;
                 distribution_grid.df.data = rows.map((r) => ({
@@ -269,14 +287,22 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     ...r,
                 }));
                 distribution_grid.refresh();
+                fill_total_turnover();
                 calculate_distribution_ratios();
             },
         });
     }
 
-    function calculate_distribution_ratios() {
+    function fill_total_turnover() {
         const rows = dialog.get_value("distribution_table") || [];
         const total = rows.reduce((sum, row) => sum + (parseFloat(row.turnover_amount) || 0), 0);
+        dialog.set_value("total_turnover", total);
+    }
+
+    function calculate_distribution_ratios() {
+        const rows = dialog.get_value("distribution_table") || [];
+        const total = parseFloat(dialog.get_value("total_turnover")) || 0;
+
         rows.forEach((row) => {
             row.distribution_ratio = total ? ((parseFloat(row.turnover_amount) || 0) / total) * 100 : 0;
         });
