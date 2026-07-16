@@ -22,11 +22,7 @@ class GSTInwardSupply(Document):
             self.ims_action = self.previous_ims_action
 
         if self.match_status != "Amended" and (self.other_return_period or self.is_amended):
-            from india_compliance.gst_india.utils.gstr_2 import NON_RECONCILE_CATEGORY
-
-            # download-only categories are never reconciled: skip amendment linking
-            if self.classification not in NON_RECONCILE_CATEGORY:
-                update_docs_for_amendment(self)
+            update_docs_for_amendment(self)
 
     def on_trash(self):
         if self.link_doctype and self.link_name:
