@@ -417,28 +417,27 @@ class ISDController(Document):
             return
 
         distributed_by_type = self.get_distributed_by_head()
+
         invalid_rows = [
             [
                 gst_tax_type.upper(),
                 _("{0} must be distributed as IGST for this place of supply").format(gst_tax_type.upper()),
             ]
-            for gst_tax_type in GST_TAX_TYPES
-            if gst_tax_type != "igst"
-            and flt(distributed_by_type.get(gst_tax_type), self._source_item_precision)
+            for gst_tax_type in ("cgst", "sgst")
+            if flt(distributed_by_type.get(gst_tax_type), self._source_item_precision)
         ]
         if invalid_rows:
             throw_row_table(_("Invalid Taxes"), [_("Component"), _("Issue")], invalid_rows)
 
     def set_provisional_values(self):
 
-        if self.isd_provisional_account:
-            self._validate_account(self.isd_provisional_account, _("ISD Provisional Account"))
-        else:
+        if not self.isd_provisional_account:
             self.isd_provisional_account = (
                 self._party_account
                 if self.is_against_party
                 else frappe.get_cached_value("Company", self.company, "default_isd_provisional_account")
             )
+        self._validate_account(self.isd_provisional_account, _("ISD Provisional Account"))
 
         self.isd_provisional_amount = flt(
             self.total_eligible + self.total_ineligible + self.total_expense, self._tax_precision
@@ -556,7 +555,9 @@ class ISDController(Document):
             self.add_gl_entry(gl_entries, row.expense_head, amount, self.cr_or_dr, row=row)
             total += amount
 
-        self.add_provisional_gl_entry(gl_entries, total, self.dr_or_cr, row=row)
+        self.add_provisional_gl_entry(
+            gl_entries, total, self.dr_or_cr, row={"project": self.project, "cost_center": self.cost_center}
+        )
 
     def add_ineligible_itc_gl_entries(self, gl_entries):
         """Reverse ineligible ITC"""
@@ -595,7 +596,7 @@ class ISDController(Document):
             if not self._book_expenses:
                 # -> provisional account
                 self.add_provisional_gl_entry(gl_entries, row_reversal_total, self.cr_or_dr, row=row)
-                return
+                continue
                 # -> expense head
             self.add_gl_entry(
                 gl_entries, self.get_gst_expense_account(), row_reversal_total, self.cr_or_dr, row=row

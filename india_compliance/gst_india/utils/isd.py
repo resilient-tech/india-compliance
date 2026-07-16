@@ -226,7 +226,7 @@ def get_input_gst_accounts(company: str):
 @frappe.whitelist()
 def get_non_isd_gstins():
     """Get all GSTINs that are not Input Service Distributors."""
-    return frappe.get_all(
+    return frappe.get_list(
         "Address",
         filters={"gstin": ("is", "set"), "gst_category": ["!=", ISD_GST_CATEGORY]},
         pluck="gstin",
@@ -399,7 +399,7 @@ def get_distribution_addresses(party_type: str, party: str, pi_posting_date: str
         query = query.where(addr.name == address)
 
     data = query.run(as_dict=True)
-    if not frappe.db.exists("Turnover Record"):
+    if not frappe.qb.get_query("Turnover Record").run():
         company = party if party_type == "Company" else None
         for row in data:
             if not flt(row.turnover_amount):

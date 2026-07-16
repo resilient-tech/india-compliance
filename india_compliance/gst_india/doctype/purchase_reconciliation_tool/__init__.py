@@ -691,7 +691,10 @@ class ISDInvoice:
         query = (
             frappe.qb.from_(self.ISD)
             .left_join(self.ISD_ITEM)
-            .on(self.ISD_ITEM.parent == self.ISD.name)
+            .on(
+                (self.ISD_ITEM.parent == self.ISD.name)
+                & (self.ISD_ITEM.parenttype == "ISD Recipient Invoice")
+            )
             .where(self.ISD.docstatus == 1)
             .where(IfNull(self.ISD.reconciliation_status, "") != "Not Applicable")
             .groupby(self.ISD.name)
