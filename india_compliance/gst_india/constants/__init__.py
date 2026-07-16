@@ -1482,6 +1482,10 @@ ORIGINAL_VS_AMENDED = (
         "original": "IMPGSEZ",
         "amended": "",
     },
+    {
+        "original": "ECOM",
+        "amended": "ECOMA",
+    },
 )
 
 E_INVOICE_MASTER_CODES_URL = "https://einvoice1.gst.gov.in/Others/MasterCodes"
