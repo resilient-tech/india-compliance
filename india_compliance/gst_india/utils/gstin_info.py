@@ -17,7 +17,12 @@ from india_compliance.gst_india.api_classes.taxpayer_base import (
     otp_handler,
 )
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
-from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
+from india_compliance.gst_india.utils import (
+    parse_datetime,
+    titlecase,
+    validate_gstin,
+    validate_gstin_permission,
+)
 
 GST_CATEGORIES = {
     "Regular": "Registered Regular",
@@ -382,6 +387,7 @@ def get_latest_3b_filed_period(company, company_gstin):
 
 
 @frappe.whitelist()
+@validate_gstin_permission(doctype="GST Return Log")
 @otp_handler
 def get_and_update_filing_preference(gstin: str, period: str):
     frappe.has_permission("GST Return Log", throw=True)

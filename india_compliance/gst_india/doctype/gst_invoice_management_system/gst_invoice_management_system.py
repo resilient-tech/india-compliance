@@ -39,6 +39,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     unlink_documents as _unlink_documents,
 )
+from india_compliance.gst_india.utils import validate_gstin_permission
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstin_info import (
     get_latest_3b_filed_period,
@@ -250,6 +251,7 @@ class GSTInvoiceManagementSystem(Document):
 
 
 @frappe.whitelist()
+@validate_gstin_permission
 @otp_handler
 def download_invoices(company_gstin: str):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
@@ -273,6 +275,7 @@ def download_invoices(company_gstin: str):
 
 
 @frappe.whitelist()
+@validate_gstin_permission
 @otp_handler
 def save_invoices(company_gstin: str):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
@@ -282,6 +285,7 @@ def save_invoices(company_gstin: str):
 
 
 @frappe.whitelist()
+@validate_gstin_permission
 @otp_handler
 def reset_invoices(company_gstin: str):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
@@ -291,6 +295,7 @@ def reset_invoices(company_gstin: str):
 
 
 @frappe.whitelist()
+@validate_gstin_permission
 @otp_handler
 def sync_with_gstn_and_reupload(company_gstin: str):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
@@ -306,6 +311,7 @@ def sync_with_gstn_and_reupload(company_gstin: str):
 
 
 @frappe.whitelist()
+@validate_gstin_permission(doctype="GST Return Log")
 @otp_handler
 def check_action_status(company_gstin: str, action: str):
     frappe.has_permission("GST Return Log", "write", throw=True)
@@ -327,6 +333,7 @@ def download_excel_report(data: str | list, doc: str | dict | frappe._dict):
 
 
 @frappe.whitelist()
+@validate_gstin_permission
 def get_period_options(company: str, company_gstin: str):
     def format_period(period):
         return period[2:] + period[:2]
