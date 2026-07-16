@@ -448,10 +448,9 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
                 msg=f"{classification}: expected one record per period, got {stored_periods}",
             )
 
-    def test_gstr2a_ecom_skips_amendment_linking(self):
-        # Download-only categories must not run the reconciliation amendment machinery.
-        # An ECOM invoice that carries an amendment period (aspd) would otherwise be
-        # stamped match_status="Amended"; the guard in before_save must keep it clean.
+    def test_gstr2a_ecom_runs_amendment_linking(self):
+        # ECOM docs now run the amendment machinery: an ECOM invoice carrying an
+        # amendment period (aspd) is stamped match_status="Amended" in before_save.
         save_gstr_2a(
             self.gstin,
             "072020",
@@ -490,4 +489,4 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
             {"company_gstin": self.gstin, "classification": "ECOM", "bill_no": "ECO-AMD-001"},
         )
         self.assertEqual(doc.other_return_period, "052020")
-        self.assertNotEqual(doc.match_status, "Amended")
+        self.assertEqual(doc.match_status, "Amended")
