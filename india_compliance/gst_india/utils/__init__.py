@@ -203,16 +203,13 @@ def validate_gstin_permission(fn=None, *, doctype=None):
             "'company_gstin' or 'gstin' parameter."
         )
 
-    doctype_from_arg = doctype is None and "doctype" in signature.parameters
+    resolved_doctype = doctype or "GST Inward Supply"
 
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         bound = signature.bind_partial(*args, **kwargs)
-        resolved_doctype = (
-            bound.arguments.get("doctype") if doctype_from_arg else doctype
-        ) or "GST Inward Supply"
-
         company_gstin = bound.arguments.get(field)
+
         if company_gstin == "All":
             company = bound.arguments.get("company") or getattr(bound.arguments.get("self"), "company", None)
             if not company:
