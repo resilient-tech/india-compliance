@@ -366,13 +366,32 @@ def setup_isd_fixtures(cls):
     cls.branch_customer, cls.branch_address = make_internal_customer()
 
 
+def _delete_isd_docs_for_party(party_type, party):
+    """Cancel and delete any ISD documents raised against a party so it can be deleted."""
+    for distribution in frappe.get_all(
+        "ISD Distribution Invoice", filters={"party_type": party_type, "party": party}, pluck="name"
+    ):
+        for recipient in frappe.get_all(
+            "ISD Recipient Invoice",
+            filters={"isd_distribution_invoice_reference": distribution},
+            pluck="name",
+        ):
+            _cancel_and_delete("ISD Recipient Invoice", recipient)
+        _cancel_and_delete("ISD Distribution Invoice", distribution)
+
+
+def _cancel_and_delete(doctype, name):
+    doc = frappe.get_doc(doctype, name)
+    if doc.docstatus == 1:
+        doc.cancel()
+    frappe.delete_doc(doctype, name, force=True)
+
+
 def teardown_isd_fixtures():
+    _delete_isd_docs_for_party("Customer", BRANCH_CUSTOMER)
     for doctype, name in (("Customer", BRANCH_CUSTOMER), ("Company", BRANCH_COMPANY)):
         if frappe.db.exists(doctype, name):
-            try:
-                frappe.delete_doc(doctype, name, force=True)
-            except Exception:
-                pass
+            frappe.delete_doc(doctype, name, force=True)
 
 
 class IntegrationTestISDDistributionInvoice(IntegrationTestCase):

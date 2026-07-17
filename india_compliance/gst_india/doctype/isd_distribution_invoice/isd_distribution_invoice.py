@@ -79,10 +79,10 @@ class ISDDistributionInvoice(ISDController):
         _p = frappe.get_precision("Purchase Invoice", "isd_credit_distributed_percent")
 
         # edge case of 99.9999% distribution rounded to misleading 100% distribution
-        distribution_percentage = flt((net_distributed_itc / total_itc_available) * 100, _p)
-        if distribution_percentage == flt(100, _p) and (
-            (net_distributed_itc / total_itc_available) * 100 != 100
-        ):
+        distribution_percentage = (
+            flt((net_distributed_itc / total_itc_available) * 100, _p) if total_itc_available else 100.0
+        )
+        if distribution_percentage == flt(100, _p) and (net_distributed_itc != total_itc_available):
             distribution_percentage = flt(100 - 10**-_p, _p)
 
         if distribution_percentage > 100:

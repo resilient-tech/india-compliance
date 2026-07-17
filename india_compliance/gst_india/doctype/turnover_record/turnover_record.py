@@ -20,7 +20,7 @@ class TurnoverRecord(Document):
         self.name = make_autoname(f"{fy_prefix} {self.gst_state}.##")
 
     def validate(self):
-        self.gstin = validate_gstin(self.gstin)
+        validate_gstin(self.gstin)
         self.validate_and_set_gst_state()
         self.validate_duplicate_record()
 
