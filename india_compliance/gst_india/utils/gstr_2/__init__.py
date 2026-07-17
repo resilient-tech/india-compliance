@@ -38,7 +38,7 @@ class GSTRCategory(Enum):
     B2BDN = "B2BDN"
     B2BDNA = "B2BDNA"
 
-    # GSTR 2A only (downloaded but not reconciled against purchases)
+    # GSTR 2A only
     ECOM = "ECOM"
     ECOMA = "ECOMA"
     TDS = "TDS"
@@ -77,7 +77,7 @@ GSTR_MODULES = {
 
 IMPORT_CATEGORY = ("IMPG", "IMPGSEZ")
 
-NON_RECONCILE_CATEGORY = ("ECOM", "ECOMA", "TDS", "TCS")
+NON_RECONCILE_CATEGORY = ("TDS", "TCS")
 
 
 def download_gstr_2a(gstin, return_periods):

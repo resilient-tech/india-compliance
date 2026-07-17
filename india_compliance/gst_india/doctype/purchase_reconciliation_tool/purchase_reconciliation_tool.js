@@ -288,7 +288,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 label: "Classification",
                 fieldname: "classification",
                 fieldtype: "Select",
-                options: ["B2B", "B2BA", "CDNR", "CDNRA", "ISD", "ISDA", "IMPG", "IMPGSEZ"],
+                options: ["B2B", "B2BA", "CDNR", "CDNRA", "ISD", "ISDA", "IMPG", "IMPGSEZ", "ECOM", "ECOMA"],
             },
             {
                 label: "Is Reverse Charge",
