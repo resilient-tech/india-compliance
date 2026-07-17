@@ -284,8 +284,9 @@ class GSTR2aTDS(GSTR2a):
 
     def get_invoice_details(self, invoice):
         return {
-            "supplier_gstin": invoice.gstin_ded,
-            "sup_return_period": self.return_period,
+            "supplier_gstin": invoice.gstin_deductor,
+            "supplier_name": invoice.deductor_name,
+            "sup_return_period": invoice.month,
             "taxable_value": invoice.amt_ded,
             "igst": invoice.iamt,
             "cgst": invoice.camt,

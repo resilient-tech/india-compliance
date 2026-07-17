@@ -376,8 +376,9 @@ class TestGSTR2a(TestGSTRMixin, FrappeTestCase):
         self.assertImportLog(GSTRCategory.TDS)
         self.assertDocumentEqual(
             {
-                "supplier_gstin": self.gstin,
-                "sup_return_period": self.return_period,
+                "supplier_gstin": "24AANFA2543R1ZG",
+                "supplier_name": "Test Deductor",
+                "sup_return_period": "022020",
                 "taxable_value": 10000,
                 "igst": 0,
                 "cgst": 100,
@@ -410,10 +411,10 @@ class TestGSTR2a(TestGSTRMixin, FrappeTestCase):
         # TDS/TCS records have no bill number/date. Downloading the same deductor
         # (TDS) / collector (TCS) across multiple periods must yield one distinct
         # record per period, not a single record overwritten by the latest period.
-        deductor = "24AANFA2543R1ZG"
+        deductor = "27AAPFU0939F1ZV"
         periods = ("052020", "062020")
         section_data = {
-            "tds": {"gstin_ded": deductor, "amt_ded": 10000, "iamt": 0, "camt": 100, "samt": 100},
+            "tds": {"gstin_deductor": deductor, "amt_ded": 10000, "iamt": 0, "camt": 100, "samt": 100},
             "tcs": {
                 "etin": deductor,
                 "sup_val": 50000,
@@ -427,6 +428,9 @@ class TestGSTR2a(TestGSTRMixin, FrappeTestCase):
 
         for section, record in section_data.items():
             for period in periods:
+                if section == "tds":
+                    record["month"] = period
+
                 save_gstr_2a(
                     self.gstin,
                     period,
