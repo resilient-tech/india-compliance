@@ -307,7 +307,7 @@ class InwardSupply:
         query = (
             frappe.qb.from_(self.GSTR2)
             .where(IfNull(self.GSTR2.match_status, "") != "Amended")
-            # download-only categories (TDS/TCS/ECOM) are stored but never reconciled
+            # download-only categories (TDS/TCS) are stored but never reconciled
             .where(self.GSTR2.classification.notin(NON_RECONCILE_CATEGORY))
             .select(*fields, ConstantColumn("GST Inward Supply").as_("doctype"))
         )
@@ -393,7 +393,7 @@ class PurchaseInvoice:
                 "Tax Collector",
                 "Input Service Distributor",
             )
-            if category in ("B2B", "CDNR", "ISD")
+            if category in ("B2B", "CDNR", "ISD", "ECOM")
             else ("SEZ", "Overseas", "UIN Holders")
         )
         is_return = 1 if category == "CDNR" else 0
