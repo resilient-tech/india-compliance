@@ -14,6 +14,15 @@
 				<td data-label="company_gstin">{{ purchase.company_gstin || '-' }}</td>
 			</tr>
 			<tr>
+				<th>Supplier GSTIN</th>
+				<td data-label="supplier_gstin">
+					{{ inward_supply.supplier_gstin || '-' }}
+				</td>
+				<td data-label="supplier_gstin">
+					{{ purchase.supplier_gstin || '-' }}
+				</td>
+			</tr>
+			<tr>
 				<th>Document Links</td>
 					{% if inward_supply.name %}
 				<td data-label="name">{{ frappe.utils.get_form_link("GST Inward Supply",
