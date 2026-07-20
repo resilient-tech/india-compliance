@@ -61,7 +61,11 @@ def create_inward_supply(transaction):
 
 def preserve_pending_itc_declaration(existing, transaction):
     """Keep the user's un-uploaded declared ITC; portal returns stale values until upload."""
-    if not existing.ims_action or existing.ims_action == existing.previous_ims_action:
+    action_pending = existing.ims_action and existing.ims_action != existing.previous_ims_action
+    # declaration changed after upload (action unchanged) — still un-synced, so protect it too
+    declaration_pending = existing.is_declaration_pending_upload
+
+    if not (action_pending or declaration_pending):
         return
 
     for field in (
@@ -104,8 +108,11 @@ def update_previous_ims_action(transaction):
     frappe.db.set_value(
         "GST Inward Supply",
         filters,
-        "previous_ims_action",
-        transaction.previous_ims_action or "No Action",
+        {
+            "previous_ims_action": transaction.previous_ims_action or "No Action",
+            # declaration is now in sync with the portal; clear the re-upload flag
+            "is_declaration_pending_upload": 0,
+        },
     )
 
 

@@ -97,8 +97,13 @@ class InwardSupply:
                 "declared_cess",
                 "remarks",
                 "is_remarks_blocked",
+                "is_declaration_pending_upload",
             ],
-        ).where(self.IMS.ims_action != self.IMS.previous_ims_action)
+        ).where(
+            (self.IMS.ims_action != self.IMS.previous_ims_action)
+            # declared ITC changed after upload; re-send even though the action is unchanged
+            | (self.IMS.is_declaration_pending_upload == 1)
+        )
 
     def get_unmatched(self, filters):
         query = self.get_query(filters.company_gstin)
@@ -123,7 +128,8 @@ class InwardSupply:
                 ConstantColumn("GST Inward Supply").as_("doctype"),
                 Case()
                 .when(
-                    (self.IMS.ims_action == self.IMS.previous_ims_action),
+                    (self.IMS.ims_action == self.IMS.previous_ims_action)
+                    & (IfNull(self.IMS.is_declaration_pending_upload, 0) == 0),
                     False,
                 )
                 .else_(True)
@@ -292,6 +298,25 @@ class PurchaseInvoice:
 
 ITC_REDUCTION_TOLERANCE = 1  # books rounding noise; snap to supplier value within this
 
+DECLARED_FIELDS = (
+    "itc_reduction_required",
+    "declared_igst",
+    "declared_cgst",
+    "declared_sgst",
+    "declared_cess",
+)
+
+
+def _flag_if_declaration_changed(stored, declared):
+    """Re-queue an already-synced record for upload when its declaration changes.
+
+    The action is unchanged, so ims_action == previous_ims_action and the record
+    would otherwise be skipped on save. previous_ims_action doubles as prev_status
+    in the payload, so it must stay put; this flag carries the "dirty" signal instead.
+    """
+    if any(flt(stored.get(field)) != flt(declared.get(field)) for field in DECLARED_FIELDS):
+        declared["is_declaration_pending_upload"] = 1
+
 
 def set_declared_itc(invoice_names, action):
     """On accept, store declared ITC reduction from books for specified records."""
@@ -312,6 +337,11 @@ def set_declared_itc(invoice_names, action):
             IMS.cgst,
             IMS.sgst,
             IMS.cess,
+            IMS.itc_reduction_required,
+            IMS.declared_igst,
+            IMS.declared_cgst,
+            IMS.declared_sgst,
+            IMS.declared_cess,
         )
         .where(IMS.name.isin(invoice_names))
         .run(as_dict=True)
@@ -330,7 +360,9 @@ def set_declared_itc(invoice_names, action):
 
     for row in specified:
         if book := books.get(row.link_name):
-            frappe.db.set_value("GST Inward Supply", row.name, _declared_from_books(row, book))
+            declared = _declared_from_books(row, book)
+            _flag_if_declaration_changed(row, declared)
+            frappe.db.set_value("GST Inward Supply", row.name, declared)
 
 
 def _cap_declared(value, cap):
@@ -367,16 +399,30 @@ def apply_declared_overrides(overrides):
     IMS = frappe.qb.DocType("GST Inward Supply")
     rows = (
         frappe.qb.from_(IMS)
-        .select(IMS.name, IMS.is_itc_reduction_blocked, IMS.igst, IMS.cgst, IMS.sgst, IMS.cess)
+        .select(
+            IMS.name,
+            IMS.is_itc_reduction_blocked,
+            IMS.igst,
+            IMS.cgst,
+            IMS.sgst,
+            IMS.cess,
+            IMS.itc_reduction_required,
+            IMS.declared_igst,
+            IMS.declared_cgst,
+            IMS.declared_sgst,
+            IMS.declared_cess,
+        )
         .where(IMS.name.isin(list(overrides)))
         .run(as_dict=True)
     )
     # skip GSTN-blocked records: their declaration is read-only
     document = {row.name: row for row in rows if not row.is_itc_reduction_blocked}
 
-    for name, declared in overrides.items():
+    for name, override in overrides.items():
         if doc := document.get(name):
-            frappe.db.set_value("GST Inward Supply", name, _clean_declared(doc, declared))
+            declared = _clean_declared(doc, override)
+            _flag_if_declaration_changed(doc, declared)
+            frappe.db.set_value("GST Inward Supply", name, declared)
 
 
 def _clean_declared(document, declared):

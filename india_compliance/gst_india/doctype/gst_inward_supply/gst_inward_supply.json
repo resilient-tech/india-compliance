@@ -89,7 +89,8 @@
   "declared_sgst",
   "declared_cess",
   "remarks",
-  "is_remarks_blocked"
+  "is_remarks_blocked",
+  "is_declaration_pending_upload"
  ],
  "fields": [
   {
@@ -548,6 +549,15 @@
    "fieldname": "is_remarks_blocked",
    "fieldtype": "Check",
    "label": "Remarks Blocked",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Declared ITC changed after upload; re-send on next save even though the action is unchanged.",
+   "fieldname": "is_declaration_pending_upload",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Declaration Pending Upload",
    "read_only": 1
   }
  ],

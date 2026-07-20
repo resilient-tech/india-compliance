@@ -6,8 +6,10 @@ from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_to_date
 
 from india_compliance.gst_india.doctype.gst_invoice_management_system import (
+    InwardSupply,
     PurchaseInvoice,
     _declared_from_books,
+    apply_declared_overrides,
     defer_undeclarable_itc_reduction,
     set_declared_itc,
 )
@@ -19,6 +21,9 @@ from india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoic
 )
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     preserve_pending_itc_declaration,
+)
+from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
+    update_previous_ims_action as sync_uploaded_ims_action,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.test_purchase_reconciliation_tool import (
     create_gst_inward_supply,
@@ -283,6 +288,18 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         )
         self.assertIn("declared_cgst", refreshed)
 
+        # declaration changed after upload (action unchanged) -> still un-synced, so protected
+        redeclared = {"declared_cgst": 10}
+        preserve_pending_itc_declaration(
+            frappe._dict(
+                ims_action="Accepted",
+                previous_ims_action="Accepted",
+                is_declaration_pending_upload=1,
+            ),
+            redeclared,
+        )
+        self.assertNotIn("declared_cgst", redeclared)
+
     def test_update_action_with_declared_overrides(self):
         cn = create_gst_inward_supply(
             bill_no="CN-IMS-OVERRIDE",
@@ -309,6 +326,88 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual(cn.declared_cgst, 900)  # capped at document
         self.assertEqual(cn.declared_sgst, cn.declared_cgst)  # govt: CGST == SGST
         self.assertEqual(cn.itc_reduction_required, 1)
+
+    def test_declaration_change_requeues_upload(self):
+        # An already-uploaded accept (ims_action == previous_ims_action) must re-upload
+        # when the declared ITC changes, without disturbing previous_ims_action/prev_status.
+        cn = create_gst_inward_supply(
+            bill_no="CN-IMS-REDECLARE",
+            bill_date="2024-12-11",
+            classification="CDNR",
+            doc_type="Credit Note",
+            is_amended=0,
+            previous_ims_action="Accepted",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-11",
+        )
+        self.addCleanup(self.delete_inward_supply, cn.name)
+        frappe.db.set_value(
+            "GST Inward Supply",
+            cn.name,
+            {
+                "link_doctype": "Purchase Invoice",
+                "link_name": self.pinv.name,
+                "ims_action": "Accepted",
+                "itc_reduction_required": 1,
+                "declared_igst": 0,
+                "declared_cgst": 850,
+                "declared_sgst": 850,
+                "declared_cess": 0,
+                "is_declaration_pending_upload": 0,
+            },
+        )
+
+        # supplier tax is cgst = sgst = 900; changing the declaration to 500 marks it dirty
+        apply_declared_overrides({cn.name: {"igst": 0, "cgst": 500, "sgst": 500, "cess": 0}})
+
+        cn.reload()
+        self.assertEqual(cn.declared_cgst, 500)
+        self.assertEqual(cn.is_declaration_pending_upload, 1)
+        self.assertEqual(cn.previous_ims_action, "Accepted")  # untouched -> prev_status stays valid
+
+        # queued for save despite ims_action == previous_ims_action
+        queued = [row.name for row in InwardSupply().get_for_save(self.gst_ims.company_gstin)]
+        self.assertIn(cn.name, queued)
+
+        # re-applying the same declaration is a no-op and does not re-dirty a clean record
+        frappe.db.set_value("GST Inward Supply", cn.name, "is_declaration_pending_upload", 0)
+        apply_declared_overrides({cn.name: {"igst": 0, "cgst": 500, "sgst": 500, "cess": 0}})
+        self.assertEqual(
+            frappe.db.get_value("GST Inward Supply", cn.name, "is_declaration_pending_upload"), 0
+        )
+
+    def test_upload_clears_declaration_flag(self):
+        cn = create_gst_inward_supply(
+            bill_no="CN-IMS-FLAG-CLEAR",
+            bill_date="2024-12-11",
+            classification="CDNR",
+            doc_type="Credit Note",
+            is_amended=0,
+            previous_ims_action="Accepted",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-11",
+        )
+        self.addCleanup(self.delete_inward_supply, cn.name)
+        frappe.db.set_value(
+            "GST Inward Supply",
+            cn.name,
+            {"ims_action": "Accepted", "is_declaration_pending_upload": 1},
+        )
+
+        cn.reload()
+        sync_uploaded_ims_action(
+            frappe._dict(
+                bill_no=cn.bill_no,
+                bill_date=cn.bill_date,
+                classification=cn.classification,
+                supplier_gstin=cn.supplier_gstin,
+                previous_ims_action="Accepted",
+            )
+        )
+
+        cn.reload()
+        self.assertEqual(cn.is_declaration_pending_upload, 0)
+        self.assertEqual(cn.previous_ims_action, "Accepted")
 
     def gov_invoice(self, **overrides):
         invoice = frappe._dict(
