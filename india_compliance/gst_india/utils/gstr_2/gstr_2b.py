@@ -196,6 +196,23 @@ class GSTR2bISDA(GSTR2bISD):
         return invoice_details
 
 
+# E-commerce operator supplies u/s 9(5). Same structure as B2B/B2BA.
+class GSTR2bECOM(GSTR2bB2B):
+    pass
+
+
+class GSTR2bECOMA(GSTR2bECOM):
+    def get_invoice_details(self, invoice):
+        invoice_details = super().get_invoice_details(invoice)
+        invoice_details.update(
+            {
+                "original_bill_no": invoice.oinum,
+                "original_bill_date": parse_datetime(invoice.oidt, day_first=True),
+            }
+        )
+        return invoice_details
+
+
 class GSTR2bIMPGSEZ(GSTR2b):
     def setup(self):
         super().setup()

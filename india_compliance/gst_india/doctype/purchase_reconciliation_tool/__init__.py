@@ -15,7 +15,11 @@ from rapidfuzz import fuzz, process
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, TAXABLE_GST_TREATMENTS
 from india_compliance.gst_india.utils import get_gstin_list, get_party_for_gstin, get_periods_between_dates
-from india_compliance.gst_india.utils.gstr_2 import IMPORT_CATEGORY, ReturnType
+from india_compliance.gst_india.utils.gstr_2 import (
+    IMPORT_CATEGORY,
+    NON_RECONCILE_CATEGORY,
+    ReturnType,
+)
 from india_compliance.gst_india.utils.itc_claim import (
     SUPPORTED_DOCTYPES,
     set_itc_claim_period_on_match,
@@ -303,6 +307,8 @@ class InwardSupply:
         query = (
             frappe.qb.from_(self.GSTR2)
             .where(IfNull(self.GSTR2.match_status, "") != "Amended")
+            # download-only categories (TDS/TCS) are stored but never reconciled
+            .where(self.GSTR2.classification.notin(NON_RECONCILE_CATEGORY))
             .select(*fields, ConstantColumn("GST Inward Supply").as_("doctype"))
         )
 
@@ -387,7 +393,7 @@ class PurchaseInvoice:
                 "Tax Collector",
                 "Input Service Distributor",
             )
-            if category in ("B2B", "CDNR", "ISD")
+            if category in ("B2B", "CDNR", "ISD", "ECOM")
             else ("SEZ", "Overseas", "UIN Holders")
         )
         is_return = 1 if category == "CDNR" else 0

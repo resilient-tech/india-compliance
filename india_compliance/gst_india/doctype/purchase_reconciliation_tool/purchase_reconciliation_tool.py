@@ -51,7 +51,6 @@ from india_compliance.gst_india.utils.gstin_info import (
     update_gstr_returns_info,
 )
 from india_compliance.gst_india.utils.gstr_2 import (
-    GSTR_2A_ACTIONS,
     IMPORT_CATEGORY,
     ReturnType,
     download_gstr_2a,
@@ -72,10 +71,6 @@ STATUS_MAP = {
     "Pending": "Unreconciled",
     "Ignore": "Ignored",
 }
-
-RECO_2A_CATEGORIES_KEY = "purchase_reco_2a_categories"
-
-VALID_2A_CATEGORIES = {cat.value for cat in GSTR_2A_ACTIONS.values()}
 
 
 class PurchaseReconciliationTool(Document):
@@ -145,7 +140,6 @@ class PurchaseReconciliationTool(Document):
         return_type: str | None = None,
         return_period: str | None = None,
         force: bool = False,
-        gst_categories: str | list | None = None,
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
@@ -167,7 +161,6 @@ class PurchaseReconciliationTool(Document):
             return_type=return_type,
             return_period=return_period,
             force=force,
-            gst_categories=gst_categories,
             queue="long",
             job_id=job_id,
             now=frappe.flags.in_test,
@@ -392,7 +385,6 @@ def download_gstr(
     return_type,
     return_period=None,
     force=False,
-    gst_categories=None,
 ):
     return_type = ReturnType(return_type)
 
@@ -410,7 +402,7 @@ def download_gstr(
 
     try:
         if return_type == ReturnType.GSTR2A:
-            return download_gstr_2a(company_gstin, periods, gst_categories)
+            return download_gstr_2a(company_gstin, periods)
 
         if return_type == ReturnType.GSTR2B:
             return download_gstr_2b(company_gstin, periods)
@@ -573,20 +565,6 @@ def download_excel_report(
     build_data.export_data()
 
 
-@frappe.whitelist()
-def set_category_preference(categories: str | list | None = None):
-    frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
-
-    if isinstance(categories, str):
-        categories = frappe.parse_json(categories) if categories else None
-
-    if not categories:
-        categories = []
-
-    categories = [c for c in categories if c in VALID_2A_CATEGORIES]
-    frappe.defaults.set_user_default(RECO_2A_CATEGORIES_KEY, frappe.as_json(categories))
-
-
 def parse_params(fun):
     def wrapper(*args, **kwargs):
         args = (frappe.parse_json(arg) for arg in args)
@@ -633,8 +611,6 @@ class AutoReconcile:
         if not self.is_reconciliation_enabled():
             return
 
-        # GST Categories for which GSTR 2A is to be downloaded
-        gst_categories = self.get_gst_categories()
         gstins = self.get_gstins_with_valid_credentials()
 
         for gstin in gstins:
@@ -645,16 +621,8 @@ class AutoReconcile:
                         self.today.strftime("%Y-%m-%d"),
                     ],
                     company_gstin=gstin,
-                    gst_categories=gst_categories,
                     return_type=return_type.value,
                 )
-
-    def get_gst_categories(self):
-        return [
-            category.value
-            for category in GSTR_2A_ACTIONS.values()
-            if getattr(self.gst_settings, "reconcile_for_" + category.value.lower())
-        ]
 
     def get_gstins_with_valid_credentials(self):
         valid_gstins = set()

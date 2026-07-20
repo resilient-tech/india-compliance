@@ -250,3 +250,78 @@ class GSTR2aIMPGSEZ(GSTR2aIMPG):
             }
         )
         return invoice_details
+
+
+# E-commerce operator supplies u/s 9(5). Same structure as B2B/B2BA.
+class GSTR2aECOM(GSTR2aB2B):
+    pass
+
+
+class GSTR2aECOMA(GSTR2aECOM):
+    def get_invoice_details(self, invoice):
+        invoice_details = super().get_invoice_details(invoice)
+        invoice_details.update(
+            {
+                "original_bill_no": invoice.oinum,
+                "original_bill_date": parse_datetime(invoice.oidt, day_first=True),
+            }
+        )
+        return invoice_details
+
+
+class GSTR2aTDS(GSTR2a):
+    """TDS credit received (counterparty files GSTR-7).
+
+    Flat records with no invoice number or line items: each record is one
+    deductor's aggregated deduction for the period.
+    """
+
+    def get_supplier_details(self, supplier):
+        return {}
+
+    def get_supplier_transactions(self, supplier):
+        return [self.get_transaction(frappe._dict(supplier), frappe._dict(supplier))]
+
+    def get_invoice_details(self, invoice):
+        return {
+            "supplier_gstin": invoice.gstin_deductor,
+            "supplier_name": invoice.deductor_name,
+            "sup_return_period": invoice.month,
+            "taxable_value": invoice.amt_ded,
+            "igst": invoice.iamt,
+            "cgst": invoice.camt,
+            "sgst": invoice.samt,
+            "document_value": invoice.amt_ded,
+        }
+
+    def get_transaction_items(self, invoice):
+        pass
+
+
+class GSTR2aTCS(GSTR2a):
+    """TCS credit received (e-commerce operator files GSTR-8).
+
+    Flat records with no invoice number or line items: each record is one
+    e-commerce operator's aggregated collection for the period.
+    """
+
+    def get_supplier_details(self, supplier):
+        return {}
+
+    def get_supplier_transactions(self, supplier):
+        return [self.get_transaction(frappe._dict(supplier), frappe._dict(supplier))]
+
+    def get_invoice_details(self, invoice):
+        return {
+            "supplier_gstin": invoice.etin,
+            "sup_return_period": self.return_period,
+            "taxable_value": invoice.tx_val,
+            "igst": invoice.iamt,
+            "cgst": invoice.camt,
+            "sgst": invoice.samt,
+            "cess": invoice.csamt,
+            "document_value": invoice.sup_val,
+        }
+
+    def get_transaction_items(self, invoice):
+        pass
