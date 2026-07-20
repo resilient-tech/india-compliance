@@ -990,6 +990,21 @@ class TestGSTR1BooksData(IntegrationTestCase):
         self.assertGreater(row_1[inv_f.CGST], 0)
         self.assertGreater(row_1[inv_f.SGST], 0)
 
+    @change_settings("GST Settings", {"enable_reverse_charge_in_sales": 1})
+    def test_9_5_reported_only_in_supecom(self):
+        si = create_sales_invoice(
+            customer="_Test Registered Customer",
+            is_reverse_charge=True,
+            is_in_state=True,
+            is_in_state_rcm=True,
+            ecommerce_gstin="20ALYPD6528PQC5",
+        )
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        self.assertIn(GSTR1_SubCategory.SUPECOM_9_5.value, data)
+        self.assertNotIn(si.name, data.get(GSTR1_SubCategory.B2B_REVERSE_CHARGE.value, {}))
+
     def test_supecom_rounding_at_invoice_level(self):
         """
         Rounding must happen at the invoice level before aggregating across
@@ -1092,7 +1107,15 @@ class TestGSTR1BooksData(IntegrationTestCase):
 
             self.assertEqual(summary_row["no_of_records"], 2)
             self.assertEqual(summary_row[inv_f.TAXABLE_VALUE], 300.0)
-            self.assertFalse(summary_row["consider_in_total_taxable_value"])
+
+            # 52 (TCS) is already reported in B2B/B2C, so its taxable value is not
+            # counted again. 9(5) is reported only in Table 14(b), so its taxable
+            # value is counted (but the tax is never the supplier's liability).
+            if subcategory == GSTR1_SubCategory.SUPECOM_52.value:
+                self.assertFalse(summary_row["consider_in_total_taxable_value"])
+            else:
+                self.assertTrue(summary_row["consider_in_total_taxable_value"])
+
             self.assertFalse(summary_row["consider_in_total_tax"])
 
     def test_document_issued_summary(self):
