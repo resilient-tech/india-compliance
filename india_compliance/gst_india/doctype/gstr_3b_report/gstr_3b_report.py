@@ -58,24 +58,46 @@ class GSTR3BReport(Document):
         if not self.company_gstin:
             frappe.throw(_("Please enter GSTIN for Company {0}").format(self.company))
 
-        if self.is_new() and frappe.db.exists("GSTR 3B Report", self.name):
-            frappe.throw(
-                _("GSTR-3B Report for {0} {1} already exists: {2}").format(
-                    self.month_or_quarter,
-                    self.year,
-                    frappe.utils.get_link_to_form("GSTR 3B Report", self.name),
-                ),
-                title=_("Report Already Exists"),
+        if self.is_new():
+            existing_report = frappe.db.get_value(
+                "GSTR 3B Report",
+                {
+                    "company_gstin": self.company_gstin,
+                    "month_or_quarter": self.month_or_quarter,
+                    "year": self.year,
+                },
+                "name",
             )
+
+            if existing_report:
+                frappe.throw(
+                    _("GSTR-3B Report for {0} {1} already exists: {2}").format(
+                        self.month_or_quarter,
+                        self.year,
+                        frappe.utils.get_link_to_form("GSTR 3B Report", existing_report),
+                    ),
+                    title=_("Report Already Exists"),
+                )
 
         self.generation_status = "In Process"
 
         if self.enqueue_report:
-            frappe.msgprint(_("Initiated report generation in background"), alert=True)
-            frappe.enqueue_doc("GSTR 3B Report", self.name, "get_data", queue="long")
             return
 
         self.get_data()
+
+    def on_update(self):
+        if not self.enqueue_report:
+            return
+
+        frappe.msgprint(_("Initiated report generation in background"), alert=True)
+        frappe.enqueue_doc(
+            "GSTR 3B Report",
+            self.name,
+            "get_data",
+            queue="long",
+            enqueue_after_commit=True,
+        )
 
     def get_data(self):
         try:
