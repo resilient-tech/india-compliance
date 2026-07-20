@@ -289,11 +289,20 @@ def get_file_name(name):
     return f"GSTR-3B-{report.company_gstin}-{report.month_or_quarter.replace(' ', '')}-{report.year}"
 
 
+def get_json_data(name: str):
+    frappe.has_permission("GSTR 3B Report", throw=True)
+    json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
+
+    if not json_data:
+        frappe.throw(_("Report data not found"), title=_("Invalid Data"))
+
+    return json_data
+
+
 @frappe.whitelist()
 def make_json(name: str):
-    frappe.has_permission("GSTR 3B Report", throw=True)
+    json_data = get_json_data(name)
 
-    json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
     frappe.local.response.filename = f"{get_file_name(name)}.json"
     frappe.local.response.filecontent = json_data
     frappe.local.response.type = "download"
@@ -302,13 +311,8 @@ def make_json(name: str):
 @frappe.whitelist()
 def download_gstr3b_as_excel(name: str):
     """Download GSTR 3B report as Excel file"""
-    frappe.has_permission("GSTR 3B Report", throw=True)
-    json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
+    data = json.loads(get_json_data(name))
 
-    if not json_data:
-        frappe.throw(_("Report data not found. Please generate the report."))
-
-    data = json.loads(json_data)
     exporter = GSTR3BExcelExporter(data)
     exporter.generate_excel(get_file_name(name))
 
@@ -316,7 +320,7 @@ def download_gstr3b_as_excel(name: str):
 @frappe.whitelist()
 def download_gstr3b_as_pdf(name: str):
     """Download GSTR 3B report as PDF file"""
-    frappe.has_permission("GSTR 3B Report", throw=True)
+    get_json_data(name)
 
     frappe.local.response.filename = f"{get_file_name(name)}.pdf"
     frappe.local.response.filecontent = frappe.get_print(
