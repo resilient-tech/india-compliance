@@ -1315,7 +1315,7 @@ class TabManager {
             class="btn ${icon} reconcile-row"
             data-row-index='${data.idx}'
         >
-            <i class="fa fa-${icon}"></i>
+            ${frappe.utils.icon(icon, "md")}
         </button>`;
     }
 

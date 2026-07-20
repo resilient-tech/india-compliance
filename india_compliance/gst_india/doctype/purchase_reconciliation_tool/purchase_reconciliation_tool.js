@@ -526,13 +526,15 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 fieldname: "download",
                 fieldtype: "html",
                 width: 60,
+                align: "center",
                 _value: (...args) => get_icon(...args, "download"),
             },
             {
                 fieldname: "email",
                 fieldtype: "html",
                 width: 60,
-                _value: (...args) => get_icon(...args, "envelope"),
+                align: "center",
+                _value: (...args) => get_icon(...args, "mail"),
             },
         ];
     }
@@ -1240,7 +1242,7 @@ function get_icon(value, column, data, icon) {
 
     const hash = get_hash(data);
     return `<button class="btn ${icon}" data-name="${hash}">
-                <i class="fa fa-${icon}"></i>
+                ${frappe.utils.icon(icon, "md")}
             </button>`;
 }
 
