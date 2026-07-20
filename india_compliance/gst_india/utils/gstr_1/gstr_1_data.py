@@ -26,6 +26,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_Category,
     GSTR1_SubCategory,
     get_b2c_limit,
+    is_9_5_supply,
 )
 
 CATEGORY_CONDITIONS = {
@@ -592,7 +593,8 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             summary_row["unique_records"].add(row.invoice_no)
 
         for row in invoices:
-            _update_summary_row(row)
+            if not is_9_5_supply(row):
+                _update_summary_row(row)
 
             if row.ecommerce_gstin:
                 _update_summary_row(row, "ecommerce_supply_type")

@@ -21,6 +21,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_B2B_InvoiceType,
     GSTR1_Category,
     GSTR1_SubCategory,
+    is_9_5_supply,
 )
 from india_compliance.gst_india.utils.gstr_1 import GovDataField as gov_f
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
@@ -2501,37 +2502,40 @@ class GSTR1BooksData(BooksDataMapper):
         for item in data:
             gst_rate = flt(item.get("gst_rate"))
 
-            is_9_5 = item.get("ecommerce_supply_type") == GSTR1_SubCategory.SUPECOM_9_5.value
+            # 9(5) supplies are reported ONLY in SUPECOM (Table 14b), never in HSN
+            # or the primary B2B/B2C tables — the e-commerce operator pays the tax.
+            if is_9_5_supply(item):
+                if not only_for_hsn and item.get("taxable_value") != 0:
+                    data_for_supecom[item.ecommerce_supply_type][item.invoice_no].append(item)
+                continue
 
-            if not is_9_5:
-                hsn_key = f"{item.gst_hsn_code} - {item.uom} - {gst_rate}"
-                data_for_hsn[item.get("hsn_sub_category")][hsn_key].append(item)
+            hsn_key = f"{item.gst_hsn_code} - {item.uom} - {gst_rate}"
+            data_for_hsn[item.get("hsn_sub_category")][hsn_key].append(item)
 
             if only_for_hsn or item.get("taxable_value") == 0:
                 continue
 
-            if not is_9_5:
-                key = (item.get("invoice_sub_category"), item.get("invoice_no"))
+            key = (item.get("invoice_sub_category"), item.get("invoice_no"))
 
-                invoice_category = GSTR1_Category(item.get("invoice_category"))
-                if invoice_category in (
-                    GSTR1_Category.B2B,
-                    GSTR1_Category.EXP,
-                    GSTR1_Category.B2CL,
-                    GSTR1_Category.CDNR,
-                    GSTR1_Category.CDNUR,
-                ):
-                    data_for_invoice_no_key[key][gst_rate].append(item)
+            invoice_category = GSTR1_Category(item.get("invoice_category"))
+            if invoice_category in (
+                GSTR1_Category.B2B,
+                GSTR1_Category.EXP,
+                GSTR1_Category.B2CL,
+                GSTR1_Category.CDNR,
+                GSTR1_Category.CDNUR,
+            ):
+                data_for_invoice_no_key[key][gst_rate].append(item)
 
-                elif invoice_category == GSTR1_Category.NIL_EXEMPT:
-                    data_for_nil_exempt[key][gst_rate].append(item)
+            elif invoice_category == GSTR1_Category.NIL_EXEMPT:
+                data_for_nil_exempt[key][gst_rate].append(item)
 
-                elif invoice_category == GSTR1_Category.B2CS:
-                    data_for_b2cs[key][gst_rate].append(item)
+            elif invoice_category == GSTR1_Category.B2CS:
+                data_for_b2cs[key][gst_rate].append(item)
 
-            # E-commerce invoices are also aggregated into SUPECOM regardless of
-            # their primary category (B2B/B2CS). ecommerce_supply_type is set by
-            # assign_categories() for every invoice that has ecommerce_gstin.
+            # E-commerce invoices (52/TCS) are also aggregated into SUPECOM in
+            # addition to their primary category (B2B/B2CS). ecommerce_supply_type
+            # is set by assign_categories() for every invoice with ecommerce_gstin.
             if item.get("ecommerce_gstin") and item.get("ecommerce_supply_type"):
                 data_for_supecom[item.ecommerce_supply_type][item.invoice_no].append(item)
 

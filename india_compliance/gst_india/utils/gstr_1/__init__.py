@@ -377,6 +377,10 @@ SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX = [
 ]
 
 
+def is_9_5_supply(item):
+    return item.get("ecommerce_supply_type") == GSTR1_SubCategory.SUPECOM_9_5.value
+
+
 HSN_BIFURCATION_FROM = getdate("2025-05-01")
 
 B2C_LIMIT = [

@@ -15,6 +15,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
 from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_DataField as inv_f,
 )
+from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     BooksDataMapper,
     GSTR1BooksData,
@@ -990,7 +991,13 @@ class TestGSTR1BooksData(IntegrationTestCase):
         self.assertGreater(row_1[inv_f.CGST], 0)
         self.assertGreater(row_1[inv_f.SGST], 0)
 
-    @change_settings("GST Settings", {"enable_reverse_charge_in_sales": 1})
+    @change_settings(
+        "GST Settings",
+        {
+            "enable_reverse_charge_in_sales": 1,
+            "enable_sales_through_ecommerce_operators": 1,
+        },
+    )
     def test_9_5_reported_only_in_supecom(self):
         si = create_sales_invoice(
             customer="_Test Registered Customer",
@@ -1004,6 +1011,10 @@ class TestGSTR1BooksData(IntegrationTestCase):
 
         self.assertIn(GSTR1_SubCategory.SUPECOM_9_5.value, data)
         self.assertNotIn(si.name, data.get(GSTR1_SubCategory.B2B_REVERSE_CHARGE.value, {}))
+
+        overview = {row["description"]: row for row in GSTR1Invoices(FILTERS).get_overview()}
+        self.assertNotIn(si.name, overview[GSTR1_SubCategory.B2B_REVERSE_CHARGE.value]["unique_records"])
+        self.assertIn(si.name, overview[GSTR1_SubCategory.SUPECOM_9_5.value]["unique_records"])
 
     def test_supecom_rounding_at_invoice_level(self):
         """
