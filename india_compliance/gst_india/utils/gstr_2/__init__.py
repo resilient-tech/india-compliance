@@ -38,6 +38,12 @@ class GSTRCategory(Enum):
     B2BDN = "B2BDN"
     B2BDNA = "B2BDNA"
 
+    # GSTR 2A only
+    ECOM = "ECOM"
+    ECOMA = "ECOMA"
+    TDS = "TDS"
+    TCS = "TCS"
+
 
 GSTR_2A_ACTIONS = {
     "B2B": GSTRCategory.B2B,
@@ -47,6 +53,10 @@ GSTR_2A_ACTIONS = {
     "ISD": GSTRCategory.ISD,
     "IMPG": GSTRCategory.IMPG,
     "IMPGSEZ": GSTRCategory.IMPGSEZ,
+    "ECOM": GSTRCategory.ECOM,
+    "ECOMA": GSTRCategory.ECOMA,
+    "TDS": GSTRCategory.TDS,
+    "TCS": GSTRCategory.TCS,
 }
 
 IMS_ACTIONS = {
@@ -67,8 +77,10 @@ GSTR_MODULES = {
 
 IMPORT_CATEGORY = ("IMPG", "IMPGSEZ")
 
+NON_RECONCILE_CATEGORY = ("TDS", "TCS")
 
-def download_gstr_2a(gstin, return_periods, gst_categories=None):
+
+def download_gstr_2a(gstin, return_periods):
     total_expected_requests = len(return_periods) * len(GSTR_2A_ACTIONS)
     requests_made = 0
     queued_message = False
@@ -92,9 +104,6 @@ def download_gstr_2a(gstin, return_periods, gst_categories=None):
                 },
                 user=frappe.session.user,
             )
-
-            if gst_categories and category.value not in gst_categories:
-                continue
 
             response = api.get_data(action, return_period)
 
