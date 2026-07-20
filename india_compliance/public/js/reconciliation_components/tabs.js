@@ -463,12 +463,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     _set_value_color(wrapper) {
         if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
 
-        [
-            "supplier_gstin",
-            "company_gstin",
-            "place_of_supply",
-            "is_reverse_charge",
-        ].forEach((field) => {
+        ["supplier_gstin", "company_gstin", "place_of_supply", "is_reverse_charge"].forEach((field) => {
             if (this.data._purchase_invoice[field] == this.data._inward_supply[field]) return;
 
             wrapper.find(`[data-label='${field}'], [data-label='${field}']`).addClass("not-matched");
