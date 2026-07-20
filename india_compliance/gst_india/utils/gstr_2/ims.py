@@ -161,7 +161,7 @@ class IMS:
             return
 
         for inward_supply_name in self.existing_transactions.values():
-            frappe.delete_doc("GST Inward Supply", inward_supply_name)
+            frappe.delete_doc("GST Inward Supply", inward_supply_name, ignore_permissions=True)
 
     def reset_previous_ims_action(self):
         category, doc_type = get_mapped_value(self.ims_category(), self.VALUE_MAPS.classification)
