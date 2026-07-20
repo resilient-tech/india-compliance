@@ -1066,102 +1066,71 @@ class ITCReductionDialog {
                 });
         };
 
-        this.$table = this.dialog.fields_dict.itc_table.$wrapper;
-        this.$table.html(this.get_table_html());
-        this.setup_listeners();
+        this.table = new india_compliance.ActionTable({
+            $wrapper: this.dialog.fields_dict.itc_table.$wrapper,
+            columns: this.get_columns(),
+            data: this.get_table_data(),
+            actions: [
+                {
+                    label: __("Use books value (all)"),
+                    action: () => this.fill_all((row, head) => row[head]),
+                },
+                {
+                    label: __("Use supplier value (all)"),
+                    action: () => this.fill_all((row, head) => row[`supplier_${head}`]),
+                },
+            ],
+        });
         this.dialog.show();
     }
 
-    get_table_html() {
+    get_columns() {
         const label = { igst: "IGST", cgst: "CGST", sgst: "SGST", cess: "Cess" };
-        const head_cells = TAX_HEADS.map(
-            (head) => `<th class="text-right">${__("Declared")} ${label[head]}</th>`,
-        ).join("");
-
-        const body = this.rows
-            .map((row, index) => {
-                const supplier_name = frappe.utils.escape_html(row.supplier_name || "");
-                const bill_no = frappe.utils.escape_html(row.bill_no || "");
-                const cells = TAX_HEADS.map((head) => {
-                    const supplier = row._inward_supply[head] || 0;
-                    const books = row._purchase_invoice[head] || 0;
-                    return `<td class="text-right">
-                        <input type="number" class="form-control declared-input" data-row="${index}"
-                            data-head="${head}" min="0" max="${supplier}" value="${declared_default(
-                                row,
-                                head,
-                            )}"
-                            style="text-align:right; min-width: 90px;">
-                        <small class="text-muted">${__("books")} ${format_number(books)} · ${__(
-                            "doc",
-                        )} ${format_number(supplier)}</small>
-                    </td>`;
-                }).join("");
-
-                return `<tr><td>${supplier_name}<br><small>${bill_no}</small></td>${cells}</tr>`;
-            })
-            .join("");
-
-        return `
-            <div class="mb-2">
-                <button class="btn btn-xs btn-default" data-fill="books">${__(
-                    "Use books value (all)",
-                )}</button>
-                <button class="btn btn-xs btn-default" data-fill="document">${__(
-                    "Use supplier value (all)",
-                )}</button>
-            </div>
-            <div style="max-height: 50vh; overflow: auto;">
-                <table class="table table-bordered">
-                    <thead><tr><th>${__("Supplier / Bill")}</th>${head_cells}</tr></thead>
-                    <tbody>${body}</tbody>
-                </table>
-            </div>`;
+        return [
+            {
+                fieldname: "supplier_name",
+                label: __("Supplier / Bill"),
+                description: (row) => frappe.utils.escape_html(row.bill_no || ""),
+            },
+            ...TAX_HEADS.map((head) => ({
+                fieldname: head,
+                label: `${__("Declared")} ${label[head]}`,
+                fieldtype: "Float",
+                editable: 1,
+                min: 0,
+                max: (row) => row[`supplier_${head}`],
+                description: (row) =>
+                    `${__("books")} ${format_number(row[`books_${head}`])} · ${__("doc")} ${format_number(
+                        row[`supplier_${head}`],
+                    )}`,
+            })),
+        ];
     }
 
-    setup_listeners() {
-        // clamp to supplier value; keep CGST and SGST equal
-        this.$table.on("change", ".declared-input", (e) => {
-            const $input = $(e.currentTarget);
-            let value = Math.min(Math.max(flt($input.val()), 0), flt($input.attr("max")));
-            $input.val(value);
-
-            const head = $input.data("head");
-            if (head === "cgst" || head === "sgst") {
-                const mirror = head === "cgst" ? "sgst" : "cgst";
-                const $mirror = this.$input($input.data("row"), mirror);
-                $mirror.val(Math.min(value, flt($mirror.attr("max"))));
-            }
-        });
-
-        this.$table.on("click", "[data-fill]", (e) => {
-            e.preventDefault();
-            const source = $(e.currentTarget).data("fill");
-            this.rows.forEach((row, index) => {
-                TAX_HEADS.forEach((head) => {
-                    const supplier = row._inward_supply[head] || 0;
-                    const value = source === "books" ? declared_default(row, head) : supplier;
-                    this.$input(index, head).val(value);
-                });
+    get_table_data() {
+        // one flat row per record: declared default + books/supplier references per head
+        return this.rows.map((row) => {
+            const data = { supplier_name: row.supplier_name, bill_no: row.bill_no };
+            TAX_HEADS.forEach((head) => {
+                data[head] = declared_default(row, head);
+                data[`books_${head}`] = row._purchase_invoice[head] || 0;
+                data[`supplier_${head}`] = row._inward_supply[head] || 0;
             });
+            return data;
         });
     }
 
-    $input(index, head) {
-        return this.$table.find(`.declared-input[data-row='${index}'][data-head='${head}']`);
+    fill_all(get_value) {
+        this.table.data.forEach((row, index) =>
+            TAX_HEADS.forEach((head) => this.table.set_value(index, head, get_value(row, head))),
+        );
     }
 
     confirm() {
-        const clamp = (value, supplier) => Math.min(Math.max(flt(value), 0), flt(supplier));
+        // raw values; the server clamps to [0, document] and equalizes CGST/SGST
+        const values = this.table.get_values();
         const overrides = {};
-        this.rows.forEach((row, index) => {
-            const declared = {};
-            TAX_HEADS.forEach((head) => {
-                declared[head] = clamp(this.$input(index, head).val(), row._inward_supply[head] || 0);
-            });
-            declared.cgst = declared.sgst = Math.min(declared.cgst, declared.sgst); // govt: CGST == SGST
-            overrides[row.inward_supply_name] = declared;
-        });
+        this.rows.forEach((row, index) => (overrides[row.inward_supply_name] = values[index]));
 
         this.confirmed = true;
         this.dialog.hide();

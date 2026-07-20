@@ -48,19 +48,7 @@ class InwardSupply:
         self.IMS = frappe.qb.DocType("GST Inward Supply")
 
     def get_all(self, company_gstin, names=None):
-        query = self.get_query(
-            company_gstin,
-            [
-                "action",
-                "doc_type",
-                "is_itc_reduction_blocked",
-                "itc_reduction_required",
-                "declared_igst",
-                "declared_cgst",
-                "declared_sgst",
-                "declared_cess",
-            ],
-        )
+        query = self.get_query(company_gstin, ["action", "doc_type", "is_itc_reduction_blocked"])
 
         if names:
             query = query.where(self.IMS.name.isin(names))
@@ -97,7 +85,6 @@ class InwardSupply:
                 "declared_cess",
                 "remarks",
                 "is_remarks_blocked",
-                "is_declaration_pending_upload",
             ],
         ).where(
             (self.IMS.ims_action != self.IMS.previous_ims_action)
@@ -306,6 +293,17 @@ DECLARED_FIELDS = (
     "declared_cess",
 )
 
+# what _clean_declared / _flag_if_declaration_changed need from a stored record
+DECLARATION_ROW_FIELDS = (
+    "name",
+    "is_itc_reduction_blocked",
+    "igst",
+    "cgst",
+    "sgst",
+    "cess",
+    *DECLARED_FIELDS,
+)
+
 
 def _flag_if_declaration_changed(stored, declared):
     """Re-queue an already-synced record for upload when its declaration changes.
@@ -323,28 +321,10 @@ def set_declared_itc(invoice_names, action):
     if action != "Accepted":
         return
 
-    IMS = frappe.qb.DocType("GST Inward Supply")
-    rows = (
-        frappe.qb.from_(IMS)
-        .select(
-            IMS.name,
-            IMS.doc_type,
-            IMS.is_amended,
-            IMS.link_doctype,
-            IMS.link_name,
-            IMS.is_itc_reduction_blocked,
-            IMS.igst,
-            IMS.cgst,
-            IMS.sgst,
-            IMS.cess,
-            IMS.itc_reduction_required,
-            IMS.declared_igst,
-            IMS.declared_cgst,
-            IMS.declared_sgst,
-            IMS.declared_cess,
-        )
-        .where(IMS.name.isin(invoice_names))
-        .run(as_dict=True)
+    rows = frappe.get_all(
+        "GST Inward Supply",
+        filters={"name": ["in", invoice_names]},
+        fields=[*DECLARATION_ROW_FIELDS, "doc_type", "is_amended", "link_doctype", "link_name"],
     )
 
     # skip GSTN-blocked records: declaration is read-only, don't overwrite stored values
@@ -365,55 +345,26 @@ def set_declared_itc(invoice_names, action):
             frappe.db.set_value("GST Inward Supply", row.name, declared)
 
 
-def _cap_declared(value, cap):
-    return max(0, min(flt(value), flt(cap)))  # clamp to [0, document]
-
-
-def _equalize_state_tax(values):
-    values["cgst"] = values["sgst"] = min(values["cgst"], values["sgst"])  # govt: CGST must equal SGST
-
-
 def _declared_from_books(document, book):
     declared = {}
     for head in ("igst", "cgst", "sgst", "cess"):
         doc_amount = flt(document.get(head))
         book_amount = flt(book.get(head))
 
-        # books may carry rounding noise; trust supplier within tolerance, else cap (usually less)
-        value = doc_amount if abs(book_amount - doc_amount) <= ITC_REDUCTION_TOLERANCE else book_amount
-        declared[head] = _cap_declared(value, doc_amount)
+        # books may carry rounding noise; trust supplier within tolerance, else books (usually less)
+        declared[head] = (
+            doc_amount if abs(book_amount - doc_amount) <= ITC_REDUCTION_TOLERANCE else book_amount
+        )
 
-    _equalize_state_tax(declared)
-
-    return {
-        "itc_reduction_required": 1 if any(declared.values()) else 0,
-        "declared_igst": declared["igst"],
-        "declared_cgst": declared["cgst"],
-        "declared_sgst": declared["sgst"],
-        "declared_cess": declared["cess"],
-    }
+    return _clean_declared(document, declared)
 
 
 def apply_declared_overrides(overrides):
     """Store user-confirmed declared ITC from the Phase 2 review dialog."""
-    IMS = frappe.qb.DocType("GST Inward Supply")
-    rows = (
-        frappe.qb.from_(IMS)
-        .select(
-            IMS.name,
-            IMS.is_itc_reduction_blocked,
-            IMS.igst,
-            IMS.cgst,
-            IMS.sgst,
-            IMS.cess,
-            IMS.itc_reduction_required,
-            IMS.declared_igst,
-            IMS.declared_cgst,
-            IMS.declared_sgst,
-            IMS.declared_cess,
-        )
-        .where(IMS.name.isin(list(overrides)))
-        .run(as_dict=True)
+    rows = frappe.get_all(
+        "GST Inward Supply",
+        filters={"name": ["in", list(overrides)]},
+        fields=list(DECLARATION_ROW_FIELDS),
     )
     # skip GSTN-blocked records: their declaration is read-only
     document = {row.name: row for row in rows if not row.is_itc_reduction_blocked}
@@ -426,11 +377,12 @@ def apply_declared_overrides(overrides):
 
 
 def _clean_declared(document, declared):
-    values = {}
-    for head in ("igst", "cgst", "sgst", "cess"):
-        values[head] = _cap_declared(declared.get(head), document.get(head))
-
-    _equalize_state_tax(values)
+    values = {
+        # clamp to [0, document]
+        head: max(0, min(flt(declared.get(head)), flt(document.get(head))))
+        for head in ("igst", "cgst", "sgst", "cess")
+    }
+    values["cgst"] = values["sgst"] = min(values["cgst"], values["sgst"])  # govt: CGST must equal SGST
 
     return {
         "itc_reduction_required": 1 if any(values.values()) else 0,
