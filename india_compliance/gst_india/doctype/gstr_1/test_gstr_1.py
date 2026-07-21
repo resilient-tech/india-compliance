@@ -2,9 +2,15 @@
 # See license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from erpnext.controllers.sales_and_purchase_return import make_return_doc
+from frappe.tests import IntegrationTestCase, change_settings
+from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
+from india_compliance.gst_india.doctype.gstr_1.gstr_1 import (
+    get_journal_entries,
+    make_journal_entry,
+)
 from india_compliance.gst_india.doctype.gstr_1.gstr_1_export import (
     GovExcel,
     _filter_data_by_sections,
@@ -12,12 +18,14 @@ from india_compliance.gst_india.doctype.gstr_1.gstr_1_export import (
     _get_gov_filename,
     _get_selected_sections,
 )
+from india_compliance.gst_india.utils import MONTHS
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import (
     JSON_CATEGORY_EXCEL_CATEGORY_MAPPING,
     GovExcelSheetName,
     GovJsonKey,
 )
+from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 # Every GovJsonKey value that maps to a sheet in JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.
 # sec_sum is excluded (no sheet mapping). Used for exhaustive template checks.
@@ -27,7 +35,105 @@ GOV_EXCEL_SECTIONS = frozenset(
 
 
 class TestGSTR1(IntegrationTestCase):
-    pass
+    company = "_Test Indian Registered Company"
+    company_gstin = "24AAQCA8719H1ZC"
+
+    def setUp(self):
+        frappe.set_user("Administrator")
+
+        # the suggested JE is aggregated over the whole return period, so a sibling test's
+        # invoices would otherwise land in the same account_head group
+        for doctype in ("Sales Invoice", "Journal Entry"):
+            frappe.db.delete(doctype, filters={"company": self.company})
+
+        today = getdate()
+        self.month_or_quarter = MONTHS[today.month - 1]
+        self.year = str(today.year)
+
+    def get_journal_entry_rows(self):
+        """`get_journal_entries` feeds `make_journal_entry` directly, so every row it returns
+        must be a valid Journal Entry Account row: exactly one of debit/credit set."""
+        je_details = get_journal_entries(self.month_or_quarter, self.year, self.company, "Monthly")
+        return (je_details or {}).get("data") or []
+
+    def assert_valid_journal_entry_rows(self, rows):
+        """Journal Entry Account rejects a row with both debit and credit set, and a 0/0 row."""
+        for row in rows:
+            debit = flt(row["debit_in_account_currency"])
+            credit = flt(row["credit_in_account_currency"])
+
+            self.assertFalse(
+                debit and credit,
+                f"{row['account']}: JE rejects a row with both debit ({debit}) and credit ({credit}) set",
+            )
+            self.assertTrue(debit or credit, f"{row['account']}: JE rejects a 0/0 row")
+
+        self.assertEqual(len(rows), len({row["account"] for row in rows}), "expected one row per account")
+
+    def create_reverse_charge_invoice(self, qty=2, rate=1000):
+        return create_sales_invoice(
+            customer="_Test Registered Customer",
+            item_code="_Test Trading Goods 1",
+            qty=qty,
+            rate=rate,
+            is_reverse_charge=1,
+            is_in_state_rcm=1,
+        )
+
+    @change_settings("GST Settings", {"enable_reverse_charge_in_sales": 1})
+    def test_partial_credit_note_nets_against_invoice(self):
+        """An RCM invoice and a partial credit note land on the same account_head with opposite
+        signs. The suggested JE must net them into a single debit-or-credit row, never both."""
+        invoice = self.create_reverse_charge_invoice(qty=2, rate=1000)
+
+        credit_note = make_return_doc("Sales Invoice", invoice.name)
+        credit_note.items[0].qty = -1  # return half of it
+        credit_note.save().submit()
+
+        rows = self.get_journal_entry_rows()
+        self.assertTrue(rows, "expected suggested JE rows for the reverse charge invoice")
+        self.assert_valid_journal_entry_rows(rows)
+
+        # 2000 taxable - 1000 returned = 1000 net @ 9%: the liability moves off the output
+        # account and onto the reverse charge account, so one is debited and the other credited
+        amounts = {
+            row["account"]: (
+                flt(row["debit_in_account_currency"]),
+                flt(row["credit_in_account_currency"]),
+            )
+            for row in rows
+        }
+        self.assertEqual(amounts["Output Tax CGST - _TIRC"], (90.0, 0.0))
+        self.assertEqual(amounts["Output Tax CGST RCM - _TIRC"], (0.0, 90.0))
+
+        # and the suggested entry must balance
+        self.assertEqual(
+            sum(debit for debit, _ in amounts.values()),
+            sum(credit for _, credit in amounts.values()),
+        )
+
+        journal_entry = make_journal_entry(
+            self.company,
+            self.company_gstin,
+            self.month_or_quarter,
+            self.year,
+            rows,
+            frappe._dict(posting_date=getdate(), auto_submit=1),
+        )
+        self.assertTrue(journal_entry)
+        self.assertEqual(frappe.db.get_value("Journal Entry", journal_entry, "docstatus"), 1)
+
+    @change_settings("GST Settings", {"enable_reverse_charge_in_sales": 1})
+    def test_fully_reversed_invoice_suggests_nothing(self):
+        """A credit note that fully reverses the invoice nets to zero — there is no liability to
+        adjust, and a 0/0 row would be rejected by Journal Entry."""
+        invoice = self.create_reverse_charge_invoice()
+
+        credit_note = make_return_doc("Sales Invoice", invoice.name)
+        credit_note.save().submit()
+
+        rows = self.get_journal_entry_rows()
+        self.assertEqual(rows, [])
 
 
 class TestGSTR1APIErrorHandling(IntegrationTestCase):

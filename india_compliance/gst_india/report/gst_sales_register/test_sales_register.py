@@ -1,3 +1,4 @@
+import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import getdate
 
@@ -657,6 +658,8 @@ class TestSalesRegister(IntegrationTestCase):
     @classmethod
     @change_settings("GST Settings", {"enable_overseas_transactions": 1, "enable_e_waybill": 0})
     def create_test_records(cls):
+        frappe.db.delete("Sales Invoice", filters={"company": FILTERS["company"]})
+
         for invoice in INVOICES:
             create_sales_invoice(**invoice)
 
@@ -666,6 +669,18 @@ class TestSalesRegister(IntegrationTestCase):
 
         for index, invoice in enumerate(report_data[1]):
             self.assertPartialDict(EXPECTED_SUMMARY_BY_HSN[index], invoice)
+
+        # Summary by HSN names its columns one by one rather than selecting them all, so a
+        # column added to the shared base query would silently go missing from this report.
+        FILTERS["summary_by"] = "Summary by Item"
+        itemwise_data = execute(FILTERS)[1]
+
+        self.assertTrue(itemwise_data, "expected item wise rows to compare columns against")
+        self.assertEqual(
+            sorted(set(itemwise_data[0]) - set(report_data[1][0])),
+            [],
+            "columns present in Summary by Item are missing from Summary by HSN",
+        )
 
     def test_overview(self):
         FILTERS["summary_by"] = "Overview"

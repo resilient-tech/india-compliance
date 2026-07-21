@@ -19,6 +19,36 @@ class TestGSTSettings(IntegrationTestCase):
         doc = frappe.get_doc("GST Settings")
         doc.save()
 
+    def test_scheduled_jobs_stopped_flag(self):
+        """`stopped` is a Check column, so the toggles have to write 0/1 -- postgres rejects a
+        bool there, and these are derived from settings checkboxes."""
+        # update_auto_refresh_authtoken_scheduled_job() writes the same flag, but nothing calls
+        # it, so only the retry job is reachable from a settings save
+        jobs = {
+            "enable_retry_einv_ewb_generation": (
+                "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_e_waybill_generation"
+            ),
+        }
+
+        for setting, method in jobs.items():
+            job = frappe.db.get_value("Scheduled Job Type", {"method": method})
+            if not job:
+                continue
+
+            for enabled in (1, 0):
+                # the toggle only fires when the value changes, so move away from it first
+                for value in (not enabled, enabled):
+                    settings = frappe.get_doc("GST Settings")
+                    settings.set(setting, int(value))
+                    settings.save()
+
+                # the job is stopped exactly when the feature is off
+                self.assertEqual(
+                    frappe.db.get_value("Scheduled Job Type", job, "stopped"),
+                    0 if enabled else 1,
+                    f"{setting}={enabled} should leave {job} {'running' if enabled else 'stopped'}",
+                )
+
     def test_validate_duplicate_account(self):
         doc = frappe.get_doc("GST Settings")
         doc.append(

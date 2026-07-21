@@ -10,6 +10,7 @@ from frappe.tests.utils import make_test_objects
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
 )
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool import BillOfEntry
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
     RECO_2A_CATEGORIES_KEY,
     VALID_2A_CATEGORIES,
@@ -145,6 +146,68 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                 cls.reconciled_data[(pi.get("name"), gst_is.get("name"))] = _reconciled_data
 
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 0)
+
+    def test_bill_of_entry_over_multiple_invoices_is_one_row(self):
+        """One consignment can be invoiced more than once, so a Bill of Entry can cover several
+        Purchase Invoices of the same supplier. Reconciliation must still report a single row per
+        BoE, with the taxes summed across all of its items and the supplier details intact."""
+        frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
+        self.addCleanup(frappe.db.set_single_value, "GST Settings", "enable_overseas_transactions", 0)
+
+        # August, so this data stays out of the windows the other tests reconcile over
+        dates = {"bill_date": "2023-08-11", "posting_date": "2023-08-11"}
+
+        # no GST taxes on the invoice: that is what makes an import BoE-applicable
+        invoices = [
+            create_purchase_invoice(
+                bill_no=f"BOE-MULTI-{index}",
+                supplier="_Test Foreign Supplier",
+                supplier_gstin="",
+                gst_category="Overseas",
+                is_in_state=0,
+                **dates,
+            )
+            for index in (1, 2)
+        ]
+
+        boe = make_bill_of_entry(invoices[0].name)
+        boe.get_items_from_purchase_invoice([invoices[1].name])
+        boe.update(
+            {
+                "bill_of_entry_no": "BOE-MULTI-PI",
+                "bill_of_entry_date": dates["bill_date"],
+                "posting_date": dates["posting_date"],
+            }
+        )
+        boe.save(ignore_permissions=True).submit()
+
+        # the BoE really does span both invoices, else the test proves nothing
+        self.assertEqual(
+            {item.purchase_invoice for item in boe.items},
+            {invoice.name for invoice in invoices},
+        )
+
+        rows = BillOfEntry(
+            company="_Test Indian Registered Company",
+            company_gstin="24AAQCA8719H1ZC",
+            from_date="2023-08-01",
+            to_date="2023-08-31",
+            include_ignored=0,
+        ).get_all(names=[boe.name], only_names=True)
+
+        self.assertEqual(len(rows), 1, "a Bill of Entry must reconcile as exactly one row")
+        row = rows[0]
+
+        self.assertEqual(row.supplier_name, invoices[0].supplier_name)
+        self.assertEqual(row.is_reverse_charge, invoices[0].is_reverse_charge)
+        # taxes are summed over every item of the BoE, not taken from one invoice
+        self.assertEqual(row.taxable_value, boe.total_taxable_value)
+        self.assertEqual(row.igst, sum(item.igst_amount for item in boe.items))
+
+        # reported for SEZ invoices only, so an overseas import carries none of them
+        self.assertIsNone(row.supplier_gstin)
+        self.assertIsNone(row.gst_category)
+        self.assertIsNone(row.place_of_supply)
 
     def test_itc_claim_period_on_reconciliation_match(self):
         """
