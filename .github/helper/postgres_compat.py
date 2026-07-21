@@ -87,7 +87,8 @@ SQL_PATTERNS: list[tuple[re.Pattern, str]] = [
         re.compile(
             r"\bcast\s*\(.+?\bas\s+char\b", re.I | re.S
         ),  # .+? spans nested parens, e.g. CAST(ABS(x) AS CHAR)
-        "CAST(... AS CHAR) is character(1) on Postgres and truncates -> CAST AS VARCHAR (frappe Cast_(x, 'varchar'))",
+        "CAST(... AS CHAR) is character(1) on Postgres and truncates -> use Cast_(x, 'varchar'),"
+        " which renders CONCAT(x,'') on MariaDB (raw CAST AS VARCHAR is a syntax error there)",
     ),
 ]
 
@@ -107,6 +108,10 @@ CAST_FUNCS = {"Cast", "Cast_"}
 # with a literal `order_by` is a no-op on PG and the result comes back unordered.
 DISTINCT_ORDER_FUNCS = {"get_all", "get_list"}
 
+# frappe.qb.update(...).join(...) renders MySQL-only UPDATE..JOIN. The raw-SQL UPDATE_JOIN
+# pattern above only sees SQL strings, so the query-builder spelling needs its own rule.
+QB_JOIN_METHODS = {"join", "left_join", "right_join", "inner_join", "outer_join"}
+
 
 def _docstring_ids(tree: ast.AST) -> set[int]:
     """ids of Constant nodes that are docstrings (so prose describing the rules isn't flagged)."""
@@ -124,11 +129,54 @@ def _docstring_ids(tree: ast.AST) -> set[int]:
     return ids
 
 
+def _aliased_table_names(scope: ast.AST) -> set[str]:
+    """Names assigned from `frappe.qb.DocType(..., alias=...)` directly in this scope.
+
+    An aliased UPDATE target renders `SET "alias"."col" = ...`, and Postgres does not accept a
+    qualified column on the left of SET (MariaDB does). Aliasing is harmless everywhere else,
+    so only the update target matters -- hence tracking the names rather than the calls.
+
+    Nested function bodies are skipped so a name reused across functions does not leak.
+    """
+    names: set[str] = set()
+
+    def walk(node: ast.AST) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                continue  # its own scope
+
+            if (
+                isinstance(child, ast.Assign)
+                and isinstance(child.value, ast.Call)
+                and isinstance(child.value.func, ast.Attribute)
+                and child.value.func.attr == "DocType"
+                and any(kw.arg == "alias" for kw in child.value.keywords)
+            ):
+                names.update(t.id for t in child.targets if isinstance(t, ast.Name))
+
+            walk(child)
+
+    walk(scope)
+    return names
+
+
 class Visitor(ast.NodeVisitor):
-    def __init__(self, lines: list[str], docstrings: set[int]):
+    def __init__(self, lines: list[str], docstrings: set[int], aliased_tables: set[str] | None = None):
         self.lines = lines
         self.docstrings = docstrings
+        # one frame per enclosing scope, so a name reused in another function does not leak
+        self.aliased_tables: list[set[str]] = [aliased_tables or set()]
         self.violations: list[tuple[int, str]] = []
+
+    def _is_aliased_table(self, name: str) -> bool:
+        return any(name in frame for frame in self.aliased_tables)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self.aliased_tables.append(_aliased_table_names(node))
+        self.generic_visit(node)
+        self.aliased_tables.pop()
+
+    visit_AsyncFunctionDef = visit_FunctionDef
 
     def _ignored(self, node: ast.AST) -> bool:
         start = getattr(node, "lineno", 1)
@@ -169,9 +217,70 @@ class Visitor(ast.NodeVisitor):
         self._scan_sql(text, node)
         # don't recurse: child literal chunks would otherwise be re-scanned individually
 
+    @staticmethod
+    def _is_qb_update_chain(node: ast.AST) -> bool:
+        """True for the receiver of a builder chain rooted at `frappe.qb.update(...)`.
+
+        Walks back through `.set(...)`, `.where(...)` etc. to the first call, and checks it is
+        `<something>.qb.update(...)` -- so `frappe.qb.update(t).join(u)` is caught however many
+        builder calls sit in between.
+        """
+        while isinstance(node, ast.Call):
+            fn = node.func
+            if isinstance(fn, ast.Attribute):
+                if fn.attr == "update" and isinstance(fn.value, ast.Attribute) and fn.value.attr == "qb":
+                    return True
+                node = fn.value
+            else:
+                return False
+        return False
+
     def visit_Call(self, node: ast.Call) -> None:
         fn = node.func
         name = fn.attr if isinstance(fn, ast.Attribute) else (fn.id if isinstance(fn, ast.Name) else "")
+
+        # frappe.qb.update(aliased_table) renders `SET "alias"."col" = ...`, and postgres does
+        # not accept a qualified column on the left of SET
+        if (
+            name == "update"
+            and isinstance(fn, ast.Attribute)
+            and isinstance(fn.value, ast.Attribute)
+            and fn.value.attr == "qb"
+            and node.args
+            and isinstance(node.args[0], ast.Name)
+            and self._is_aliased_table(node.args[0].id)
+        ):
+            self._flag(
+                node,
+                f"frappe.qb.update({node.args[0].id}) targets a DocType(..., alias=...) -> renders"
+                ' SET "alias"."col", which postgres rejects; drop the alias on the update target',
+            )
+
+        # frappe.qb.update(t).join(u) / .left_join(u) renders MySQL-only UPDATE..JOIN
+        if name in QB_JOIN_METHODS and isinstance(fn, ast.Attribute) and self._is_qb_update_chain(fn.value):
+            self._flag(
+                node,
+                f"frappe.qb.update(...).{name}(...) renders MySQL-only UPDATE..JOIN -> use a "
+                "correlated subquery in .set() and/or .where(col.isin(subquery))",
+            )
+
+        # frappe.qb.update(t).set(check_field, True) emits `SET col = true`, which postgres
+        # rejects on a smallint/Check column. bool(x) is the same trap spelled differently.
+        if (
+            name == "set"
+            and len(node.args) == 2
+            and isinstance(fn, ast.Attribute)
+            and self._is_qb_update_chain(fn.value)
+        ):
+            value = node.args[1]
+            is_bool_literal = isinstance(value, ast.Constant) and isinstance(value.value, bool)
+            is_bool_call = isinstance(value, ast.Call) and getattr(value.func, "id", "") == "bool"
+            if is_bool_literal or is_bool_call:
+                self._flag(
+                    node,
+                    "frappe.qb.update(...).set(..., <bool>) sets an int/Check column with a bool"
+                    " -> pass 1/0 (cint(...)); postgres rejects bool->smallint",
+                )
 
         # row.get("Column_name") — MySQL SHOW INDEX result key
         if (
@@ -277,7 +386,7 @@ def check_file(path: str) -> list[str]:
         tree = ast.parse(src, filename=path)
     except SyntaxError:
         return []  # check-ast hook reports real syntax errors
-    v = Visitor(src.splitlines(), _docstring_ids(tree))
+    v = Visitor(src.splitlines(), _docstring_ids(tree), _aliased_table_names(tree))
     v.visit(tree)
     return [f"{path}:{line}: [pg-compat] {msg}" for line, msg in sorted(set(v.violations))]
 

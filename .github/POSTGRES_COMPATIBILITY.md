@@ -53,7 +53,20 @@ Flag a changed query that uses any of these:
   column (e.g. `posting_datetime`).
 
 - **`UPDATE … JOIN`** — not valid on PostgreSQL. Rewrite as `UPDATE … WHERE name
-  IN (subquery)`.
+  IN (subquery)`, or as a correlated subquery in `SET` when the value comes from
+  the joined table. Two traps in that rewrite: a bare `frappe.qb` subquery passed
+  to `.set()` renders **without parentheses** (`SET col = SELECT …`, a syntax
+  error on *both* engines) — wrap it in `Bracket(...)`; and a **`LEFT` join wrote
+  NULL** over non-matching rows, which a correlated subquery reproduces but a
+  `WHERE … IN (subquery)` guard does not, so check whether later statements rely
+  on that NULL before adding one.
+
+- **Aliased `UPDATE` target** — `frappe.qb.update(DocType(dt, alias="x"))` renders
+  `SET "x"."col" = …`. PostgreSQL does not accept a qualified column on the left
+  of `SET`; MariaDB does. Drop the alias on the update target. Aliasing the tables
+  it only *reads* is fine — and when the statement needs the same table twice, put
+  the alias on the **inner** occurrence and leave the target unaliased:
+  `UPDATE "tabX" SET "col" = (SELECT "x2"."col" FROM "tabX" "x2" WHERE …)`.
 
 - **`HAVING` referencing a `SELECT` alias** — PostgreSQL rejects output-column
   aliases in `HAVING` (regardless of whether the query has a `GROUP BY`; MariaDB
@@ -61,13 +74,12 @@ Flag a changed query that uses any of these:
   non-aggregate predicate into `WHERE`.
 
 - **`SELECT DISTINCT … ORDER BY <expr not in the select list>`** — add the expr
-  to the select.
+  to the select **only if it is single-valued per distinct row**; otherwise it
+  grows the `DISTINCT` key and the MariaDB row count (see §3) — drop the SQL
+  `ORDER BY` and sort in Python instead.
 
 - **Single-quoted column alias** `AS 'x'` — PostgreSQL reads `'x'` as a string
   literal. Use an unquoted (or double-quoted) alias.
-
-- **`varchar | varchar`** (bitwise OR misused as a coalesce) — errors on
-  PostgreSQL. Use `Coalesce(...)`.
 
 - **Capital-cased identifiers** used as column/field names in `get_value(dt, dn,
   "Status")`, `get_all(dt, fields=["Account"])`, and similar — PostgreSQL quotes
@@ -157,11 +169,12 @@ These don't error, so a one-engine CI stays green. Flag them:
   case-sensitive (ASCII) while MariaDB's collation is case-insensitive, so a
   plain sort reorders MariaDB's output.
 
-- **Engine-specific function rewrites** — e.g. a PostgreSQL `regexp_replace`
-  branch reimplementing MariaDB's `CAST(SUBSTRING_INDEX(name,' ',-1) AS
-  UNSIGNED)` (leading digits of the last whitespace token). Verify the rewrite
-  matches MariaDB on edge cases (`"X - 3a"→3`, `"X - 1.5"→1`) by diffing both
-  engines on literal rows.
+- **A per-engine branch is itself a smell** — India Compliance has no
+  `frappe.db.multisql` and no `frappe.db.db_type` check outside tests: every
+  query is one code path. If a fix needs an engine-specific branch, the two
+  branches will drift, and only the CI-covered one gets exercised. Prefer a
+  portable `frappe.qb` construct; if a branch is genuinely unavoidable, diff both
+  engines on literal rows and pin each branch with its own test.
 
 - **`UnixTimestamp(date)` / date→epoch** is timezone-dependent (midnight in the
   DB session TZ), so a strict `epoch <= now` bound is flaky on PostgreSQL.
@@ -178,7 +191,18 @@ key** or an **editable per-row field**. Instead **`Max()`/`Min()`-wrap** the
 offending column: the row count is preserved and the value goes from arbitrary
 (MariaDB's old loose pick) to deterministic.
 
-**Judge functional dependence by the source table, not the column name:**
+**`GROUP BY` the table's own primary key needs no wrap at all.** `name` is a real
+`PRIMARY KEY` on frappe tables, so PostgreSQL's functional-dependency rule lets
+you select **any other column of that same table** bare — `groupby(pe.name)` with
+a bare `pe.paid_amount` is valid, and `Max()`-wrapping it is noise. Three limits,
+each verified: it does **not** extend across a join (grouping the parent's PK does
+not license a bare child column, nor the reverse), it needs the actual PK (a
+merely-unique or coincidentally-1:1 column does not count), and it is **lost
+through a subquery** — grouping a derived table has no PK to depend on, so every
+non-grouped column there must be aggregated.
+
+**Otherwise, judge functional dependence by the source table, not the column
+name:**
 
 - A column from a **master joined on the group key** (`t3.x` where `t1.key =
   t3.name`) is FD → safe to keep in `GROUP BY`.
@@ -192,6 +216,58 @@ Conversely, do **not** suggest changing a `Max()`/`Min()`-wrapped column to
 `Sum()` (or vice versa) to make a number "more correct" — that changes the
 MariaDB value. The wrap reproduces MariaDB's prior one-value-per-group output; a
 different aggregate is a product change, out of scope for a portability fix.
+
+**The same trap applies to `SELECT DISTINCT`.** To satisfy PostgreSQL's "an
+`ORDER BY` expr must appear in the select list under `DISTINCT`" rule, **do not
+blindly add the ordered column to the select** — if it is not single-valued per
+existing distinct row, the `DISTINCT` key grows and MariaDB returns **more
+rows** (a regression), exactly as adding a non-FD column to `GROUP BY` does. Add
+it only when it is functionally dependent on the existing select columns;
+otherwise drop the SQL `ORDER BY` and **sort in Python** (`key=str.casefold`,
+per §2) so the distinct row set is unchanged.
+
+### 3.1 Second-order traps — when the `Max()`/`Min()` wrap itself is the bug
+
+The wrap is only a no-op when the column is provably single-valued per group
+(**"`Max()` means provably constant"**). When the column can genuinely vary, the
+wrap is a decision, and a full audit of these fixes found four recurring
+mistakes:
+
+- **Incoherent pair** — two semantically-coupled columns aggregated with
+  *independent* `Max()`/`Min()` can pair values from **different rows** — a
+  chimera row that never existed. MariaDB's loose pick was at least row-coherent.
+  Grouping a Bill of Entry by `BOE.name` while `Max()`-ing `supplier_gstin`,
+  `supplier_name` and `gst_category` off the joined Purchase Invoices is this
+  shape: a BoE *can* be built from several PIs, so only the domain rule that they
+  all share one supplier keeps it safe — and `supplier_gstin` is the
+  reconciliation key, so an incoherent value mis-matches against GSTR-2. When no
+  such rule holds, group by the pair (if consumers tolerate the extra rows), or
+  select one **representative row** (`Min(child.name)` subquery + join-back) so
+  every column comes from the same line.
+
+- **NULL-skipping** — `MAX`/`MIN` ignore NULLs, so a wrap over a
+  mostly-NULL column *deterministically* returns the non-NULL value where MariaDB
+  could return NULL. `Max(Case().when(PI.gst_category == "SEZ", col).else_(None))`
+  is the shape: every non-SEZ row contributes NULL, so the SEZ value always
+  wins, where the loose pick could land on a non-SEZ row. Flag it wherever "no
+  value" is a meaningful state (fallback gates, dict keys).
+
+- **Fabricated arithmetic** — an aggregate over an already-aggregated value
+  invents a number no row ever had. In `gst_advance_detail`'s summary mode the
+  group key drops to `voucher_no`, so a Payment Entry with two allocations
+  collapses to one row and `Max(allocated_amount)` picks the larger — which
+  `get_summary_data` then adds up. Pick the aggregate that matches the group key
+  (`Sum` when the group merges rows, `Max` only when it provably cannot).
+
+- **Wrong bound** — where the value has a semantic, pick the bound deliberately:
+  `Min(schedule_date)` for a "required by", `Min(idx)` for first-line ordering,
+  a qty-weighted average for a rate. A blind `Max` can understate urgency or
+  overstate a figure.
+
+Review heuristic: **if choosing between `Max` and `Min` would change the answer,
+the column is not functionally dependent** — wrapping either is the wrong fix.
+Group by it, restructure, or pick a bound for a stated reason, and cover the
+varying-group case with a test.
 
 ---
 
@@ -226,17 +302,66 @@ These are auto-handled by the framework and are **not** breaks:
   unless it re-`throw`s with no DB call before the throw, or the insert uses
   `ignore_if_duplicate=True` / `autoname="hash"` (→ `ON CONFLICT DO NOTHING`).
 
+- **Recover the txn with a *scoped* savepoint, not a full `frappe.db.rollback()`,
+  if any prior work must survive.** A full rollback un-poisons the txn but also
+  discards every row the handler committed *before* the failure — which MariaDB
+  kept (it has no statement-abort), so it's a **silent MariaDB regression**.
+  **"The background job / whitelist entrypoint owns the txn" does NOT make a full
+  rollback safe** if it did multiple inserts in a loop first — it drops the
+  partial results MariaDB retained. A full rollback is safe only when it (a)
+  immediately re-`throw`s/`raise`s (MariaDB rolls back anyway), (b) has nothing
+  successful before it (a single op), or (c) the batch is genuinely meant to be
+  **atomic** (a partial result is an invalid state → rollback + mark *Failed* is
+  correct). Otherwise use a **per-iteration / per-record savepoint** — and keep
+  the function's success/`None` return contract: do **not** return the doc when
+  the savepoint was rolled back.
+
+---
+
+## 6. Refactors and raw-SQL→ORM conversions are not automatically 1:1
+
+A commit labeled a **refactor** or a **raw-`frappe.db.sql` → `frappe.qb`/ORM
+conversion** is meant to preserve behaviour — but it easily doesn't, and the
+change passes the static checker and a one-engine green run. **Diff the
+`WHERE`/predicate, the `JOIN`/`ON` conditions, and the resulting row set — not
+just the `SELECT` shape.** A conversion that silently widens or narrows the
+filter changes the rows touched on **both** engines and is a regression hiding
+under a "refactor" label.
+
+**A comment claiming compatibility is not evidence of it.** Real example, from
+this repo: GSTR-1's suggested reverse-charge Journal Entry selected
+`CASE WHEN tax_amount > 0 THEN SUM(tax_amount) END` — a bare column in the
+`WHEN`, so a hard break on PostgreSQL. The fix flipped it to
+`SUM(CASE WHEN tax_amount > 0 THEN tax_amount ELSE 0 END)` under the comment
+*"use SUM(CASE ...) instead of CASE ... SUM(...) for postgres compatibility"*.
+
+Both halves of that comment are wrong. The rule is not about nesting order — it
+is that **the `CASE` must test the aggregate, not a bare column**; the minimal
+fix was `tax_amount` → `SUM(tax_amount)` inside the `WHEN`, which is still
+`CASE ... SUM(...)` and valid on both engines. And the flip was not a
+re-spelling: it turned per-account **netting** into **gross debit + gross
+credit**, so an invoice plus its credit note produced a row with both set, which
+Journal Entry rejects (*"You cannot credit and debit same account at the same
+time"*) — a dead button on MariaDB too.
+
+That is the pattern to watch for: a change announced as cosmetic, so nobody
+re-checks the arithmetic. Confirm the converted query touches exactly the same
+rows with the same values MariaDB produced before, and treat a "for postgres
+compatibility" comment as a claim to verify, not a reason to skim.
+
 ---
 
 ## How to review
 
 For every changed query: does it (a) use a construct from §1 (would error on
-PostgreSQL), or (b) match a divergence in §2/§3 (different result across
-engines)? If so, comment with the portable fix and confirm it leaves **MariaDB
-output unchanged**. Skip the §4 false positives. Prefer a comment that names the
-rule (e.g. "loose GROUP BY — Max()-wrap, don't add to GROUP BY: splits the row
-count") so the fix is unambiguous.
+PostgreSQL), (b) match a divergence in §2/§3 (different result across engines),
+or (c) change the row set under a refactor/conversion label (§6)? If so, comment
+with the portable fix and confirm it leaves **MariaDB output unchanged**. Skip
+the §4 false positives. Prefer a comment that names the rule (e.g. "loose GROUP
+BY — Max()-wrap, don't add to GROUP BY: splits the row count") so the fix is
+unambiguous.
 
 The static pre-commit checker (`.github/helper/postgres_compat.py`) catches the
-*mechanical* §1 breaks; the **semantic** §2/§3 divergences are exactly what a
-reviewer (and this guide) must cover, because no static check can see them.
+*mechanical* §1 breaks; the **semantic** §2/§3 divergences and the §6
+refactor/conversion row-set changes are exactly what a reviewer (and this guide)
+must cover, because no static check can see them.
