@@ -9,17 +9,30 @@ app_license = "GNU General Public License (v3)"
 required_apps = ["frappe/erpnext"]
 app_home = "/desk/gst-india"
 
-add_app_to_dock = [
+# India Compliance extends ERPNext, so it pins its workspaces into ERPNext's workspace dock
+# instead of taking an apps-screen icon of its own. Who sees them is controlled by each
+# workspace's Roles table.
+add_to_workspace_dock = [
     {
         "app": "erpnext",
         "workspace": "GST India",
-        "has_permission": "india_compliance.check_app_permission",
     },
     {
         "app": "erpnext",
         "workspace": "Income Tax India",
-        "has_permission": "india_compliance.check_app_permission",
     },
+]
+
+# Kept for older Frappe versions, which have no workspace dock and would otherwise drop the app
+# entirely. Versions that support add_to_workspace_dock ignore this.
+add_to_apps_screen = [
+    {
+        "name": app_name,
+        "logo": "/assets/india_compliance/images/india-compliance.svg",
+        "title": app_title,
+        "route": app_home,
+        "has_permission": "india_compliance.check_app_permission",
+    }
 ]
 
 
