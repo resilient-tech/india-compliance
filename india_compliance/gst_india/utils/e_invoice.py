@@ -830,8 +830,16 @@ class EInvoiceData(GSTTransactionData):
                     "pincode": 500055,
                 }
                 self.billing_address.update(buyer)
+
                 if self.shipping_address:
-                    self.shipping_address.update(buyer)
+                    if self.shipping_address.get("gstin") == "URP":
+                        self.shipping_address.update(
+                            {"gstin": "URP", "state_number": "02", "pincode": 171302}
+                        )
+                    else:
+                        self.shipping_address.update(
+                            seller
+                        )  # note: buyer and shipping gstin can't be the same
 
                 if self.transaction_details.total_igst_amount > 0:
                     self.transaction_details.pos_state_code = "36"
