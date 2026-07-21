@@ -321,7 +321,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             me.frm.reco_tool_actions.export_data(row);
         });
 
-        this.tabs.supplier_tab.datatable.$datatable.on("click", ".btn.envelope", function (e) {
+        this.tabs.supplier_tab.datatable.$datatable.on("click", ".btn.mail", function (e) {
             const row = me.tabs.supplier_tab.datatable.data.find(
                 (r) => r.supplier_gstin === $(this).attr("data-name"),
             );
@@ -526,13 +526,15 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 fieldname: "download",
                 fieldtype: "html",
                 width: 60,
+                align: "center",
                 _value: (...args) => get_icon(...args, "download"),
             },
             {
                 fieldname: "email",
                 fieldtype: "html",
                 width: 60,
-                _value: (...args) => get_icon(...args, "envelope"),
+                align: "center",
+                _value: (...args) => get_icon(...args, "mail"),
             },
         ];
     }
@@ -1240,7 +1242,7 @@ function get_icon(value, column, data, icon) {
 
     const hash = get_hash(data);
     return `<button class="btn ${icon}" data-name="${hash}">
-                <i class="fa fa-${icon}"></i>
+                ${frappe.utils.icon(icon, "md")}
             </button>`;
 }
 

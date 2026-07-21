@@ -32,6 +32,6 @@
 </div>
 {% else %}
 <p class="text-center">
-    No invoices found! <i class="fa fa-soundcloud" aria-hidden="true"></i>
+    No invoices found! {{ frappe.utils.icon("inbox", "sm") }}
 </p>
 {% endif %}

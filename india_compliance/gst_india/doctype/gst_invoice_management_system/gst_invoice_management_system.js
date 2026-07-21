@@ -994,7 +994,7 @@ function is_accept_allowed(row, action) {
 
 function get_icon(value, column, data) {
     return `<button class="btn eye" data-name="${data.inward_supply_name}">
-                <i class="fa fa-eye"></i>
+                ${frappe.utils.icon("eye", "md")}
             </button>`;
 }
 
