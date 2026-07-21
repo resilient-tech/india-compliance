@@ -271,27 +271,26 @@ def get_journal_entries(month_or_quarter: str, year: str, company: str, filing_p
     sales_invoice = frappe.qb.DocType("Sales Invoice")
     sales_invoice_taxes = frappe.qb.DocType("Sales Taxes and Charges")
 
+    # net per account, so that a row carries either debit or credit, never both. the case must
+    # read the aggregate and not the column, or the grouped select is invalid on postgres.
+    net_amount = Sum(sales_invoice_taxes.tax_amount)
+
     data = (
         frappe.qb.from_(sales_invoice)
         .join(sales_invoice_taxes)
         .on(sales_invoice.name == sales_invoice_taxes.parent)
         .select(
             sales_invoice_taxes.account_head.as_("account"),
-            # use SUM(CASE ...) instead of CASE ... SUM(...) for postgres compatibility
-            Sum(Case().when(sales_invoice_taxes.tax_amount > 0, sales_invoice_taxes.tax_amount).else_(0)).as_(
-                "debit_in_account_currency"
-            ),
-            Sum(
-                Case()
-                .when(sales_invoice_taxes.tax_amount < 0, sales_invoice_taxes.tax_amount * (-1))
-                .else_(0)
-            ).as_("credit_in_account_currency"),
+            Case().when(net_amount > 0, net_amount).else_(0).as_("debit_in_account_currency"),
+            Case().when(net_amount < 0, net_amount * -1).else_(0).as_("credit_in_account_currency"),
         )
         .where(sales_invoice.is_reverse_charge == 1)
         .where(Date(sales_invoice.posting_date).between(getdate(from_date), getdate(to_date)))
         .where(IfNull(sales_invoice_taxes.gst_tax_type, "") != "")
         .where(sales_invoice.docstatus == 1)
         .groupby(sales_invoice_taxes.account_head)
+        .having(net_amount != 0)
+        .orderby(sales_invoice_taxes.account_head)
         .run(as_dict=True)
     )
 
