@@ -51,6 +51,12 @@ from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice,
     create_sales_invoice,
     create_transaction,
+<<<<<<< HEAD
+=======
+    create_unregistered_shipping_address,
+    make_subcontracting_inward_delivery,
+    make_subcontracting_inward_rm_return,
+>>>>>>> 4e5ad9e3 (feat: implement handling of mandatory ship-to gstin for e-invoice)
     make_subcontracting_stock_entry,
 )
 
@@ -1357,7 +1363,7 @@ class TestEWaybill(FrappeTestCase):
         """
         shipToGSTIN must be 'URP' when the Ship-To consignee is unregistered.
         """
-        shipping_address = self._create_unregistered_shipping_address()
+        shipping_address = create_unregistered_shipping_address()
 
         si = create_sales_invoice(
             vehicle_no="GJ07DL9009",
@@ -1384,7 +1390,7 @@ class TestEWaybill(FrappeTestCase):
     @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_ship_to_gstin_for_transaction_type_4(self):
         # ship to GSTIN is mandatory in transaction type 4.
-        shipping_address = self._create_unregistered_shipping_address()
+        shipping_address = create_unregistered_shipping_address()
 
         si = create_sales_invoice(
             vehicle_no="GJ07DL9009",
@@ -1436,33 +1442,6 @@ class TestEWaybill(FrappeTestCase):
             json_data = EWaybillData(si, for_json=True).get_data()
             self.assertTrue(json_data.get("shipToGSTIN"))
             self.assertTrue(json_data.get("shipToTradeName"))
-
-    @staticmethod
-    def _create_unregistered_shipping_address():
-        """Create (once) an unregistered, India-based Shipping address for URP tests."""
-        name = "_Test Unregistered Consignee-Shipping"
-        if frappe.db.exists("Address", name):
-            return name
-
-        return (
-            frappe.get_doc(
-                {
-                    "doctype": "Address",
-                    "address_title": "_Test Unregistered Consignee",
-                    "address_type": "Shipping",
-                    "address_line1": "Test Address - Unregistered Consignee",
-                    "city": "Test City",
-                    "state": "Gujarat",
-                    "pincode": "380015",
-                    "country": "India",
-                    "gstin": "",
-                    "gst_category": "Unregistered",
-                    "links": [{"link_doctype": "Customer", "link_name": "_Test Registered Customer"}],
-                }
-            )
-            .insert(ignore_if_duplicate=True)
-            .name
-        )
 
     def test_e_waybill_for_inter_state_sales_return(self):
         """Test e-waybill generation for inter-state sales return.
