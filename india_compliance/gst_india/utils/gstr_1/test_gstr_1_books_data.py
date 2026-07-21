@@ -1010,11 +1010,35 @@ class TestGSTR1BooksData(IntegrationTestCase):
         data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
 
         self.assertIn(GSTR1_SubCategory.SUPECOM_9_5.value, data)
+        supecom = data[GSTR1_SubCategory.SUPECOM_9_5.value]
+        self.assertIn("20ALYPD6528PQC5", supecom)
+        self.assertGreater(supecom["20ALYPD6528PQC5"][inv_f.TAXABLE_VALUE], 0)
+
         self.assertNotIn(si.name, data.get(GSTR1_SubCategory.B2B_REVERSE_CHARGE.value, {}))
+        for hsn in (
+            GSTR1_SubCategory.HSN_B2B.value,
+            GSTR1_SubCategory.HSN_B2C.value,
+            GSTR1_SubCategory.HSN.value,
+        ):
+            self.assertNotIn(hsn, data)
 
         overview = {row["description"]: row for row in GSTR1Invoices(FILTERS).get_overview()}
         self.assertNotIn(si.name, overview[GSTR1_SubCategory.B2B_REVERSE_CHARGE.value]["unique_records"])
         self.assertIn(si.name, overview[GSTR1_SubCategory.SUPECOM_9_5.value]["unique_records"])
+
+    @change_settings("GST Settings", {"enable_sales_through_ecommerce_operators": 1})
+    def test_52_reported_in_both_primary_and_supecom(self):
+        si = create_sales_invoice(
+            customer="_Test Registered Customer",
+            is_in_state=True,
+            ecommerce_gstin="20ALYPD6528PQC5",
+        )
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        self.assertIn(si.name, data.get(GSTR1_SubCategory.B2B_REGULAR.value, {}))
+        self.assertIn(GSTR1_SubCategory.SUPECOM_52.value, data)
+        self.assertIn("20ALYPD6528PQC5", data[GSTR1_SubCategory.SUPECOM_52.value])
 
     def test_supecom_rounding_at_invoice_level(self):
         """
@@ -1119,9 +1143,6 @@ class TestGSTR1BooksData(IntegrationTestCase):
             self.assertEqual(summary_row["no_of_records"], 2)
             self.assertEqual(summary_row[inv_f.TAXABLE_VALUE], 300.0)
 
-            # 52 (TCS) is already reported in B2B/B2C, so its taxable value is not
-            # counted again. 9(5) is reported only in Table 14(b), so its taxable
-            # value is counted (but the tax is never the supplier's liability).
             if subcategory == GSTR1_SubCategory.SUPECOM_52.value:
                 self.assertFalse(summary_row["consider_in_total_taxable_value"])
             else:

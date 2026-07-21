@@ -23,6 +23,7 @@ class GSTR1_Category(Enum):
     HSN = "HSN Summary"
     DOC_ISSUE = "Document Issued"
     SUPECOM = "Supplies made through E-commerce Operators"
+    UNCATEGORISED = "Uncategorised"
 
 
 class GSTR1_SubCategory(Enum):
@@ -378,7 +379,7 @@ SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX = [
 
 
 def is_9_5_supply(item):
-    return item.get("ecommerce_supply_type") == GSTR1_SubCategory.SUPECOM_9_5.value
+    return bool(item.get("ecommerce_gstin")) and bool(item.get("is_reverse_charge"))
 
 
 HSN_BIFURCATION_FROM = getdate("2025-05-01")
