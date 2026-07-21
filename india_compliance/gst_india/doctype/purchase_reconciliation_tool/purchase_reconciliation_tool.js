@@ -1237,7 +1237,7 @@ function get_icon(value, column, data, icon) {
      * @param {string} value        Current value of the row.
      * @param {object} column       All properties of current column
      * @param {object} data         All values in its core form for current row
-     * @param {string} icon         Return icon (font-awesome) as the content
+     * @param {string} icon         Lucide icon name to render as the content
      */
 
     const hash = get_hash(data);
