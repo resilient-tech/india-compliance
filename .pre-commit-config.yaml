@@ -77,6 +77,7 @@ repos:
         entry: .github/helper/postgres_compat.py
         language: script
         files: ^india_compliance/.*\.py$
+        exclude: ^india_compliance/tests/test_postgres_compat\.py$
 
 ci:
   autoupdate_schedule: weekly
