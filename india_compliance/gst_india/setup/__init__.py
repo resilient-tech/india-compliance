@@ -80,6 +80,42 @@ def create_accounting_dimension_fields():
         doc = frappe.get_doc("Accounting Dimension", dimension)
         make_dimension_in_accounting_doctypes(doc, doctypes)
 
+    toggle_accounting_dimensions_sections(doctypes)
+
+
+def toggle_accounting_dimensions_sections(doctypes=None):
+    """Mirror the `enable_accounting_dimensions` toggle (Accounts Settings) on
+    India Compliance doctypes.
+
+    ERPNext hides the Accounting Dimensions section via a property setter that
+    is (re)created only from `Accounts Settings.validate` when the toggle
+    changes. That never fires while installing India Compliance or creating its
+    doctypes, so we apply the current setting to our own doctypes here.
+
+    We intentionally do not call ERPNext's `toggle_accounting_dimension_sections`
+    directly: it iterates `accounting_dimension_doctypes` hooks across *all*
+    installed apps, so from our install/patch it would recreate property setters
+    on ERPNext-owned doctypes too. We scope to India Compliance's own doctypes.
+    """
+    # Field and the helper below were introduced in the same ERPNext PR;
+    # guarding on the field keeps this a no-op (and import-safe) on older builds.
+    if not frappe.get_meta("Accounts Settings").has_field("enable_accounting_dimensions"):
+        return
+
+    from erpnext.accounts.doctype.accounts_settings.accounts_settings import (
+        create_property_setter_for_hiding_field,
+    )
+
+    if doctypes is None:
+        doctypes = frappe.get_hooks(
+            "accounting_dimension_doctypes",
+            app_name="india_compliance",
+        )
+
+    hide = not frappe.db.get_single_value("Accounts Settings", "enable_accounting_dimensions")
+    for doctype in doctypes:
+        create_property_setter_for_hiding_field(doctype, "accounting_dimensions_section", hide)
+
 
 def create_property_setters(*, include_defaults=False):
     for property_setter in get_property_setters(include_defaults=include_defaults):
