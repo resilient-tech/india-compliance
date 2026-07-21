@@ -1023,6 +1023,22 @@ class GSTR11A11BData:
             .groupby(self.gl_entry.voucher_detail_no)
         )
 
+    def get_11B_payment_entry_fields(self, **aliases):
+        """Payment Entry columns for the 11B query, under the caller's own column names.
+
+        11B groups by voucher_detail_no, not the Payment Entry primary key, so postgres needs
+        these aggregated. One GL entry per reference row, so each is single valued per group.
+        """
+        columns = {
+            "name": self.pe.name,
+            "party": self.pe.party,
+            "posting_date": self.pe.posting_date,
+            "company_gstin": self.pe.company_gstin,
+            "reference_name": self.pe_ref.reference_name,
+        }
+
+        return [Max(columns[column]).as_(alias) for column, alias in aliases.items()]
+
     def get_query(self, type_of_business):
         cr_or_dr = "credit" if type_of_business == "Advances" else "debit"
         cr_or_dr_amount_field = getattr(self.gl_entry, f"{cr_or_dr}_in_account_currency")
