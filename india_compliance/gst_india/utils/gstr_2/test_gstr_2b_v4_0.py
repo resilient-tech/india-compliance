@@ -101,6 +101,67 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
             doc,
         )
 
+    def test_gstr2b_ecom(self):
+        doc = self.get_doc(GSTRCategory.ECOM)
+        self.assertDocumentEqual(
+            {
+                "supplier_gstin": "07USERR0205A1ZS",
+                "supplier_name": "GSTN",
+                "gstr_1_filing_date": date(2023, 8, 26),
+                "sup_return_period": "052023",
+                "bill_no": "E123",
+                "supply_type": "Regular",
+                "bill_date": date(2023, 5, 1),
+                "document_value": 234324234,
+                "place_of_supply": "23-Madhya Pradesh",
+                "is_reverse_charge": 0,
+                "itc_availability": "Yes",
+                "diffprcnt": "1",
+                "irn_source": "e-Invoice",
+                "irn_number": ("897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"),
+                "irn_gen_date": date(2019, 12, 24),
+                "doc_type": "Invoice",
+                "taxable_value": 12200,
+                "igst": 183,
+                "cgst": 0,
+                "sgst": 0,
+                "cess": 0,
+                "is_downloaded_from_2b": 1,
+                "is_supplier_return_filed": 1,
+            },
+            doc,
+        )
+
+    def test_gstr2b_ecoma(self):
+        doc = self.get_doc(GSTRCategory.ECOMA)
+        self.assertDocumentEqual(
+            {
+                "supplier_gstin": "07USERR0205A1ZS",
+                "supplier_name": "GSTN",
+                "gstr_1_filing_date": date(2023, 8, 26),
+                "sup_return_period": "052023",
+                "bill_no": "E123",
+                "supply_type": "Regular",
+                "bill_date": date(2023, 5, 1),
+                "document_value": 234324234,
+                "place_of_supply": "23-Madhya Pradesh",
+                "is_reverse_charge": 0,
+                "itc_availability": "Yes",
+                "diffprcnt": "1",
+                "original_bill_no": None,
+                "original_bill_date": None,
+                "doc_type": "Invoice",
+                "taxable_value": 12200,
+                "igst": 183,
+                "cgst": 0,
+                "sgst": 0,
+                "cess": 0,
+                "is_downloaded_from_2b": 1,
+                "is_supplier_return_filed": 1,
+            },
+            doc,
+        )
+
     def test_gstr2b_cdnr(self):
         doc = self.get_doc(GSTRCategory.CDNR)
         self.assertDocumentEqual(
