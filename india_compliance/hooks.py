@@ -9,14 +9,17 @@ app_license = "GNU General Public License (v3)"
 required_apps = ["frappe/erpnext"]
 app_home = "/desk/gst-india"
 
-add_to_apps_screen = [
+add_app_to_dock = [
     {
-        "name": app_name,
-        "logo": "/assets/india_compliance/images/india-compliance.svg",
-        "title": app_title,
-        "route": app_home,
+        "app": "erpnext",
+        "workspace": "GST India",
         "has_permission": "india_compliance.check_app_permission",
-    }
+    },
+    {
+        "app": "erpnext",
+        "workspace": "Income Tax India",
+        "has_permission": "india_compliance.check_app_permission",
+    },
 ]
 
 
