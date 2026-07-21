@@ -26,7 +26,6 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_Category,
     GSTR1_SubCategory,
     get_b2c_limit,
-    is_9_5_supply,
 )
 
 CATEGORY_CONDITIONS = {
@@ -273,10 +272,15 @@ class GSTR1Conditions:
             invoice
         )
 
+    @cache_invoice_condition
+    def is_9_5_supply(self, invoice):
+        # Section 9(5) e-commerce supply: reported only in Table 14(b)/SUPECOM.
+        return bool(invoice.get("ecommerce_gstin")) and bool(invoice.get("is_reverse_charge"))
+
 
 class GSTR1CategoryConditions(GSTR1Conditions):
     def is_uncategorised(self, invoice):
-        return is_9_5_supply(invoice)
+        return self.is_9_5_supply(invoice)
 
     def is_nil_rated_exempted_non_gst_invoice(self, invoice):
         return not self.is_uncategorised(invoice) and (
@@ -494,6 +498,11 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
     def get_invoices_for_hsn_wise_summary(self):
         query = self.get_base_query()
 
+        # Exclude 9(5) e-commerce supplies from the HSN summary. This must be done at
+        # the DB level: the Sales Register's "Summary by HSN" returns these grouped rows
+        # directly (it does not run through the hsn_sub_category filter in
+        # get_structured_data), so without this they would surface in the HSN summary and
+        # inflate its taxable value/tax even though 9(5) is reported only in Table 14(b).
         query = query.where((IfNull(self.si.ecommerce_gstin, "") == "") | (self.si.is_reverse_charge == 0))
 
         query = (
