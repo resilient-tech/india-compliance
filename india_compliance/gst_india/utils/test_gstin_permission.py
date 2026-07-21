@@ -1,5 +1,5 @@
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.utils import (
     validate_company_gstin_access,
@@ -11,7 +11,7 @@ OTHER_GSTIN = "29AAQCA8719H1Z1"  # another company (user is not permitted)
 TEST_USER = "gstin-perm-test@example.com"
 
 
-class TestGstinPermission(IntegrationTestCase):
+class TestGstinPermission(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
