@@ -26,7 +26,6 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_Category,
     GSTR1_SubCategory,
     get_b2c_limit,
-    is_9_5_supply,
 )
 
 CATEGORY_CONDITIONS = {
@@ -242,6 +241,10 @@ class GSTR1Conditions:
         return invoice.is_return or invoice.is_debit_note
 
     @cache_invoice_condition
+    def is_uncategorised(self, invoice):
+        return bool(invoice.get("ecommerce_gstin")) and bool(invoice.get("is_reverse_charge"))
+
+    @cache_invoice_condition
     def has_gstin_and_is_not_export(self, invoice):
         return invoice.billing_address_gstin and not self.is_export(invoice)
 
@@ -275,9 +278,6 @@ class GSTR1Conditions:
 
 
 class GSTR1CategoryConditions(GSTR1Conditions):
-    def is_uncategorised(self, invoice):
-        return is_9_5_supply(invoice)
-
     def is_nil_rated_exempted_non_gst_invoice(self, invoice):
         return not self.is_uncategorised(invoice) and (
             self.is_nil_rated(invoice) or self.is_exempted(invoice) or self.is_non_gst(invoice)

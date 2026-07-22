@@ -378,10 +378,6 @@ SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX = [
 ]
 
 
-def is_9_5_supply(item):
-    return bool(item.get("ecommerce_gstin")) and bool(item.get("is_reverse_charge"))
-
-
 HSN_BIFURCATION_FROM = getdate("2025-05-01")
 
 B2C_LIMIT = [
