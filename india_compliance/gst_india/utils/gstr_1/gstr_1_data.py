@@ -687,7 +687,6 @@ class GSTR1DocumentIssuedSummary:
     def __init__(self, filters):
         self.filters = filters
         self.sales_invoice = frappe.qb.DocType("Sales Invoice")
-        self.sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
         self.purchase_invoice = frappe.qb.DocType("Purchase Invoice")
         self.stock_entry = frappe.qb.DocType("Stock Entry")
         self.subcontracting_receipt = frappe.qb.DocType("Subcontracting Receipt")
@@ -773,15 +772,11 @@ class GSTR1DocumentIssuedSummary:
             self.sales_invoice.is_opening,
         ]
 
-        query = self.build_query(
+        return self.build_query(
             doctype=self.sales_invoice,
             party_gstin_field="billing_address_gstin",
             address_field="company_address",
             additional_selects=additional_selects,
-        )
-
-        return query.join(self.sales_invoice_item).on(
-            self.sales_invoice.name == self.sales_invoice_item.parent
         )
 
     def get_query_for_purchase_invoice(self):
