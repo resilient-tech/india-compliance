@@ -294,13 +294,18 @@ These are auto-handled by the framework and are **not** breaks:
 
 ## 5. Transaction / runtime (not query-shape, still PostgreSQL-only)
 
-- **Catch-and-continue inserts** — on PostgreSQL a failed `insert()` aborts the
-  **whole transaction**, so code that swallows a duplicate and keeps going dies
-  on the next statement with `InFailedSqlTransaction` (frappe dropped its
-  blanket per-statement savepoint in frappe#40075). Such a handler must wrap the
-  fallible insert in `frappe.db.savepoint(name)` + `rollback(save_point=name)` —
-  unless it re-`throw`s with no DB call before the throw, or the insert uses
+- **Catch-and-continue around any failing statement** — on PostgreSQL **any**
+  statement the server rejects aborts the **whole transaction**: `INSERT`,
+  `UPDATE`, `DELETE`, a plain `SELECT` with a type mismatch, raw `frappe.db.sql`.
+  Code that swallows the error and keeps going then dies on the *next* statement
+  with `InFailedSqlTransaction` (frappe dropped its blanket per-statement
+  savepoint in frappe#40075). MariaDB has no statement-abort, so the handler
+  looks fine there. Any `try/except` that continues to use the connection must
+  wrap the fallible statement in `frappe.db.savepoint(name)` +
+  `rollback(save_point=name)` — unless it re-`throw`s with no DB call before the
+  throw, or (for the duplicate-insert case specifically) the insert uses
   `ignore_if_duplicate=True` / `autoname="hash"` (→ `ON CONFLICT DO NOTHING`).
+  Loops over records are the usual offender: one bad row poisons the rest.
 
 - **Recover the txn with a *scoped* savepoint, not a full `frappe.db.rollback()`,
   if any prior work must survive.** A full rollback un-poisons the txn but also

@@ -1,6 +1,6 @@
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import getdate
+from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.report.gst_sales_register.gst_sales_register import (
     execute,
@@ -672,9 +672,19 @@ class TestSalesRegister(IntegrationTestCase):
 
         FILTERS["summary_by"] = "Summary by Item"
         itemwise_data = execute(FILTERS)[1]
-
         self.assertTrue(itemwise_data)
-        self.assertEqual(sorted(set(itemwise_data[0]) - set(report_data[1][0])), [])
+
+        # the HSN projection is a hand maintained column list, so a column added to the base
+        hsn_columns = set(report_data[1][0])
+        for row in itemwise_data:
+            self.assertEqual(sorted(set(row) - hsn_columns), [])
+
+        for field in ("taxable_value", "total_tax", "total_amount"):
+            self.assertAlmostEqual(
+                sum(flt(row[field]) for row in report_data[1]),
+                sum(flt(row[field]) for row in itemwise_data),
+                places=2,
+            )
 
     def test_overview(self):
         FILTERS["summary_by"] = "Overview"

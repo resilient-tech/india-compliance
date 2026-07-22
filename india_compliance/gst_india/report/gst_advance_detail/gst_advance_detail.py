@@ -161,26 +161,23 @@ class GSTAdvanceDetail:
         )
 
     def get_allocated_entries(self):
-        query = (
+        # always one row per allocation: voucher_detail_no is the pe_ref primary key, so each
+        # group holds a single allocation spread over its tax entries. get_summary_data() adds
+        # the allocations up per payment entry -- grouping by voucher_no here instead would
+        # collapse them into one row and report a single allocation as the total.
+        return (
             self.get_query()
             .join(self.pe_ref)
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
             .select(
-                # Max(): grouped by voucher_no / voucher_detail_no, not the pe_ref PK
                 Max(self.pe_ref.allocated_amount).as_("allocated_amount"),
                 Max(self.pe_ref.reference_doctype).as_("against_voucher_type"),
                 Max(self.pe_ref.reference_name).as_("against_voucher"),
             )
             .where(self.gl_entry.debit_in_account_currency > 0)
+            .groupby(self.gl_entry.voucher_detail_no)
+            .run(as_dict=True)
         )
-
-        if self.filters.get("show_summary"):
-            query = query.groupby(self.gl_entry.voucher_no)
-
-        else:
-            query = query.groupby(self.gl_entry.voucher_detail_no)
-
-        return query.run(as_dict=True)
 
     def get_query(self):
         return (
@@ -188,8 +185,8 @@ class GSTAdvanceDetail:
             .join(self.pe)
             .on(self.pe.name == self.gl_entry.voucher_no)
             .select(
-                # Max(): grouped by voucher_no / voucher_detail_no (not a PK), so every
-                # non-aggregate is wrapped; each is single-valued per group (MariaDB output unchanged).
+                # grouped by voucher_no / voucher_detail_no, neither of which is this table's
+                # primary key, so every non-aggregate is wrapped; each is single-valued per group
                 Max(self.gl_entry.voucher_no).as_("voucher_no"),
                 Max(self.gl_entry.posting_date).as_("posting_date"),
                 Max(self.pe.name).as_("payment_entry"),

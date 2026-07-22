@@ -96,8 +96,10 @@ SQL_PATTERNS: list[tuple[re.Pattern, str]] = [
     ),
 ]
 
-# UPDATE ... JOIN: both keywords in the same SQL string.
-UPDATE_JOIN = (re.compile(r"\bupdate\b", re.I), re.compile(r"\bjoin\b", re.I))
+# UPDATE ... JOIN, i.e. a JOIN in the update target itself -- everything between UPDATE and the
+# first SET. A JOIN *after* SET belongs to a subquery, which is the portable rewrite of this very
+# construct, so matching both keywords anywhere would flag the fix as the bug.
+UPDATE_JOIN = re.compile(r"\bupdate\b(?:(?!\bset\b)[\s\S])*?\bjoin\b", re.I)
 
 MYSQL_RESULT_KEYS = {"Column_name", "Key_name", "Seq_in_index", "Non_unique", "Index_type"}
 
@@ -200,7 +202,7 @@ class Visitor(ast.NodeVisitor):
         for pattern, msg in SQL_PATTERNS:
             if pattern.search(text):
                 self._flag(node, msg)
-        if UPDATE_JOIN[0].search(text) and UPDATE_JOIN[1].search(text):
+        if UPDATE_JOIN.search(text):
             self._flag(
                 node, "UPDATE ... JOIN is MySQL-only -> use a correlated subquery (WHERE ... IN/EXISTS)"
             )

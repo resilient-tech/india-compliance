@@ -312,10 +312,9 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         )
 
     def test_advance_detail_with_multiple_allocations(self):
-        """One advance adjusted against several invoices.
-        Note `allocated_amount` in summary mode reports the largest allocation rather than their
-        total (100, not 150). That is long-standing behaviour, not a rounding artefact; it is a
-        product bug to be fixed on its own, deliberately left untouched here."""
+        """One advance adjusted against several invoices. Summary mode groups by payment entry,
+        so every allocation of that entry has to be added up -- picking one of them (as the loose
+        GROUP BY did) reports a number no row ever had."""
         payment_doc = self._create_payment_entry()
         for amount in (118, 59):
             make_payment_reconciliation(payment_doc, self._create_sales_invoice(), amount)
@@ -331,11 +330,11 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         self.assertEqual([flt(row["gst_allocated"], 2) for row in detail], [0.0, 18.0, 9.0])
         self.assertEqual([flt(row["paid_amount"], 2) for row in detail], [500.0, 0.0, 0.0])
 
-        # summed across allocations, except allocated_amount (see the note above)
+        # every amount is summed across the allocations
         self.assertEqual(flt(summary[0]["gst_allocated"], 2), 27.0)
         self.assertEqual(flt(summary[0]["gst_paid"], 2), 90.0)
         self.assertEqual(flt(summary[0]["paid_amount"], 2), 500.0)
-        self.assertEqual(flt(summary[0]["allocated_amount"], 2), 100.0)
+        self.assertEqual(flt(summary[0]["allocated_amount"], 2), 150.0)
 
     def _advance_detail_rows(self, payment_doc, show_summary):
         from india_compliance.gst_india.report.gst_advance_detail.gst_advance_detail import (
