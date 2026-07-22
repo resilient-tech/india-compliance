@@ -13,9 +13,6 @@ from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 
 class TestEInvoiceSummary(EInvoiceTestMixin, IntegrationTestCase):
-    """The report left joins the e-Invoice Log onto the invoice's IRN, so it is driven by
-    actually generating an e-Invoice against the mocked API rather than by planting an IRN."""
-
     def run_report(self, **filters):
         _columns, data = execute(
             frappe._dict(

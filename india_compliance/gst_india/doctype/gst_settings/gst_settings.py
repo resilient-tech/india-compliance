@@ -36,6 +36,10 @@ from india_compliance.utils.custom_fields import toggle_custom_fields
 
 E_INVOICE_START_DATE = "2021-01-01"
 
+RETRY_E_INVOICE_E_WAYBILL_JOB = (
+    "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_e_waybill_generation"
+)
+
 
 class GSTSettings(Document):
     def onload(self):
@@ -131,9 +135,9 @@ class GSTSettings(Document):
 
         frappe.db.set_value(
             "Scheduled Job Type",
-            {"method": "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_e_waybill_generation"},
+            {"method": RETRY_E_INVOICE_E_WAYBILL_JOB},
             "stopped",
-            cint(not self.enable_retry_einv_ewb_generation),  # store 0/1 instead of bool for Postgres
+            cint(not self.enable_retry_einv_ewb_generation),
         )
 
     def update_auto_refresh_authtoken_scheduled_job(self):
@@ -146,7 +150,7 @@ class GSTSettings(Document):
                 "method": "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_refresh_authtoken"
             },
             "stopped",
-            cint(not self.enable_auto_reconciliation),  # store 0/1 instead of bool for Postgres
+            cint(not self.enable_auto_reconciliation),
         )
 
     def get_gstin_with_credentials(self, service=None):

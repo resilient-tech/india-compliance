@@ -67,7 +67,6 @@ def update_journal_entry_for_payment(query):
     return (
         query.left_join(journal_entry_account)
         .on(bill_of_entry.name == journal_entry_account.reference_name)
-        # use MAX() for joined JEA fields to satisfy postgres GROUP BY rules
         .select(Max(journal_entry_account.parent).as_("payment_journal_entry"))
     )
 
@@ -84,7 +83,6 @@ def update_purchase_invoice_query(query):
         .on(purchase_invoice.name == bill_of_entry_item.purchase_invoice)
         .select(
             GroupConcat(purchase_invoice.name, ",").as_("purchase_invoice"),
-            # use MAX() for joined PI fields to satisfy postgres GROUP BY rules
             Max(purchase_invoice.supplier).as_("supplier"),
         )
         .groupby(bill_of_entry.name)

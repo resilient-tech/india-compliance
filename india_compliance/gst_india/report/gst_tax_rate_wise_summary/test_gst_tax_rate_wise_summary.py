@@ -17,7 +17,6 @@ class TestGSTTaxRateWiseSummary(IntegrationTestCase):
     """One row per tax rate, aggregated over the vouchers of the period."""
 
     def setUp(self):
-        frappe.set_user("Administrator")
         for doctype in ("Sales Invoice", "Purchase Invoice"):
             frappe.db.delete(doctype, filters={"company": COMPANY})
 

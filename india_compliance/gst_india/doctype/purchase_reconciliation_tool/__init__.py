@@ -598,7 +598,6 @@ class BillOfEntry:
             self.BOE.bill_of_entry_date.as_("bill_date"),
             self.BOE.posting_date,
             self.BOE.company_gstin,
-            # use MAX() for joined PI fields to satisfy postgres GROUP BY rules
             Max(self.PI.supplier_name).as_("supplier_name"),
             Max(self.PI.is_reverse_charge).as_("is_reverse_charge"),
             *tax_fields,

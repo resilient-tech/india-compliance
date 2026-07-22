@@ -5,19 +5,18 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
+    DOWNLOAD_QUEUED_REQUEST_JOB,
     toggle_scheduled_jobs,
 )
-
-DOWNLOAD_JOB = "india_compliance.gst_india.utils.gstr_utils.download_queued_request"
 
 
 class TestGSTRImportLog(IntegrationTestCase):
     def test_toggle_scheduled_jobs(self):
-        """`stopped` is a Check column, so it has to be written as 0/1 -- postgres rejects a
-        bool there, and the callers pass one."""
-        job = frappe.db.get_value("Scheduled Job Type", {"method": DOWNLOAD_JOB})
-        if not job:
-            self.skipTest("download_queued_request scheduled job is not set up on this site")
+        job = frappe.db.get_value("Scheduled Job Type", {"method": DOWNLOAD_QUEUED_REQUEST_JOB})
+        self.assertTrue(job)
+
+        old_value = frappe.db.get_value("Scheduled Job Type", job, "stopped")
+        self.addCleanup(frappe.db.set_value, "Scheduled Job Type", job, "stopped", old_value)
 
         toggle_scheduled_jobs(stopped=True)
         self.assertEqual(frappe.db.get_value("Scheduled Job Type", job, "stopped"), 1)

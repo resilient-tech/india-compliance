@@ -28,8 +28,6 @@ from india_compliance.gst_india.utils.tests import append_item, create_sales_inv
 
 
 class EInvoiceTestMixin:
-    """e-Invoice settings, fixtures and API mock, shared with the reports built on them."""
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

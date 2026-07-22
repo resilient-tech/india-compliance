@@ -274,8 +274,6 @@ def get_journal_entries(month_or_quarter: str, year: str, company: str, filing_p
     sales_invoice = frappe.qb.DocType("Sales Invoice")
     sales_invoice_taxes = frappe.qb.DocType("Sales Taxes and Charges")
 
-    # net per account, so that a row carries either debit or credit, never both. the case must
-    # read the aggregate and not the column, or the grouped select is invalid on postgres.
     net_amount = Sum(sales_invoice_taxes.tax_amount)
 
     data = (
@@ -293,7 +291,6 @@ def get_journal_entries(month_or_quarter: str, year: str, company: str, filing_p
         .where(sales_invoice.docstatus == 1)
         .groupby(sales_invoice_taxes.account_head)
         .having(net_amount != 0)
-        .orderby(sales_invoice_taxes.account_head)
         .run(as_dict=True)
     )
 

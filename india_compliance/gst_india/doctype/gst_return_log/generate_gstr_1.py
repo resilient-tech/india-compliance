@@ -803,7 +803,7 @@ class FileGSTR1:
 
         # reset called after proceed to file
         self.db_set({"filing_status": "Not Filed"})
-        self.db_set({"is_nil": cint(sbool(is_nil_return))})  # store 0/1 instead of bool for Postgres
+        self.db_set({"is_nil": cint(sbool(is_nil_return))})
 
         api = GSTR1API(self)
         response = api.reset_gstr_1_data(self.return_period)
@@ -950,7 +950,7 @@ class FileGSTR1:
             response = {}
 
         summary = api.get_gstr_1_data("RETSUM", self.return_period)
-        self.db_set("is_nil", cint(summary.isnil == "Y"))  # store 0/1 instead of bool for Postgres
+        self.db_set("is_nil", cint(summary.isnil == "Y"))
 
         if summary.error:
             return

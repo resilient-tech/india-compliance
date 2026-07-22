@@ -670,17 +670,11 @@ class TestSalesRegister(IntegrationTestCase):
         for index, invoice in enumerate(report_data[1]):
             self.assertPartialDict(EXPECTED_SUMMARY_BY_HSN[index], invoice)
 
-        # Summary by HSN names its columns one by one rather than selecting them all, so a
-        # column added to the shared base query would silently go missing from this report.
         FILTERS["summary_by"] = "Summary by Item"
         itemwise_data = execute(FILTERS)[1]
 
-        self.assertTrue(itemwise_data, "expected item wise rows to compare columns against")
-        self.assertEqual(
-            sorted(set(itemwise_data[0]) - set(report_data[1][0])),
-            [],
-            "columns present in Summary by Item are missing from Summary by HSN",
-        )
+        self.assertTrue(itemwise_data)
+        self.assertEqual(sorted(set(itemwise_data[0]) - set(report_data[1][0])), [])
 
     def test_overview(self):
         FILTERS["summary_by"] = "Overview"

@@ -474,7 +474,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
     def get_invoices_for_hsn_wise_summary(self):
         base = self.get_base_query()
 
-        # Explicitly select grouped, summed, and MAX()-wrapped columns for postgres GROUP BY compatibility.
         group_by = ("invoice_no", "gst_hsn_code", "gst_rate", "gst_treatment", "uom")
         summed = (
             "qty",
@@ -507,7 +506,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             "cess_non_advol_amount",
             "invoice_total",
             "returned_invoice_total",
-            # future-proof: wrap any additional columns too (none on this path today)
             *self.additional_si_columns,
             *self.additional_si_item_columns,
         )
@@ -995,7 +993,6 @@ class GSTR11A11BData:
             .left_join(included_taxes_query)
             .on(included_taxes_query.parent == self.pe.name)
             .select(
-                # use MAX() for joined subquery value to satisfy postgres GROUP BY rules
                 Max(self.pe.base_paid_amount - IfNull(included_taxes_query.included_taxes, 0)).as_(
                     "taxable_value"
                 )
@@ -1008,17 +1005,11 @@ class GSTR11A11BData:
             self.get_query("Adjustment")
             .join(self.pe_ref)
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
-            # use MAX() for joined fields to satisfy postgres GROUP BY rules
             .select(Max(self.pe_ref.allocated_amount).as_("taxable_value"))
             .groupby(self.gl_entry.voucher_detail_no)
         )
 
     def get_11B_payment_entry_fields(self, **aliases):
-        """Payment Entry columns for the 11B query, under the caller's own column names.
-
-        11B groups by voucher_detail_no, not the Payment Entry primary key, so postgres needs
-        these aggregated. One GL entry per reference row, so each is single valued per group.
-        """
         columns = {
             "name": self.pe.name,
             "party": self.pe.party,

@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests import IntegrationTestCase, change_settings
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -18,10 +18,6 @@ POSTING_DATE = "2023-08-11"
 
 
 class TestBillOfEntrySummary(IntegrationTestCase):
-    """The report groups by Bill of Entry, pulling the supplier and the invoice numbers out of
-    the joined Purchase Invoices, so it has to stay one row per BoE however many invoices and
-    items it covers."""
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -35,16 +31,9 @@ class TestBillOfEntrySummary(IntegrationTestCase):
         ).insert(ignore_if_duplicate=True)
 
     def setUp(self):
-        frappe.set_user("Administrator")
-        frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
-        self.addCleanup(frappe.db.set_single_value, "GST Settings", "enable_overseas_transactions", 0)
-
-        # the report is filtered by date and company, not by document
         frappe.db.delete("Bill of Entry", filters={"company": COMPANY})
 
     def create_bill_of_entry(self, invoice_count=1):
-        """A Bill of Entry covering `invoice_count` import invoices of the same supplier."""
-        # no GST taxes on the invoice: that is what makes an import BoE-applicable
         invoices = [
             create_purchase_invoice(
                 bill_no=f"BOE-SUMMARY-{index}",
@@ -80,6 +69,7 @@ class TestBillOfEntrySummary(IntegrationTestCase):
         _columns, data = execute(frappe._dict(company=COMPANY, from_date="2023-08-01", to_date="2023-08-31"))
         return data
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_single_invoice(self):
         boe, invoices = self.create_bill_of_entry()
 
@@ -94,6 +84,7 @@ class TestBillOfEntrySummary(IntegrationTestCase):
         self.assertEqual(row.total_taxes, boe.total_taxes)
         self.assertEqual(row.total_amount_payable, boe.total_amount_payable)
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_multiple_invoices_stay_one_row(self):
         """GROUP_CONCAT on MariaDB and STRING_AGG on postgres must both list every invoice."""
         boe, invoices = self.create_bill_of_entry(invoice_count=2)
@@ -109,6 +100,7 @@ class TestBillOfEntrySummary(IntegrationTestCase):
             sorted(invoice.name for invoice in invoices),
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_payment_journal_entry_is_reported(self):
         boe, _invoices = self.create_bill_of_entry()
 
@@ -117,5 +109,5 @@ class TestBillOfEntrySummary(IntegrationTestCase):
         journal_entry.save().submit()
 
         data = self.run_report()
-        self.assertEqual(len(data), 1, "the payment entry join must not duplicate the row")
+        self.assertEqual(len(data), 1)
         self.assertEqual(data[0].payment_journal_entry, journal_entry.name)

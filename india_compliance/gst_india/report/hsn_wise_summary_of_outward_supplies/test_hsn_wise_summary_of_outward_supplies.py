@@ -21,8 +21,6 @@ class TestHSNWiseSummaryReport(IntegrationTestCase):
         frappe.db.rollback()
 
     def setUp(self):
-        # the report is filtered by date and company, not by document, so an invoice another
-        # test left behind for today would be summed into these HSN rows
         frappe.db.delete("Sales Invoice", filters={"company": "_Test Indian Registered Company"})
 
     def test_hsn_summary_for_invoice_with_duplicate_items(self):

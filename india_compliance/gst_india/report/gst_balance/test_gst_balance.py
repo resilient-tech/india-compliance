@@ -13,10 +13,7 @@ COMPANY = "_Test Indian Registered Company"
 
 
 class TestGSTBalance(IntegrationTestCase):
-    """Both modes aggregate GL Entries per GST account, so they are run over a known invoice."""
-
     def setUp(self):
-        frappe.set_user("Administrator")
         frappe.db.delete("Sales Invoice", filters={"company": COMPANY})
 
         self.output_accounts = get_gst_accounts_by_type(COMPANY, "Output")
@@ -42,18 +39,16 @@ class TestGSTBalance(IntegrationTestCase):
         return flt(row.get("closing_credit")) - flt(row.get("closing_debit"))
 
     def test_trial_balance_reports_the_invoice_tax(self):
-        # the ledger carries whatever else the site has posted, so assert the movement
         cgst_account = self.output_accounts.cgst_account
         before = self.closing_balance(cgst_account)
 
         create_sales_invoice(is_in_state=1, qty=1, rate=1000)
 
-        # tax collected is a credit, so 18% of 1000 lands on the credit side, split CGST/SGST
         self.assertEqual(self.closing_balance(cgst_account) - before, 90)
 
-    def test_summary_mode_runs(self):
+    def test_summary_mode(self):
         create_sales_invoice(is_in_state=1, qty=1, rate=1000)
 
         rows = self.run_report(show_summary=1)
 
-        self.assertTrue(rows, "expected summary rows for the GST accounts")
+        self.assertTrue(rows)

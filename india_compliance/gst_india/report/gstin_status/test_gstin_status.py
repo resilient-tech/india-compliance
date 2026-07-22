@@ -8,9 +8,6 @@ from india_compliance.gst_india.report.gstin_status.gstin_status import execute
 
 
 class TestGSTINStatus(IntegrationTestCase):
-    """Unions the Customer and Supplier queries and left joins the GSTIN cache, so the party
-    filter and the status filter each reshape the query."""
-
     GSTIN = "24AABCR6898M1ZN"
 
     @classmethod
@@ -35,7 +32,7 @@ class TestGSTINStatus(IntegrationTestCase):
     def test_lists_both_party_types(self):
         rows = self.run_report()
 
-        self.assertTrue(rows, "expected parties with a GSTIN")
+        self.assertTrue(rows)
         self.assertEqual({"Customer", "Supplier"}, {row["party_type"] for row in rows})
 
     def test_party_type_filter(self):
@@ -47,6 +44,6 @@ class TestGSTINStatus(IntegrationTestCase):
     def test_status_filter(self):
         rows = self.run_report(status="Active")
 
-        self.assertTrue(rows, "expected at least the GSTIN cached above")
+        self.assertTrue(rows)
         self.assertEqual({"Active"}, {row["status"] for row in rows})
         self.assertIn(self.GSTIN, {row["gstin"] for row in rows})

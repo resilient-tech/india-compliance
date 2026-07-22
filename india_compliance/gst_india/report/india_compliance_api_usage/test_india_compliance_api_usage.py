@@ -16,17 +16,7 @@ from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 
 class TestIndiaComplianceAPIUsage(EInvoiceTestMixin, IntegrationTestCase):
-    """The report summarises the Integration Requests an API call leaves behind, so it is driven
-    here by actually generating an e-Invoice -- reusing the e-Invoice suite's settings, fixtures
-    and API mock rather than restating them.
-
-    Each mode groups differently -- by url, by a `date` select alias, and by the linked document
-    -- so all three are run to keep them valid on MariaDB and postgres alike.
-    """
-
     def run_report(self, report_by):
-        # `creation` is a datetime while the filter is a date, so `to_date` has to be the day
-        # after for anything logged today to be counted
         _columns, data = execute(
             frappe._dict(
                 from_date=getdate(),
@@ -49,12 +39,10 @@ class TestIndiaComplianceAPIUsage(EInvoiceTestMixin, IntegrationTestCase):
             {"reference_doctype": "Sales Invoice", "reference_docname": invoice.name},
         )
 
-        # selects REPLACE(url, ...) while grouping by url
         endpoint = request.url.replace(BASE_URL, "")
         row = next(row for row in self.run_report("Endpoint") if row["endpoint"] == endpoint)
         self.assertGreaterEqual(row["api_requests_count"], 1)
 
-        # groups by the `date` select alias rather than the underlying column
         row = next(row for row in self.run_report("Date") if str(row["date"]) == str(getdate()))
         self.assertGreaterEqual(row["api_requests_count"], 1)
 

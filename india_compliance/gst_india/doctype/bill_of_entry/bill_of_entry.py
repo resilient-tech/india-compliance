@@ -423,7 +423,6 @@ class BillofEntry(Document):
         pi_item = frappe.qb.DocType("Purchase Invoice Item")
         boe_item = frappe.qb.DocType("Bill of Entry Item")
 
-        # correlated subquery, not UPDATE..JOIN (invalid on postgres)
         submitted_boe_qty = (
             frappe.qb.from_(boe_item)
             .select(Sum(boe_item.qty))

@@ -312,15 +312,11 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         )
 
     def test_advance_detail_with_multiple_allocations(self):
-        """One advance adjusted against several invoices. Both report modes group by columns that
-        are not a primary key, so this pins what they return — the numbers must not shift when
-        those queries are reshaped, and must be identical on MariaDB and postgres.
-
+        """One advance adjusted against several invoices.
         Note `allocated_amount` in summary mode reports the largest allocation rather than their
         total (100, not 150). That is long-standing behaviour, not a rounding artefact; it is a
         product bug to be fixed on its own, deliberately left untouched here."""
         payment_doc = self._create_payment_entry()
-        # different amounts, so a total and a single pick cannot coincide
         for amount in (118, 59):
             make_payment_reconciliation(payment_doc, self._create_sales_invoice(), amount)
 
