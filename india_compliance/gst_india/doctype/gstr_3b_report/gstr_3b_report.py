@@ -133,16 +133,16 @@ class GSTR3BReport(Document):
                         "generation_status": self.generation_status,
                     }
                 )
+                self.notify_generation_complete(after_commit=True)
 
         except Exception as e:
             self.generation_status = "Failed"
             self.db_set({"generation_status": self.generation_status}, commit=True)  # nosemgrep
-            self.notify_generation_complete(after_commit=False)
+
+            if self.enqueue_report:
+                self.notify_generation_complete(after_commit=False)
 
             raise e
-
-        else:
-            self.notify_generation_complete(after_commit=True)
 
     def notify_generation_complete(self, after_commit):
         frappe.publish_realtime(

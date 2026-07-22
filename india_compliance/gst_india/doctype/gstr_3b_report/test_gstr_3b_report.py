@@ -894,7 +894,13 @@ class TestGSTR3BReport(FrappeTestCase):
             enqueue_doc.assert_not_called()
 
     def test_generation_failure_is_persisted_and_published(self):
-        report = self.create_report().insert()
+        """
+        A failed background job must commit its status and notify immediately:
+        deferring the event would queue it against the transaction the re-raise
+        is about to roll back, so the client would never learn it failed.
+        """
+        with patch("frappe.enqueue_doc"):
+            report = self.create_report(enqueue_report=1).insert()
 
         with (
             patch.object(GSTR3BReport, "_process_outward_itc", side_effect=Exception("boom")),
