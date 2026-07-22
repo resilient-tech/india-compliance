@@ -4,8 +4,10 @@
 const REPORT_METHOD = "india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report";
 
 frappe.ui.form.on("GSTR 3B Report", {
-    setup: function () {
+    setup: function (frm) {
         frappe.require("assets/india_compliance/js/gstr_2b.js");
+
+        frappe.realtime.on("gstr3b_report_generation", () => frm.reload_doc());
     },
 
     onload: function (frm) {
@@ -16,10 +18,6 @@ frappe.ui.form.on("GSTR 3B Report", {
                 if (options && options.length) frm.set_value("company_gstin", options[0]);
             });
         }
-
-        frappe.realtime.on("gstr3b_report_generation", function () {
-            frm.reload_doc();
-        });
     },
 
     refresh: function (frm) {
