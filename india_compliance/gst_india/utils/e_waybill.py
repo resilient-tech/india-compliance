@@ -1189,19 +1189,30 @@ class EWaybillData(GSTTransactionData):
         self.set_party_address_details()
         self.validate_distance_for_same_pincode()
 
-        return self.sanitize_data(
-            {
-                "Irn": self.doc.irn,
-                "Distance": self.transaction_details.distance,
-                "TransMode": str(self.transaction_details.mode_of_transport),
-                "TransId": self.transaction_details.gst_transporter_id,
-                "TransName": self.transaction_details.transporter_name,
-                "TransDocDt": self.transaction_details.lr_date,
-                "TransDocNo": self.transaction_details.lr_no,
-                "VehNo": self.transaction_details.vehicle_no,
-                "VehType": self.transaction_details.vehicle_type,
+        data = {
+            "Irn": self.doc.irn,
+            "Distance": self.transaction_details.distance,
+            "TransMode": str(self.transaction_details.mode_of_transport),
+            "TransId": self.transaction_details.gst_transporter_id,
+            "TransName": self.transaction_details.transporter_name,
+            "TransDocDt": self.transaction_details.lr_date,
+            "TransDocNo": self.transaction_details.lr_no,
+            "VehNo": self.transaction_details.vehicle_no,
+            "VehType": self.transaction_details.vehicle_type,
+        }
+
+        if 1 or is_e_waybill_changes_applicable(self.settings):
+            data["ExpShipDtls"] = {
+                "Gstin": self.ship_to.gstin,
+                "TrdNm": self.ship_to.legal_name,
+                "Addr1": self.ship_to.address_line1,
+                "Addr2": self.ship_to.address_line2,
+                "Loc": self.ship_to.city,
+                "Pin": self.ship_to.pincode,
+                "Stcd": str(self.ship_to.state_number),
             }
-        )
+
+        return self.sanitize_data(data)
 
     def get_data_for_cancellation(self, values):
         self.validate_if_e_waybill_is_set()
