@@ -29,7 +29,7 @@ frappe.ui.form.on("GSTR 3B Report", {
         const is_filed = frm.doc.filing_status === "Filed";
         frm.page.set_indicator(is_filed ? __("Filed") : __("Not Filed"), is_filed ? "green" : "orange");
 
-        // making form dirty without UI changes
+        // Marked dirty without UI changes so Regenerate actually re-saves:
         frm.doc.__unsaved = 1;
 
         append_form(frm);
