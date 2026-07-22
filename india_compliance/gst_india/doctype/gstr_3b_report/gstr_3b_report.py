@@ -11,6 +11,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, cstr, flt, get_first_day, get_last_day
+from frappe.utils.background_jobs import is_job_enqueued
 from openpyxl.cell.cell import MergedCell
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
@@ -90,12 +91,21 @@ class GSTR3BReport(Document):
         if not self.enqueue_report:
             return
 
+        job_id = f"gstr_3b_report:{self.name}"
+
+        if is_job_enqueued(job_id):
+            frappe.msgprint(_("Report generation is already in progress"), alert=True)
+            return
+
         frappe.msgprint(_("Initiated report generation in background"), alert=True)
         frappe.enqueue_doc(
             "GSTR 3B Report",
             self.name,
             "get_data",
             queue="long",
+            job_id=job_id,
+            deduplicate=True,
+            now=frappe.flags.in_test,
             enqueue_after_commit=True,
         )
 
