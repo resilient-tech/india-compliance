@@ -38,7 +38,7 @@ frappe.ui.form.on("GSTR 3B Report", {
         const docname = encodeURIComponent(frm.doc.name);
         const download_group = __("Download");
 
-        if (frappe.model.can_print(frm.doctype, frm)) {
+        if (frappe.model.can_read(frm.doctype)) {
             frm.add_custom_button(
                 __("JSON"),
                 () => open_download(`${REPORT_METHOD}.make_json?name=${docname}`),
