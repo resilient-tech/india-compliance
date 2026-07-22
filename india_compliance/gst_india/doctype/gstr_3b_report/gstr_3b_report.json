@@ -68,9 +68,9 @@
    "hide_border": 1
   },
   {
+   "depends_on": "eval: doc.enqueue_report",
    "fieldname": "generation_status",
    "fieldtype": "Data",
-   "hidden": 1,
    "label": "Status",
    "read_only": 1
   },
@@ -118,7 +118,7 @@
   }
  ],
  "links": [],
- "modified": "2026-07-14 10:50:19.330148",
+ "modified": "2026-07-22 13:56:05.507571",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
