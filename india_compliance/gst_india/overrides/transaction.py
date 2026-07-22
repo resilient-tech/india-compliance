@@ -135,7 +135,7 @@ def validate_item_wise_tax_detail(doc):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
 
-    for row in doc.get("_item_wise_tax_details", []):
+    for row in doc.get("_item_wise_tax_details") or []:
         tax = row.tax
         if not tax.gst_tax_type:
             continue
