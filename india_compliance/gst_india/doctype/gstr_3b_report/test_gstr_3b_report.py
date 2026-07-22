@@ -32,7 +32,16 @@ from india_compliance.gst_india.utils.tests import (
 )
 
 
+<<<<<<< HEAD
 class TestGSTR3BReport(FrappeTestCase):
+=======
+class TestGSTR3BReport(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
+
+>>>>>>> cbbe2419 (test: skip committing in test)
     def setUp(self):
         frappe.set_user("Administrator")
         filters = {"company": "_Test Indian Registered Company"}
@@ -47,8 +56,6 @@ class TestGSTR3BReport(FrappeTestCase):
             "Journal Entry",
         ):
             frappe.db.delete(doctype, filters=filters)
-
-        frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
 
     @classmethod
     def tearDownClass(cls):
@@ -895,9 +902,12 @@ class TestGSTR3BReport(FrappeTestCase):
 
     def test_generation_failure_is_persisted_and_published(self):
         """
-        A failed background job must commit its status and notify immediately:
+        A failed background job must record its status and notify immediately:
         deferring the event would queue it against the transaction the re-raise
         is about to roll back, so the client would never learn it failed.
+
+        The commit itself is skipped under frappe.flags.in_test, so this asserts
+        the write rather than its durability.
         """
         with patch("frappe.enqueue_doc"):
             report = self.create_report(enqueue_report=1).insert()
