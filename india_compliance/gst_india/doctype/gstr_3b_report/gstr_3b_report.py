@@ -18,6 +18,7 @@ from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.utils import (
     get_data_file_path,
     get_period,
+    load_doc,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import (
@@ -289,50 +290,43 @@ def format_values(data, precision=2):
     return data
 
 
-def get_file_name(name):
-    report = frappe.db.get_value(
-        "GSTR 3B Report",
-        name,
-        ["company_gstin", "month_or_quarter", "year"],
-        as_dict=True,
-    )
-    return f"GSTR-3B-{report.company_gstin}-{report.month_or_quarter.replace(' ', '')}-{report.year}"
+def get_report(name: str):
+    report = load_doc("GSTR 3B Report", name)
 
-
-def get_json_data(name: str):
-    frappe.has_permission("GSTR 3B Report", throw=True)
-    json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
-
-    if not json_data:
+    if not report.json_output:
         frappe.throw(_("Report data not found"), title=_("Invalid Data"))
 
-    return json_data
+    return report
+
+
+def get_file_name(report):
+    return f"GSTR-3B-{report.company_gstin}-{report.month_or_quarter.replace(' ', '')}-{report.year}"
 
 
 @frappe.whitelist()
 def make_json(name: str):
-    json_data = get_json_data(name)
+    report = get_report(name)
 
-    frappe.local.response.filename = f"{get_file_name(name)}.json"
-    frappe.local.response.filecontent = json_data
+    frappe.local.response.filename = f"{get_file_name(report)}.json"
+    frappe.local.response.filecontent = report.json_output
     frappe.local.response.type = "download"
 
 
 @frappe.whitelist()
 def download_gstr3b_as_excel(name: str):
     """Download GSTR 3B report as Excel file"""
-    data = json.loads(get_json_data(name))
+    report = get_report(name)
 
-    exporter = GSTR3BExcelExporter(data)
-    exporter.generate_excel(get_file_name(name))
+    exporter = GSTR3BExcelExporter(json.loads(report.json_output))
+    exporter.generate_excel(get_file_name(report))
 
 
 @frappe.whitelist()
 def download_gstr3b_as_pdf(name: str):
     """Download GSTR 3B report as PDF file"""
-    get_json_data(name)
+    report = get_report(name)
 
-    frappe.local.response.filename = f"{get_file_name(name)}.pdf"
+    frappe.local.response.filename = f"{get_file_name(report)}.pdf"
     frappe.local.response.filecontent = frappe.get_print(
         "GSTR 3B Report", name, print_format="GSTR-3B", as_pdf=True, no_letterhead=True
     )
