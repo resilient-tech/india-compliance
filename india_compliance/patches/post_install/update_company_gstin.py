@@ -1,5 +1,6 @@
 import click
 import frappe
+from frappe.utils import cint
 
 from india_compliance.gst_india.utils import get_all_gst_accounts, get_gstin_list
 
@@ -171,7 +172,7 @@ def toggle_allow_on_submit(allow=True, voucher_types=None):
     custom_field = frappe.qb.DocType("Custom Field")
     query = (
         frappe.qb.update(custom_field)
-        .set(custom_field.allow_on_submit, bool(allow))
+        .set(custom_field.allow_on_submit, cint(allow))
         .where(custom_field.fieldname == "company_gstin")
     )
 
