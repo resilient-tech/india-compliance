@@ -133,12 +133,24 @@ function set_primary_action_label(frm) {
 }
 
 function append_form(frm) {
-    $(frm.fields_dict.gstr3b_form.wrapper).empty();
+    const wrapper = $(frm.fields_dict.gstr3b_form.wrapper).empty();
+
+    if (!frm.doc.json_output) {
+        const message = {
+            "In Process": __("Report generation is in progress. This page will refresh automatically."),
+            Failed: __("Report generation failed. Please try regenerating."),
+        }[frm.doc.generation_status];
+
+        if (message) wrapper.append($("<div class='text-muted'>").text(message));
+
+        return;
+    }
+
     $(
         frappe.render_template("gstr_3b_report", {
             data: JSON.parse(frm.doc.json_output),
         }),
-    ).appendTo(frm.fields_dict.gstr3b_form.wrapper);
+    ).appendTo(wrapper);
 }
 
 function set_options_for_year_month(frm) {

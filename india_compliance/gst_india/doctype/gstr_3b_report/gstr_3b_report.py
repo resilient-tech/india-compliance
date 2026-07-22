@@ -136,18 +136,21 @@ class GSTR3BReport(Document):
 
         except Exception as e:
             self.generation_status = "Failed"
-            self.db_set({"generation_status": self.generation_status})
-            frappe.db.commit()  # nosemgrep
+            self.db_set({"generation_status": self.generation_status}, commit=True)  # nosemgrep
+            self.notify_generation_complete(after_commit=False)
+
             raise e
 
-        finally:
-            # after_commit so the client never reloads before the row is visible
-            frappe.publish_realtime(
-                "gstr3b_report_generation",
-                doctype=self.doctype,
-                docname=self.name,
-                after_commit=True,
-            )
+        else:
+            self.notify_generation_complete(after_commit=True)
+
+    def notify_generation_complete(self, after_commit):
+        frappe.publish_realtime(
+            "gstr3b_report_generation",
+            doctype=self.doctype,
+            docname=self.name,
+            after_commit=after_commit,
+        )
 
     def _get_filters(self):
         return frappe._dict(
