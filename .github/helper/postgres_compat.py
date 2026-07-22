@@ -11,6 +11,11 @@ case-sensitive ==/IN, NULL ordering, ORDER BY ... LIMIT 1 tiebreakers, integer-d
 intent, division by a possibly-zero divisor, savepoint discipline) — those genuinely need
 the test suite or a human/Greptile reviewer. Run the full suite on a Postgres site for those.
 
+The AST rules also only see a single expression: a `frappe.qb.update(...)` builder assigned
+to a variable or passed to another function and `.join()`-ed there is invisible (that is how
+improve_item_tax_template's UPDATE..JOIN slipped through). test_patches.py's
+test_every_patch_runs is the runtime backstop for that shape.
+
 Escape hatch: put `# pg-ok` anywhere on the offending statement's line span (e.g. on a
 `SHOW INDEX` query that lives inside an `if frappe.db.db_type == "mariadb":` branch).
 
@@ -87,8 +92,7 @@ SQL_PATTERNS: list[tuple[re.Pattern, str]] = [
         re.compile(
             r"\bcast\s*\(.+?\bas\s+char\b", re.I | re.S
         ),  # .+? spans nested parens, e.g. CAST(ABS(x) AS CHAR)
-        "CAST(... AS CHAR) is character(1) on Postgres and truncates -> use Cast_(x, 'varchar'),"
-        " which renders CONCAT(x,'') on MariaDB (raw CAST AS VARCHAR is a syntax error there)",
+        "CAST(... AS CHAR) is character(1) on Postgres and truncates -> use Cast_(x, 'varchar'); raw CAST AS VARCHAR is a syntax error on MariaDB",
     ),
 ]
 
