@@ -88,8 +88,6 @@ class TestPatches(IntegrationTestCase):
                 frappe.clear_cache(doctype=doctype)
 
     def test_every_patch_runs(self):
-        db_errors = (frappe.db.ProgrammingError, frappe.db.OperationalError, frappe.db.DataError)
-
         failures = []
 
         frappe.db._disable_transaction_control += 1
@@ -101,10 +99,8 @@ class TestPatches(IntegrationTestCase):
                     frappe.db.savepoint("patch_smoke_test")
                     try:
                         frappe.get_attr(path)()
-                    except db_errors as e:
+                    except Exception as e:
                         failures.append(f"{path}: {type(e).__name__}: {str(e)[:160]}")
-                    except Exception:
-                        pass  # not a SQL problem; out of context on a bare test site
                     finally:
                         frappe.db.rollback(save_point="patch_smoke_test")
         finally:
