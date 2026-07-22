@@ -255,7 +255,7 @@ class TestGSTR1B2CL(FrappeTestCase):
 
         invoice_data = next((inv for inv in pos_block["inv"] if inv["inum"] == invoice.name), None)
 
-        self.assertEqual(invoice_data["idt"], "05-07-2026")
+        self.assertEqual(invoice_data["idt"], getdate(invoice.posting_date).strftime("%d-%m-%Y"))
         self.assertEqual(invoice_data["val"], 118000.0)
 
         self.assertEqual(len(invoice_data["itms"]), 1)
