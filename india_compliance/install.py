@@ -39,6 +39,7 @@ POST_INSTALL_PATCHES = (
     "update_e_waybill_status",
     "remove_deprecated_docs",
     "remove_old_fields",
+    "remove_tax_category_gst_state",
     "update_custom_role_for_e_invoice_summary",
     "update_company_gstin",
     "update_payment_entry_fields",

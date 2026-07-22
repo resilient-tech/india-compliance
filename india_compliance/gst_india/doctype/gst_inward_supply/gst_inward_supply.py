@@ -42,6 +42,11 @@ def create_inward_supply(transaction):
         "supplier_gstin": transaction.supplier_gstin,
     }
 
+    # flat records (TDS/TCS) have no bill no/date; key them by period so a later
+    # period doesn't overwrite an earlier one
+    if not transaction.bill_no:
+        filters["sup_return_period"] = transaction.sup_return_period
+
     if name := frappe.get_value("GST Inward Supply", filters):
         gst_inward_supply = frappe.get_doc("GST Inward Supply", name)
     else:

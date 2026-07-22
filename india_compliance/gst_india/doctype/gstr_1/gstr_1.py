@@ -22,6 +22,7 @@ from india_compliance.gst_india.utils import (
     MONTHS,
     get_gst_accounts_by_type,
     get_period,
+    validate_gstin_permission,
 )
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 
@@ -183,6 +184,7 @@ class GSTR1(Document):
 
 
 @frappe.whitelist()
+@validate_gstin_permission(doctype="GST Return Log")
 @otp_handler
 def perform_gstr1_action(
     action: str,
@@ -216,6 +218,7 @@ def perform_gstr1_action(
 
 
 @frappe.whitelist()
+@validate_gstin_permission(doctype="GST Return Log")
 @otp_handler
 def check_action_status(month_or_quarter: str, year: str, company_gstin: str, action: str):
     frappe.has_permission("GST Return Log", "write", throw=True)
@@ -354,6 +357,7 @@ def get_gst_and_round_off_accounts(month_or_quarter: str, year: str, company: st
 
 
 @frappe.whitelist()
+@validate_gstin_permission(doctype="GST Return Log")
 def make_journal_entry(
     company: str,
     company_gstin: str,
@@ -393,6 +397,7 @@ def make_journal_entry(
 
 
 @frappe.whitelist()
+@validate_gstin_permission(doctype="GST Return Log")
 def get_net_gst_liability(
     company: str,
     company_gstin: str,
@@ -462,6 +467,7 @@ def get_gstr_1_from_and_to_date(month_or_quarter: str, year: str, filing_prefere
 
 
 @frappe.whitelist()
+@validate_gstin_permission(doctype="GST Return Log")
 def get_filing_preference_from_log(month_or_quarter: str, year: str, company_gstin: str):
     frappe.has_permission("GSTR-1", throw=True)
 

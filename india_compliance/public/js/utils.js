@@ -51,6 +51,29 @@ Object.assign(india_compliance, {
 
     HSN_BIFURCATION_FROM: frappe.datetime.str_to_obj("2025-05-01"),
 
+    // Stock Entry purposes for Subcontracting Inward (company is the job worker)
+    SUBCONTRACTING_INWARD_PURPOSES: ["Subcontracting Delivery", "Return Raw Material to Customer"],
+
+    // Stock Entry purposes where goods move between subcontracting parties
+    SUBCONTRACTING_PURPOSES: [
+        "Send to Subcontractor",
+        "Subcontracting Delivery",
+        "Return Raw Material to Customer",
+    ],
+
+    // Stock Entry purposes eligible for e-Waybill
+    E_WAYBILL_STOCK_ENTRY_PURPOSES: [
+        "Material Transfer",
+        "Material Issue",
+        "Send to Subcontractor",
+        "Subcontracting Delivery",
+        "Return Raw Material to Customer",
+    ],
+
+    is_subcontracting_inward_entry(doc) {
+        return this.SUBCONTRACTING_INWARD_PURPOSES.includes(doc.purpose);
+    },
+
     get_month_year_from_period(period) {
         /**
          * Returns month or quarter and year from the period
@@ -303,6 +326,13 @@ Object.assign(india_compliance, {
         }
 
         state_field.set_data(frappe.boot.india_state_options || []);
+    },
+
+    get_state_from_gstin(gstin) {
+        if (!gstin || gstin.length < 2) return;
+
+        const state_number = gstin.substring(0, 2);
+        return (frappe.boot.gst_state_by_number || {})[state_number];
     },
 
     can_enable_api(settings) {
@@ -598,7 +628,7 @@ Object.assign(india_compliance, {
 
         if (doc.doctype != "Stock Entry") return true;
 
-        if (!["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(doc.purpose)) {
+        if (!india_compliance.E_WAYBILL_STOCK_ENTRY_PURPOSES.includes(doc.purpose)) {
             return false;
         }
 
