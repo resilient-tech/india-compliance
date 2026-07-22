@@ -1,6 +1,8 @@
 // Copyright (c) 2019, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
+const REPORT_METHOD = "india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report";
+
 frappe.ui.form.on("GSTR 3B Report", {
     setup: function () {
         frappe.require("assets/india_compliance/js/gstr_2b.js");
@@ -35,26 +37,25 @@ frappe.ui.form.on("GSTR 3B Report", {
         append_form(frm);
 
         // Download Buttons
-        const report_method = "india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report";
         const docname = encodeURIComponent(frm.doc.name);
         const download_group = __("Download");
 
         if (frappe.model.can_print(frm.doctype, frm)) {
             frm.add_custom_button(
                 __("JSON"),
-                () => open_download(`${report_method}.make_json?name=${docname}`),
+                () => open_download(`${REPORT_METHOD}.make_json?name=${docname}`),
                 download_group,
             );
 
             frm.add_custom_button(
                 __("Excel"),
-                () => open_download(`${report_method}.download_gstr3b_as_excel?name=${docname}`),
+                () => open_download(`${REPORT_METHOD}.download_gstr3b_as_excel?name=${docname}`),
                 download_group,
             );
 
             frm.add_custom_button(
                 __("PDF"),
-                () => open_download(`${report_method}.download_gstr3b_as_pdf?name=${docname}`),
+                () => open_download(`${REPORT_METHOD}.download_gstr3b_as_pdf?name=${docname}`),
                 download_group,
             );
         }
