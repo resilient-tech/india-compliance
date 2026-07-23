@@ -1155,6 +1155,7 @@ class TestEWaybill(FrappeTestCase):
             self.assertTrue(json_data.get("shipToTradeName"))
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     @staticmethod
     def _create_unregistered_shipping_address():
         """Create (once) an unregistered, India-based Shipping address for URP tests."""
@@ -1188,6 +1189,86 @@ class TestEWaybill(FrappeTestCase):
         )
 
 =======
+=======
+    def _create_sales_invoice_with_irn(self, shipping_address_name, irn):
+        """utility to create sales invoice with given irn"""
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name=shipping_address_name,
+            is_in_state=1,
+            distance=10,
+            transporter="_Test Common Supplier",
+            mode_of_transport="Road",
+            irn=irn,
+            do_not_submit=True,
+        )
+        si.gst_transporter_id = ""
+        si.submit()
+        return si
+
+    @change_settings("GST Settings", {"sandbox_mode": 1})
+    def test_e_waybill_irn_exp_ship_dtls(self):
+        """testing ExpShipDtls on the e-waybill by IRN (get_data_with_irn).
+
+        - registered shipping address, IRN has no matching ship-to -> block added with
+          the sandbox GSTIN override
+        - unregistered shipping address -> block added with 'URP'
+        - IRN already carries the same ship-to GSTIN -> block skipped (dedup)
+        """
+        # registered shipping address, no e-Invoice Log -> ExpShipDtls added, sandbox GSTIN
+        si = self._create_sales_invoice_with_irn("_Test Registered Customer-Billing-1", "12345678901234561")
+        data = EWaybillData(si).get_data(with_irn=True)
+        exp_ship_dtls = data.get("ExpShipDtls")
+        self.assertIsNotNone(exp_ship_dtls)
+        self.assertEqual(exp_ship_dtls.get("Gstin"), "02AMBPG7773M002")
+        for field in ("TrdNm", "Addr1", "Loc", "Pin", "Stcd"):
+            self.assertTrue(exp_ship_dtls.get(field), f"ExpShipDtls.{field} must be set")
+
+        # unregistered shipping address -> ExpShipDtls.Gstin == 'URP'
+        si = self._create_sales_invoice_with_irn(create_unregistered_shipping_address(), "12345678901234562")
+        data = EWaybillData(si).get_data(with_irn=True)
+        self.assertEqual((data.get("ExpShipDtls") or {}).get("Gstin"), "URP")
+
+        # IRN already carries the same ship-to GSTIN -> ExpShipDtls skipped
+        irn = "12345678901234563"
+        si = self._create_sales_invoice_with_irn("_Test Registered Customer-Billing-1", irn)
+        frappe.get_doc(
+            {
+                "doctype": "e-Invoice Log",
+                "irn": irn,
+                "invoice_data": json.dumps({"ShipDtls": {"Gstin": "02AMBPG7773M002"}}),
+            }
+        ).insert(ignore_if_duplicate=True)
+
+        data = EWaybillData(si).get_data(with_irn=True)
+        self.assertNotIn("ExpShipDtls", data)
+
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    def test_e_waybill_irn_ship_to_gated_by_rollout_date(self):
+        """ExpShipDtls on the IRN path is gated by E_WAYBILL_CHANGES_APPLICABLE_DATE
+        in production (sandbox off), mirroring test_ship_to_gstin_gated_by_rollout_date."""
+        day_before_rollout = get_datetime(add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1))
+        rollout_date = get_datetime(E_WAYBILL_CHANGES_APPLICABLE_DATE)
+
+        # before rollout -> ExpShipDtls omitted
+        with time_machine.travel(day_before_rollout, tick=True):
+            si = self._create_sales_invoice_with_irn(
+                "_Test Registered Customer-Billing-1", "12345678901234564"
+            )
+            data = EWaybillData(si).get_data(with_irn=True)
+            # when with irn is true, this data is compatable with E-Invoice APIs
+            self.assertNotIn("ExpShipDtls", data)
+
+        # on/after rollout -> ExpShipDtls sent
+        with time_machine.travel(rollout_date, tick=False):
+            data = EWaybillData(si).get_data(with_irn=True)
+            self.assertIn("ExpShipDtls", data)
+            self.assertTrue(data["ExpShipDtls"].get("Gstin"))
+
+>>>>>>> 89815eb5 (fix: update e-invoice and e-waybill tests)
     def test_e_waybill_for_inter_state_sales_return(self):
         """Test e-waybill generation for inter-state sales return.
 
