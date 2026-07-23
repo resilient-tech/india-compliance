@@ -35,13 +35,17 @@ def set_generated_status(sales_invoice):
 def set_cancelled_status(sales_invoice):
     e_waybill_log = frappe.qb.DocType("e-Waybill Log")
 
+    cancelled_e_waybills = (
+        frappe.qb.from_(e_waybill_log)
+        .select(e_waybill_log.reference_name)
+        .where(e_waybill_log.is_cancelled == 1)
+    )
+
     (
         frappe.qb.update(sales_invoice)
-        .join(e_waybill_log)
-        .on(sales_invoice.name == e_waybill_log.reference_name)
         .set(sales_invoice.e_waybill_status, "Cancelled")
         .where(
-            (e_waybill_log.is_cancelled == 1)
+            sales_invoice.name.isin(cancelled_e_waybills)
             & (IfNull(sales_invoice.e_waybill_status, "") == "")
             & (IfNull(sales_invoice.ewaybill, "") == "")
             & (sales_invoice.is_opening != "Yes")
@@ -62,10 +66,17 @@ def set_pending_status(sales_invoice):
 
     sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
 
+    invoices_with_goods_item = (
+        frappe.qb.from_(sales_invoice_item)
+        .select(sales_invoice_item.parent)
+        .where(
+            (IfNull(sales_invoice_item.gst_hsn_code, "") != "")
+            | (sales_invoice_item.gst_hsn_code.not_like("99%"))
+        )
+    )
+
     (
         frappe.qb.update(sales_invoice)
-        .join(sales_invoice_item)
-        .on(sales_invoice.name == sales_invoice_item.parent)
         .set(sales_invoice.e_waybill_status, "Pending")
         .where(
             (IfNull(sales_invoice.ewaybill, "") == "")
@@ -73,10 +84,7 @@ def set_pending_status(sales_invoice):
             & (sales_invoice.docstatus == 1)
             & (sales_invoice.posting_date >= from_date)
             & (sales_invoice.base_grand_total >= e_waybill_threshold)
-            & (
-                (IfNull(sales_invoice_item.gst_hsn_code, "") != "")
-                | (sales_invoice_item.gst_hsn_code.not_like("99%"))
-            )
+            & sales_invoice.name.isin(invoices_with_goods_item)
             & (sales_invoice.company_gstin != sales_invoice.billing_address_gstin)
             & (sales_invoice.is_return == 0)
             & (sales_invoice.is_debit_note == 0)

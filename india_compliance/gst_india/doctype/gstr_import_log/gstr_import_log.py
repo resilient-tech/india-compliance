@@ -3,7 +3,9 @@
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import add_to_date
+from frappe.utils import add_to_date, cint
+
+DOWNLOAD_QUEUED_REQUEST_JOB = "india_compliance.gst_india.utils.gstr_utils.download_queued_request"
 
 
 class GSTRImportLog(Document):
@@ -75,10 +77,8 @@ def _create_import_log(
 def toggle_scheduled_jobs(stopped):
     scheduled_job = frappe.db.get_value(
         "Scheduled Job Type",
-        {
-            "method": "india_compliance.gst_india.utils.gstr_utils.download_queued_request",
-        },
+        {"method": DOWNLOAD_QUEUED_REQUEST_JOB},
     )
 
     if scheduled_job:
-        frappe.db.set_value("Scheduled Job Type", scheduled_job, "stopped", stopped)
+        frappe.db.set_value("Scheduled Job Type", scheduled_job, "stopped", cint(stopped))

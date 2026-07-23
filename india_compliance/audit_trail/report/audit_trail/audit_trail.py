@@ -108,7 +108,13 @@ class BaseAuditTrail:
         return doctypes
 
     def update_count(self):
-        fields = ["owner as user_name", {"COUNT": "name", "as": "count"}]
+        # if a query has any aggregate in the SELECT, every other selected column must be
+        # either in the GROUP BY or wrapped in its own aggregate.
+        fields = [{"COUNT": "name", "as": "count"}]
+
+        if self.group_by:
+            fields.insert(0, f"{self.group_by} as user_name")
+
         self.filters["creation"] = self.get_date()
 
         if doctype := self.filters.pop("doctype", None):

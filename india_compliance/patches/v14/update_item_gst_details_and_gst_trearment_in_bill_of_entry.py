@@ -1,5 +1,6 @@
 import click
 import frappe
+from frappe.query_builder import Bracket
 from frappe.query_builder.functions import IfNull
 
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -108,38 +109,40 @@ def get_taxes_query(docs, doctype, taxes):
 def set_gst_treatment():
     # based on item_tax_template
     boe = frappe.qb.DocType("Bill of Entry")
-    boe_item = frappe.qb.DocType("Bill of Entry Item", alias="boe_item")
+    boe_item = frappe.qb.DocType("Bill of Entry Item")
     item_tax_template = frappe.qb.DocType("Item Tax Template")
+
+    template_gst_treatment = (
+        frappe.qb.from_(item_tax_template)
+        .select(item_tax_template.gst_treatment)
+        .where(item_tax_template.name == boe_item.item_tax_template)
+    )
 
     (
         frappe.qb.update(boe_item)
-        .left_join(item_tax_template)
-        .on(item_tax_template.name == boe_item.item_tax_template)
-        .set(boe_item.gst_treatment, item_tax_template.gst_treatment)
+        .set(boe_item.gst_treatment, Bracket(template_gst_treatment))
         .where(boe_item.docstatus == 1)
         .run()
     )
 
     # if no taxes are applied all the items are nil-rated
+    untaxed_bills_of_entry = frappe.qb.from_(boe).select(boe.name).where(boe.total_taxes == 0)
+    taxed_bills_of_entry = frappe.qb.from_(boe).select(boe.name).where(boe.total_taxes != 0)
 
     (
         frappe.qb.update(boe_item)
-        .join(boe)
-        .on(boe.name == boe_item.parent)
         .set(boe_item.gst_treatment, "Nil-Rated")
         .where(boe_item.docstatus == 1)
-        .where(boe.total_taxes == 0)
+        .where(boe_item.parent.isin(untaxed_bills_of_entry))
         .where(boe_item.gst_treatment.notin(("Nil-Rated", "Exempted", "Non-GST")))
         .run()
     )
 
     (
         frappe.qb.update(boe_item)
-        .join(boe)
-        .on(boe.name == boe_item.parent)
         .set(boe_item.gst_treatment, "Taxable")
         .where(boe_item.docstatus == 1)
-        .where(boe.total_taxes != 0)
+        .where(boe_item.parent.isin(taxed_bills_of_entry))
         .where(IfNull(boe_item.gst_treatment, "") == "")
         .run()
     )

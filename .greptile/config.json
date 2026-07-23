@@ -8,5 +8,20 @@
             "frappe/erpnext",
             "resilient-tech/india-compliance-docs"
         ]
+    },
+    "instructions": "India Compliance runs on both MariaDB and PostgreSQL from one codebase, but the PostgreSQL test job is label-gated and may not run on this PR, so review every new or changed database query (raw frappe.db.sql, frappe.qb, frappe.get_all/get_list/get_value, report SQL and migration patches) for cross-engine compatibility. Apply .github/POSTGRES_COMPATIBILITY.md, which is loaded as context below and is the single source of truth for these rules: it lists the constructs that ERROR on PostgreSQL, the ones that SILENTLY DIVERGE between engines, the GROUP BY / DISTINCT row-count trap and the second-order traps where a Max()/Min() wrap is itself the bug, the false positives not to flag, and the rule that governs all of them -- MariaDB output must never change; PostgreSQL is bent to match MariaDB, never the reverse. Quote the rule you are applying so the fix is unambiguous.",
+    "customContext": {
+        "files": [
+            {
+                "scope": [
+                    "**/*.py",
+                    "**/*.js",
+                    "**/*.sql",
+                    "**/report/**/*.json"
+                ],
+                "path": ".github/POSTGRES_COMPATIBILITY.md",
+                "description": "MariaDB <-> PostgreSQL parity rules for India Compliance, kept in sync with the ERPNext guide of the same name. Sections: 1 hard breaks, 2 silent divergences, 3 the GROUP BY and DISTINCT row-count trap (3.1 when the Max()/Min() wrap is itself the bug), 4 false positives not to flag, 5 transaction/savepoint rules, 6 refactors and raw-SQL to ORM conversions are not automatically 1:1. Apply to every changed database query in this PR."
+            }
+        ]
     }
 }

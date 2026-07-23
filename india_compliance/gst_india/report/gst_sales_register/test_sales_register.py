@@ -1,5 +1,6 @@
+import frappe
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import getdate
+from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.report.gst_sales_register.gst_sales_register import (
     execute,
@@ -657,6 +658,8 @@ class TestSalesRegister(IntegrationTestCase):
     @classmethod
     @change_settings("GST Settings", {"enable_overseas_transactions": 1, "enable_e_waybill": 0})
     def create_test_records(cls):
+        frappe.db.delete("Sales Invoice", filters={"company": FILTERS["company"]})
+
         for invoice in INVOICES:
             create_sales_invoice(**invoice)
 
@@ -666,6 +669,22 @@ class TestSalesRegister(IntegrationTestCase):
 
         for index, invoice in enumerate(report_data[1]):
             self.assertPartialDict(EXPECTED_SUMMARY_BY_HSN[index], invoice)
+
+        FILTERS["summary_by"] = "Summary by Item"
+        itemwise_data = execute(FILTERS)[1]
+        self.assertTrue(itemwise_data)
+
+        # the HSN projection is a hand maintained column list, so a column added to the base
+        hsn_columns = set(report_data[1][0])
+        for row in itemwise_data:
+            self.assertEqual(sorted(set(row) - hsn_columns), [])
+
+        for field in ("taxable_value", "total_tax", "total_amount"):
+            self.assertAlmostEqual(
+                sum(flt(row[field]) for row in report_data[1]),
+                sum(flt(row[field]) for row in itemwise_data),
+                places=2,
+            )
 
     def test_overview(self):
         FILTERS["summary_by"] = "Overview"
