@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
-from frappe.utils import add_to_date, getdate
+from frappe.utils import add_to_date, cint, getdate
 
 from india_compliance.gst_india.constants import (
     GST_ACCOUNT_FIELDS,
@@ -35,6 +35,10 @@ from india_compliance.gst_india.utils.gstin_info import get_gstin_info
 from india_compliance.utils.custom_fields import toggle_custom_fields
 
 E_INVOICE_START_DATE = "2021-01-01"
+
+RETRY_E_INVOICE_E_WAYBILL_JOB = (
+    "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_e_waybill_generation"
+)
 
 
 class GSTSettings(Document):
@@ -131,9 +135,9 @@ class GSTSettings(Document):
 
         frappe.db.set_value(
             "Scheduled Job Type",
-            {"method": "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_e_waybill_generation"},
+            {"method": RETRY_E_INVOICE_E_WAYBILL_JOB},
             "stopped",
-            not self.enable_retry_einv_ewb_generation,
+            cint(not self.enable_retry_einv_ewb_generation),
         )
 
     def update_auto_refresh_authtoken_scheduled_job(self):
@@ -146,7 +150,7 @@ class GSTSettings(Document):
                 "method": "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_refresh_authtoken"
             },
             "stopped",
-            not self.enable_auto_reconciliation,
+            cint(not self.enable_auto_reconciliation),
         )
 
     def get_gstin_with_credentials(self, service=None):
@@ -528,10 +532,13 @@ def update_pending_status(e_invoice_applicability_date, company=None):
     gst_settings = frappe.get_cached_doc("GST Settings")
     if gst_settings.nil_exempt_e_invoice_treatment == "Do Not Generate":
         sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
-        query = (
-            query.join(sales_invoice_item)
-            .on(sales_invoice_item.parent == sales_invoice.name)
-            .where(sales_invoice_item.gst_treatment.isin(TAXABLE_GST_TREATMENTS))
+        # use subquery, not UPDATE..JOIN (invalid on postgres)
+        query = query.where(
+            sales_invoice.name.isin(
+                frappe.qb.from_(sales_invoice_item)
+                .select(sales_invoice_item.parent)
+                .where(sales_invoice_item.gst_treatment.isin(TAXABLE_GST_TREATMENTS))
+            )
         )
 
     if company:

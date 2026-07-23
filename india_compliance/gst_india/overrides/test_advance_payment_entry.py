@@ -311,6 +311,49 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
             ],
         )
 
+    def test_advance_detail_with_multiple_allocations(self):
+        """One advance adjusted against several invoices.
+        Summary mode reports a single allocation rather than their total (150): develop's loose
+        GROUP BY returned an arbitrary one, and the Max() wrap makes that pick deterministic
+        (100). Reporting the total is a product fix in its own right, out of scope here."""
+        payment_doc = self._create_payment_entry()
+        for amount in (118, 59):
+            make_payment_reconciliation(payment_doc, self._create_sales_invoice(), amount)
+
+        detail = self._advance_detail_rows(payment_doc, show_summary=0)
+        summary = self._advance_detail_rows(payment_doc, show_summary=1)
+
+        self.assertEqual(len(detail), 3, "one row for the advance received, plus one per allocation")
+        self.assertEqual(len(summary), 1, "expected one summary row per payment entry")
+
+        # advance received, then the two adjustments — allocations net of GST
+        self.assertEqual([flt(row["allocated_amount"], 2) for row in detail], [0.0, 100.0, 50.0])
+        self.assertEqual([flt(row["gst_allocated"], 2) for row in detail], [0.0, 18.0, 9.0])
+        self.assertEqual([flt(row["paid_amount"], 2) for row in detail], [500.0, 0.0, 0.0])
+
+        # summed across allocations, except allocated_amount (see the docstring)
+        self.assertEqual(flt(summary[0]["gst_allocated"], 2), 27.0)
+        self.assertEqual(flt(summary[0]["gst_paid"], 2), 90.0)
+        self.assertEqual(flt(summary[0]["paid_amount"], 2), 500.0)
+        self.assertEqual(flt(summary[0]["allocated_amount"], 2), 100.0)
+
+    def _advance_detail_rows(self, payment_doc, show_summary):
+        from india_compliance.gst_india.report.gst_advance_detail.gst_advance_detail import (
+            execute as advance_detail,
+        )
+
+        _columns, data = advance_detail(
+            frappe._dict(
+                company=payment_doc.company,
+                company_gstin=payment_doc.company_gstin,
+                from_date=getdate(),
+                to_date=getdate(),
+                show_for_period=1,
+                show_summary=show_summary,
+            )
+        )
+        return [row for row in data if row.get("payment_entry") == payment_doc.name]
+
     def test_payment_entry_allocation_with_rounding_off(self):
         payment_doc = self._create_payment_entry()
         invoice_doc = self._create_sales_invoice()

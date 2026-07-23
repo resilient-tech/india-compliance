@@ -2566,12 +2566,12 @@ class GSTR1BooksData(BooksDataMapper):
 
         elif type_of_business == "Adjustment":
             query = _class.get_11B_query()
-            fields = (
-                _class.pe.name,
-                _class.pe.party,
-                _class.pe.posting_date,
-                _class.pe.company_gstin,
-                _class.pe_ref.reference_name,
+            fields = _class.get_11B_payment_entry_fields(
+                name="name",
+                party="party",
+                posting_date="posting_date",
+                company_gstin="company_gstin",
+                reference_name="reference_name",
             )
             multipler = -1
 

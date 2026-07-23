@@ -1,0 +1,151 @@
+name: Server Tests (Postgres)
+
+# PostgreSQL parity job. india_compliance targets both MariaDB and PostgreSQL from one codebase.
+# This job is label-gated (it does NOT run on every PR) plus a nightly schedule, mirroring the
+# policy used by ERPNext — keep it green by running the suite on a Postgres site for any PR that
+# touches database queries by adding the `postgres` label.
+
+on:
+  schedule:
+    # 03:00 AM IST daily (21:30 UTC the previous day)
+    - cron: "30 21 * * *"
+  pull_request:
+    # 'labeled' so adding the 'postgres' label to an already-open PR re-triggers the run.
+    types: [opened, reopened, synchronize, labeled]
+    paths-ignore:
+      - "**.css"
+      - "**.js"
+      - "**.md"
+      - "**.html"
+      - "**.csv"
+  workflow_dispatch:
+    inputs:
+      frappe_remote:
+        description: "Frappe remote URL"
+        required: false
+        default: "https://github.com/frappe/frappe.git"
+        type: string
+      frappe_branch:
+        description: "Frappe branch"
+        required: false
+        default: "develop"
+        type: string
+      erpnext_remote:
+        description: "ERPNext remote URL"
+        required: false
+        default: "https://github.com/frappe/erpnext.git"
+        type: string
+      erpnext_branch:
+        description: "ERPNext branch"
+        required: false
+        default: "develop"
+        type: string
+
+env:
+  BRANCH: ${{ github.base_ref || github.ref_name }}
+  APP_NAME: india_compliance
+  PYTHON_VERSION: "3.14"
+  NODE_VERSION: 24
+
+concurrency:
+  group: server-tests-postgres-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event.number || github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # On PRs run ONLY when the PR carries the 'postgres' label; always run on schedule / manual dispatch.
+    if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'postgres') }}
+
+    strategy:
+      fail-fast: false
+
+    name: Python Unit Tests (Postgres)
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: travis
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 2s
+          --health-retries 5
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          check-latest: true
+
+      - name: Add to Hosts
+        run: echo "127.0.0.1 test_site" | sudo tee -a /etc/hosts
+
+      - name: Cache pip
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
+
+      - name: Cache node modules
+        uses: actions/cache@v6
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v6
+        id: yarn-cache
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install
+        run: |
+          bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
+        env:
+          DB: postgres
+          BRANCH_TO_CLONE: ${{ env.BRANCH }}
+          FRAPPE_REMOTE: ${{ inputs.frappe_remote }}
+          FRAPPE_BRANCH: ${{ inputs.frappe_branch }}
+          ERPNEXT_REMOTE: ${{ inputs.erpnext_remote }}
+          ERPNEXT_BRANCH: ${{ inputs.erpnext_branch }}
+
+      - name: Run Tests
+        run: cd ~/frappe-bench/ && bench --site test_site run-parallel-tests --app ${{ env.APP_NAME }}
+        env:
+          DB: postgres
+          TYPE: server
+
+      - name: Show bench output
+        if: ${{ always() }}
+        run: cat ~/frappe-bench/bench_start.log || true

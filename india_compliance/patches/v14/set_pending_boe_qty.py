@@ -9,22 +9,21 @@ def execute():
 
     submitted_boe_qty = (
         frappe.qb.from_(boe_item)
-        .select(boe_item.pi_detail, Sum(boe_item.qty).as_("qty"))
+        .select(Sum(boe_item.qty))
+        .where(boe_item.pi_detail == pi_item.name)
         .where(boe_item.docstatus == 1)
-        .groupby(boe_item.pi_detail)
+    )
+
+    overseas_invoices = (
+        frappe.qb.from_(pi).select(pi.name).where(pi.docstatus == 1).where(pi.gst_category == "Overseas")
     )
 
     (
         frappe.qb.update(pi_item)
-        .join(pi)
-        .on(pi_item.parent == pi.name)
-        .left_join(submitted_boe_qty)
-        .on(pi_item.name == submitted_boe_qty.pi_detail)
         .set(
             pi_item.pending_boe_qty,
-            pi_item.qty - IfNull(submitted_boe_qty.qty, 0),
+            pi_item.qty - IfNull(submitted_boe_qty, 0),
         )
-        .where(pi.docstatus == 1)
-        .where(pi.gst_category == "Overseas")
+        .where(pi_item.parent.isin(overseas_invoices))
         .run()
     )

@@ -27,7 +27,7 @@ from india_compliance.gst_india.utils.e_waybill import EWaybillData
 from india_compliance.gst_india.utils.tests import append_item, create_sales_invoice
 
 
-class TestEInvoice(IntegrationTestCase):
+class EInvoiceTestMixin:
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -54,6 +54,31 @@ class TestEInvoice(IntegrationTestCase):
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
 
+    def _mock_e_invoice_response(self, data, api="ei/api/invoice"):
+        """Mock response for e-Invoice API"""
+        url = BASE_URL + "/test/" + api
+
+        responses.add(
+            responses.POST,
+            url,
+            body=json.dumps(data.get("response_data")),
+            match=[matchers.json_params_matcher(data.get("request_data"))],
+            status=200,
+        )
+
+        # Mock get e_invoice by IRN response
+        data = self.e_invoice_test_data.get("get_e_invoice_by_irn")
+
+        responses.add(
+            responses.GET,
+            url + "/irn",
+            body=json.dumps(data.get("response_data")),
+            match=[matchers.query_string_matcher(data.get("request_data"))],
+            status=200,
+        )
+
+
+class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
     def test_request_data_for_different_shipping_dispatch_address(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill
         si = create_sales_invoice(
@@ -1320,29 +1345,6 @@ class TestEInvoice(IntegrationTestCase):
 
         cancel_e_invoice(doc.name, values=values)
         return frappe.get_doc("Sales Invoice", doc.name)
-
-    def _mock_e_invoice_response(self, data, api="ei/api/invoice"):
-        """Mock response for e-Invoice API"""
-        url = BASE_URL + "/test/" + api
-
-        responses.add(
-            responses.POST,
-            url,
-            body=json.dumps(data.get("response_data")),
-            match=[matchers.json_params_matcher(data.get("request_data"))],
-            status=200,
-        )
-
-        # Mock get e_invoice by IRN response
-        data = self.e_invoice_test_data.get("get_e_invoice_by_irn")
-
-        responses.add(
-            responses.GET,
-            url + "/irn",
-            body=json.dumps(data.get("response_data")),
-            match=[matchers.query_string_matcher(data.get("request_data"))],
-            status=200,
-        )
 
 
 def update_dates_for_test_data(test_data):
