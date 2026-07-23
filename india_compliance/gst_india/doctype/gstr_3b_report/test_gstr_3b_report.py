@@ -16,6 +16,7 @@ from india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report import (
     GSTR3BExcelExporter,
     GSTR3BReport,
     download_gstr3b_as_excel,
+    download_gstr3b_as_pdf,
     get_file_name,
     make_json,
 )
@@ -854,10 +855,20 @@ class TestGSTR3BReport(IntegrationTestCase):
 
         self.assertEqual(file_name, f"GSTR-3B-24AAQCA8719H1ZC-{get_month(getdate())}-{getdate().year}")
 
-        with patch.object(GSTR3BExcelExporter, "generate_excel") as generate_excel:
-            download_gstr3b_as_excel(report.name)
+        download_gstr3b_as_excel(report.name)
 
-        generate_excel.assert_called_once_with(file_name)
+        self.assertEqual(frappe.local.response.filename, f"{file_name}.xlsx")
+        self.assertTrue(frappe.local.response.filecontent)
+
+    def test_pdf_download(self):
+        """PDF download renders the GSTR-3B print format for a generated report."""
+        report = self.create_report().insert()
+
+        download_gstr3b_as_pdf(report.name)
+
+        self.assertEqual(frappe.local.response.type, "pdf")
+        self.assertEqual(frappe.local.response.filename, f"{get_file_name(report)}.pdf")
+        self.assertTrue(frappe.local.response.filecontent)
 
     def test_file_name_for_quarterly_report(self):
         """Quarterly values contain spaces, which must not leak into the file name."""
