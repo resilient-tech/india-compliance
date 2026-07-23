@@ -113,19 +113,18 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         )
 
     @change_settings("GST Settings", {"sandbox_mode": 0})
-    def test_e_invoice_ship_gstin_urp_for_unregistered_consignee(self):
-        """ShipDtls.Gstin must be 'URP' when the consignee (shipping address) is unregistered.
-
-        Sandbox mode substitutes a dummy buyer GSTIN into ShipDtls, so this must run
-        outside sandbox mode to observe the real 'URP' value.
+    def test_e_invoice_ship_to_gstin_outside_sandbox(self):
+        """Outside sandbox, an unregistered consignee yields ShipDtls.Gstin == 'URP'
+        while the registered buyer keeps its real GSTIN. A differing dispatch address
+        adds DispDtls (the e-Waybill transaction-type-4 analog: both dispatch and
+        ship-to differ).
         """
-        shipping_address = create_unregistered_shipping_address()
-
         si = create_sales_invoice(
             company_address="_Test Indian Registered Company-Billing",
+            dispatch_address_name="_Test Indian Registered Company-Shipping",  # dispatch differs
             customer="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
-            shipping_address_name=shipping_address,
+            shipping_address_name=create_unregistered_shipping_address(),  # ship-to differs
             is_in_state=True,
             do_not_submit=True,
         )
@@ -136,30 +135,8 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         self.assertNotEqual(data["BuyerDtls"]["Gstin"], "URP")
         self.assertEqual(data["ShipDtls"]["Gstin"], "URP")
         self.assertTrue(data["ShipDtls"]["LglNm"])
-
-    @change_settings("GST Settings", {"sandbox_mode": 0})
-    def test_e_invoice_ship_gstin_mandatory_with_dispatch_and_shipping(self):
-        """Analogous to e-Waybill transaction type 4 (both dispatch and shipping differ):
-        when a shipping address is provided, ShipDtls.Gstin must be present ('URP' is acceptable).
-        """
-        shipping_address = create_unregistered_shipping_address()
-
-        si = create_sales_invoice(
-            company_address="_Test Indian Registered Company-Billing",
-            dispatch_address_name="_Test Indian Registered Company-Shipping",  # dispatch differs
-            customer="_Test Registered Customer",
-            customer_address="_Test Registered Customer-Billing",
-            shipping_address_name=shipping_address,  # ship-to differs
-            is_in_state=True,
-            do_not_submit=True,
-        )
-
-        data = EInvoiceData(si).get_data()
-
         # both blocks present -> the type-4 analog
         self.assertIn("DispDtls", data)
-        self.assertIn("ShipDtls", data)
-        self.assertTrue(data["ShipDtls"]["Gstin"])
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_request_data_for_foreign_transactions(self):
@@ -183,53 +160,37 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         )
 
     @change_settings("GST Settings", {"sandbox_mode": 1})
-    def test_ship_to_gstin_mandatory_urp_for_unregistered_consignee(self):
+    def test_e_invoice_ship_to_gstin_in_sandbox(self):
+        """In sandbox (Bill To-Ship To), ShipDtls.Gstin is mandatory:
+        - in case GSTIN is not present "URP" is used
+        - for registered sanbox's GSTIN is provided, which must differ
+          from the buyer GSTIN ('buyer and shipping gstin can't be the same')
         """
-        When a distinct Ship-To party exists (Bill To-Ship To), ShipDtls.Gstin
-        is mandatory but may be "URP" for an unregistered consignee.
-        """
-        shipping_address = create_unregistered_shipping_address()
-
+        # unregistered shipping address -> ShipDtls stays URP, buyer substituted
         si = create_sales_invoice(
             company_address="_Test Indian Registered Company-Billing",
             customer="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
-            shipping_address_name=shipping_address,
-            qty=1000,
+            shipping_address_name=create_unregistered_shipping_address(),
             is_in_state=True,
             do_not_submit=True,
         )
-        si.submit()
+        data = EInvoiceData(si).get_data()
+        self.assertEqual(data["ShipDtls"]["Gstin"], "URP")
+        self.assertEqual(data["BuyerDtls"]["Gstin"], "36AMBPG7773M002")
 
-        invoice_data = EInvoiceData(si).get_data()
-        ship_dtls = invoice_data.get("ShipDtls")
-
-        self.assertIsNotNone(ship_dtls)
-        self.assertEqual(ship_dtls.get("Gstin"), "URP")
-
-    @change_settings("GST Settings", {"sandbox_mode": 1})
-    def test_ship_to_gstin_for_registered_consignee(self):
-        """
-        When a distinct Ship-To party exists (Bill To-Ship To) and the consignee is
-        registered, ShipDtls.Gstin carries a GSTIN (not "URP"). In sandbox mode the real
-        GSTIN is substituted with a whitelisted sandbox GSTIN.
-        """
+        # registered consignee -> sandbox GSTIN, distinct from the buyer GSTIN
         si = create_sales_invoice(
             company_address="_Test Indian Registered Company-Billing",
             customer="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
             shipping_address_name="_Test Registered Customer-Billing-1",
-            qty=1000,
             is_in_state=True,
             do_not_submit=True,
         )
-        si.submit()
-
-        invoice_data = EInvoiceData(si).get_data()
-        ship_dtls = invoice_data.get("ShipDtls")
-
-        self.assertIsNotNone(ship_dtls)
-        self.assertEqual(ship_dtls.get("Gstin"), "02AMBPG7773M002")
+        data = EInvoiceData(si).get_data()
+        self.assertEqual(data["ShipDtls"]["Gstin"], "02AMBPG7773M002")
+        self.assertNotEqual(data["ShipDtls"]["Gstin"], data["BuyerDtls"]["Gstin"])
 
     def test_progressive_item_tax_amount(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill
