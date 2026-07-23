@@ -8,6 +8,7 @@ from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.utils import (
     add_days,
     add_to_date,
+    cint,
     escape_html,
     format_date,
     get_datetime,
@@ -645,7 +646,7 @@ def extend_validity(
     data = EWaybillData(doc).get_extend_validity_data(values)
     result = EWaybillAPI.create(doc).extend_validity(data)
 
-    doc.db_set("distance", values.remaining_distance)
+    doc.db_set("distance", cint(values.remaining_distance))
 
     update_e_waybill_log_for_extention(
         values=values,
@@ -1140,7 +1141,7 @@ def update_transaction(doc, values):
         "transporter_name": transporter_name,
         "gst_transporter_id": values.gst_transporter_id,
         "vehicle_no": values.vehicle_no,
-        "distance": values.distance,
+        "distance": cint(values.distance),
         "lr_no": values.lr_no,
         "lr_date": values.lr_date,
         "mode_of_transport": values.mode_of_transport,
@@ -1339,7 +1340,7 @@ class EWaybillData(GSTTransactionData):
             "fromPlace": self.sanitize_value(values.current_place, regex=3, max_length=50),
             "fromState": STATE_NUMBERS[values.current_state],
             "fromPincode": int(values.current_pincode),
-            "remainingDistance": int(values.remaining_distance),
+            "remainingDistance": cint(values.remaining_distance),
             "transDocNo": self.transaction_details.lr_no,
             "transDocDate": self.transaction_details.lr_date,
             "transMode": self.transaction_details.mode_of_transport,
