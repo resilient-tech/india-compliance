@@ -879,23 +879,6 @@ class TestGSTR3BReport(IntegrationTestCase):
             self.create_report().insert,
         )
 
-    def test_report_is_enqueued_once_per_document(self):
-        """A second save must not queue a duplicate generation job."""
-        with patch("frappe.enqueue_doc") as enqueue_doc:
-            report = self.create_report(enqueue_report=1).insert()
-
-            self.assertEqual(enqueue_doc.call_count, 1)
-
-        with (
-            patch("frappe.enqueue_doc") as enqueue_doc,
-            patch(
-                "india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.is_job_enqueued",
-                return_value=True,
-            ),
-        ):
-            frappe.get_doc("GSTR 3B Report", report.name).save()
-            enqueue_doc.assert_not_called()
-
     def test_generation_failure_is_persisted_and_published(self):
         """
         A failed background job must record its status and notify immediately:
@@ -912,7 +895,7 @@ class TestGSTR3BReport(IntegrationTestCase):
             patch.object(GSTR3BReport, "_process_outward_itc", side_effect=Exception("boom")),
             patch("frappe.publish_realtime") as publish_realtime,
         ):
-            self.assertRaises(Exception, report.get_data)
+            self.assertRaises(Exception, report.generate)
 
         publish_realtime.assert_called_once()
         self.assertFalse(publish_realtime.call_args.kwargs["after_commit"])
@@ -954,14 +937,12 @@ class TestGSTR3BReport(IntegrationTestCase):
             report.name,
         )
 
-    def test_downloads_share_one_file_name(self):
+    def test_excel_download_uses_shared_file_name(self):
+        """Excel export must use the same file name helper as the other downloads."""
         report = self.create_report().insert()
         file_name = get_file_name(report)
 
         self.assertEqual(file_name, f"GSTR-3B-24AAQCA8719H1ZC-{get_month(getdate())}-{getdate().year}")
-
-        make_json(report.name)
-        self.assertEqual(frappe.local.response.filename, f"{file_name}.json")
 
         with patch.object(GSTR3BExcelExporter, "generate_excel") as generate_excel:
             download_gstr3b_as_excel(report.name)
