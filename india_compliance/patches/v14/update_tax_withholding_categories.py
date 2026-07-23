@@ -10,3 +10,4 @@ def execute():
 
     for company in company_list:
         create_or_update_tax_withholding_category(company)
+        frappe.db.commit()  # nosemgrep — for multiple companies, commit after each to avoid long transactions
