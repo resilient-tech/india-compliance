@@ -11,7 +11,6 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, cstr, flt, get_first_day, get_last_day
-from frappe.utils.background_jobs import is_job_enqueued
 from openpyxl.cell.cell import MergedCell
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
@@ -56,7 +55,6 @@ class GSTR3BReport(Document):
         return status or "Not Filed"
 
     def validate(self):
-        self.json_output = ""
         if not self.company_gstin:
             frappe.throw(_("Please enter GSTIN for Company {0}").format(self.company))
 
@@ -81,71 +79,58 @@ class GSTR3BReport(Document):
                     title=_("Report Already Exists"),
                 )
 
+        self.json_output = ""
         self.generation_status = "In Process"
 
-        if self.enqueue_report:
-            return
-
-        self.get_data()
+        if not self.enqueue_report:
+            self.get_data()
 
     def on_update(self):
         if not self.enqueue_report:
-            return
-
-        job_id = f"gstr_3b_report:{self.name}"
-
-        if is_job_enqueued(job_id):
-            frappe.msgprint(_("Report generation is already in progress"), alert=True)
             return
 
         frappe.msgprint(_("Initiated report generation in background"), alert=True)
         frappe.enqueue_doc(
             "GSTR 3B Report",
             self.name,
-            "get_data",
+            "generate",
             queue="long",
-            job_id=job_id,
+            job_id=f"gstr_3b_report:{self.name}",
             deduplicate=True,
             now=frappe.flags.in_test,
             enqueue_after_commit=True,
         )
 
-    def get_data(self):
+    def generate(self):
+        """Generate the report in the background and persist the result."""
         try:
-            self.report_dict = json.loads(get_json("gstr_3b_report_template"))
-            self.report_dict["gstin"] = self.company_gstin
-            self.report_dict["ret_period"] = get_period(self.month_or_quarter, self.year)
-            self.month_or_quarter_no = get_period(self.month_or_quarter)
-            self.from_date = get_first_day(f"{cint(self.year)}-{self.month_or_quarter_no[0]}-01")
-            self.to_date = get_last_day(f"{cint(self.year)}-{self.month_or_quarter_no[1]}-01")
-
-            self._process_outward_itc()
-            self._process_inward_itc()
-
-            self.report_dict = format_values(self.report_dict)
-            self.json_output = frappe.as_json(self.report_dict)
-            self.generation_status = "Generated"
-
-            if self.enqueue_report:
-                self.db_set(
-                    {
-                        "json_output": self.json_output,
-                        "generation_status": self.generation_status,
-                    }
-                )
-                self.notify_generation_complete(after_commit=True)
-
-        except Exception as e:
-            self.generation_status = "Failed"
+            self.get_data()
             self.db_set(
-                {"generation_status": self.generation_status},
+                {"json_output": self.json_output, "generation_status": "Generated"},
                 commit=not frappe.flags.in_test,  # nosemgrep
             )
+            self.notify_generation_complete(after_commit=True)
+        except Exception:
+            if not frappe.flags.in_test:
+                frappe.db.rollback()  # nosemgrep
+            self.db_set("generation_status", "Failed", commit=not frappe.flags.in_test)  # nosemgrep
+            self.notify_generation_complete(after_commit=False)
+            raise
 
-            if self.enqueue_report:
-                self.notify_generation_complete(after_commit=False)
+    def get_data(self):
+        self.report_dict = json.loads(get_json("gstr_3b_report_template"))
+        self.report_dict["gstin"] = self.company_gstin
+        self.report_dict["ret_period"] = get_period(self.month_or_quarter, self.year)
+        self.month_or_quarter_no = get_period(self.month_or_quarter)
+        self.from_date = get_first_day(f"{cint(self.year)}-{self.month_or_quarter_no[0]}-01")
+        self.to_date = get_last_day(f"{cint(self.year)}-{self.month_or_quarter_no[1]}-01")
 
-            raise e
+        self._process_outward_itc()
+        self._process_inward_itc()
+
+        self.report_dict = format_values(self.report_dict)
+        self.json_output = frappe.as_json(self.report_dict)
+        self.generation_status = "Generated"
 
     def notify_generation_complete(self, after_commit):
         frappe.publish_realtime(
