@@ -211,7 +211,7 @@ class Gstr1Report:
                         "cess_amount": 0,
                         "type": "",
                         "invoice_number": invoice_number,
-                        "posting_date": invoice_details.get("posting_date").strftime("%d-%m-%Y"),
+                        "posting_date": invoice_details.get("posting_date").strftime("%d-%b-%Y"),
                         "invoice_value": flt(invoice_details.get("base_grand_total"), 2),
                         "applicable_tax_rate": 0,
                     },
