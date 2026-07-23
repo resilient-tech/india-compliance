@@ -253,9 +253,13 @@ class TestGSTR1B2CL(FrappeTestCase):
         pos_block = next((pos for pos in b2cl_data if pos["pos"] == "27"), None)
         self.assertIsNotNone(pos_block)
 
-        invoice_data = next((inv for inv in pos_block["inv"] if inv["inum"] == invoice.name), None)
+        invoice_data = next(
+            (inv for inv in pos_block["inv"] if inv["inum"] == invoice.name), None
+        )
 
-        self.assertEqual(invoice_data["idt"], getdate(invoice.posting_date).strftime("%d-%m-%Y"))
+        self.assertEqual(
+            invoice_data["idt"], getdate(invoice.posting_date).strftime("%d-%m-%Y")
+        )
         self.assertEqual(invoice_data["val"], 118000.0)
 
         self.assertEqual(len(invoice_data["itms"]), 1)
