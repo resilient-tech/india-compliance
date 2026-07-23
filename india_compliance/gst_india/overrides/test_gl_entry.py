@@ -1,5 +1,5 @@
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.utils import get_all_gst_accounts
 from india_compliance.gst_india.utils.tests import (
@@ -10,7 +10,7 @@ from india_compliance.gst_india.utils.tests import (
 COMPANY = "_Test Indian Registered Company"
 
 
-class TestGLEntryValidate(IntegrationTestCase):
+class TestGLEntryValidate(FrappeTestCase):
     def test_submit_gst_transaction_with_company_gstin(self):
         """A GST transaction with a company GSTIN posts to GST accounts and
         submits without error."""
@@ -32,7 +32,7 @@ class TestGLEntryValidate(IntegrationTestCase):
     def test_submit_transaction_without_company_gstin_on_gst_accounts_throws(self):
         si = create_sales_invoice(company=COMPANY, is_in_state=1, do_not_save=1)
         si.company_gstin = ""
-        # ignore_mandatory bypasses the transaction-level GSTIN guard so the
+        # ignore_mandatory bypasses the transaction-level GSTIN guard
         si.insert(ignore_mandatory=True)
 
         self.assertRaisesRegex(
