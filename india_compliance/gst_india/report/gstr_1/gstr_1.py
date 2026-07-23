@@ -224,7 +224,7 @@ class Gstr1Report(object):
                             "invoice_number": invoice_number,
                             "posting_date": invoice_details.get(
                                 "posting_date"
-                            ).strftime("%d-%m-%Y"),
+                            ).strftime("%d-%b-%Y"),
                             "invoice_value": flt(
                                 invoice_details.get("base_grand_total"), 2
                             ),
