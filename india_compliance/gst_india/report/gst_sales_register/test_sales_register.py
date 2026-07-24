@@ -730,4 +730,9 @@ class TestSalesRegisterEcommerce(IntegrationTestCase):
             )
         )
 
-        self.assertFalse(rows_for({**FILTERS, "summary_by": "Summary by HSN"}))
+        hsn_rows = rows_for({**FILTERS, "summary_by": "Summary by HSN"})
+        self.assertTrue(hsn_rows)
+        for row in hsn_rows:
+            self.assertEqual(row["invoice_category"], GSTR1_Category.ECOM_RCM.value)
+            self.assertFalse(row.get("invoice_sub_category"))
+            self.assertEqual(row["ecommerce_supply_type"], GSTR1_SubCategory.SUPECOM_9_5.value)
