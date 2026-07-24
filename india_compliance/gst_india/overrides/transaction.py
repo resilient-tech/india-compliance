@@ -2009,7 +2009,7 @@ def before_update_after_submit(doc, method=None):
         return
 
     if not frappe.flags.through_update_item:
-        sync_address_dependent_fields_on_submit(doc)
+        sync_address_dependent_fields_after_submit(doc)
         return
 
     update_item_gst_treatment(doc)  # normalize before validate_items reads it
@@ -2030,7 +2030,6 @@ ADDRESS_DEPENDENT_FIELDS = {
 }
 
 
-# no transporter edits after e-Waybill is made (#4619)
 def validate_transporter_fields_on_submit(doc, method=None):
     if doc.docstatus != 1 or ignore_gst_validations(doc):
         return
@@ -2042,11 +2041,10 @@ def validate_transporter_fields_on_submit(doc, method=None):
     if not transporter_fields:
         return
 
-    changed_fields = [
-        field
-        for field in transporter_fields
-        if doc.meta.has_field(field) and doc.has_value_changed(field)
-    ]
+    def has_changed(field):
+        return doc.meta.has_field(field) and doc.has_value_changed(field)
+
+    changed_fields = [field for field in transporter_fields if has_changed(field)]
 
     if not changed_fields:
         return
@@ -2061,7 +2059,7 @@ def validate_transporter_fields_on_submit(doc, method=None):
     )
 
 
-def sync_address_dependent_fields_on_submit(doc, method=None):
+def sync_address_dependent_fields_after_submit(doc, method=None):
     if doc.docstatus != 1 or ignore_gst_validations(doc):
         return
 
@@ -2070,12 +2068,12 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
     def has_changed(field):
         return doc.meta.has_field(field) and doc.has_value_changed(field)
 
-    changed_address_fields = [field for field in ADDRESS_DEPENDENT_FIELDS if has_changed(field)]
+    changed_fields = [field for field in ADDRESS_DEPENDENT_FIELDS if has_changed(field)]
 
     if doc.doctype == "Sales Invoice" and has_changed("shipping_address_name"):
-        changed_address_fields.append("shipping_address_name")
+        changed_fields.append("shipping_address_name")
 
-    if not changed_address_fields and not has_changed("place_of_supply"):
+    if not changed_fields and not has_changed("place_of_supply"):
         return
 
     if doc.get("ewaybill") or doc.get("irn"):
@@ -2090,8 +2088,8 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
     if doc.doctype == "Sales Invoice":
         validate_backdated_transaction(doc, action="update")
 
-    if changed_address_fields:
-        sync_gst_details_from_address(doc, changed_address_fields)
+    if changed_fields:
+        sync_gst_details_from_address(doc, changed_fields)
 
     is_sales_transaction = doc.doctype in SALES_DOCTYPES
     gstin = doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin

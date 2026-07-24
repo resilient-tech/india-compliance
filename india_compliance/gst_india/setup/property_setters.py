@@ -244,10 +244,6 @@ ADDRESS_ALLOW_ON_SUBMIT_PROPERTIES = [
     for fieldname in fieldnames
 ]
 
-
-# transporter fields editable after submit, until e-Waybill is made (#4619)
-# transporter_name is fetched from transporter, so it must be listed too, else
-# its refetched value gets dropped on save after submit
 COMMON_TRANSPORTER_FIELDS = (
     "transporter",
     "transporter_name",
@@ -263,11 +259,13 @@ COMMON_TRANSPORTER_FIELDS = (
 # driver_name is fetched from driver, so pair them like transporter_name above
 DRIVER_FIELDS = ("driver", "driver_name")
 
+TRANSPORTER_FIELDS = COMMON_TRANSPORTER_FIELDS + DRIVER_FIELDS
+
 TRANSPORTER_FIELDS_BY_DOCTYPE = {
-    "Sales Invoice": COMMON_TRANSPORTER_FIELDS + DRIVER_FIELDS,
-    "Purchase Invoice": COMMON_TRANSPORTER_FIELDS + DRIVER_FIELDS,
-    "Delivery Note": COMMON_TRANSPORTER_FIELDS + DRIVER_FIELDS,
-    "Purchase Receipt": COMMON_TRANSPORTER_FIELDS + DRIVER_FIELDS,
+    "Sales Invoice": TRANSPORTER_FIELDS,
+    "Purchase Invoice": TRANSPORTER_FIELDS,
+    "Delivery Note": TRANSPORTER_FIELDS,
+    "Purchase Receipt": TRANSPORTER_FIELDS,
     "Stock Entry": COMMON_TRANSPORTER_FIELDS,
     "Subcontracting Receipt": COMMON_TRANSPORTER_FIELDS,
 }
