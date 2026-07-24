@@ -305,6 +305,96 @@ class TestGSTR3BReport(FrappeTestCase):
         net_itc = output["itc_elg"]["itc_net"]
         self.assertEqual(net_itc["iamt"], 36.0)
 
+    @change_settings(
+        "GST Settings",
+        {"round_off_gst_values": 0},
+    )
+    def test_mixed_item_section_17_5_pi_reverses_only_ineligible_item(self):
+        """
+        A Purchase Invoice with a mix of eligible and Section-17(5) ineligible items
+        must reverse ONLY the ineligible item's tax, not the whole invoice.
+
+        Two items @ rate=100 (CGST 9 + SGST 9 each); item[1] is ineligible:
+          - Table 4A (itc_avl OTH): both items availed → CGST 18, SGST 18
+          - Table 4B (itc_rev RUL): only ineligible item reversed → CGST 9, SGST 9
+          - Table 4C (itc_net): eligible item retained → CGST 9, SGST 9
+        """
+        pi = create_purchase_invoice(is_in_state=True, rate=100, qty=1, do_not_save=True)
+        append_item(
+            pi,
+            frappe._dict(
+                {
+                    "doctype": "Purchase Invoice",
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1,
+                    "rate": 100,
+                }
+            ),
+        )
+        pi.items[1].is_ineligible_for_itc = 1
+        pi.save()
+        pi.submit()
+
+        output = self.get_report_output()
+
+        # Table 4A — itc_avl OTH: both items availed
+        oth_avl = next(d for d in output["itc_elg"]["itc_avl"] if d["ty"] == "OTH")
+        self.assertEqual(oth_avl["camt"], 18.0)
+        self.assertEqual(oth_avl["samt"], 18.0)
+        self.assertEqual(oth_avl["iamt"], 0.0)
+        self.assertEqual(oth_avl["csamt"], 0.0)
+
+        # Table 4B — itc_rev RUL: only the ineligible item reversed
+        rul_rev = next(d for d in output["itc_elg"]["itc_rev"] if d["ty"] == "RUL")
+        self.assertEqual(rul_rev["camt"], 9.0)
+        self.assertEqual(rul_rev["samt"], 9.0)
+
+        # Table 4C — itc_net: eligible item's ITC retained
+        net_itc = output["itc_elg"]["itc_net"]
+        self.assertEqual(net_itc["camt"], 9.0)
+        self.assertEqual(net_itc["samt"], 9.0)
+
+    @change_settings(
+        "GST Settings",
+        {"round_off_gst_values": 0},
+    )
+    def test_pos_restricted_pi_with_ineligible_item_is_not_reversed_under_section_17_5(self):
+        """
+        When a Purchase Invoice is PoS-restricted, its ITC is ineligible under the
+        PoS rules (Table 4D) and must NOT ALSO be reported as a Section-17(5) reversal
+        (Table 4B), even if an item carries is_ineligible_for_itc.
+        """
+        pi = create_purchase_invoice(
+            update_stock=1,
+            place_of_supply="27-Maharashtra",
+            is_out_state=1,
+            supplier_address="_Test Registered Supplier-Billing",
+            rate=100,
+            qty=1,
+            do_not_save=True,
+        )
+        pi.items[0].is_ineligible_for_itc = 1
+        pi.save()
+        pi.submit()
+
+        self.assertEqual(pi.ineligibility_reason, "ITC restricted due to PoS rules")
+
+        output = self.get_report_output()
+
+        # Table 4D — itc_inelg OTH: whole invoice reported here (18% IGST on 100 = 18)
+        oth_inelg = next(d for d in output["itc_elg"]["itc_inelg"] if d["ty"] == "OTH")
+        self.assertEqual(oth_inelg["iamt"], 18.0)
+
+        # Table 4B — itc_rev RUL: nothing reversed under Section 17(5)
+        rul_rev = next(d for d in output["itc_elg"]["itc_rev"] if d["ty"] == "RUL")
+        self.assertEqual(rul_rev["camt"], 0.0)
+        self.assertEqual(rul_rev["samt"], 0.0)
+        self.assertEqual(rul_rev["iamt"], 0.0)
+
+        # Not availed either — PoS-restricted ITC never enters Table 4A
+        oth_avl = next(d for d in output["itc_elg"]["itc_avl"] if d["ty"] == "OTH")
+        self.assertEqual(oth_avl["iamt"], 0.0)
+
     def test_itc_reversal_journal_entry_is_included_in_gstr_3b(self):
         journal_entry = create_itc_reversal_journal_entry(tax_amount=9)
 
