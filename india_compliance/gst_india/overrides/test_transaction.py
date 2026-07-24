@@ -39,6 +39,7 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.setup.property_setters import (
     ADDRESS_FIELDS_BY_DOCTYPE,
+    TRANSPORTER_FIELDS_BY_DOCTYPE,
 )
 from india_compliance.gst_india.utils.jinja import get_gst_breakup
 from india_compliance.gst_india.utils.tests import (
@@ -470,6 +471,43 @@ class TestTransaction(IntegrationTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             "Cannot change the Place of Supply or address after the e-Waybill",
+            doc.save,
+        )
+
+    def test_allow_transporter_change_after_submit_without_ewaybill(self):
+        """Transporter details stay editable after submit while no e-Waybill exists."""
+        if self.doctype not in TRANSPORTER_FIELDS_BY_DOCTYPE:
+            return
+
+        doc = create_transaction(**self.transaction_details)
+        doc.reload()
+        self.assertEqual(doc.docstatus, 1)
+        self.assertFalse(doc.get("ewaybill"))
+
+        doc.vehicle_no = "GJ01AA1234"
+        doc.save()
+
+        doc.reload()
+        self.assertEqual(doc.vehicle_no, "GJ01AA1234")
+
+    def test_block_transporter_change_when_ewaybill_exists(self):
+        """Once an e-Waybill exists, transporter details can no longer be edited."""
+        if self.doctype not in TRANSPORTER_FIELDS_BY_DOCTYPE:
+            return
+
+        if not frappe.get_meta(self.doctype).has_field("ewaybill"):
+            return
+
+        doc = create_transaction(**self.transaction_details)
+        doc.reload()
+
+        # fake an e-Waybill, then edit a transporter field
+        doc.ewaybill = "123456789012"
+        doc.vehicle_no = "GJ01AA1234"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            "Cannot change transporter details after the e-Waybill",
             doc.save,
         )
 

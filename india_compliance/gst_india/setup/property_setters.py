@@ -76,6 +76,7 @@ def get_property_setters(*, include_defaults=False):
         *PURCHASE_RECEIPT_PROPERTIES,
         *SUBCONTRACTING_RECEIPT_PROPERTIES,
         *ADDRESS_ALLOW_ON_SUBMIT_PROPERTIES,
+        *TRANSPORTER_ALLOW_ON_SUBMIT_PROPERTIES,
     ]
 
     if include_defaults:
@@ -241,6 +242,58 @@ ADDRESS_ALLOW_ON_SUBMIT_PROPERTIES = [
     }
     for doctype, fieldnames in ADDRESS_FIELDS_BY_DOCTYPE.items()
     for fieldname in fieldnames
+]
+
+
+# transporter fields editable after submit, until e-Waybill is made (#4619)
+COMMON_TRANSPORTER_FIELDS = (
+    "transporter",
+    "gst_transporter_id",
+    "lr_no",
+    "lr_date",
+    "vehicle_no",
+    "distance",
+    "mode_of_transport",
+    "gst_vehicle_type",
+)
+
+TRANSPORTER_FIELDS_BY_DOCTYPE = {
+    "Sales Invoice": COMMON_TRANSPORTER_FIELDS + ("driver",),
+    "Purchase Invoice": COMMON_TRANSPORTER_FIELDS + ("driver",),
+    "Delivery Note": COMMON_TRANSPORTER_FIELDS + ("driver",),
+    "Purchase Receipt": COMMON_TRANSPORTER_FIELDS + ("driver",),
+    "Stock Entry": COMMON_TRANSPORTER_FIELDS,
+    "Subcontracting Receipt": COMMON_TRANSPORTER_FIELDS,
+}
+
+
+def get_transporter_read_only_condition(fieldname):
+    # keep old Ship lock too
+    if fieldname == "gst_vehicle_type":
+        return "eval: doc.ewaybill || doc.mode_of_transport == 'Ship'"
+
+    return "eval: doc.ewaybill"
+
+
+TRANSPORTER_ALLOW_ON_SUBMIT_PROPERTIES = [
+    property_setter
+    for doctype, fieldnames in TRANSPORTER_FIELDS_BY_DOCTYPE.items()
+    for fieldname in fieldnames
+    for property_setter in (
+        {
+            "doctype": doctype,
+            "fieldname": fieldname,
+            "property": "allow_on_submit",
+            "property_type": "Check",
+            "value": "1",
+        },
+        {
+            "doctype": doctype,
+            "fieldname": fieldname,
+            "property": "read_only_depends_on",
+            "value": get_transporter_read_only_condition(fieldname),
+        },
+    )
 ]
 
 

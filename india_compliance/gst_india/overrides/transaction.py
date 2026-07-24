@@ -1878,10 +1878,51 @@ ADDRESS_DEPENDENT_FIELDS = {
     "supplier_address": ("supplier_gstin", "gst_category"),
 }
 
+# no transporter edits after e-Waybill is made (#4619)
+TRANSPORTER_FIELDS = (
+    "transporter",
+    "gst_transporter_id",
+    "driver",
+    "lr_no",
+    "lr_date",
+    "vehicle_no",
+    "distance",
+    "mode_of_transport",
+    "gst_vehicle_type",
+)
+
+
+def validate_transporter_fields_on_submit(doc, method=None):
+    if doc.docstatus != 1 or ignore_gst_validations(doc):
+        return
+
+    if not doc.get("ewaybill"):
+        return
+
+    changed_fields = [
+        field
+        for field in TRANSPORTER_FIELDS
+        if doc.meta.has_field(field) and doc.has_value_changed(field)
+    ]
+
+    if not changed_fields:
+        return
+
+    frappe.throw(
+        _(
+            "Cannot change transporter details after the e-Waybill has been"
+            " generated. Cancel the e-Waybill first, or use the Update Transporter"
+            " / Update Vehicle Info actions instead."
+        ),
+        title=_("Cannot Update After Submit"),
+    )
+
 
 def sync_address_dependent_fields_on_submit(doc, method=None):
     if doc.docstatus != 1 or ignore_gst_validations(doc):
         return
+
+    validate_transporter_fields_on_submit(doc)
 
     def has_changed(field):
         return doc.meta.has_field(field) and doc.has_value_changed(field)
