@@ -1401,8 +1401,9 @@ class TestEWaybill(FrappeTestCase):
             mode_of_transport="Road",
             do_not_submit=True,
         )
-        si.gst_transporter_id = ""
         si.submit()
+        # gst_transporter_id is re-fetched from the transporter on submit
+        si.db_set("gst_transporter_id", "")
 
         e_waybill_data = EWaybillData(si).get_data()
 
@@ -1427,8 +1428,9 @@ class TestEWaybill(FrappeTestCase):
             mode_of_transport="Road",
             do_not_submit=True,
         )
-        si.gst_transporter_id = ""
         si.submit()
+        # gst_transporter_id is re-fetched from the transporter on submit
+        si.db_set("gst_transporter_id", "")
 
         e_waybill_data = EWaybillData(si).get_data()
 
@@ -1802,8 +1804,9 @@ class TestEWaybill(FrappeTestCase):
         update_dates_for_test_data(self.e_waybill_test_data)
 
         si = create_sales_invoice(**invoice_args, do_not_submit=True)
-        si.gst_transporter_id = ""
         si.submit()
+        # gst_transporter_id is fetched from the transporter on submit
+        si.db_set("gst_transporter_id", "")
 
         return si
 
