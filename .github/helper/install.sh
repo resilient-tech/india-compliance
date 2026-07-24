@@ -77,7 +77,7 @@ ERPNEXT_REMOTE=${ERPNEXT_REMOTE:-https://github.com/frappe/erpnext.git}
 ERPNEXT_BRANCH=${ERPNEXT_BRANCH:-$BRANCH_TO_CLONE}
 
 bench get-app "$ERPNEXT_REMOTE" --branch "$ERPNEXT_BRANCH" --resolve-deps
-bench get-app india_compliance "${GITHUB_WORKSPACE}"
+bench get-app india_compliance "${GITHUB_WORKSPACE}" --skip-assets
 bench setup requirements --dev
 
 wait $wkpid
