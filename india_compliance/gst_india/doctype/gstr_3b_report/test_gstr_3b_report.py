@@ -354,6 +354,47 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(net_itc["camt"], 9.0)
         self.assertEqual(net_itc["samt"], 9.0)
 
+    @change_settings(
+        "GST Settings",
+        {"round_off_gst_values": 0},
+    )
+    def test_pos_restricted_pi_with_ineligible_item_is_not_reversed_under_section_17_5(self):
+        """
+        When a Purchase Invoice is PoS-restricted, its ITC is ineligible under the
+        PoS rules (Table 4D) and must NOT ALSO be reported as a Section-17(5) reversal
+        (Table 4B), even if an item carries is_ineligible_for_itc.
+        """
+        pi = create_purchase_invoice(
+            update_stock=1,
+            place_of_supply="27-Maharashtra",
+            is_out_state=1,
+            supplier_address="_Test Registered Supplier-Billing",
+            rate=100,
+            qty=1,
+            do_not_save=True,
+        )
+        pi.items[0].is_ineligible_for_itc = 1
+        pi.save()
+        pi.submit()
+
+        self.assertEqual(pi.ineligibility_reason, "ITC restricted due to PoS rules")
+
+        output = self.get_report_output()
+
+        # Table 4D — itc_inelg OTH: whole invoice reported here (18% IGST on 100 = 18)
+        oth_inelg = next(d for d in output["itc_elg"]["itc_inelg"] if d["ty"] == "OTH")
+        self.assertEqual(oth_inelg["iamt"], 18.0)
+
+        # Table 4B — itc_rev RUL: nothing reversed under Section 17(5)
+        rul_rev = next(d for d in output["itc_elg"]["itc_rev"] if d["ty"] == "RUL")
+        self.assertEqual(rul_rev["camt"], 0.0)
+        self.assertEqual(rul_rev["samt"], 0.0)
+        self.assertEqual(rul_rev["iamt"], 0.0)
+
+        # Not availed either — PoS-restricted ITC never enters Table 4A
+        oth_avl = next(d for d in output["itc_elg"]["itc_avl"] if d["ty"] == "OTH")
+        self.assertEqual(oth_avl["iamt"], 0.0)
+
     def test_itc_reversal_journal_entry_is_included_in_gstr_3b(self):
         journal_entry = create_itc_reversal_journal_entry(tax_amount=9)
 
