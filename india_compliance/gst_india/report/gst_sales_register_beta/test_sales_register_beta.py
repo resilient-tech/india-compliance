@@ -686,7 +686,7 @@ class TestSalesRegisterBeta(FrappeTestCase):
                     self.fail(standardMsg)
 
 
-class TestSalesRegisterEcommerce(IntegrationTestCase):
+class TestSalesRegisterEcommerce(FrappeTestCase):
     """Separate class: its transaction is rolled back after the class, so the
     committed 9(5) invoice never leaks into TestSalesRegister's positional tests."""
 
