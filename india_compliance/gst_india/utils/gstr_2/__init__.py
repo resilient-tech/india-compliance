@@ -34,12 +34,6 @@ class GSTRCategory(Enum):
     IMPG = "IMPG"
     IMPGSEZ = "IMPGSEZ"
 
-    # GSTR-2A only; fetched for the export tool, not mapped into GST Inward Supply
-    ECO = "ECO"
-    ECOA = "ECOA"
-    TDS = "TDS"
-    TCS = "TCS"
-
     # IMS
     B2BCN = "B2BCN"
     B2BCNA = "B2BCNA"

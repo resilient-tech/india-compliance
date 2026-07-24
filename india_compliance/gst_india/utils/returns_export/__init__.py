@@ -4,7 +4,7 @@
 """
 Ports-and-adapters layer for the GST Return Export tool.
 
-`ReturnExporter` is the port; one adapter per return type supplies the specifics
+`ReturnAdapter` is the port; one adapter per return type supplies the specifics
 (download, summary aggregation, ITC), so GSTR-1/3B plug in by subclassing rather
 than by adding branches. The raw payload (`filed`) and prepared summary (`summary`)
 both live on the period's GST Return Log row.
@@ -21,7 +21,6 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
 )
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     get_gst_return_log,
-    get_raw_return_data,
 )
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
@@ -29,10 +28,20 @@ SECTION_ORDER = ["B2B", "B2BA", "CDNR", "CDNRA", "ISD", "ISDA", "IMPG", "IMPGSEZ
 TAX_FIELDS = ("igst", "cgst", "sgst", "cess")
 SECTION_FIELDS = ("documents", "taxable_value", *TAX_FIELDS)
 
+RETURN_TYPE_MAP = {"GSTR-2A": ReturnType.GSTR2A.value, "GSTR-2B": ReturnType.GSTR2B.value}
+
+
+def normalize_return_type(return_type):
+    """Accept the UI label ('GSTR-2B'), the enum value ('GSTR2b'), or the ReturnType member."""
+    if isinstance(return_type, ReturnType):
+        return return_type.value
+    return RETURN_TYPE_MAP.get(return_type, return_type)
+
 
 def merge_raw(existing, new):
     """Deep-merge two raw payload chunks: dicts recurse, lists concatenate, numbers
-    add, else newer wins. Covers 2A/2B split payloads and GSTR-3B summations."""
+    add, else newer wins (but a null in `new` never clobbers accumulated data).
+    Covers 2A/2B split payloads and GSTR-3B summations."""
     if isinstance(existing, dict) and isinstance(new, dict):
         merged = dict(existing)
         for key, value in new.items():
@@ -45,11 +54,11 @@ def merge_raw(existing, new):
     if isinstance(existing, (int, float)) and isinstance(new, (int, float)):
         return existing + new
 
-    return new
+    return existing if new is None else new
 
 
-class ReturnExporter:
-    """Port the tool calls; each return type is an adapter subclass (see EXPORTERS)."""
+class ReturnAdapter:
+    """Port the tool calls; each return type is an adapter subclass (see ADAPTERS)."""
 
     return_type = None
 
@@ -58,12 +67,9 @@ class ReturnExporter:
 
     @classmethod
     def for_return(cls, return_type, gstin):
-        if adapter := EXPORTERS.get(return_type):
+        if adapter := ADAPTERS.get(return_type):
             return adapter(gstin)
         frappe.throw(_("Export is not supported for {0}").format(return_type))
-
-    def get_raw_payload(self, period):
-        return get_raw_return_data(self.gstin, self.return_type, period)
 
     def build_and_store_summary(self, period):
         """Store the period summary on the log's `summary` field; None if no data."""
@@ -84,19 +90,10 @@ class ReturnExporter:
 
     def get_range_summary(self, periods):
         """Section-first summary for the range: each section summed across the selected
-        months with a per-month breakdown (for drill-down), the consolidated ITC, and a
-        per-month sync picker (last-synced + selectable). Built from the stored monthly
-        summaries — no re-aggregation over GST Inward Supply."""
+        months with a per-month breakdown (for drill-down) and the consolidated ITC. Built
+        from the stored monthly summaries — no re-aggregation over GST Inward Supply. Sync
+        state is not reported here; get_sync_status is the single source of truth for it."""
         stored = {s["period"]: s for s in self.get_summaries(periods)}
-
-        picker = [
-            {
-                "period": period,
-                "synced": period in stored,
-                "last_updated_on": stored[period]["last_updated_on"] if period in stored else None,
-            }
-            for period in periods
-        ]
 
         sections = {}
         for period in periods:
@@ -114,17 +111,50 @@ class ReturnExporter:
 
         cumulative = _cumulate(stored.values())
         return {
-            "periods": picker,
             "sections": sorted(sections.values(), key=lambda s: _section_rank(s["section"])),
             "totals": cumulative["totals"],
             "itc": cumulative["itc"],
+        }
+
+    def get_sync_status(self, periods):
+        """Per-month sync state for the sync picker / missing-sync banner.
+
+        A month counts as synced only when its raw portal payload (the log's `filed`
+        attachment) is stored — that's what the Excel export actually consumes. A period
+        downloaded before this tool existed (present in the GSTR Import Log / GST Inward
+        Supply, but with no stored payload) is therefore correctly reported as not synced,
+        so the banner prompts a re-sync instead of the export failing with "no data".
+
+        One query of small columns only: the `filed` filter runs in the DB and the row's
+        `modified` timestamp doubles as the last-synced time (these logs are only written
+        while syncing), so there's no need to load or parse the summary blob."""
+        names = {self._log_name(period): period for period in periods}
+        synced = {
+            names[row.name]: row.modified
+            for row in frappe.get_all(
+                RETURN_LOG,
+                filters={"name": ("in", list(names)), "filed": ("is", "set")},
+                fields=["name", "modified"],
+            )
+        }
+
+        return {
+            "periods": [
+                {
+                    "period": period,
+                    "synced": period in synced,
+                    "last_updated_on": str(synced[period]) if period in synced else None,
+                }
+                for period in periods
+            ],
+            "has_missing_sync": any(period not in synced for period in periods),
         }
 
     def _log_name(self, period):
         return f"{self.return_type}-{period}-{self.gstin}"
 
 
-class GSTR2Exporter(ReturnExporter):
+class GSTR2Adapter(ReturnAdapter):
     """Common to GSTR-2A/2B: summary aggregated from GST Inward Supply."""
 
     period_field = None
@@ -179,7 +209,7 @@ class GSTR2Exporter(ReturnExporter):
         return None
 
 
-class GSTR2AExporter(GSTR2Exporter):
+class GSTR2AAdapter(GSTR2Adapter):
     return_type = ReturnType.GSTR2A.value
     period_field = "sup_return_period"
     downloaded_flag = "is_downloaded_from_2a"
@@ -187,10 +217,10 @@ class GSTR2AExporter(GSTR2Exporter):
     def download(self, periods):
         from india_compliance.gst_india.utils.gstr_2 import download_gstr_2a
 
-        download_gstr_2a(self.gstin, periods, include_export_sections=True)
+        download_gstr_2a(self.gstin, periods)
 
 
-class GSTR2BExporter(GSTR2Exporter):
+class GSTR2BAdapter(GSTR2Adapter):
     return_type = ReturnType.GSTR2B.value
     period_field = "return_period_2b"
     downloaded_flag = "is_downloaded_from_2b"
@@ -218,9 +248,9 @@ class GSTR2BExporter(GSTR2Exporter):
         }
 
 
-EXPORTERS = {
-    GSTR2AExporter.return_type: GSTR2AExporter,
-    GSTR2BExporter.return_type: GSTR2BExporter,
+ADAPTERS = {
+    GSTR2AAdapter.return_type: GSTR2AAdapter,
+    GSTR2BAdapter.return_type: GSTR2BAdapter,
 }
 
 

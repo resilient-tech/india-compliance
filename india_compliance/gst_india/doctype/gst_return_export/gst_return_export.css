@@ -1,3 +1,17 @@
 div[data-page-route="GST Return Export"] .section-body {
 	max-width: 100% !important;
 }
+
+/* Summary block. The number cards (NumberCardManager) and table (DataTable) are stock
+   Frappe components with no custom styling — same as GSTR-1. Only the heading needs
+   light styling, mirroring GSTR-1's .tab-title-text. */
+.gst-return-summary .summary-heading {
+	font-size: 1.2rem;
+	margin-top: var(--margin-md);
+	margin-bottom: var(--margin-md);
+}
+
+/* Breathing room below the DataTable, before the section border. */
+.gst-return-summary .section-table {
+	margin-bottom: var(--margin-lg);
+}

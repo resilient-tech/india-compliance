@@ -10,46 +10,32 @@ placed by header label (read from each sheet's merged header stack at runtime), 
 nothing is hard-coded to a position. 2A and 2B have their own field maps: 2B expands
 codes and is invoice-level; 2A keeps raw codes and is item-level with a per-invoice
 "-Total" row. Empty sections stay blank, exactly like the portal file.
+
+Each return type keeps its own template, sheet list and field maps as class attributes
+on its exporter (below), so the module level holds only the shared header-parsing and
+value-transform helpers.
 """
 
 import re
 from functools import partial
+from typing import ClassVar
 
 import frappe
+from frappe.desk.utils import provide_binary_file
 from frappe.utils import flt
 
 from india_compliance.gst_india.constants import GST_CATEGORY_MAP, STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     get_raw_return_data,
 )
-from india_compliance.gst_india.utils import get_data_file_path
+from india_compliance.gst_india.utils import (
+    get_data_file_path,
+    validate_gstin_permission,
+)
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_2.gstr_2a import map_date_format
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
-from india_compliance.gst_india.utils.returns_export import merge_raw
-
-TEMPLATES = {
-    ReturnType.GSTR2A.value: "gstr2a_excel_template_v1.0.xlsx",
-    ReturnType.GSTR2B.value: "gstr2b_excel_template_v1.0.xlsx",
-}
-
-SECTION_SHEETS = {
-    ReturnType.GSTR2A.value: {
-        "B2B": "B2B",
-        "B2BA": "B2BA",
-        "CDNR": "CDNR",
-        "CDNRA": "CDNRA",
-        "ECO": "ECO",
-        "ECOA": "ECOA",
-        "ISD": "ISD",
-        "IMPG": "IMPG",
-        "IMPGSEZ": "IMPG SEZ",
-        "TDS": "TDS",
-        "TCS": "TCS",
-    },
-}
-
-RETURN_TYPE_MAP = {"GSTR-2A": ReturnType.GSTR2A.value, "GSTR-2B": ReturnType.GSTR2B.value}
+from india_compliance.gst_india.utils.returns_export import merge_raw, normalize_return_type
 
 HEADER_START_ROW = 5
 _REVISED = "revised details | "
@@ -74,11 +60,17 @@ def _norm(value):
     return _WS.sub(" ", value).strip().lower()
 
 
-def _merged_value(ws, row, col):
+def _merge_anchor(ws, row, col):
+    """The top-left (row, col) a cell resolves to inside a merged range, or itself if
+    unmerged. Merged cells share that anchor for both reads and writes."""
     for rng in ws.merged_cells.ranges:
         if rng.min_row <= row <= rng.max_row and rng.min_col <= col <= rng.max_col:
-            return ws.cell(rng.min_row, rng.min_col).value
-    return ws.cell(row, col).value
+            return rng.min_row, rng.min_col
+    return row, col
+
+
+def _merged_value(ws, row, col):
+    return ws.cell(*_merge_anchor(ws, row, col)).value
 
 
 def _header_extent(ws):
@@ -114,17 +106,17 @@ def _split_label(label):
     return label, False
 
 
-def _normalize_return_type(return_type):
-    """Accept the UI label ('GSTR-2B'), the enum value ('GSTR2b'), or the member."""
-    if isinstance(return_type, ReturnType):
-        return return_type.value
-    return RETURN_TYPE_MAP.get(return_type, return_type)
-
-
 def _as_section_dict(obj):
-    """Unwrap a docdata sub-section (itcrev / docRejdata) that may arrive list-wrapped."""
+    """Unwrap a docdata sub-section (itcrev / docRejdata) that may arrive list-wrapped.
+    Each period's payload wraps it as a single-element list, so a multi-period merge
+    concatenates them; fold every element together instead of taking [0], or all but the
+    first period's ITC-reversal documents get silently dropped."""
     if isinstance(obj, list):
-        return obj[0] if obj else {}
+        merged = {}
+        for item in obj:
+            if isinstance(item, dict):
+                merged = merge_raw(merged, item)
+        return merged
     return obj or {}
 
 
@@ -190,247 +182,26 @@ def _rreason(value):
     return _ITC_REASON.get(value, "")
 
 
-RAW_FIELDS_2B = {
-    "gstin of supplier": ("s", "ctin", None),
-    "gstin of isd": ("s", "ctin", None),
-    "trade/legal name": ("s", "trdnm", None),
-    "gstin of eco": ("s", "ctin", None),
-    "gstr-1/1a/iff/gstr-5 period": ("s", "supprd", _rperiod),
-    "gstr-1/iff/1a/gstr-5 period": ("s", "supprd", _rperiod),
-    "gstr-1/1a/iff period": ("s", "supprd", _rperiod),
-    "gstr-1/iff/1a period": ("s", "supprd", _rperiod),
-    "gstr-1/iff/gstr-1a period": ("s", "supprd", _rperiod),
-    "isd gstr-6 period": ("s", "supprd", _rperiod),
-    "gstr-1/1a/iff/gstr-5 filing date": ("s", "supfildt", _rdate),
-    "gstr-1/iff/1a/gstr-5 filing date": ("s", "supfildt", _rdate),
-    "gstr-1/1a/iff filing date": ("s", "supfildt", _rdate),
-    "gstr-1/iff/1a filing date": ("s", "supfildt", _rdate),
-    "gstr-1/iff/gstr-1a filing date": ("s", "supfildt", _rdate),
-    "isd gstr-6 filing date": ("s", "supfildt", _rdate),
-    "invoice details | invoice number": ("i", "inum", None),
-    "invoice details | invoice type": ("i", "typ", _rtype),
-    "invoice details | invoice date": ("i", "dt", _rdate),
-    "invoice details | invoice value": ("i", "val", None),
-    "document details | document number": ("i", "inum", None),  # ECO
-    "document details | document type": ("i", "typ", _rtype),
-    "document details | document date": ("i", "dt", _rdate),
-    "document details | document value": ("i", "val", None),
-    "credit note/debit note details | note number": ("i", "ntnum", None),
-    "credit note/debit note details | note type": ("i", "typ", _rnote),
-    "credit note/debit note details | note supply type": ("i", "suptyp", _rtype),
-    "credit note/debit note details | note date": ("i", "dt", _rdate),
-    "credit note/debit note details | note value": ("i", "val", None),
-    "debit note details | note number": ("i", "ntnum", None),  # B2B-DNR (ITC reversal)
-    "debit note details | note type": ("i", "typ", _rnote),
-    "debit note details | note supply type": ("i", "suptyp", _rtype),
-    "debit note details | note date": ("i", "dt", _rdate),
-    "debit note details | note value": ("i", "val", None),
-    "place of supply": ("i", "pos", _rstate),
-    "supply attract reverse charge": ("i", "rev", _ryesno),
-    "taxable value": ("i", "txval", None),
-    "tax amount | integrated tax": ("i", "igst", None),
-    "tax amount | central tax": ("i", "cgst", None),
-    "tax amount | state/ut tax": ("i", "sgst", None),
-    "tax amount | cess": ("i", "cess", None),
-    "itc availability": ("i", "itcavl", _ritc),
-    "eligibility of itc": ("i", "itcelg", _ritc),
-    "applicable % of tax rate": ("i", "diffprcnt", _rpct),
-    "source": ("i", "srctyp", None),
-    "irn": ("i", "irn", None),
-    "irn date": ("i", "irngendate", _rdate),
-    "isd document type": ("i", "doctyp", _risd),
-    "isd document number": ("i", "docnum", None),
-    "isd document date": ("i", "docdt", _rdate),
-    "original invoice number": ("i", "oinvnum", None),
-    "original invoice date": ("i", "oinvdt", _rdate),
-    "input tax distribution by isd | integrated tax": ("i", "igst", None),
-    "input tax distribution by isd | central tax": ("i", "cgst", None),
-    "input tax distribution by isd | state/ut tax": ("i", "sgst", None),
-    "input tax distribution by isd | cess": ("i", "cess", None),
-    "icegate reference date": ("i", "refdt", _rdate),
-    "port code": ("i", "portcode", None),
-    "bill of entry details | number": ("i", "boenum", None),
-    "bill of entry details | date": ("i", "boedt", _rdate),
-    "bill of entry details | taxable value": ("i", "txval", None),
-    "amount of tax | integrated tax": ("i", "igst", None),
-    "amount of tax | cess": ("i", "cess", None),
-    "reason": ("i", "rsn", _rreason),
-}
-
-RAW_ORIGINAL_2B = {
-    "invoice number": ("i", "oinum", None),
-    "invoice date": ("i", "oidt", _rdate),
-    "note type": ("i", "onttyp", _rnote),
-    "note number": ("i", "ontnum", None),
-    "note date": ("i", "ontdt", _rdate),
-    "isd document type": ("i", "odoctyp", _risd),
-    "document number": ("i", "odocnum", None),
-    "document date": ("i", "odocdt", _rdate),
-}
-
-_ECOA_ORIGINAL_2B = {"document number": ("i", "oinum", None), "document date": ("i", "oidt", _rdate)}
-
-GSTR2B_SHEETS = [
-    ("B2B", "docdata", "b2b", "inv", RAW_ORIGINAL_2B),
-    ("B2BA", "docdata", "b2ba", "inv", RAW_ORIGINAL_2B),
-    ("B2B-CDNR", "docdata", "cdnr", "nt", RAW_ORIGINAL_2B),
-    ("B2B-CDNRA", "docdata", "cdnra", "nt", RAW_ORIGINAL_2B),
-    ("ISD", "docdata", "isd", "doclist", RAW_ORIGINAL_2B),
-    ("ISDA", "docdata", "isda", "doclist", RAW_ORIGINAL_2B),
-    ("IMPG", "docdata", "impg", "", RAW_ORIGINAL_2B),
-    ("IMPGSEZ", "docdata", "impgsez", "boe", RAW_ORIGINAL_2B),
-    ("ECO", "docdata", "ecom", "inv", RAW_ORIGINAL_2B),
-    ("ECOA", "docdata", "ecoma", "inv", _ECOA_ORIGINAL_2B),
-    ("IMPGA", "docdata", "impga", "", RAW_ORIGINAL_2B),
-    ("IMPGSEZA", "docdata", "impgasez", "boe", RAW_ORIGINAL_2B),
-    ("B2B (ITC Reversal)", "itcrev", "b2b", "inv", RAW_ORIGINAL_2B),
-    ("B2BA (ITC Reversal)", "itcrev", "b2ba", "inv", RAW_ORIGINAL_2B),
-    ("B2B-DNR", "itcrev", "cdnr", "nt", RAW_ORIGINAL_2B),
-    ("B2B-DNRA", "itcrev", "cdnra", "nt", RAW_ORIGINAL_2B),
-    ("B2B(Rejected)", "rejected", "b2b", "inv", RAW_ORIGINAL_2B),
-    ("B2BA(Rejected)", "rejected", "b2ba", "inv", RAW_ORIGINAL_2B),
-    ("B2B-CDNR(Rejected)", "rejected", "cdnr", "nt", RAW_ORIGINAL_2B),
-    ("B2B-CDNRA(Rejected)", "rejected", "cdnra", "nt", RAW_ORIGINAL_2B),
-    ("ECO(Rejected)", "rejected", "ecom", "inv", RAW_ORIGINAL_2B),
-    ("ECOA(Rejected)", "rejected", "ecoma", "inv", _ECOA_ORIGINAL_2B),
-    ("ISD(Rejected)", "rejected", "isd", "doclist", RAW_ORIGINAL_2B),
-    ("ISDA(Rejected)", "rejected", "isda", "doclist", RAW_ORIGINAL_2B),
-]
-
-
-_NUMERIC_ZERO_KEYS_2A = {"rt", "txval", "iamt", "camt", "samt", "csamt", "cess"}
-
-
-RAW_FIELDS_2A = {
-    "gstin of supplier": ("s", "ctin", None),
-    "gstin of isd": ("s", "ctin", None),
-    "gstr-1/iff/gstr-1a/5 filing status": ("s", "cfs", None),
-    "gstr-1/iff/gstr-1a/5 filing date": ("s", "fldtr1", None),
-    "gstr-1/iff/gstr-1a/5 filing period": ("s", "flprdr1", None),
-    "gstr-1/iff/gstr-1a filing status": ("s", "cfs", None),  # ECO variant (no /5)
-    "gstr-1/iff/gstr-1a filing date": ("s", "fldtr1", None),
-    "gstr-1/iff/gstr-1a filing period": ("s", "flprdr1", None),
-    "isd gstr-6 filing status": ("s", "cfs", None),
-    "gstr-3b filing status": ("s", "cfs3b", None),
-    "effective date of cancellation": ("s", "dtcancel", None),
-    "gstin of eco": ("s", "ctin", None),
-    "document details | document number": ("i", "inum", None),
-    "document details | document type": ("i", "inv_typ", None),
-    "document details | document date": ("i", "idt", None),
-    "document details | document value": ("i", "val", None),
-    "invoice details | invoice number": ("i", "inum", None),
-    "invoice details | invoice type": ("i", "inv_typ", None),
-    "invoice details | invoice date": ("i", "idt", None),
-    "invoice details | invoice value": ("i", "val", None),
-    "credit note/debit note details | note type": ("i", "ntty", None),
-    "credit note/debit note details | note number": ("i", "nt_num", None),
-    "credit note/debit note details | note supply type": ("i", "inv_typ", None),
-    "credit note/debit note details | note date": ("i", "nt_dt", None),
-    "credit note/debit note details | note value": ("i", "val", None),
-    "place of supply": ("i", "pos", _rstate),
-    "supply attract reverse charge": ("i", "rchrg", None),
-    "tax period in which amended": ("i", "aspd", None),
-    "source": ("i", "srctyp", None),
-    "irn": ("i", "irn", None),
-    "irn date": ("i", "irngendate", None),
-    "eligibility of itc": ("i", "itc_elg", None),
-    "isd document type": ("i", "isd_docty", None),
-    "isd invoice number": ("i", "docnum", None),
-    "isd invoice date": ("i", "docdt", None),
-    "isd credit note number": ("i", "docnum", None),
-    "isd credit note date": ("i", "docdt", None),
-    "original invoice number": ("i", "oinvnum", None),
-    "original invoice date": ("i", "oinvdt", None),
-    "input tax distribution by isd | integrated tax": ("i", "iamt", None),
-    "input tax distribution by isd | central tax": ("i", "camt", None),
-    "input tax distribution by isd | state/ut tax": ("i", "samt", None),
-    "input tax distribution by isd | cess": ("i", "cess", None),
-    "reference date (icegate)": ("i", "refdt", None),
-    "port code": ("i", "portcd", None),
-    "bill of entry details | number": ("i", "benum", None),
-    "bill of entry details | date": ("i", "bedt", None),
-    "bill of entry details | taxable value": ("i", "txval", None),
-    "amount of tax | integrated tax": ("i", "iamt", None),
-    "amount of tax | cess": ("i", "csamt", None),
-    "amended (yes)": ("i", "amd", None),
-    "amended(yes)": ("i", "amd", None),
-    "rate": ("it", "rt", None),
-    "taxable value": ("it", "txval", None),
-    "tax amount | integrated tax": ("it", "iamt", None),
-    "tax amount | central tax": ("it", "camt", None),
-    "tax amount | state/ut tax": ("it", "samt", None),
-    "tax amount | state tax": ("it", "samt", None),
-    "tax amount | cess": ("it", "csamt", None),
-    "tax amount | cess amount": ("it", "csamt", None),
-}
-
-RAW_ORIGINAL_2A = {
-    "invoice number": ("i", "oinum", None),
-    "invoice date": ("i", "oidt", None),
-    "note type": ("i", "ntty", None),
-    "note number": ("i", "ont_num", None),
-    "note date": ("i", "ont_dt", None),
-}
-_ECOA_ORIGINAL_2A = {"document number": ("i", "oinum", None), "document date": ("i", "oidt", None)}
-ORIGINAL_2A_BY_SECTION = {"ECOA": _ECOA_ORIGINAL_2A}
-
-
-RAW_FIELDS_2A_TDS = {
-    "gstin of deductor": ("i", "gstin_deductor", None),
-    "deductor's name": ("i", "deductor_name", None),
-    "tax period of gstr 7": ("i", "month", None),  # MMYYYY, as the portal shows it
-    "taxable value": ("i", "amt_ded", None),
-    "amount of tax deducted by deductors | integrated tax": ("i", "iamt", None),
-    "amount of tax deducted by deductors | central tax": ("i", "camt", None),
-    "amount of tax deducted by deductors | state/ut tax": ("i", "samt", None),
-}
-
-RAW_FIELDS_2A_TCS = {
-    "gstin of e-com. operator": ("i", "etin", None),
-    "gross value of supplies": ("i", "sup_val", None),
-    "net amount liable for tcs": ("i", "tx_val", None),
-    "total tcs amount | integrated tax": ("i", "iamt", None),
-    "total tcs amount | central tax": ("i", "camt", None),
-    "total tcs amount | state/ut tax": ("i", "samt", None),
-}
-
-FIELDS_2A_BY_SECTION = {"TDS": RAW_FIELDS_2A_TDS, "TCS": RAW_FIELDS_2A_TCS}
-
-RAW_SECTIONS_2A = {
-    "B2B": ("b2b", "inv", "itms"),
-    "B2BA": ("b2ba", "inv", "itms"),
-    "CDNR": ("cdnr", "nt", "itms"),
-    "CDNRA": ("cdnra", "nt", "itms"),
-    "ECO": ("eco", "inv", "itms"),
-    "ECOA": ("ecoa", "inv", "itms"),
-    "ISD": ("isd", "doclist", ""),
-    "IMPG": ("impg", "", ""),
-    "IMPGSEZ": ("impgsez", "", ""),
-    "TDS": ("tds", "", ""),
-    "TCS": ("tcs", "", ""),
-}
-
-
-ITC_SHEET_BLOCK = {
-    "ITC Available": "itcavl",
-    "ITC not available": "itcunavl",
-    "ITC Reversal": "itcrev",
-    "ITC Rejected": "itcRejected",
-}
-ITC_TAX_COLUMNS = {"igst": 4, "cgst": 5, "sgst": 6, "cess": 7}
+def _ramend(value):  # IMPGA/IMPGSEZA "type of amendment"; A=modify, G/D=new entry
+    return {"A": "Amendment", "G": "Addition", "D": "Addition"}.get(value, value or "")
 
 
 class GovReturnExporter:
     """Render a bundled government template from the stored raw payload, label-driven.
-    Subclasses set `return_type` and implement `fill()`; the base handles template
-    loading, header-aware cell writing, keeping all sheets, and streaming the file."""
+    Subclasses set `return_type` / `template` and their field maps, and implement `fill()`;
+    the base handles template loading, header-aware cell writing, keeping all sheets, and
+    streaming the file."""
 
     return_type = None
+    template = None
+    NUMERIC_ZERO_KEYS = frozenset()
 
     def __init__(self, gstin, periods):
+        if not self.return_type or not self.template:
+            raise NotImplementedError(f"{type(self).__name__} must set `return_type` and `template`.")
         self.gstin = gstin
         self.periods = periods
-        self.excel = ExcelExporter(get_data_file_path(TEMPLATES[self.return_type]))
+        self.excel = ExcelExporter(get_data_file_path(self.template))
         self.raw = _merged_raw(gstin, self.return_type, periods)
 
     def build(self):
@@ -471,6 +242,32 @@ class GovReturnExporter:
         itself for flat sections (IMPG/TDS/TCS) that have no nested list."""
         return (supplier.get(list_key) or []) if list_key else [supplier]
 
+    def _flat_rows(self, groups, list_key, original, fields, labels):
+        """One row per record (invoice/document-level). Item-level returns override
+        with their own builder."""
+        return [
+            {
+                label: self._raw_value(label, {"s": supplier, "i": record}, fields, original)
+                for label in labels.values()
+            }
+            for supplier in groups
+            for record in self._records(supplier, list_key)
+        ]
+
+    def _raw_value(self, label, containers, fields, original):
+        """Resolve one cell from a field map. The 'original details' block uses the sheet's
+        `original` map, everything else `fields`. `containers` maps each level (s/i/it) to
+        its source dict. Absent numeric keys listed in NUMERIC_ZERO_KEYS become 0."""
+        base, is_original = _split_label(label)
+        spec = (original if is_original else fields).get(base)
+        if not spec:
+            return None
+        level, key, transform = spec
+        value = containers.get(level, {}).get(key)
+        if value is None and key in self.NUMERIC_ZERO_KEYS:
+            value = 0
+        return transform(value) if transform else value
+
     def _open_on_readme(self):
         # every sheet is kept (empty sections stay blank, like the portal); open on Read me
         if not self.excel.has_sheet("Read me"):
@@ -481,39 +278,23 @@ class GovReturnExporter:
             worksheet.sheet_view.tabSelected = index == active
 
     @staticmethod
-    def _live_gstin_name(gstin):
-        """Registered (trade/legal) name from the GSTIN registry — for names the payload
-        doesn't carry. Guarded so a lookup failure never breaks the export."""
+    def _live_gstin_info(gstin):
+        """GSTIN registry info for names the payload doesn't carry (company legal/trade for
+        the Read me header, 2A supplier names). Guarded so a lookup failure never breaks
+        the export."""
         if not gstin:
-            return ""
+            return {}
         try:
             from india_compliance.gst_india.utils.gstin_info import _get_gstin_info
 
-            return (_get_gstin_info(gstin, throw_error=False) or {}).get("business_name") or ""
+            return _get_gstin_info(gstin, throw_error=False) or {}
         except Exception:
-            return ""
-
-    @staticmethod
-    def _live_gstin_names(gstin):
-        """(legal_name, trade_name) from the GSTIN registry, verbatim — for the Read me
-        header, which shows the two separately in the portal's casing."""
-        if not gstin:
-            return "", ""
-        try:
-            from india_compliance.gst_india.utils.gstin_info import _get_gstin_info
-
-            info = _get_gstin_info(gstin, throw_error=False) or {}
-            return info.get("legal_name") or "", info.get("trade_name") or ""
-        except Exception:
-            return "", ""
+            return {}
 
     @staticmethod
     def _set_merged(ws, row, col, value):
         """Write to a cell, redirecting to the merge anchor (merged cells are read-only)."""
-        for rng in ws.merged_cells.ranges:
-            if rng.min_row <= row <= rng.max_row and rng.min_col <= col <= rng.max_col:
-                ws.cell(row=rng.min_row, column=rng.min_col, value=value)
-                return
+        row, col = _merge_anchor(ws, row, col)
         ws.cell(row=row, column=col, value=value)
 
 
@@ -522,6 +303,135 @@ class GSTR2BExporter(GovReturnExporter):
     expanded to text, plus the four ITC summary sheets from the portal's itcsumm."""
 
     return_type = ReturnType.GSTR2B.value
+    template = "gstr2b_excel_template_v1.0.xlsx"
+
+    RAW_FIELDS: ClassVar[dict] = {
+        "gstin of supplier": ("s", "ctin", None),
+        "gstin of isd": ("s", "ctin", None),
+        "trade/legal name": ("s", "trdnm", None),
+        "gstin of eco": ("s", "ctin", None),
+        "gstr-1/1a/iff/gstr-5 period": ("s", "supprd", _rperiod),
+        "gstr-1/iff/1a/gstr-5 period": ("s", "supprd", _rperiod),
+        "gstr-1/1a/iff period": ("s", "supprd", _rperiod),
+        "gstr-1/iff/1a period": ("s", "supprd", _rperiod),
+        "gstr-1/iff/gstr-1a period": ("s", "supprd", _rperiod),
+        "isd gstr-6 period": ("s", "supprd", _rperiod),
+        "gstr-1/1a/iff/gstr-5 filing date": ("s", "supfildt", _rdate),
+        "gstr-1/iff/1a/gstr-5 filing date": ("s", "supfildt", _rdate),
+        "gstr-1/1a/iff filing date": ("s", "supfildt", _rdate),
+        "gstr-1/iff/1a filing date": ("s", "supfildt", _rdate),
+        "gstr-1/iff/gstr-1a filing date": ("s", "supfildt", _rdate),
+        "isd gstr-6 filing date": ("s", "supfildt", _rdate),
+        "invoice details | invoice number": ("i", "inum", None),
+        "invoice details | invoice type": ("i", "typ", _rtype),
+        "invoice details | invoice date": ("i", "dt", _rdate),
+        "invoice details | invoice value": ("i", "val", None),
+        "document details | document number": ("i", "inum", None),  # ECO
+        "document details | document type": ("i", "typ", _rtype),
+        "document details | document date": ("i", "dt", _rdate),
+        "document details | document value": ("i", "val", None),
+        "credit note/debit note details | note number": ("i", "ntnum", None),
+        "credit note/debit note details | note type": ("i", "typ", _rnote),
+        "credit note/debit note details | note supply type": ("i", "suptyp", _rtype),
+        "credit note/debit note details | note date": ("i", "dt", _rdate),
+        "credit note/debit note details | note value": ("i", "val", None),
+        "debit note details | note number": ("i", "ntnum", None),  # B2B-DNR (ITC reversal)
+        "debit note details | note type": ("i", "typ", _rnote),
+        "debit note details | note supply type": ("i", "suptyp", _rtype),
+        "debit note details | note date": ("i", "dt", _rdate),
+        "debit note details | note value": ("i", "val", None),
+        "place of supply": ("i", "pos", _rstate),
+        "supply attract reverse charge": ("i", "rev", _ryesno),
+        "taxable value": ("i", "txval", None),
+        "tax amount | integrated tax": ("i", "igst", None),
+        "tax amount | central tax": ("i", "cgst", None),
+        "tax amount | state/ut tax": ("i", "sgst", None),
+        "tax amount | cess": ("i", "cess", None),
+        "itc availability": ("i", "itcavl", _ritc),
+        "eligibility of itc": ("i", "itcelg", _ritc),
+        "applicable % of tax rate": ("i", "diffprcnt", _rpct),
+        "source": ("i", "srctyp", None),
+        "irn": ("i", "irn", None),
+        "irn date": ("i", "irngendate", _rdate),
+        "isd document type": ("i", "doctyp", _risd),
+        "isd document number": ("i", "docnum", None),
+        "isd document date": ("i", "docdt", _rdate),
+        "original invoice number": ("i", "oinvnum", None),
+        "original invoice date": ("i", "oinvdt", _rdate),
+        "input tax distribution by isd | integrated tax": ("i", "igst", None),
+        "input tax distribution by isd | central tax": ("i", "cgst", None),
+        "input tax distribution by isd | state/ut tax": ("i", "sgst", None),
+        "input tax distribution by isd | cess": ("i", "cess", None),
+        "icegate reference date": ("i", "refdt", _rdate),
+        "port code": ("i", "portcode", None),
+        "bill of entry details | number": ("i", "boenum", None),
+        "bill of entry details | date": ("i", "boedt", _rdate),
+        "bill of entry details | taxable value": ("i", "txval", None),
+        "amount of tax | integrated tax": ("i", "igst", None),
+        "amount of tax | cess": ("i", "cess", None),
+        "reason": ("i", "rsn", _rreason),
+        "type of amendment": ("i", "amendType", _ramend),  # IMPGA/IMPGSEZA
+        "whether itc to be reduced (taxpayer's input)": ("i", "itcRedReq", _ryesno),
+        "amount declared by taxpayer for itc reduction | integrated tax": ("i", "declIgst", None),
+        "amount declared by taxpayer for itc reduction | central tax": ("i", "declCgst", None),
+        "amount declared by taxpayer for itc reduction | state/ut tax": ("i", "declSgst", None),
+        "amount declared by taxpayer for itc reduction | cess": ("i", "declCess", None),
+        "remarks": ("i", "remarks", None),
+        "taxable value | integrated tax": ("i", "txval", None),
+        "taxable value | central tax": ("i", "igst", None),
+        "taxable value | state/ut tax": ("i", "cgst", None),
+        "taxable value | cess": ("i", "sgst", None),
+        "tax amount": ("i", "cess", None),
+    }
+
+    RAW_ORIGINAL: ClassVar[dict] = {
+        "invoice number": ("i", "oinum", None),
+        "invoice date": ("i", "oidt", _rdate),
+        "note type": ("i", "onttyp", _rnote),
+        "note number": ("i", "ontnum", None),
+        "note date": ("i", "ontdt", _rdate),
+        "isd document type": ("i", "odoctyp", _risd),
+        "document number": ("i", "odocnum", None),
+        "document date": ("i", "odocdt", _rdate),
+    }
+
+    _ECOA_ORIGINAL: ClassVar[dict] = {
+        "document number": ("i", "oinum", None),
+        "document date": ("i", "oidt", _rdate),
+    }
+
+    SHEETS: ClassVar[list] = [
+        ("B2B", "docdata", "b2b", "inv", RAW_ORIGINAL),
+        ("B2BA", "docdata", "b2ba", "inv", RAW_ORIGINAL),
+        ("B2B-CDNR", "docdata", "cdnr", "nt", RAW_ORIGINAL),
+        ("B2B-CDNRA", "docdata", "cdnra", "nt", RAW_ORIGINAL),
+        ("ISD", "docdata", "isd", "doclist", RAW_ORIGINAL),
+        ("ISDA", "docdata", "isda", "doclist", RAW_ORIGINAL),
+        ("ECO", "docdata", "ecom", "inv", RAW_ORIGINAL),
+        ("ECOA", "docdata", "ecoma", "inv", _ECOA_ORIGINAL),
+        ("B2B (ITC Reversal)", "itcrev", "b2b", "inv", RAW_ORIGINAL),
+        ("B2BA (ITC Reversal)", "itcrev", "b2ba", "inv", RAW_ORIGINAL),
+        ("B2B-DNR", "itcrev", "cdnr", "nt", RAW_ORIGINAL),
+        ("B2B-DNRA", "itcrev", "cdnra", "nt", RAW_ORIGINAL),
+        ("B2B(Rejected)", "rejected", "b2b", "inv", RAW_ORIGINAL),
+        ("B2BA(Rejected)", "rejected", "b2ba", "inv", RAW_ORIGINAL),
+        ("B2B-CDNR(Rejected)", "rejected", "cdnr", "nt", RAW_ORIGINAL),
+        ("B2B-CDNRA(Rejected)", "rejected", "cdnra", "nt", RAW_ORIGINAL),
+        ("ECO(Rejected)", "rejected", "ecom", "inv", RAW_ORIGINAL),
+        ("ECOA(Rejected)", "rejected", "ecoma", "inv", _ECOA_ORIGINAL),
+        ("ISD(Rejected)", "rejected", "isd", "doclist", RAW_ORIGINAL),
+        ("ISDA(Rejected)", "rejected", "isda", "doclist", RAW_ORIGINAL),
+    ]
+
+    ITC_SHEET_BLOCK: ClassVar[dict] = {
+        "ITC Available": "itcavl",
+        "ITC not available": "itcunavl",
+        "ITC Reversal": "itcrev",
+        "ITC Rejected": "itcRejected",
+    }
+    ITC_TAX_COLUMNS: ClassVar[dict] = {"igst": 4, "cgst": 5, "sgst": 6, "cess": 7}
+
+    _ITEM_TAX_KEYS = ("txval", "igst", "cgst", "sgst", "cess")
 
     def fill(self):
         docdata = self.raw.get("docdata", self.raw)
@@ -531,67 +441,93 @@ class GSTR2BExporter(GovReturnExporter):
             "rejected": _as_section_dict(self.raw.get("docRejdata")),
         }
         filled = []
-        for sheet, source, key, list_key, original in GSTR2B_SHEETS:
+        for sheet, source, key, list_key, original in self.SHEETS:
             groups = sources[source].get(key) or []
-            if groups and self.render(sheet, partial(self._build_rows, groups, list_key, original)):
+            if source == "itcrev":
+                groups = self._with_item_totals(groups, list_key)
+            build = partial(self._flat_rows, groups, list_key, original, self.RAW_FIELDS)
+            if groups and self.render(sheet, build):
                 filled.append(sheet)
 
-        itcsumm = self._itcsumm()
-        for sheet in ITC_SHEET_BLOCK:
+        self._fill_imports(docdata, filled)
+
+        itcsumm = self.raw.get("itcsumm") or {}
+        for sheet in self.ITC_SHEET_BLOCK:
             if itcsumm and self.excel.has_sheet(sheet):
                 self._fill_itc_sheet(sheet, itcsumm)
                 filled.append(sheet)
         return filled
 
-    def _build_rows(self, groups, list_key, original, labels):
-        return [
-            {label: self._raw_value(label, supplier, record, original) for label in labels.values()}
-            for supplier in groups
-            for record in self._records(supplier, list_key)
+    def _with_item_totals(self, groups, list_key):
+        """ITC-reversal records carry tax only in `items`; sum them to the invoice level so
+        the sheet's taxable-value/tax columns fill (these sheets are invoice-level, one row
+        per document, like the portal)."""
+        result = []
+        for group in groups:
+            records = []
+            for record in group.get(list_key) or []:
+                items = record.get("items")
+                if items and record.get("txval") is None:
+                    totals = {k: sum(flt(it.get(k)) for it in items) for k in self._ITEM_TAX_KEYS}
+                    record = {**record, **totals}
+                records.append(record)
+            result.append({**group, list_key: records})
+        return result
+
+    def _fill_imports(self, docdata, filled):
+        """IMPG/IMPGSEZ and their amendment sheets are not separate payload sections: the
+        payload keeps every bill of entry in `impg`/`impgsez`, and the amended ones
+        (isamd == 'Y') belong on IMPGA/IMPGSEZA, the rest on IMPG/IMPGSEZ."""
+        plans = [
+            ("IMPG", docdata.get("impg"), "", False),
+            ("IMPGA", docdata.get("impg"), "", True),
+            ("IMPGSEZ", docdata.get("impgsez"), "boe", False),
+            ("IMPGSEZA", docdata.get("impgsez"), "boe", True),
         ]
+        for sheet, groups, list_key, amended in plans:
+            groups = self._imports_by_amendment(groups, list_key, amended)
+            build = partial(self._flat_rows, groups, list_key, self.RAW_ORIGINAL, self.RAW_FIELDS)
+            if groups and self.render(sheet, build):
+                filled.append(sheet)
 
     @staticmethod
-    def _raw_value(label, supplier, record, original=RAW_ORIGINAL_2B):
-        """Resolve one 2B cell: the 'original details' block uses the sheet's original
-        map, everything else the base map (RAW_FIELDS_2B)."""
-        base, is_original = _split_label(label)
-        spec = (original if is_original else RAW_FIELDS_2B).get(base)
-        if not spec:
-            return None
-        level, key, transform = spec
-        value = (supplier if level == "s" else record).get(key)
-        return transform(value) if transform else value
+    def _imports_by_amendment(groups, list_key, amended):
+        """Keep bill-of-entry records whose amendment state matches. IMPG is flat (records are
+        the groups); IMPGSEZ nests them under each supplier's `boe` list."""
+        groups = groups or []
+
+        def matches(rec):
+            return (rec.get("isamd") == "Y") == amended
+
+        if not list_key:  # flat (IMPG)
+            return [rec for rec in groups if matches(rec)]
+        filtered = []
+        for group in groups:  # grouped (IMPGSEZ)
+            boe = [rec for rec in (group.get(list_key) or []) if matches(rec)]
+            if boe:
+                filtered.append({**group, list_key: boe})
+        return filtered
 
     def fill_readme(self):
         if not self.excel.has_sheet("Read me"):
             return
         period = self.periods[-1]
-        legal_name, trade_name = self._live_gstin_names(self.gstin)
-        raw = get_raw_return_data(self.gstin, self.return_type, period)
+        info = self._live_gstin_info(self.gstin)
+        gendt = self.raw.get("gendt")
 
         ws = self.excel.wb["Read me"]
         self._set_merged(ws, 4, 3, _financial_year(period))
         self._set_merged(ws, 5, 3, _reformat_date(period, "%m%Y", "%B"))  # full month name
         self._set_merged(ws, 6, 3, self.gstin)
-        self._set_merged(ws, 7, 3, legal_name)  # Legal Name
-        self._set_merged(ws, 8, 3, trade_name)  # Trade Name
-        self._set_merged(ws, 9, 3, _rdate(raw.get("gendt")) if isinstance(raw, dict) else "")
-
-    def _itcsumm(self):
-        """The portal's own computed ITC summary, merged across periods (merge_raw sums
-        the numbers). It's part of the stored payload, so we use it directly."""
-        merged = {}
-        for period in self.periods:
-            raw = get_raw_return_data(self.gstin, self.return_type, period)
-            if isinstance(raw, dict) and raw.get("itcsumm"):
-                merged = merge_raw(merged, raw["itcsumm"])
-        return merged
+        self._set_merged(ws, 7, 3, info.get("legal_name") or "")  # Legal Name
+        self._set_merged(ws, 8, 3, info.get("trade_name") or "")  # Trade Name
+        self._set_merged(ws, 9, 3, _rdate(gendt) if gendt else "")
 
     def _fill_itc_sheet(self, sheet, itcsumm):
         """Label-driven so the four differing layouts all work: section-total rows set
         the current bucket (and get its totals), detail rows get their section's tax
         split. Absent sections are written as 0 (the portal shows 0, not blank)."""
-        block = itcsumm.get(ITC_SHEET_BLOCK[sheet]) or {}
+        block = itcsumm.get(self.ITC_SHEET_BLOCK[sheet]) or {}
         ws = self.excel.wb[sheet]
         bucket = None
         for row in range(1, ws.max_row + 1):
@@ -641,9 +577,8 @@ class GSTR2BExporter(GovReturnExporter):
             return "cdnra" if amended else "cdnr"  # debit/credit notes
         return None
 
-    @staticmethod
-    def _write_itc_row(ws, row, values):
-        for field, col in ITC_TAX_COLUMNS.items():
+    def _write_itc_row(self, ws, row, values):
+        for field, col in self.ITC_TAX_COLUMNS.items():
             ws.cell(row=row, column=col, value=flt((values or {}).get(field)))
 
 
@@ -652,15 +587,149 @@ class GSTR2AExporter(GovReturnExporter):
     trade names resolved from GIS / a live GSTIN lookup (the raw doesn't carry them)."""
 
     return_type = ReturnType.GSTR2A.value
+    template = "gstr2a_excel_template_v1.0.xlsx"
+
+    NUMERIC_ZERO_KEYS: ClassVar[set] = {"rt", "txval", "iamt", "camt", "samt", "csamt", "cess"}
+
+    RAW_FIELDS: ClassVar[dict] = {
+        "gstin of supplier": ("s", "ctin", None),
+        "gstin of isd": ("s", "ctin", None),
+        "gstr-1/iff/gstr-1a/5 filing status": ("s", "cfs", None),
+        "gstr-1/iff/gstr-1a/5 filing date": ("s", "fldtr1", None),
+        "gstr-1/iff/gstr-1a/5 filing period": ("s", "flprdr1", None),
+        "gstr-1/iff/gstr-1a filing status": ("s", "cfs", None),  # ECO variant (no /5)
+        "gstr-1/iff/gstr-1a filing date": ("s", "fldtr1", None),
+        "gstr-1/iff/gstr-1a filing period": ("s", "flprdr1", None),
+        "isd gstr-6 filing status": ("s", "cfs", None),
+        "gstr-3b filing status": ("s", "cfs3b", None),
+        "effective date of cancellation": ("s", "dtcancel", None),
+        "gstin of eco": ("s", "ctin", None),
+        "document details | document number": ("i", "inum", None),
+        "document details | document type": ("i", "inv_typ", None),
+        "document details | document date": ("i", "idt", None),
+        "document details | document value": ("i", "val", None),
+        "invoice details | invoice number": ("i", "inum", None),
+        "invoice details | invoice type": ("i", "inv_typ", None),
+        "invoice details | invoice date": ("i", "idt", None),
+        "invoice details | invoice value": ("i", "val", None),
+        "credit note/debit note details | note type": ("i", "ntty", None),
+        "credit note/debit note details | note number": ("i", "nt_num", None),
+        "credit note/debit note details | note supply type": ("i", "inv_typ", None),
+        "credit note/debit note details | note date": ("i", "nt_dt", None),
+        "credit note/debit note details | note value": ("i", "val", None),
+        "place of supply": ("i", "pos", _rstate),
+        "supply attract reverse charge": ("i", "rchrg", None),
+        "tax period in which amended": ("i", "aspd", None),  # base sheets
+        "original tax period in which reported": ("i", "aspd", None),
+        "tax period in which reported earlier": ("i", "aspd", None),
+        "amendment made, if any": ("i", "atyp", None),
+        "source": ("i", "srctyp", None),
+        "irn": ("i", "irn", None),
+        "irn date": ("i", "irngendate", None),
+        "eligibility of itc": ("i", "itc_elg", None),
+        "isd document type": ("i", "isd_docty", None),
+        "isd invoice number": ("i", "docnum", None),
+        "isd invoice date": ("i", "docdt", None),
+        "isd credit note number": ("i", "docnum", None),
+        "isd credit note date": ("i", "docdt", None),
+        "original invoice number": ("i", "oinvnum", None),
+        "original invoice date": ("i", "oinvdt", None),
+        "input tax distribution by isd | integrated tax": ("i", "iamt", None),
+        "input tax distribution by isd | central tax": ("i", "camt", None),
+        "input tax distribution by isd | state/ut tax": ("i", "samt", None),
+        "input tax distribution by isd | cess": ("i", "cess", None),
+        "reference date (icegate)": ("i", "refdt", None),
+        "port code": ("i", "portcd", None),
+        "bill of entry details | number": ("i", "benum", None),
+        "bill of entry details | date": ("i", "bedt", None),
+        "bill of entry details | taxable value": ("i", "txval", None),
+        "amount of tax | integrated tax": ("i", "iamt", None),
+        "amount of tax | cess": ("i", "csamt", None),
+        "amended (yes)": ("i", "amd", None),
+        "amended(yes)": ("i", "amd", None),
+        "rate": ("it", "rt", None),
+        "taxable value": ("it", "txval", None),
+        "tax amount | integrated tax": ("it", "iamt", None),
+        "tax amount | central tax": ("it", "camt", None),
+        "tax amount | state/ut tax": ("it", "samt", None),
+        "tax amount | state tax": ("it", "samt", None),
+        "tax amount | cess": ("it", "csamt", None),
+        "tax amount | cess amount": ("it", "csamt", None),
+    }
+
+    RAW_ORIGINAL: ClassVar[dict] = {
+        "invoice number": ("i", "oinum", None),
+        "invoice date": ("i", "oidt", None),
+        "note type": ("i", "ntty", None),
+        "note number": ("i", "ont_num", None),
+        "note date": ("i", "ont_dt", None),
+    }
+    _ECOA_ORIGINAL: ClassVar[dict] = {
+        "document number": ("i", "oinum", None),
+        "document date": ("i", "oidt", None),
+    }
+    ORIGINAL_BY_SECTION: ClassVar[dict] = {"ECOA": _ECOA_ORIGINAL}
+
+    RAW_FIELDS_TDS: ClassVar[dict] = {
+        "gstin of deductor": ("i", "gstin_deductor", None),
+        "deductor's name": ("i", "deductor_name", None),
+        "tax period of gstr 7": ("i", "month", None),  # MMYYYY, as the portal shows it
+        "taxable value": ("i", "amt_ded", None),
+        "amount of tax deducted by deductors | integrated tax": ("i", "iamt", None),
+        "amount of tax deducted by deductors | central tax": ("i", "camt", None),
+        "amount of tax deducted by deductors | state/ut tax": ("i", "samt", None),
+    }
+
+    RAW_FIELDS_TCS: ClassVar[dict] = {
+        "gstin of e-com. operator": ("i", "etin", None),
+        "gross value of supplies": ("i", "sup_val", None),
+        "net amount liable for tcs": ("i", "tx_val", None),
+        "total tcs amount | integrated tax": ("i", "iamt", None),
+        "total tcs amount | central tax": ("i", "camt", None),
+        "total tcs amount | state/ut tax": ("i", "samt", None),
+    }
+
+    FIELDS_BY_SECTION: ClassVar[dict] = {"TDS": RAW_FIELDS_TDS, "TCS": RAW_FIELDS_TCS}
+
+    SECTION_SHEETS: ClassVar[dict] = {
+        "B2B": "B2B",
+        "B2BA": "B2BA",
+        "CDNR": "CDNR",
+        "CDNRA": "CDNRA",
+        "ECO": "ECO",
+        "ECOA": "ECOA",
+        "ISD": "ISD",
+        "IMPG": "IMPG",
+        "IMPGSEZ": "IMPG SEZ",
+        "TDS": "TDS",
+        "TCS": "TCS",
+    }
+
+    RAW_SECTIONS: ClassVar[dict] = {
+        "B2B": ("b2b", "inv", "itms"),
+        "B2BA": ("b2ba", "inv", "itms"),
+        "CDNR": ("cdnr", "nt", "itms"),
+        "CDNRA": ("cdnra", "nt", "itms"),
+        "ECO": ("ecom", "inv", "itms"),
+        "ECOA": ("ecoma", "inv", "itms"),
+        "ISD": ("isd", "doclist", ""),
+        "IMPG": ("impg", "", ""),
+        "IMPGSEZ": ("impgsez", "", ""),
+        "TDS": ("tds", "", ""),
+        "TCS": ("tcs", "", ""),
+    }
 
     def fill(self):
         docdata = self.raw.get("docdata", self.raw)
         resolve = self._name_resolver(self._supplier_names())
         period = self.periods[-1]
         filled = []
-        for section, sheet in SECTION_SHEETS[self.return_type].items():
-            docdata_key, list_key, item_key = RAW_SECTIONS_2A[section]
+        for section, sheet in self.SECTION_SHEETS.items():
+            docdata_key, list_key, item_key = self.RAW_SECTIONS[section]
             groups = docdata.get(docdata_key) or []
+            if section == "IMPGSEZ":
+                # SEZ imports carry the supplier under sgstin/tdname, not ctin/trdnm
+                groups = [{**g, "ctin": g.get("sgstin"), "trdnm": g.get("tdname")} for g in groups]
             build_rows = partial(self._build_rows, section, groups, list_key, item_key, resolve, period)
             if groups and self.render(sheet, build_rows):
                 filled.append(sheet)
@@ -672,21 +741,20 @@ class GSTR2AExporter(GovReturnExporter):
         if not self.excel.has_sheet("Read me"):
             return
         period = self.periods[-1]
-        legal_name, trade_name = self._live_gstin_names(self.gstin)
-        raw = get_raw_return_data(self.gstin, self.return_type, period)
-        gendt = raw.get("gendt") if isinstance(raw, dict) else None
+        info = self._live_gstin_info(self.gstin)
+        gendt = self.raw.get("gendt")
 
         ws = self.excel.wb["Read me"]
         ws.cell(2, 3, self.gstin)  # C2  Taxpayer's GSTIN
-        ws.cell(3, 3, legal_name)  # C3  Legal name
-        ws.cell(4, 3, trade_name)  # C4  Trade name
+        ws.cell(3, 3, info.get("legal_name") or "")  # C3  Legal name
+        ws.cell(4, 3, info.get("trade_name") or "")  # C4  Trade name
         ws.cell(2, 5, period)  # E2  Tax period (MMYYYY)
         ws.cell(3, 5, _financial_year(period))  # E3  Financial year
         ws.cell(4, 5, _rdate(gendt) if gendt else "")  # E4  Date of generation
 
     def _build_rows(self, section, groups, list_key, item_key, resolve, period, labels):
-        fields = FIELDS_2A_BY_SECTION.get(section, RAW_FIELDS_2A)
-        original = ORIGINAL_2A_BY_SECTION.get(section, RAW_ORIGINAL_2A)
+        fields = self.FIELDS_BY_SECTION.get(section, self.RAW_FIELDS)
+        original = self.ORIGINAL_BY_SECTION.get(section, self.RAW_ORIGINAL)
 
         def cell(label, supplier, record, item):
             if self._is_trade_name_label(label):
@@ -695,7 +763,7 @@ class GSTR2AExporter(GovReturnExporter):
                 return resolve(record.get("etin"))
             if label == "tax period of gstr 8":
                 return period
-            return self._raw_value_2a(label, supplier, record, item, fields, original)
+            return self._raw_value(label, {"s": supplier, "i": record, "it": item}, fields, original)
 
         def row_for(supplier, record, item):
             return {label: cell(label, supplier, record, item) for label in labels.values()}
@@ -728,30 +796,25 @@ class GSTR2AExporter(GovReturnExporter):
             row[number_label] = f"{row[number_label]}-Total"
         return row
 
-    @staticmethod
-    def _raw_value_2a(label, supplier, record, item, fields=RAW_FIELDS_2A, original=RAW_ORIGINAL_2A):
-        base, is_original = _split_label(label)
+    def _raw_value(self, label, containers, fields, original):
+        """2A-only computed/conditional cells the (level, key, transform) map can't
+        express; everything else falls through to the generic resolver."""
+        base, _ = _split_label(label)
+        record = containers["i"]
         if base.startswith(("isd invoice", "isd credit note")):
             if (record.get("isd_docty") == "ISDCN") != ("credit note" in base):
                 return ""
         if base == "value of supplies returned":
             return round(flt(record.get("sup_val")) - flt(record.get("tx_val")), 2)
-        spec = (original if is_original else fields).get(base)
-        if not spec:
-            return None
-        level, key, transform = spec
-        value = {"s": supplier, "i": record, "it": item}[level].get(key)
-        if value is None and key in _NUMERIC_ZERO_KEYS_2A:
-            value = 0
-        return transform(value) if transform else value
+        return super()._raw_value(label, containers, fields, original)
 
     @staticmethod
     def _is_trade_name_label(label):
         return _split_label(label)[0].startswith("trade/legal name")
 
-    @staticmethod
-    def _r2a_sum(items):
-        return {field: sum(flt(it.get(field)) for it in items) for field in _NUMERIC_ZERO_KEYS_2A}
+    @classmethod
+    def _r2a_sum(cls, items):
+        return {field: sum(flt(it.get(field)) for it in items) for field in cls.NUMERIC_ZERO_KEYS}
 
     def _supplier_names(self):
         """{supplier_gstin: supplier_name} resolved during sync — the 2A B2B/CDNR trade
@@ -770,16 +833,19 @@ class GSTR2AExporter(GovReturnExporter):
 
     @staticmethod
     def _name_resolver(gis_names):
-        """Resolve a supplier/operator name: GIS first, then a cached live GSTIN lookup."""
+        """Resolve a supplier/operator name. The 2A raw doesn't carry it and the portal shows
+        the registered legal name, so prefer a cached live GSTIN lookup's legal name, then the
+        name synced to GIS, then the business name. One lookup per unique GSTIN."""
         cache = {}
 
         def resolve(gstin):
             if not gstin:
                 return ""
-            if gstin in gis_names:
-                return gis_names[gstin]
             if gstin not in cache:
-                cache[gstin] = GovReturnExporter._live_gstin_name(gstin)
+                info = GovReturnExporter._live_gstin_info(gstin)
+                cache[gstin] = (
+                    info.get("legal_name") or gis_names.get(gstin) or info.get("business_name") or ""
+                )
             return cache[gstin]
 
         return resolve
@@ -793,32 +859,42 @@ EXPORTERS = {
 
 def build_export(gstin, return_type, periods):
     """Build the portal-format workbook for the return; returns (file_name, xlsx bytes)."""
-    return EXPORTERS[_normalize_return_type(return_type)](gstin, periods).build()
+    exporter = EXPORTERS.get(normalize_return_type(return_type))
+    if not exporter:
+        frappe.throw(frappe._("Export is not supported for {0}").format(return_type))
+    return exporter(gstin, periods).build()
 
 
 EXPORT_READY_EVENT = "gst_return_export_ready"
+DOCTYPE = "GST Return Export"
 
 
-def _resolve_periods(company_gstin, return_type, date_range):
+def _resolve_periods(company_gstin, return_type, from_date, to_date):
     from india_compliance.gst_india.doctype.purchase_reconciliation_tool import BaseUtil
 
-    if isinstance(date_range, str):
-        date_range = frappe.parse_json(date_range)
-    return BaseUtil.get_periods(date_range, ReturnType(return_type), company_gstin)
+    return BaseUtil.get_periods([from_date, to_date], ReturnType(return_type), company_gstin)
 
 
-def generate_export_file(company_gstin, return_type, date_range, user):
-    """Background job: build the workbook, save it as a private File, and notify the
-    user (via realtime) with a download link. Errors are reported the same way."""
+def generate_export_file(company_gstin, return_type, from_date, to_date, user):
+    """Background job: build the workbook, save it as a private File attached to the tool,
+    and notify the user (via realtime) with the File id to download. Errors are reported
+    the same way."""
     try:
-        periods = _resolve_periods(company_gstin, return_type, date_range)
+        periods = _resolve_periods(company_gstin, return_type, from_date, to_date)
         if not periods:
             raise frappe.ValidationError(frappe._("No available periods in the selected range to export."))
         file_name, content = build_export(company_gstin, return_type, periods)
         file = frappe.get_doc(
-            {"doctype": "File", "file_name": file_name, "is_private": 1, "content": content}
+            {
+                "doctype": "File",
+                "file_name": file_name,
+                "attached_to_doctype": DOCTYPE,
+                "attached_to_name": DOCTYPE,
+                "is_private": 1,
+                "content": content,
+            }
         ).insert(ignore_permissions=True)
-        payload = {"file_url": file.file_url, "file_name": file_name}
+        payload = {"file_id": file.name, "file_name": file_name}
     except Exception as exc:
         frappe.db.rollback()
         payload = {"error": str(exc)}
@@ -828,20 +904,36 @@ def generate_export_file(company_gstin, return_type, date_range, user):
 
 
 @frappe.whitelist()
-def export_return_as_excel(company_gstin: str, return_type: str, date_range: str | list):
-    """Enqueue the export (async); the file download link arrives via realtime."""
-    frappe.has_permission("GST Return Export", "export", throw=True)
-    return_type = _normalize_return_type(return_type)
+def download_export_file(file_id: str):
+    """Stream a generated export to the browser. Guarded by the same `export` permission as
+    producing it, and restricted to files this tool created — so it can't be used to fetch
+    arbitrary private Files."""
+    frappe.has_permission(DOCTYPE, "export", throw=True)
+
+    file = frappe.get_doc("File", file_id)
+    if file.attached_to_doctype != DOCTYPE or file.owner != frappe.session.user:
+        frappe.throw(frappe._("This file is not a GST Return Export."), frappe.PermissionError)
+
+    provide_binary_file(file.file_name.removesuffix(".xlsx"), "xlsx", file.get_content(encodings=[]))
+
+
+@frappe.whitelist()
+@validate_gstin_permission(doctype=DOCTYPE)
+def export_return_as_excel(company_gstin: str, return_type: str, from_date: str, to_date: str):
+    """Enqueue the export (async); the download is triggered via realtime when ready."""
+    frappe.has_permission(DOCTYPE, "export", throw=True)
+    return_type = normalize_return_type(return_type)
 
     frappe.enqueue(
         generate_export_file,
         queue="long",
         timeout=1500,
-        job_id=f"gst_return_export::{company_gstin}::{return_type}",
+        job_id=f"gst_return_export:{company_gstin}:{return_type}",
         deduplicate=True,
         company_gstin=company_gstin,
         return_type=return_type,
-        date_range=date_range,
+        from_date=from_date,
+        to_date=to_date,
         user=frappe.session.user,
     )
     return {"message": frappe._("Generating your export — the download will start when it's ready.")}

@@ -54,7 +54,8 @@
   {
    "fieldname": "from_date",
    "fieldtype": "Date",
-   "label": "From Date"
+   "label": "From Month",
+   "options": "{\"minView\": \"months\", \"view\": \"months\"}"
   },
   {
    "fieldname": "column_break_filters_3",
@@ -63,7 +64,8 @@
   {
    "fieldname": "to_date",
    "fieldtype": "Date",
-   "label": "To Date"
+   "label": "To Month",
+   "options": "{\"minView\": \"months\", \"view\": \"months\"}"
   },
   {
    "fieldname": "summary_section",
