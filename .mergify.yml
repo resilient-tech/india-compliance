@@ -30,16 +30,9 @@ pull_request_rules:
     actions:
       merge:
         method: squash
-<<<<<<< HEAD
-        commit_message_template: |
-            {{ title }} (#{{ number }})
-            {{ body }}
-  
-=======
         commit_message_format:
           title: pr-title
           body: pr-body
->>>>>>> eabfee78 (ci(mergify): upgrade configuration to current format)
   - name: backport to develop
     conditions:
       - label="backport next"
