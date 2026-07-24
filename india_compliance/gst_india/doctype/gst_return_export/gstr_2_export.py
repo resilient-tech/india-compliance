@@ -22,6 +22,7 @@ from typing import ClassVar
 
 import frappe
 from frappe.desk.utils import provide_binary_file
+from frappe.query_builder.functions import Max
 from frappe.utils import flt
 
 from india_compliance.gst_india.constants import GST_CATEGORY_MAP, STATE_NUMBERS
@@ -822,11 +823,11 @@ class GSTR2AExporter(GovReturnExporter):
         GIS = frappe.qb.DocType("GST Inward Supply")
         rows = (
             frappe.qb.from_(GIS)
-            .select(GIS.supplier_gstin, GIS.supplier_name)
-            .distinct()
+            .select(GIS.supplier_gstin, Max(GIS.supplier_name).as_("supplier_name"))
             .where(GIS.company_gstin == self.gstin)
             .where(GIS.is_downloaded_from_2a == 1)
             .where(GIS.sup_return_period.isin(self.periods))
+            .groupby(GIS.supplier_gstin)
             .run(as_dict=True)
         )
         return {row.supplier_gstin: row.supplier_name for row in rows if row.supplier_name}
@@ -928,7 +929,7 @@ def export_return_as_excel(company_gstin: str, return_type: str, from_date: str,
         generate_export_file,
         queue="long",
         timeout=1500,
-        job_id=f"gst_return_export:{company_gstin}:{return_type}",
+        job_id=f"gst_return_export:{company_gstin}:{return_type}:{from_date}:{to_date}",
         deduplicate=True,
         company_gstin=company_gstin,
         return_type=return_type,

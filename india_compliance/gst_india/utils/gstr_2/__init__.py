@@ -223,14 +223,17 @@ def download_gstr_2b(gstin, return_periods):
         if response.data and (file_count := response.data.get("fc")):
             full_payload = {}
             merged_docdata = {}
+            merged_rejdata = {}
             for file_num in range(1, file_count + 1):
                 r = api.get_data(return_period, file_num=file_num)
                 merged_docdata = merge_raw(merged_docdata, r.data.get("docdata") or {})
+                merged_rejdata = merge_raw(merged_rejdata, r.data.get("docRejdata") or {})
                 if not full_payload:
                     full_payload = dict(r.data)
                 save_gstr_2b(gstin, return_period, r, store_raw=False)
 
             full_payload["docdata"] = merged_docdata
+            full_payload["docRejdata"] = merged_rejdata
             store_raw_return_data(gstin, ReturnType.GSTR2B.value, return_period, full_payload)
             continue  # skip first response if file_count is greater than 1
 
