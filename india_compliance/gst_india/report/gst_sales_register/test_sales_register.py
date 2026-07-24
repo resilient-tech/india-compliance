@@ -714,7 +714,7 @@ class TestSalesRegisterEcommerce(IntegrationTestCase):
         rows = rows_for(base)
         self.assertTrue(rows)
         for row in rows:
-            self.assertEqual(row["invoice_category"], GSTR1_Category.UNCATEGORISED.value)
+            self.assertEqual(row["invoice_category"], GSTR1_Category.ECOM_RCM.value)
             self.assertFalse(row.get("invoice_sub_category"))
             self.assertEqual(row["ecommerce_supply_type"], GSTR1_SubCategory.SUPECOM_9_5.value)
 

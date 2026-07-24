@@ -23,7 +23,7 @@ class GSTR1_Category(Enum):
     HSN = "HSN Summary"
     DOC_ISSUE = "Document Issued"
     SUPECOM = "Supplies made through E-commerce Operators"
-    UNCATEGORISED = "Uncategorised"
+    ECOM_RCM = "Supplies through E-commerce Operators u/s 9(5)"
 
 
 class GSTR1_SubCategory(Enum):

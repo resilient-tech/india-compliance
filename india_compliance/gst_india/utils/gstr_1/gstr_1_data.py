@@ -29,7 +29,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
 )
 
 CATEGORY_CONDITIONS = {
-    GSTR1_Category.UNCATEGORISED.value: {
+    GSTR1_Category.ECOM_RCM.value: {
         "category": "is_uncategorised",
         "sub_category": None,
     },
@@ -419,7 +419,7 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
             invoice.invoice_sub_category = GSTR1_SubCategory.B2B_REGULAR.value
 
     def set_hsn_sub_category(self, invoice, bifurcate_hsn):
-        if invoice.invoice_category == GSTR1_Category.UNCATEGORISED.value:
+        if invoice.invoice_category == GSTR1_Category.ECOM_RCM.value:
             return
 
         if not bifurcate_hsn:
@@ -493,8 +493,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
     def get_invoices_for_hsn_wise_summary(self):
         query = self.get_base_query()
-
-        query = query.where((IfNull(self.si.ecommerce_gstin, "") == "") | (self.si.is_reverse_charge == 0))
 
         query = (
             frappe.qb.from_(query)
