@@ -252,7 +252,7 @@ class TestEWaybill(IntegrationTestCase):
                 "reference_name": transporter_data.get("request_data").get("ewbNo"),
                 "content": (
                     "Transporter Info has been updated by <strong>Administrator</strong>. "
-                    "Transporter ID changed from <strong>&lt;empty&gt;</strong> to <strong>05AAACG2140A1ZL</strong>."
+                    "Transporter ID changed from <strong>05AAACG2140A1ZL</strong> to <strong>88AAACD8017H1ZX</strong>."
                 ),
             },
             frappe.get_doc(
@@ -957,6 +957,10 @@ class TestEWaybill(IntegrationTestCase):
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
         self._generate_e_waybill(si.name)
         doc = load_doc("Sales Invoice", si.name, "submit")
+
+        # When a transporter GST ID is set, only that transporter can extend the
+        # e-Waybill. Clear it so the company can extend it (self-transport).
+        doc.gst_transporter_id = ""
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
