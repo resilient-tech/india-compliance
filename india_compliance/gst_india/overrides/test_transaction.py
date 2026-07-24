@@ -32,7 +32,7 @@ from india_compliance.gst_india.overrides.transaction import (
     DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
     _is_multicurrency_doc,
-    sync_address_dependent_fields_on_submit,
+    sync_address_dependent_fields_after_submit,
     sync_gst_details_from_address,
     validate_gst_refund_accounts,
     validate_item_tax_template,
@@ -290,7 +290,7 @@ class TestTransaction(IntegrationTestCase):
                 msg=f"{self.doctype}.{company_address_field} must stay locked so company_gstin can't change",
             )
 
-    def test_sync_address_dependent_fields_on_submit(self):
+    def test_sync_address_dependent_fields_after_submit(self):
         """Tax-neutral address change is allowed; party GSTIN/category re-sync."""
         doc = create_transaction(**self.transaction_details)
 
@@ -313,7 +313,7 @@ class TestTransaction(IntegrationTestCase):
 
         doc.load_doc_before_save()
         doc.set(address_field, new_address)
-        sync_address_dependent_fields_on_submit(doc)
+        sync_address_dependent_fields_after_submit(doc)
 
         self.assertEqual(doc.get(gstin_field), expected_gstin)
         self.assertEqual(doc.get("gst_category"), expected_category)
@@ -1789,7 +1789,7 @@ class TestSpecificTransactions(IntegrationTestCase):
             self.assertRaisesRegex(
                 frappe.exceptions.ValidationError,
                 re.compile(r"You are not allowed to update Sales Invoice"),
-                sync_address_dependent_fields_on_submit,
+                sync_address_dependent_fields_after_submit,
                 si,
             )
 
