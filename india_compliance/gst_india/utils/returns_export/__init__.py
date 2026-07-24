@@ -4,10 +4,9 @@
 """
 Ports-and-adapters layer for the GST Return Export tool.
 
-`ReturnAdapter` is the port; one adapter per return type supplies the specifics
-(download, summary aggregation, ITC), so GSTR-1/3B plug in by subclassing rather
-than by adding branches. The raw payload (`filed`) and prepared summary (`summary`)
-both live on the period's GST Return Log row.
+`ReturnAdapter` is the port; one adapter per return type supplies download, summary
+aggregation and ITC. Raw payload (`filed`) and prepared summary (`summary`) both live
+on the period's GST Return Log row.
 """
 
 import frappe
@@ -39,9 +38,8 @@ def normalize_return_type(return_type):
 
 
 def merge_raw(existing, new):
-    """Deep-merge two raw payload chunks: dicts recurse, lists concatenate, numbers
-    add, else newer wins (but a null in `new` never clobbers accumulated data).
-    Covers 2A/2B split payloads and GSTR-3B summations."""
+    """Deep-merge raw payload chunks: dicts recurse, lists concat, numbers add, else
+    newer wins (but a null in `new` never clobbers accumulated data)."""
     if isinstance(existing, dict) and isinstance(new, dict):
         merged = dict(existing)
         for key, value in new.items():
@@ -89,10 +87,9 @@ class ReturnAdapter:
         return [{"period": period, **stored[period]} for period in periods if period in stored]
 
     def get_range_summary(self, periods):
-        """Section-first summary for the range: each section summed across the selected
-        months with a per-month breakdown (for drill-down) and the consolidated ITC. Built
-        from the stored monthly summaries — no re-aggregation over GST Inward Supply. Sync
-        state is not reported here; get_sync_status is the single source of truth for it."""
+        """Section-first range summary: each section summed across months with a per-month
+        breakdown and consolidated ITC. Built from stored monthly summaries. Sync state is
+        not reported here; get_sync_status owns that."""
         stored = {s["period"]: s for s in self.get_summaries(periods)}
 
         sections = {}
@@ -119,15 +116,13 @@ class ReturnAdapter:
     def get_sync_status(self, periods):
         """Per-month sync state for the sync picker / missing-sync banner.
 
-        A month counts as synced only when its raw portal payload (the log's `filed`
-        attachment) is stored — that's what the Excel export actually consumes. A period
-        downloaded before this tool existed (present in the GSTR Import Log / GST Inward
-        Supply, but with no stored payload) is therefore correctly reported as not synced,
-        so the banner prompts a re-sync instead of the export failing with "no data".
+        A month counts as synced only when its raw payload (the log's `filed` attachment)
+        is stored — that's what the export consumes. A period downloaded before this tool
+        existed (no stored payload) is reported as not synced, so the banner prompts a
+        re-sync instead of the export failing with "no data".
 
-        One query of small columns only: the `filed` filter runs in the DB and the row's
-        `modified` timestamp doubles as the last-synced time (these logs are only written
-        while syncing), so there's no need to load or parse the summary blob."""
+        One query, small columns only: the `filed` filter runs in the DB and `modified`
+        doubles as last-synced time, so no summary blob is loaded."""
         names = {self._log_name(period): period for period in periods}
         synced = {
             names[row.name]: row.modified

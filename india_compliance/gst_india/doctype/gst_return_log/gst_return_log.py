@@ -331,8 +331,6 @@ def store_raw_return_data(gstin, return_type, return_period, json_data, *, merge
     (what's on the government portal), for the GST Return Export tool.
 
     merge=True updates section keys into the existing payload; merge=False overwrites.
-    The lock guards concurrent queued-retry workers; the log is loaded inside it so
-    `update_json_for` sees the current file state (no duplicate attachment).
     """
     name = f"{return_type}-{return_period}-{gstin}"
 

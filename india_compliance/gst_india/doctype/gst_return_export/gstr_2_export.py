@@ -4,16 +4,12 @@
 """
 Export GSTR-2A / 2B to the government Excel format, byte-for-byte.
 
-The bundled portal template is filled from the stored raw portal payload (`docdata`),
-not from GST Inward Supply, so every column the portal shows is preserved. Columns are
-placed by header label (read from each sheet's merged header stack at runtime), so
-nothing is hard-coded to a position. 2A and 2B have their own field maps: 2B expands
-codes and is invoice-level; 2A keeps raw codes and is item-level with a per-invoice
-"-Total" row. Empty sections stay blank, exactly like the portal file.
+Fills the bundled portal template from the stored raw payload (`docdata`). Columns are
+placed by header label read at runtime, not by position. 2B is invoice-level with codes
+expanded; 2A is item-level with raw codes and a per-invoice "-Total" row.
 
-Each return type keeps its own template, sheet list and field maps as class attributes
-on its exporter (below), so the module level holds only the shared header-parsing and
-value-transform helpers.
+Each exporter holds its own template, sheet list and field maps; the module level holds
+only the shared header-parsing and value-transform helpers.
 """
 
 import re
