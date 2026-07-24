@@ -99,6 +99,19 @@ def send_updated_doc(doc, set_docinfo=False):
     frappe.response.docs.append(doc)
 
 
+def publish_doc_update(doc, message, indicator="green"):
+    """like send_updated_doc: alert + reload for everyone viewing the doc."""
+    doc.notify_update()
+
+    frappe.publish_realtime(
+        "ic_doc_update",
+        {"message": message, "indicator": indicator},
+        doctype=doc.doctype,
+        docname=doc.name,
+        after_commit=True,
+    )
+
+
 @frappe.whitelist()
 def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = False):
     """

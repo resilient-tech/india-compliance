@@ -50,6 +50,7 @@ from india_compliance.gst_india.utils import (
     is_overseas_doc,
     load_doc,
     parse_datetime,
+    publish_doc_update,
     send_updated_doc,
     set_einvoice_status,
     update_onload,
@@ -399,11 +400,11 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
     if result.EwbNo:
         log_and_process_e_waybill_generation(doc, result, with_irn=True)
 
-    if not frappe.request:
-        return
-
     if not message:
         message = "e-Invoice generated successfully"
+
+    if not frappe.request:
+        return publish_doc_update(doc, message)
 
     frappe.msgprint(_(message), indicator="green", alert=True)
 
@@ -461,6 +462,9 @@ def log_and_process_e_invoice_cancellation(doc, values, result, message):
             "irn": "",
         }
     )
+
+    if not frappe.request:
+        return publish_doc_update(doc, message)
 
     frappe.msgprint(_(message), indicator="green", alert=True)
 

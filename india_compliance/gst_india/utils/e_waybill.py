@@ -60,6 +60,7 @@ from india_compliance.gst_india.utils import (
     is_outward_stock_entry,
     load_doc,
     parse_datetime,
+    publish_doc_update,
     send_updated_doc,
     set_ewaybill_status,
     update_onload,
@@ -316,18 +317,16 @@ def _generate_e_waybill(doc, throw=True, force=False):
 
     log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
 
-    if not frappe.request:
-        return
-
-    frappe.msgprint(
-        (
-            _("e-Waybill generated successfully")
-            if result.validUpto or result.EwbValidTill
-            else _("e-Waybill (Part A) generated successfully")
-        ),
-        indicator="green",
-        alert=True,
+    message = (
+        "e-Waybill generated successfully"
+        if result.validUpto or result.EwbValidTill
+        else "e-Waybill (Part A) generated successfully"
     )
+
+    if not frappe.request:
+        return publish_doc_update(doc, message)
+
+    frappe.msgprint(_(message), indicator="green", alert=True)
 
     return send_updated_doc(doc)
 
@@ -404,11 +403,12 @@ def _cancel_e_waybill(doc, values):
 
     log_and_process_e_waybill_cancellation(doc, values, result)
 
-    frappe.msgprint(
-        _("e-Waybill cancelled successfully"),
-        indicator="green",
-        alert=True,
-    )
+    message = _("e-Waybill cancelled successfully")
+
+    if not frappe.request:
+        return publish_doc_update(doc, message)
+
+    frappe.msgprint(message, indicator="green", alert=True)
 
 
 def log_and_process_e_waybill_cancellation(doc, values, result):

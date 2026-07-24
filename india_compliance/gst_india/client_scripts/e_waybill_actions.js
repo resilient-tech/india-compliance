@@ -8,6 +8,8 @@ const E_WAYBILL_CLASS = {
 };
 
 function setup_e_waybill_actions(doctype) {
+    setup_gst_update_notifications(doctype);
+
     if (!gst_settings.enable_e_waybill) return;
 
     frappe.ui.form.on(doctype, {
@@ -1374,6 +1376,21 @@ async function get_source_destination_address(frm, address_type) {
     });
 
     return address?.message;
+}
+
+function setup_gst_update_notifications(doctype) {
+    if (!india_compliance.is_api_enabled()) return;
+
+    frappe.ui.form.on(doctype, {
+        setup() {
+            frappe.realtime.on("ic_doc_update", (message) => {
+                frappe.show_alert({
+                    message: __(message.message),
+                    indicator: message.indicator || "green",
+                });
+            });
+        },
+    });
 }
 
 function show_sandbox_mode_indicator() {
