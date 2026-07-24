@@ -2496,9 +2496,11 @@ class GSTR1BooksData(BooksDataMapper):
 
         for item in data:
             gst_rate = flt(item.get("gst_rate"))
-            hsn_key = f"{item.gst_hsn_code} - {item.uom} - {gst_rate}"
 
-            data_for_hsn[item.get("hsn_sub_category")][hsn_key].append(item)
+            hsn_sub_category = item.get("hsn_sub_category")
+            if hsn_sub_category:
+                hsn_key = f"{item.gst_hsn_code} - {item.uom} - {gst_rate}"
+                data_for_hsn[hsn_sub_category][hsn_key].append(item)
 
             if only_for_hsn or item.get("taxable_value") == 0:
                 continue
@@ -2521,9 +2523,8 @@ class GSTR1BooksData(BooksDataMapper):
             elif invoice_category == GSTR1_Category.B2CS:
                 data_for_b2cs[key][gst_rate].append(item)
 
-            # E-commerce invoices are also aggregated into SUPECOM regardless of
-            # their primary category (B2B/B2CS). ecommerce_supply_type is set by
-            # assign_categories() for every invoice that has ecommerce_gstin.
+            # E-commerce invoices are aggregated into SUPECOM: 52/TCS in addition to
+            # their primary category (B2B/B2CS), 9(5) exclusively (no primary above).
             if item.get("ecommerce_gstin") and item.get("ecommerce_supply_type"):
                 data_for_supecom[item.ecommerce_supply_type][item.invoice_no].append(item)
 
