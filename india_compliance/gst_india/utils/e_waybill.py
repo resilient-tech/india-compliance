@@ -1200,9 +1200,12 @@ class EWaybillData(GSTTransactionData):
             "VehNo": self.transaction_details.vehicle_no,
             "VehType": self.transaction_details.vehicle_type,
         }
-        if is_e_waybill_changes_applicable(self.settings):
+        if (
+            is_e_waybill_changes_applicable(self.settings)
+            and self.transaction_details.transaction_type in SHIP_TO_TRANSACTION_TYPES
+        ):
             if self.sandbox_mode and self.ship_to.gstin and self.ship_to.gstin != "URP":
-                self.ship_to.gstin = "02AMBPG7773M002"
+                self.ship_to.update({"gstin": "02AMBPG7773M002", "state_number": "02", "pincode": 171302})
 
             # case of ship_to details provided during irn generation and same as before
             # passing them again will result in error from e-waybill api
@@ -1731,7 +1734,10 @@ class EWaybillData(GSTTransactionData):
             self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
             self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
             if self.ship_to.gstin:
-                self.ship_to.gstin = _get_sandbox_gstin(self.ship_to, 1)
+                # ship to gstin can't be the same as bill to gstin
+                self.ship_to.gstin = _get_sandbox_gstin(self.ship_to, 0)
+
+            # TODO: in future add ship_to gstin in sandbox as SHIPPING_GSTIN = "07AAFCD5862R1ZX" and update the failing test cases
 
         to_state_code = int(self.transaction_details.pos_state_code)
 

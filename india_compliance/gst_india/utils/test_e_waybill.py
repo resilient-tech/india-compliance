@@ -1054,10 +1054,15 @@ class TestEWaybill(FrappeTestCase):
         )
 
         self.assertEqual(e_waybill_data.get("transactionType"), 2)
+<<<<<<< HEAD
         self.assertEqual(e_waybill_data.get("shipToGSTIN"), "05AAACG2140A1ZL")
         self.assertEqual(
             e_waybill_data.get("shipToTradeName"), "Test Foreign Customer-1"
         )
+=======
+        self.assertEqual(e_waybill_data.get("shipToGSTIN"), "05AAACG2115R1ZN")
+        self.assertEqual(e_waybill_data.get("shipToTradeName"), "Test Foreign Customer-1")
+>>>>>>> 68f45ef5 (fix: update ship-to GSTIN for transport type-1, registered shipping address and update test cases)
 
         expected_request_data = test_data.get("request_data")
         for key, value in e_waybill_data.items():
@@ -1217,6 +1222,7 @@ class TestEWaybill(FrappeTestCase):
           the sandbox GSTIN override
         - unregistered shipping address -> block added with 'URP'
         - IRN already carries the same ship-to GSTIN -> block skipped (dedup)
+        - ship-to same as bill-to (transaction type 1) -> block skipped
         """
         # registered shipping address, no e-Invoice Log -> ExpShipDtls added, sandbox GSTIN
         si = self._create_sales_invoice_with_irn("_Test Registered Customer-Billing-1", "12345678901234561")
@@ -1224,7 +1230,9 @@ class TestEWaybill(FrappeTestCase):
         exp_ship_dtls = data.get("ExpShipDtls")
         self.assertIsNotNone(exp_ship_dtls)
         self.assertEqual(exp_ship_dtls.get("Gstin"), "02AMBPG7773M002")
-        for field in ("TrdNm", "Addr1", "Loc", "Pin", "Stcd"):
+        self.assertEqual(exp_ship_dtls.get("Stcd"), "02")
+        self.assertEqual(exp_ship_dtls.get("Pin"), 171302)
+        for field in ("TrdNm", "Addr1", "Loc"):
             self.assertTrue(exp_ship_dtls.get(field), f"ExpShipDtls.{field} must be set")
 
         # unregistered shipping address -> ExpShipDtls.Gstin == 'URP'
@@ -1243,6 +1251,11 @@ class TestEWaybill(FrappeTestCase):
             }
         ).insert(ignore_if_duplicate=True)
 
+        data = EWaybillData(si).get_data(with_irn=True)
+        self.assertNotIn("ExpShipDtls", data)
+
+        si = self._create_sales_invoice_with_irn("_Test Registered Customer-Billing", "12345678901234565")
+        self.assertEqual(EWaybillData(si).get_data().get("transactionType"), 1)
         data = EWaybillData(si).get_data(with_irn=True)
         self.assertNotIn("ExpShipDtls", data)
 
