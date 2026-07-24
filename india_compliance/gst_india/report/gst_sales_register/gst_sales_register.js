@@ -119,6 +119,9 @@ function set_sub_category_options(report) {
     } else report.refresh();
 }
 
+const SUPECOM_CATEGORY = "Supplies made through E-commerce Operators";
+const SUPECOM_9_5 = "Liable to pay tax u/s 9(5)";
+
 function custom_report_column_total(...args) {
     const summary_by = frappe.query_report.get_filter_value("summary_by");
     if (summary_by !== "Overview") return frappe.utils.report_column_total.apply(this, args);
@@ -129,7 +132,23 @@ function custom_report_column_total(...args) {
     const { data } = this.datamanager;
     return this.datamanager.getFilteredRowIndices().reduce((acc, index) => {
         const row = data[index];
-        if (row.indent === 1 || row.description === "Supplies made through E-commerce Operators") return acc;
+
+        // Sub-category (indent 1) rows are excluded, since their category parent
+        // (indent 0) already carries the aggregate. The one exception: 9(5) supplies
+        // are reported only under SUPECOM and not in any primary category, so their
+        // taxable value must still be added to the overall turnover. Their tax is paid
+        // by the e-commerce operator, so it is left out of the tax column totals.
+        if (row.indent === 1) {
+            if (row.description === SUPECOM_9_5 && column_field === "taxable_value")
+                return acc + (row[column_field] || 0);
+            return acc;
+        }
+
+        // The SUPECOM parent aggregates both 52(TCS) supplies (already counted in their
+        // primary B2B/B2C categories) and 9(5) supplies (handled above), so exclude the
+        // parent to avoid double counting.
+        if (row.description === SUPECOM_CATEGORY) return acc;
+
         return acc + (row[column_field] || 0);
     }, 0);
 }
