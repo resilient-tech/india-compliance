@@ -249,7 +249,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
                 fieldname: "_address_title",
                 fieldtype: "Data",
                 default: this.doc.address_title,
-                mandatory_depends_on: "eval: !doc.links?.length && !doc.link_name",
+                mandatory_depends_on: "eval: !doc.link_name",
             },
         ];
     }
