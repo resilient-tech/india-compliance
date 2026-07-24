@@ -144,19 +144,19 @@
     "update_transporter": {
         "params": "action=UPDATETRANSPORTER",
         "values": {
-            "transporter": "_Test Common Supplier",
-            "gst_transporter_id": "05AAACG2140A1ZL"
+            "transporter": "_Test Transporter with Enrolment No",
+            "gst_transporter_id": "88AAACD8017H1ZX"
         },
         "request_data": {
             "ewbNo": "301002999920",
-            "transporterId": "05AAACG2140A1ZL"
+            "transporterId": "88AAACD8017H1ZX"
         },
         "response_data": {
             "message": "Transporter details are updated successfully",
             "result": {
                 "ewayBillNo": "301002999920",
                 "transUpdateDate": "05/10/2022 12:45:00 PM",
-                "transporterId": "05AAACG2140A1ZL"
+                "transporterId": "88AAACD8017H1ZX"
             },
             "success": true
         }
