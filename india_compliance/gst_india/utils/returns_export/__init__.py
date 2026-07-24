@@ -82,7 +82,9 @@ class ReturnAdapter:
     def get_summaries(self, periods):
         """Batch-read the prepared per-period summaries in one query."""
         names = {self._log_name(period): period for period in periods}
-        rows = frappe.get_all(RETURN_LOG, filters={"name": ("in", list(names))}, fields=["name", "summary"])
+        rows = frappe.get_all(
+            RETURN_LOG, filters={"name": ("in", list(names))}, fields=["name", "summary"], limit=len(names)
+        )
         stored = {names[row.name]: frappe.parse_json(row.summary) for row in rows if row.summary}
         return [{"period": period, **stored[period]} for period in periods if period in stored]
 
@@ -130,6 +132,7 @@ class ReturnAdapter:
                 RETURN_LOG,
                 filters={"name": ("in", list(names)), "filed": ("is", "set")},
                 fields=["name", "modified"],
+                limit=len(names),
             )
         }
 
