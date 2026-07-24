@@ -413,7 +413,6 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
 
 @frappe.whitelist()
 def cancel_e_invoice(docname: str, values: str | dict | frappe._dict):
-    """Cancel e-Waybill + IRN on the portal only; the SI is cancelled by a separate request."""
     doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
 
@@ -423,11 +422,14 @@ def cancel_e_invoice(docname: str, values: str | dict | frappe._dict):
 
 
 def _cancel_e_invoice(doc, values):
-    """Cancel e-Waybill (if any) + IRN on the portal and record it. Never cancels the SI."""
     validate_if_e_invoice_can_be_cancelled(doc)
 
     if doc.get("ewaybill"):
         _cancel_e_waybill(doc, values)
+
+        # e-Waybill cancelled on the portal (irreversible);
+        if not frappe.flags.in_test:
+            frappe.db.commit()  # nosemgrep
 
     data = {
         "Irn": doc.irn,

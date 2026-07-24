@@ -141,9 +141,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
     const d = new frappe.ui.Dialog({
         title: frm.doc.ewaybill ? __("Cancel e-Invoice and e-Waybill") : __("Cancel e-Invoice"),
         fields: get_cancel_e_invoice_dialog_fields(frm),
-        primary_action_label: frm.doc.ewaybill
-            ? __("Cancel IRN, e-Waybill & Invoice")
-            : __("Cancel IRN & Invoice"),
+        primary_action_label: frm.doc.ewaybill ? __("Cancel IRN, e-Waybill") : __("Cancel IRN"),
         primary_action(values) {
             d.hide();
             // portal cancel only; the SI is cancelled by a separate request
