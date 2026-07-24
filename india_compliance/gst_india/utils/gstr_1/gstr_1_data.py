@@ -30,7 +30,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
 
 CATEGORY_CONDITIONS = {
     GSTR1_Category.ECOM_RCM.value: {
-        "category": "is_uncategorised",
+        "category": "is_ecom_rcm",
         "sub_category": None,
     },
     GSTR1_Category.B2B.value: {
@@ -241,7 +241,7 @@ class GSTR1Conditions:
         return invoice.is_return or invoice.is_debit_note
 
     @cache_invoice_condition
-    def is_uncategorised(self, invoice):
+    def is_ecom_rcm(self, invoice):
         return bool(invoice.get("ecommerce_gstin")) and bool(invoice.get("is_reverse_charge"))
 
     @cache_invoice_condition
@@ -279,13 +279,13 @@ class GSTR1Conditions:
 
 class GSTR1CategoryConditions(GSTR1Conditions):
     def is_nil_rated_exempted_non_gst_invoice(self, invoice):
-        return not self.is_uncategorised(invoice) and (
+        return not self.is_ecom_rcm(invoice) and (
             self.is_nil_rated(invoice) or self.is_exempted(invoice) or self.is_non_gst(invoice)
         )
 
     def is_b2b_invoice(self, invoice):
         return (
-            not self.is_uncategorised(invoice)
+            not self.is_ecom_rcm(invoice)
             and not self.is_nil_rated_exempted_or_non_gst(invoice)
             and not self.is_cn_dn(invoice)
             and self.has_gstin_and_is_not_export(invoice)
@@ -293,7 +293,7 @@ class GSTR1CategoryConditions(GSTR1Conditions):
 
     def is_export_invoice(self, invoice):
         return (
-            not self.is_uncategorised(invoice)
+            not self.is_ecom_rcm(invoice)
             and not self.is_nil_rated_exempted_or_non_gst(invoice)
             and not self.is_cn_dn(invoice)
             and self.is_export(invoice)
@@ -301,7 +301,7 @@ class GSTR1CategoryConditions(GSTR1Conditions):
 
     def is_b2cl_invoice(self, invoice):
         return (
-            not self.is_uncategorised(invoice)
+            not self.is_ecom_rcm(invoice)
             and not self.is_nil_rated_exempted_or_non_gst(invoice)
             and not self.is_cn_dn(invoice)
             and not self.has_gstin_and_is_not_export(invoice)
@@ -311,7 +311,7 @@ class GSTR1CategoryConditions(GSTR1Conditions):
 
     def is_b2cs_invoice(self, invoice):
         return (
-            not self.is_uncategorised(invoice)
+            not self.is_ecom_rcm(invoice)
             and not self.is_nil_rated_exempted_or_non_gst(invoice)
             and not self.has_gstin_and_is_not_export(invoice)
             and not self.is_export(invoice)
@@ -321,7 +321,7 @@ class GSTR1CategoryConditions(GSTR1Conditions):
 
     def is_cdnr_invoice(self, invoice):
         return (
-            not self.is_uncategorised(invoice)
+            not self.is_ecom_rcm(invoice)
             and not self.is_nil_rated_exempted_or_non_gst(invoice)
             and self.is_cn_dn(invoice)
             and self.has_gstin_and_is_not_export(invoice)
@@ -329,7 +329,7 @@ class GSTR1CategoryConditions(GSTR1Conditions):
 
     def is_cdnur_invoice(self, invoice):
         return (
-            not self.is_uncategorised(invoice)
+            not self.is_ecom_rcm(invoice)
             and not self.is_nil_rated_exempted_or_non_gst(invoice)
             and self.is_cn_dn(invoice)
             and not self.has_gstin_and_is_not_export(invoice)
