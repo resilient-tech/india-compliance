@@ -29,6 +29,10 @@ from india_compliance.gst_india.utils.gstr_1 import (
 )
 
 CATEGORY_CONDITIONS = {
+    GSTR1_Category.ECOM_RCM.value: {
+        "category": "is_ecom_rcm",
+        "sub_category": None,
+    },
     GSTR1_Category.B2B.value: {
         "category": "is_b2b_invoice",
         "sub_category": "set_for_b2b",
@@ -237,6 +241,10 @@ class GSTR1Conditions:
         return invoice.is_return or invoice.is_debit_note
 
     @cache_invoice_condition
+    def is_ecom_rcm(self, invoice):
+        return bool(invoice.get("ecommerce_gstin")) and bool(invoice.get("is_reverse_charge"))
+
+    @cache_invoice_condition
     def has_gstin_and_is_not_export(self, invoice):
         return invoice.billing_address_gstin and not self.is_export(invoice)
 
@@ -271,25 +279,30 @@ class GSTR1Conditions:
 
 class GSTR1CategoryConditions(GSTR1Conditions):
     def is_nil_rated_exempted_non_gst_invoice(self, invoice):
-        return self.is_nil_rated(invoice) or self.is_exempted(invoice) or self.is_non_gst(invoice)
+        return not self.is_ecom_rcm(invoice) and (
+            self.is_nil_rated(invoice) or self.is_exempted(invoice) or self.is_non_gst(invoice)
+        )
 
     def is_b2b_invoice(self, invoice):
         return (
-            not self.is_nil_rated_exempted_or_non_gst(invoice)
+            not self.is_ecom_rcm(invoice)
+            and not self.is_nil_rated_exempted_or_non_gst(invoice)
             and not self.is_cn_dn(invoice)
             and self.has_gstin_and_is_not_export(invoice)
         )
 
     def is_export_invoice(self, invoice):
         return (
-            not self.is_nil_rated_exempted_or_non_gst(invoice)
+            not self.is_ecom_rcm(invoice)
+            and not self.is_nil_rated_exempted_or_non_gst(invoice)
             and not self.is_cn_dn(invoice)
             and self.is_export(invoice)
         )
 
     def is_b2cl_invoice(self, invoice):
         return (
-            not self.is_nil_rated_exempted_or_non_gst(invoice)
+            not self.is_ecom_rcm(invoice)
+            and not self.is_nil_rated_exempted_or_non_gst(invoice)
             and not self.is_cn_dn(invoice)
             and not self.has_gstin_and_is_not_export(invoice)
             and not self.is_export(invoice)
@@ -298,7 +311,8 @@ class GSTR1CategoryConditions(GSTR1Conditions):
 
     def is_b2cs_invoice(self, invoice):
         return (
-            not self.is_nil_rated_exempted_or_non_gst(invoice)
+            not self.is_ecom_rcm(invoice)
+            and not self.is_nil_rated_exempted_or_non_gst(invoice)
             and not self.has_gstin_and_is_not_export(invoice)
             and not self.is_export(invoice)
             and not self.is_b2cl_cn_dn(invoice)
@@ -307,14 +321,16 @@ class GSTR1CategoryConditions(GSTR1Conditions):
 
     def is_cdnr_invoice(self, invoice):
         return (
-            not self.is_nil_rated_exempted_or_non_gst(invoice)
+            not self.is_ecom_rcm(invoice)
+            and not self.is_nil_rated_exempted_or_non_gst(invoice)
             and self.is_cn_dn(invoice)
             and self.has_gstin_and_is_not_export(invoice)
         )
 
     def is_cdnur_invoice(self, invoice):
         return (
-            not self.is_nil_rated_exempted_or_non_gst(invoice)
+            not self.is_ecom_rcm(invoice)
+            and not self.is_nil_rated_exempted_or_non_gst(invoice)
             and self.is_cn_dn(invoice)
             and not self.has_gstin_and_is_not_export(invoice)
             and (self.is_export(invoice) or self.is_b2cl_cn_dn(invoice))
@@ -403,6 +419,9 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
             invoice.invoice_sub_category = GSTR1_SubCategory.B2B_REGULAR.value
 
     def set_hsn_sub_category(self, invoice, bifurcate_hsn):
+        if invoice.invoice_category == GSTR1_Category.ECOM_RCM.value:
+            return
+
         if not bifurcate_hsn:
             invoice.hsn_sub_category = GSTR1_SubCategory.HSN.value
 
@@ -463,8 +482,9 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
     def set_invoice_sub_category_and_type(self, invoice):
         category = invoice.invoice_category
-        function = CATEGORY_CONDITIONS[category]["sub_category"]
-        getattr(self, function, None)(invoice)
+        function = CATEGORY_CONDITIONS[category].get("sub_category")
+        if function:
+            getattr(self, function, None)(invoice)
 
     def get_invoices_for_item_wise_summary(self):
         query = self.get_base_query()
@@ -624,7 +644,8 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             summary_row["unique_records"].add(row.invoice_no)
 
         for row in invoices:
-            _update_summary_row(row)
+            if row.get("invoice_sub_category"):
+                _update_summary_row(row)
 
             if row.ecommerce_gstin:
                 _update_summary_row(row, "ecommerce_supply_type")

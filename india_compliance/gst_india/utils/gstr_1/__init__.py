@@ -23,6 +23,7 @@ class GSTR1_Category(Enum):
     HSN = "HSN Summary"
     DOC_ISSUE = "Document Issued"
     SUPECOM = "Supplies made through E-commerce Operators"
+    ECOM_RCM = "Supplies through E-commerce Operators u/s 9(5)"
 
 
 class GSTR1_SubCategory(Enum):
@@ -368,11 +369,11 @@ SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE = [
     GSTR1_SubCategory.HSN_B2C.value,
     GSTR1_SubCategory.DOC_ISSUE.value,
     GSTR1_SubCategory.SUPECOM_52.value,
-    GSTR1_SubCategory.SUPECOM_9_5.value,
 ]
 
 SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX = [
     GSTR1_SubCategory.B2B_REVERSE_CHARGE.value,
+    GSTR1_SubCategory.SUPECOM_9_5.value,
     *SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
 ]
 

@@ -15,6 +15,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
 from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_DataField as inv_f,
 )
+from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     BooksDataMapper,
     GSTR1BooksData,
@@ -990,6 +991,55 @@ class TestGSTR1BooksData(IntegrationTestCase):
         self.assertGreater(row_1[inv_f.CGST], 0)
         self.assertGreater(row_1[inv_f.SGST], 0)
 
+    @change_settings(
+        "GST Settings",
+        {
+            "enable_reverse_charge_in_sales": 1,
+            "enable_sales_through_ecommerce_operators": 1,
+        },
+    )
+    def test_9_5_reported_only_in_supecom(self):
+        si = create_sales_invoice(
+            customer="_Test Registered Customer",
+            is_reverse_charge=True,
+            is_in_state=True,
+            is_in_state_rcm=True,
+            ecommerce_gstin="20ALYPD6528PQC5",
+        )
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        self.assertIn(GSTR1_SubCategory.SUPECOM_9_5.value, data)
+        supecom = data[GSTR1_SubCategory.SUPECOM_9_5.value]
+        self.assertIn("20ALYPD6528PQC5", supecom)
+        self.assertGreater(supecom["20ALYPD6528PQC5"][inv_f.TAXABLE_VALUE], 0)
+
+        self.assertNotIn(si.name, data.get(GSTR1_SubCategory.B2B_REVERSE_CHARGE.value, {}))
+        for hsn in (
+            GSTR1_SubCategory.HSN_B2B.value,
+            GSTR1_SubCategory.HSN_B2C.value,
+            GSTR1_SubCategory.HSN.value,
+        ):
+            self.assertNotIn(hsn, data)
+
+        overview = {row["description"]: row for row in GSTR1Invoices(FILTERS).get_overview()}
+        self.assertNotIn(si.name, overview[GSTR1_SubCategory.B2B_REVERSE_CHARGE.value]["unique_records"])
+        self.assertIn(si.name, overview[GSTR1_SubCategory.SUPECOM_9_5.value]["unique_records"])
+
+    @change_settings("GST Settings", {"enable_sales_through_ecommerce_operators": 1})
+    def test_52_reported_in_both_primary_and_supecom(self):
+        si = create_sales_invoice(
+            customer="_Test Registered Customer",
+            is_in_state=True,
+            ecommerce_gstin="20ALYPD6528PQC5",
+        )
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        self.assertIn(si.name, data.get(GSTR1_SubCategory.B2B_REGULAR.value, {}))
+        self.assertIn(GSTR1_SubCategory.SUPECOM_52.value, data)
+        self.assertIn("20ALYPD6528PQC5", data[GSTR1_SubCategory.SUPECOM_52.value])
+
     def test_supecom_rounding_at_invoice_level(self):
         """
         Rounding must happen at the invoice level before aggregating across
@@ -1092,7 +1142,12 @@ class TestGSTR1BooksData(IntegrationTestCase):
 
             self.assertEqual(summary_row["no_of_records"], 2)
             self.assertEqual(summary_row[inv_f.TAXABLE_VALUE], 300.0)
-            self.assertFalse(summary_row["consider_in_total_taxable_value"])
+
+            if subcategory == GSTR1_SubCategory.SUPECOM_52.value:
+                self.assertFalse(summary_row["consider_in_total_taxable_value"])
+            else:
+                self.assertTrue(summary_row["consider_in_total_taxable_value"])
+
             self.assertFalse(summary_row["consider_in_total_tax"])
 
     def test_document_issued_summary(self):
