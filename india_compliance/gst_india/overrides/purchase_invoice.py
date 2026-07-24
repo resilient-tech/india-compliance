@@ -14,7 +14,7 @@ from india_compliance.gst_india.overrides.sales_invoice import (
 from india_compliance.gst_india.overrides.transaction import (
     _validate_hsn_codes,
     ignore_gst_validations,
-    sync_address_dependent_fields_on_submit,
+    sync_address_dependent_fields_after_submit,
     validate_transaction,
 )
 from india_compliance.gst_india.utils import (
@@ -81,7 +81,7 @@ def validate(doc, method=None):
 
 
 def before_update_after_submit(doc, method=None):
-    sync_address_dependent_fields_on_submit(doc)
+    sync_address_dependent_fields_after_submit(doc)
 
     if ignore_gst_validations(doc):
         return
