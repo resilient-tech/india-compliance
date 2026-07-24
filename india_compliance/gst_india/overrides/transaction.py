@@ -23,6 +23,9 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
     restrict_gstr_1_transaction_for,
 )
 from india_compliance.gst_india.doctype.gstin.gstin import get_and_validate_gstin_status
+from india_compliance.gst_india.setup.property_setters import (
+    TRANSPORTER_FIELDS_BY_DOCTYPE,
+)
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_account_by_item_tax_template,
@@ -1878,20 +1881,8 @@ ADDRESS_DEPENDENT_FIELDS = {
     "supplier_address": ("supplier_gstin", "gst_category"),
 }
 
+
 # no transporter edits after e-Waybill is made (#4619)
-TRANSPORTER_FIELDS = (
-    "transporter",
-    "gst_transporter_id",
-    "driver",
-    "lr_no",
-    "lr_date",
-    "vehicle_no",
-    "distance",
-    "mode_of_transport",
-    "gst_vehicle_type",
-)
-
-
 def validate_transporter_fields_on_submit(doc, method=None):
     if doc.docstatus != 1 or ignore_gst_validations(doc):
         return
@@ -1899,9 +1890,13 @@ def validate_transporter_fields_on_submit(doc, method=None):
     if not doc.get("ewaybill"):
         return
 
+    transporter_fields = TRANSPORTER_FIELDS_BY_DOCTYPE.get(doc.doctype)
+    if not transporter_fields:
+        return
+
     changed_fields = [
         field
-        for field in TRANSPORTER_FIELDS
+        for field in transporter_fields
         if doc.meta.has_field(field) and doc.has_value_changed(field)
     ]
 
