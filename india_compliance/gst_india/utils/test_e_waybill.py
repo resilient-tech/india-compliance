@@ -1396,8 +1396,6 @@ class TestEWaybill(IntegrationTestCase):
             do_not_submit=True,
         )
         si.submit()
-        # gst_transporter_id is re-fetched from the transporter on submit
-        si.db_set("gst_transporter_id", "")
 
         e_waybill_data = EWaybillData(si).get_data()
 
@@ -1423,8 +1421,6 @@ class TestEWaybill(IntegrationTestCase):
             do_not_submit=True,
         )
         si.submit()
-        # gst_transporter_id is re-fetched from the transporter on submit
-        si.db_set("gst_transporter_id", "")
 
         e_waybill_data = EWaybillData(si).get_data()
 
@@ -1799,8 +1795,6 @@ class TestEWaybill(IntegrationTestCase):
 
         si = create_sales_invoice(**invoice_args, do_not_submit=True)
         si.submit()
-        # gst_transporter_id is fetched from the transporter on submit
-        si.db_set("gst_transporter_id", "")
 
         return si
 

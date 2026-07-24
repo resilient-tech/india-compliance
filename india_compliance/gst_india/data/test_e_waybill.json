@@ -55,7 +55,8 @@
                     "cessNonAdvol": 0
                 }
             ],
-            "mainHsnCode": "61149090"
+            "mainHsnCode": "61149090",
+            "transporterId": "05AAACG2140A1ZL"
         },
         "params": "action=GENEWAYBILL",
         "response_data": {
@@ -125,7 +126,8 @@
             "transporterName": "Test Common Supplier",
             "userGstin": "05AAACG2115R1ZN",
             "vehicleNo": "GJ07DL9009",
-            "vehicleType": "R"
+            "vehicleType": "R",
+            "transporterId": "05AAACG2140A1ZL"
         },
         "params": "action=GENEWAYBILL",
         "response_data": {
@@ -1089,7 +1091,8 @@
             "transporterName": "Test Common Supplier",
             "userGstin": "05AAACG2115R1ZN",
             "vehicleNo": "GJ07DL9009",
-            "vehicleType": "R"
+            "vehicleType": "R",
+            "transporterId": "05AAACG2140A1ZL"
         },
         "params": "action=GENEWAYBILL",
         "response_data": {
@@ -1419,7 +1422,8 @@
                     "cessNonAdvol": 0
                 }
             ],
-            "mainHsnCode": "61149090"
+            "mainHsnCode": "61149090",
+            "transporterId": "05AAACG2140A1ZL"
         },
         "params": "action=GENEWAYBILL",
         "response_data": {
