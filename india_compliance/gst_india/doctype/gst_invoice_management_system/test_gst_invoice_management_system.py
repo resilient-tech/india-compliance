@@ -10,7 +10,6 @@ from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     PurchaseInvoice,
     _declared_from_books,
     apply_declared_overrides,
-    defer_undeclarable_itc_reduction,
     set_declared_itc,
 )
 from india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system import (
@@ -218,27 +217,6 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             self.gov_invoice()
         )
         self.assertNotIn("itcRedReq", data)
-
-    def test_defer_undeclarable_itc_reduction(self):
-        matched = frappe._dict(
-            ims_action="Accepted",
-            doc_type="Credit Note",
-            is_amended=0,
-            is_itc_reduction_blocked=0,
-            link_doctype="Purchase Invoice",
-            link_name="PINV-1",
-            bill_no="CN-MATCHED",
-        )
-        unmatched = frappe._dict(matched, link_doctype=None, link_name=None, bill_no="CN-UNMATCHED")
-        blocked = frappe._dict(unmatched, is_itc_reduction_blocked=1, bill_no="CN-BLOCKED")
-        b2b = frappe._dict(unmatched, doc_type="Invoice", is_amended=0, bill_no="B2B-UNMATCHED")
-
-        # only the unmatched specified accept is deferred (skipped); the rest are kept
-        kept = defer_undeclarable_itc_reduction([matched, unmatched, blocked, b2b])
-        self.assertEqual(
-            [invoice.bill_no for invoice in kept],
-            ["CN-MATCHED", "CN-BLOCKED", "B2B-UNMATCHED"],
-        )
 
     def test_set_declared_itc_on_accept(self):
         cn = create_gst_inward_supply(

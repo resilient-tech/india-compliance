@@ -20,7 +20,6 @@ from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     InwardSupply,
     PurchaseInvoice,
     apply_declared_overrides,
-    defer_undeclarable_itc_reduction,
     set_declared_itc,
 )
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
@@ -187,12 +186,14 @@ class GSTInvoiceManagementSystem(Document):
 
         set_itc_claim_period_on_ims_action(invoice_names, action, ims_period=self.period)
 
-        # Store declared ITC reduction from books for specified records
-        set_declared_itc(invoice_names, action)
+        declared_overrides = frappe.parse_json(declared_overrides) if declared_overrides else {}
+
+        # Auto-declare from books only for specified accepts the user didn't correct below
+        set_declared_itc([name for name in invoice_names if name not in declared_overrides], action)
 
         # User corrections from the Phase 2 review dialog take precedence
         if declared_overrides:
-            apply_declared_overrides(frappe.parse_json(declared_overrides))
+            apply_declared_overrides(declared_overrides)
 
     @frappe.whitelist()
     def get_invoice_details(self, purchase_name: str | None, inward_supply_name: str | None):
@@ -453,7 +454,7 @@ def get_data_for_upload(company_gstin, request_type):
     key_invoice_map = {}
 
     if request_type == "save":
-        gst_inward_supply_list = defer_undeclarable_itc_reduction(InwardSupply().get_for_save(company_gstin))
+        gst_inward_supply_list = InwardSupply().get_for_save(company_gstin)
     else:
         gst_inward_supply_list = InwardSupply().get_for_reset(company_gstin)
 

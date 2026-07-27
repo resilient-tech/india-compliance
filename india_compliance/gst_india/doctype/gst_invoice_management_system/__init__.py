@@ -2,7 +2,6 @@ import frappe
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
-from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Sum
@@ -396,32 +395,6 @@ def _clean_declared(document, declared):
         "declared_sgst": values["sgst"],
         "declared_cess": values["cess"],
     }
-
-
-def defer_undeclarable_itc_reduction(invoices):
-    """Specified accept needs a linked PI to declare ITC; skip the rest and defer to Phase 2."""
-    declarable, deferred = [], []
-    for invoice in invoices:
-        if (
-            invoice.ims_action == "Accepted"
-            and is_specified_record(invoice)
-            and not invoice.is_itc_reduction_blocked
-            and not is_pi_matched(invoice)
-        ):
-            deferred.append(invoice.bill_no)
-        else:
-            declarable.append(invoice)
-
-    if deferred:
-        frappe.msgprint(
-            _(
-                "Skipped upload for records with no linked Purchase Invoice to declare ITC reduction: {0}"
-            ).format(", ".join(deferred)),
-            title=_("ITC Reduction Pending"),
-            indicator="orange",
-        )
-
-    return declarable
 
 
 def is_specified_record(invoice):
