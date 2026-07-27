@@ -264,7 +264,11 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
             notify=bool(frappe.request),
         )
 
-        raise
+        if throw or frappe.request:
+            raise
+
+        notify_action_failure(doc, "e-Invoice generation failed")
+        return
 
     return log_and_process_e_invoice_generation(doc, result, api.sandbox_mode)
 
@@ -1012,7 +1016,7 @@ class EInvoiceData(GSTTransactionData):
 
 
 @frappe.whitelist()
-def cancel_e_invoice_e_waybill_after_commit(docname):
+def cancel_e_invoice_e_waybill_after_commit(docname: str):
     """cancel IRN / e-Waybill on portal, after the SI cancel saved. desk calls it now, rest queue it."""
     doc = load_doc("Sales Invoice", docname, "cancel")
 

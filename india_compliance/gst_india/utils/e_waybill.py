@@ -313,7 +313,11 @@ def _generate_e_waybill(doc, throw=True, force=False):
             notify=bool(frappe.request),
         )
 
-        raise
+        if throw or frappe.request:
+            raise
+
+        notify_action_failure(doc, "e-Waybill generation failed")
+        return
 
     if result.error_code == "604":
         error_message = (
@@ -410,12 +414,12 @@ def _cancel_e_waybill(doc, values):
 
     log_and_process_e_waybill_cancellation(doc, values, result)
 
-    message = _("e-Waybill cancelled successfully")
+    message = "e-Waybill cancelled successfully"
 
     if not frappe.request:
         return publish_doc_update(doc, message)
 
-    frappe.msgprint(message, indicator="green", alert=True)
+    frappe.msgprint(_(message), indicator="green", alert=True)
 
 
 def log_and_process_e_waybill_cancellation(doc, values, result):

@@ -82,19 +82,22 @@ function should_auto_cancel_e_invoice_e_waybill(frm) {
     if (!india_compliance.is_api_enabled()) return false;
 
     // IRN cancel also cancels its e-Waybill
-    if (frm.doc.irn)
-        return (
-            india_compliance.is_e_invoice_enabled() &&
-            !!gst_settings.auto_cancel_e_invoice &&
-            is_irn_cancellable(frm)
-        );
+    if (
+        frm.doc.irn &&
+        india_compliance.is_e_invoice_enabled() &&
+        !!gst_settings.auto_cancel_e_invoice &&
+        is_irn_cancellable(frm)
+    )
+        return true;
 
-    if (frm.doc.ewaybill)
-        return (
-            gst_settings.enable_e_waybill &&
-            !!gst_settings.auto_cancel_e_waybill &&
-            is_e_waybill_cancellable(frm)
-        );
+    // else e-Waybill can still auto-cancel on its own (mirrors the server's OR fallback)
+    if (
+        frm.doc.ewaybill &&
+        gst_settings.enable_e_waybill &&
+        !!gst_settings.auto_cancel_e_waybill &&
+        is_e_waybill_cancellable(frm)
+    )
+        return true;
 
     return false;
 }

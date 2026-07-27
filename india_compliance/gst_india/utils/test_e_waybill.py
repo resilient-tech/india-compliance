@@ -457,7 +457,7 @@ class TestEWaybill(IntegrationTestCase):
         never run synchronously inside before_cancel."""
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
         self._generate_e_waybill(si.name)
-        si.reload()
+        si = load_doc("Sales Invoice", si.name, "cancel")
 
         api_calls_before = len(responses.calls)
 
