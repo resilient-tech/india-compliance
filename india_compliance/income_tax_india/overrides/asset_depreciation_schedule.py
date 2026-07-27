@@ -126,9 +126,9 @@ def cancel_depreciation_entries(asset_doc, date):
 
     for row in asset_doc.get("finance_books"):
         if not row.finance_book:
-            return
+            continue
 
-        if not fb_for_income_tax_map[row.finance_book]:
+        if not fb_for_income_tax_map.get(row.finance_book):
             continue
 
         asset_depr_schedule_doc = get_asset_depr_schedule_doc(asset_doc.name, "Active", row.finance_book)
