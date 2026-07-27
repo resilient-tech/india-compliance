@@ -390,7 +390,18 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
 
         schedule = get_asset_depr_schedule_doc(asset.name, "Active", self.fb_it.name)
         self.assertTrue(schedule.flags.get("wdv_it_act_applied"))
-        self.assertGreater(schedule.depreciation_schedule[0].depreciation_amount, 0)
+
+        fy_start = "2024-04-01"
+        fy_end = get_fiscal_year(fy_start)[2]
+        total = flt(
+            sum(
+                row.depreciation_amount
+                for row in schedule.depreciation_schedule
+                if row.schedule_date <= getdate(fy_end)
+            ),
+            2,
+        )
+        self.assertEqual(total, 15000.0)
 
     def test_unsupported_frequency_raises_error(self):
         asset = self._create_asset(
