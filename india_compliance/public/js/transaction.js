@@ -303,7 +303,7 @@ function validate_gstin_status(gstin_doc, frm, gstin_field_name) {
             title: __("Invalid Party GSTIN"),
         });
 
-    if (!["Active", "Cancelled"].includes(gstin_doc.status))
+    if (!["Active", "Cancelled"].includes(gstin_doc.status) && !gst_settings.sandbox_mode)
         frappe.throw({
             message: __("Status of {0} is {1}", [gstin_field.df.label, gstin_doc.status]),
             title: __("Invalid GSTIN Status"),
