@@ -141,6 +141,7 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
     def _create_item(cls):
         cls.item_code = "_Test IT Act Fixed Asset"
         if not frappe.db.exists("Item", cls.item_code):
+            abbr = frappe.get_cached_value("Company", cls.company, "abbr")
             frappe.get_doc(
                 {
                     "doctype": "Item",
@@ -150,7 +151,16 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
                     "is_fixed_asset": 1,
                     "asset_category": cls.asset_category.name,
                     "asset_naming_series": "ACC-ASS-.YYYY.-",
-                    "item_defaults": [{"company": cls.company}],
+                    "item_defaults": [
+                        {
+                            "company": cls.company,
+                            "default_warehouse": f"Stores - {abbr}",
+                            "expense_account": f"Cost of Goods Sold - {abbr}",
+                            "buying_cost_center": f"Main - {abbr}",
+                            "selling_cost_center": f"Main - {abbr}",
+                            "income_account": f"Sales - {abbr}",
+                        }
+                    ],
                 }
             ).insert()
 
