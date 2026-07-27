@@ -260,6 +260,13 @@ DEFAULT_PROPERTIES = [
         "property": "default_email_template",
         "value": "Purchase Reconciliation",
     },
+    {
+        "doctype": "GSTR 3B Report",
+        "doctype_or_field": "DocType",
+        "property": "default_print_format",
+        "value": "GSTR-3B",
+        "is_system_generated": 0,
+    },
     # OPTIONS #
     get_options_property_setter(
         "Journal Entry",
