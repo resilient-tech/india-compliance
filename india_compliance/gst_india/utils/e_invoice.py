@@ -49,6 +49,7 @@ from india_compliance.gst_india.utils import (
     is_foreign_doc,
     is_overseas_doc,
     load_doc,
+    notify_action_failure,
     parse_datetime,
     publish_doc_update,
     send_updated_doc,
@@ -217,6 +218,8 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
         if frappe.request:
             frappe.clear_last_message()
             frappe.msgprint(str(e), _("e-Invoice Not Applicable"))
+        else:
+            publish_doc_update(doc, "e-Invoice not applicable", indicator="orange")
 
         return
 
@@ -244,6 +247,8 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
                 _("Error Generating e-Invoice"),
                 indicator="red",
             )
+        else:
+            notify_action_failure(doc, "e-Invoice generation failed")
 
         return
 
@@ -427,6 +432,10 @@ def _cancel_e_invoice(doc, values):
     if doc.get("ewaybill"):
         _cancel_e_waybill(doc, values)
 
+        # e-Waybill gone from portal for good -> save it now, so a later IRN fail can't undo it
+        if not frappe.flags.in_test:
+            frappe.db.commit()  # nosemgrep
+
     data = {
         "Irn": doc.irn,
         "Cnlrsn": CANCEL_REASON_CODES[values.reason],
@@ -436,8 +445,6 @@ def _cancel_e_invoice(doc, values):
     result = EInvoiceAPI.create(doc).cancel_irn(data)
 
     log_and_process_e_invoice_cancellation(doc, values, result, "e-Invoice cancelled successfully")
-
-    doc.cancel()
 
 
 def log_and_process_e_invoice_cancellation(doc, values, result, message):

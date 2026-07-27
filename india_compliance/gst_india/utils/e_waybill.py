@@ -59,6 +59,7 @@ from india_compliance.gst_india.utils import (
     is_foreign_doc,
     is_outward_stock_entry,
     load_doc,
+    notify_action_failure,
     parse_datetime,
     publish_doc_update,
     send_updated_doc,
@@ -265,6 +266,8 @@ def _generate_e_waybill(doc, throw=True, force=False):
         if frappe.request:
             frappe.clear_last_message()
             frappe.msgprint(str(e), _("e-Waybill Not Applicable"))
+        else:
+            publish_doc_update(doc, "e-Waybill not applicable", indicator="orange")
 
         return
 
@@ -292,6 +295,8 @@ def _generate_e_waybill(doc, throw=True, force=False):
                 _("Warning"),
                 indicator="yellow",
             )
+        else:
+            notify_action_failure(doc, "e-Waybill generation failed")
 
         return
 

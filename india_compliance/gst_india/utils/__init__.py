@@ -100,7 +100,7 @@ def send_updated_doc(doc, set_docinfo=False):
 
 
 def publish_doc_update(doc, message, indicator="green"):
-    """like send_updated_doc: alert + reload for everyone viewing the doc."""
+    """job done -> ping + refresh everyone looking at doc."""
     doc.notify_update()
 
     frappe.publish_realtime(
@@ -110,6 +110,17 @@ def publish_doc_update(doc, message, indicator="green"):
         docname=doc.name,
         after_commit=True,
     )
+
+
+def notify_action_failure(doc, message):
+    """job broke -> log it + red ping to everyone looking at doc. call inside except."""
+    frappe.log_error(
+        title=message,
+        message=frappe.get_traceback(),
+        reference_doctype=doc.doctype,
+        reference_name=doc.name,
+    )
+    publish_doc_update(doc, message, indicator="red")
 
 
 @frappe.whitelist()

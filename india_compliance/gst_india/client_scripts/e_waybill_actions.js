@@ -176,7 +176,7 @@ function setup_e_waybill_actions(doctype) {
         async on_submit(frm) {
             if (!(await auto_generate_e_waybill(frm))) return;
 
-            frappe.show_alert(__("Attempting to generate e-Waybill"));
+            frappe.show_alert(__("Generating e-Waybill..."));
 
             await frappe.xcall("india_compliance.gst_india.utils.e_waybill.generate_e_waybill", {
                 doctype: frm.doctype,

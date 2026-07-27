@@ -71,7 +71,7 @@ frappe.ui.form.on("Sales Invoice", {
     async on_submit(frm) {
         if (frm.doc.irn || !is_e_invoice_applicable(frm) || !gst_settings.auto_generate_e_invoice) return;
 
-        frappe.show_alert(__("Attempting to generate e-Invoice"));
+        frappe.show_alert(__("Generating e-Invoice..."));
 
         await frappe.xcall("india_compliance.gst_india.utils.e_invoice.generate_e_invoice", {
             docname: frm.doc.name,
@@ -141,10 +141,10 @@ function show_cancel_e_invoice_dialog(frm, callback) {
     const d = new frappe.ui.Dialog({
         title: frm.doc.ewaybill ? __("Cancel e-Invoice and e-Waybill") : __("Cancel e-Invoice"),
         fields: get_cancel_e_invoice_dialog_fields(frm),
-        primary_action_label: frm.doc.ewaybill
-            ? __("Cancel IRN, e-Waybill & Invoice")
-            : __("Cancel IRN & Invoice"),
+        primary_action_label: frm.doc.ewaybill ? __("Cancel IRN, e-Waybill") : __("Cancel IRN"),
         primary_action(values) {
+            d.hide();
+            // cancels portal only; SI cancelled separately
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_invoice.cancel_e_invoice",
                 args: {
@@ -152,11 +152,10 @@ function show_cancel_e_invoice_dialog(frm, callback) {
                     values: values,
                 },
                 callback: function () {
-                    frm.refresh();
-                    callback && callback();
+                    if (callback) callback(); // from before_cancel
+                    else frm.savecancel(); // from custom button
                 },
             });
-            d.hide();
         },
     });
 
