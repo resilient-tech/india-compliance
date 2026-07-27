@@ -1732,8 +1732,99 @@ def before_update_after_submit(doc, method=None):
 
     GSTAccounts().validate(doc, is_sales_transaction)
     update_taxable_values(doc)
+<<<<<<< HEAD
     validate_item_wise_tax_detail(doc)
     update_gst_details(doc)
+=======
+    update_item_gst_details(doc)
+    validate_item_tax_template(doc)
+
+
+ADDRESS_DEPENDENT_FIELDS = {
+    "customer_address": ("billing_address_gstin", "gst_category"),
+    "supplier_address": ("supplier_gstin", "gst_category"),
+}
+
+# ship-to address; not synced into any transaction field, only change-tracked
+SHIPPING_ADDRESS_FIELDS = ("shipping_address_name",)
+
+
+def sync_address_dependent_fields_on_submit(doc, method=None):
+    if doc.docstatus != 1 or ignore_gst_validations(doc):
+        return
+
+    def has_changed(field):
+        return doc.meta.has_field(field) and doc.has_value_changed(field)
+
+    changed_address_fields = [field for field in ADDRESS_DEPENDENT_FIELDS if has_changed(field)]
+
+    if any(has_changed(field) for field in SHIPPING_ADDRESS_FIELDS):
+        validate_shipping_address_change(doc)
+
+    if not changed_address_fields and not has_changed("place_of_supply"):
+        return
+
+    if doc.get("ewaybill") or doc.get("irn"):
+        frappe.throw(
+            _(
+                "Cannot change the Place of Supply or address after the e-Waybill or"
+                " e-Invoice has been generated. Cancel it first."
+            ),
+            title=_("Cannot Update After Submit"),
+        )
+
+    if doc.doctype == "Sales Invoice":
+        validate_backdated_transaction(doc, action="update")
+
+    if changed_address_fields:
+        sync_gst_details_from_address(doc, changed_address_fields)
+
+    is_sales_transaction = doc.doctype in SALES_DOCTYPES
+    gstin = doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin
+
+    validate_place_of_supply(doc)
+    validate_overseas_gst_category(doc)
+
+    if gstin:
+        validate_gstin_status(gstin, doc)
+
+    validate_gst_category(doc.gst_category, gstin)
+    GSTAccounts().validate(doc, is_sales_transaction)
+
+
+def validate_shipping_address_change(doc):
+    if not doc.get("irn"):
+        return
+
+    # e-Invoice Log is named after the IRN
+    if not frappe.get_cached_value("e-Invoice Log", doc.irn, "is_generated_with_ship_to"):
+        return
+
+    if not doc.has_value_changed("shipping_address_name"):
+        return
+
+    frappe.throw(
+        _("Cannot change the shipping address after it has been used to generate e-Invoice"),
+        title=_("Cannot change shipping address"),
+    )
+
+
+def sync_gst_details_from_address(doc, changed_address_fields):
+    for address_field, (gstin_field, category_field) in ADDRESS_DEPENDENT_FIELDS.items():
+        if address_field not in changed_address_fields:
+            continue
+
+        address = doc.get(address_field)
+        gstin, gst_category = (
+            frappe.db.get_value("Address", address, ("gstin", "gst_category")) if address else (None, None)
+        )
+
+        if doc.meta.has_field(gstin_field):
+            doc.set(gstin_field, gstin or "")
+
+        if category_field and doc.meta.has_field(category_field):
+            doc.set(category_field, gst_category or "Unregistered")
+>>>>>>> b838d94b (fix: add support for tracking ship-to address changes in e-invoice and e-waybill processes)
 
 
 def set_ecommerce_supply_type(doc):
