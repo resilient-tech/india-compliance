@@ -2026,6 +2026,9 @@ ADDRESS_DEPENDENT_FIELDS = {
     "supplier_address": ("supplier_gstin", "gst_category"),
 }
 
+# ship-to address; not synced into any transaction field, only change-tracked
+SHIPPING_ADDRESS_FIELDS = ("shipping_address_name",)
+
 
 def sync_address_dependent_fields_on_submit(doc, method=None):
     if doc.docstatus != 1 or ignore_gst_validations(doc):
@@ -2035,6 +2038,9 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
         return doc.meta.has_field(field) and doc.has_value_changed(field)
 
     changed_address_fields = [field for field in ADDRESS_DEPENDENT_FIELDS if has_changed(field)]
+
+    if any(has_changed(field) for field in SHIPPING_ADDRESS_FIELDS):
+        validate_shipping_address_change(doc)
 
     if not changed_address_fields and not has_changed("place_of_supply"):
         return
@@ -2065,6 +2071,23 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
 
     validate_gst_category(doc.gst_category, gstin)
     GSTAccounts().validate(doc, is_sales_transaction)
+
+
+def validate_shipping_address_change(doc):
+    if not doc.get("irn"):
+        return
+
+    # e-Invoice Log is named after the IRN
+    if not frappe.get_cached_value("e-Invoice Log", doc.irn, "is_generated_with_ship_to"):
+        return
+
+    if not doc.has_value_changed("shipping_address_name"):
+        return
+
+    frappe.throw(
+        _("Cannot change the shipping address after it has been used to generate e-Invoice"),
+        title=_("Cannot change shipping address"),
+    )
 
 
 def sync_gst_details_from_address(doc, changed_address_fields):
