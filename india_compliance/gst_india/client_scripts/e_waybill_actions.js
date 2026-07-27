@@ -176,12 +176,13 @@ function setup_e_waybill_actions(doctype) {
         async on_submit(frm) {
             if (!(await auto_generate_e_waybill(frm))) return;
 
-            frappe.show_alert(__("Generating e-Waybill..."));
-
-            await frappe.xcall("india_compliance.gst_india.utils.e_waybill.generate_e_waybill", {
-                doctype: frm.doctype,
-                docname: frm.doc.name,
-            });
+            await india_compliance.alert_if_pending(
+                frappe.xcall("india_compliance.gst_india.utils.e_waybill.generate_e_waybill", {
+                    doctype: frm.doctype,
+                    docname: frm.doc.name,
+                }),
+                __("Generating e-Waybill..."),
+            );
         },
         before_cancel(frm) {
             // if IRN is present, e-Waybill gets cancelled in e-Invoice action

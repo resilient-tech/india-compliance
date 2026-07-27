@@ -38,12 +38,14 @@ frappe.ui.form.on(DOCTYPE, {
         // auto-cancel: do it now. manual already did it in its dialog -> skip
         if (!should_auto_cancel_e_invoice_e_waybill(frm)) return;
 
-        frappe.show_alert(__("Cancelling e-Invoice / e-Waybill..."));
-
-        frappe
-            .xcall("india_compliance.gst_india.utils.e_invoice.cancel_e_invoice_e_waybill_after_commit", {
-                docname: frm.doc.name,
-            })
+        india_compliance
+            .alert_if_pending(
+                frappe.xcall(
+                    "india_compliance.gst_india.utils.e_invoice.cancel_e_invoice_e_waybill_after_commit",
+                    { docname: frm.doc.name },
+                ),
+                __("Cancelling e-Invoice / e-Waybill..."),
+            )
             .then(() => frm.reload_doc());
     },
 

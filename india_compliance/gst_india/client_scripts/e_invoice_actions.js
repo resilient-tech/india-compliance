@@ -71,12 +71,13 @@ frappe.ui.form.on("Sales Invoice", {
     async on_submit(frm) {
         if (frm.doc.irn || !is_e_invoice_applicable(frm) || !gst_settings.auto_generate_e_invoice) return;
 
-        frappe.show_alert(__("Generating e-Invoice..."));
-
-        await frappe.xcall("india_compliance.gst_india.utils.e_invoice.generate_e_invoice", {
-            docname: frm.doc.name,
-            throw: false,
-        });
+        await india_compliance.alert_if_pending(
+            frappe.xcall("india_compliance.gst_india.utils.e_invoice.generate_e_invoice", {
+                docname: frm.doc.name,
+                throw: false,
+            }),
+            __("Generating e-Invoice..."),
+        );
     },
     before_cancel(frm) {
         if (!frm.doc.irn) return;
