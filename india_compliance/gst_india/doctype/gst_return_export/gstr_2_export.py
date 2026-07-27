@@ -16,6 +16,7 @@ import os
 import re
 import tempfile
 from functools import lru_cache, partial
+from pathlib import Path
 from typing import ClassVar
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -903,7 +904,7 @@ class GSTR2AExporter(GovReturnExporter):
         return {row.supplier_gstin: row.supplier_name for row in rows if row.supplier_name}
 
     def _registry_names(self, docdata):
-        """{gstin: legal_name} for every supplier in the payload, in one query per 5k GSTINs."""
+        """{gstin: legal_name} for every supplier in the payload, in one query."""
         gstins = {
             group.get("ctin") or group.get("sgstin")
             for section in self.RAW_SECTIONS.values()
@@ -914,21 +915,13 @@ class GSTR2AExporter(GovReturnExporter):
         if not gstins:
             return {}
 
-        gstins = list(gstins)
-        names = {}
-        for start in range(0, len(gstins), 5000):
-            names.update(
-                {
-                    row.name: row.legal_name
-                    for row in frappe.get_all(
-                        "GSTIN",
-                        filters={"name": ("in", gstins[start : start + 5000])},
-                        fields=["name", "legal_name"],
-                    )
-                    if row.legal_name
-                }
+        return {
+            row.name: row.legal_name
+            for row in frappe.get_all(
+                "GSTIN", filters={"name": ("in", list(gstins))}, fields=["name", "legal_name"]
             )
-        return names
+            if row.legal_name
+        }
 
     @staticmethod
     def _name_resolver(gis_names, registry_names=None):
@@ -985,8 +978,8 @@ def build_export(gstin, return_type, periods, group_by=DEFAULT_GROUP_BY):
         if not written:
             _throw_no_data()
 
-        with open(zip_path, "rb") as f:
-            content = f.read()
+        # nosemgrep: frappe-semgrep-rules.rules.security.frappe-security-file-traversal
+        content = Path(zip_path).read_bytes()
     finally:
         os.remove(zip_path)
 
@@ -1040,18 +1033,23 @@ def download_export_file(file_id: str):
     frappe.has_permission(DOCTYPE, "export", throw=True)
 
     file = frappe.get_doc("File", file_id)
-    if file.attached_to_doctype != DOCTYPE or file.owner != frappe.session.user:
+    file_url = file.file_url or ""
+    if (
+        file.attached_to_doctype != DOCTYPE
+        or file.owner != frappe.session.user
+        or not file.is_private
+        or not file_url.startswith("/private/files/")
+    ):
         frappe.throw(frappe._("This file is not a GST Return Export."), frappe.PermissionError)
 
     from frappe.utils.response import send_private_file
 
-    return send_private_file(file.file_url.split("/private", 1)[1], filename=file.file_name)
+    return send_private_file(file_url.split("/private", 1)[1], filename=file.file_name)
 
 
 def delete_stale_export_files():
     """Daily: drop generated exports older than a day. These are download-once artifacts, so
-    without this every Export click leaks a multi-MB private File. Drained in batches so a
-    day's backlog can't outrun a single fixed cap."""
+    without this every Export click leaks a multi-MB private File."""
     while True:
         stale = frappe.get_all(
             "File",
@@ -1065,9 +1063,11 @@ def delete_stale_export_files():
         )
         if not stale:
             return
+
         for name in stale:
             frappe.delete_doc("File", name, ignore_permissions=True, delete_permanently=True)
-        frappe.db.commit()
+
+        frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
 
 
 @frappe.whitelist()

@@ -27,6 +27,7 @@ from india_compliance.gst_india.doctype.gst_return_export.gstr_2_export import (
     _group_periods,
     build_export,
     delete_stale_export_files,
+    download_export_file,
 )
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     store_raw_return_data,
@@ -646,15 +647,24 @@ class TestSupplierNamesAreBatched(IntegrationTestCase):
         looked_up = {call.args[0] for call in per_gstin.call_args_list}
         self.assertEqual(looked_up - {GSTIN_2A}, set())
 
-    def test_batches_beyond_the_chunk_size(self):
-        """The IN list is chunked; a payload larger than one chunk must still resolve fully."""
+    def test_handles_a_large_supplier_set_in_one_query(self):
+        """The IN list is deliberately unchunked, so a payload far larger than any real return
+        must still go through as a single statement without tripping max_allowed_packet."""
         many = [f"24AACT{i:04d}F1Z5" for i in range(12_000)]
         docdata = {"b2b": [{"ctin": g} for g in many]}
 
-        with patch.object(GSTR2AExporter, "_supplier_names", lambda self: {}):
+        statements = []
+        real = frappe.db.sql
+
+        def counting(query, *a, **k):
+            statements.append(query)
+            return real(query, *a, **k)
+
+        with patch.object(frappe.db, "sql", counting):
             names = GSTR2AExporter._registry_names(GSTR2AExporter.__new__(GSTR2AExporter), docdata)
 
-        # only the 5 seeded rows exist, but all 12k must have been queried without error
+        self.assertEqual(len(statements), 1, "supplier lookup was split across statements")
+        # only the seeded rows exist, but all 12k were queried without error
         self.assertEqual(len(names), len(self.SUPPLIERS))
 
 
@@ -677,6 +687,47 @@ class TestExportFileLifecycle(IntegrationTestCase):
             frappe.db.set_value("File", file.name, "creation", creation, update_modified=False)
 
         return file.name
+
+    def test_download_streams_the_file(self):
+        file_id = self._make_export_file()
+
+        with patch("frappe.utils.response.send_private_file") as send:
+            download_export_file(file_id)
+
+        self.assertTrue(send.called, "file was never handed to the browser")
+        self.assertTrue(send.call_args.args[0].startswith("/files/"), send.call_args)
+
+        frappe.delete_doc("File", file_id, ignore_permissions=True, delete_permanently=True)
+
+    def test_download_rejects_a_file_this_tool_did_not_create(self):
+        """`file_id` is user-supplied, so this guard is all that stands between the endpoint
+        and arbitrary private Files."""
+        other = frappe.get_doc(
+            {"doctype": "File", "file_name": "someone-elses.txt", "is_private": 1, "content": b"x"}
+        ).insert(ignore_permissions=True)
+
+        with self.assertRaises(frappe.PermissionError):
+            download_export_file(other.name)
+
+        frappe.delete_doc("File", other.name, ignore_permissions=True, delete_permanently=True)
+
+    def test_download_rejects_a_public_file(self):
+        """A public File's url has no /private prefix — refuse it rather than IndexError."""
+        public = frappe.get_doc(
+            {
+                "doctype": "File",
+                "file_name": "public-export.xlsx",
+                "attached_to_doctype": DOCTYPE,
+                "attached_to_name": DOCTYPE,
+                "is_private": 0,
+                "content": b"x",
+            }
+        ).insert(ignore_permissions=True)
+
+        with self.assertRaises(frappe.PermissionError):
+            download_export_file(public.name)
+
+        frappe.delete_doc("File", public.name, ignore_permissions=True, delete_permanently=True)
 
     def test_sweep_drops_only_abandoned_files(self):
         stale = self._make_export_file(creation=add_days(now_datetime(), -3))
