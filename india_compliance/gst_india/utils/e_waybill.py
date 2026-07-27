@@ -1292,11 +1292,6 @@ class EWaybillData(GSTTransactionData):
             if self.sandbox_mode and self.ship_to.gstin and self.ship_to.gstin != "URP":
                 self.ship_to.update({"gstin": "02AMBPG7773M002", "state_number": "02", "pincode": 171302})
 
-            # case of ship_to details provided during irn generation and same as before
-            # passing them again will result in error from e-waybill api
-            if self.irn_has_ship_to_details() == self.ship_to.gstin:
-                return self.sanitize_data(data)
-
             data["ExpShipDtls"] = {
                 "Gstin": self.ship_to.gstin,
                 "TrdNm": self.ship_to.legal_name,

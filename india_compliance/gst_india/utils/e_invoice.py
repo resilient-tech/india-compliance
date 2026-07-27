@@ -381,6 +381,14 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
         )
         invoice_data = frappe.as_json(decoded_invoice, indent=4)
 
+    # ship-to sent during IRN generation can be replaced at e-Waybill generation for
+    # exports, but not for B2B / SEZ (NIC error 2324)
+    is_generated_with_ship_to = (
+        doc.shipping_address_name
+        and doc.shipping_address_name != doc.customer_address
+        and doc.gst_category in ("Registered Regular", "SEZ")
+    )
+
     log_e_invoice(
         doc,
         {
@@ -393,6 +401,7 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
             "signed_qr_code": result.SignedQRCode,
             "invoice_data": invoice_data,
             "is_generated_in_sandbox_mode": sandbox_mode,
+            "is_generated_with_ship_to": is_generated_with_ship_to,
         },
     )
 
