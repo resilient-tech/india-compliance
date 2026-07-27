@@ -10,6 +10,7 @@
   "reference_doctype",
   "reference_name",
   "is_generated_in_sandbox_mode",
+  "is_generated_with_ship_to",
   "column_break_1",
   "acknowledgement_number",
   "acknowledged_on",
@@ -132,6 +133,12 @@
    "options": "reference_doctype",
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_generated_with_ship_to",
+   "fieldtype": "Check",
+   "label": "Is Generated with Ship-To"
   }
  ],
  "in_create": 1,
@@ -141,7 +148,7 @@
    "link_fieldname": "irn"
   }
  ],
- "modified": "2025-02-26 11:43:41.437023",
+ "modified": "2026-07-27 17:19:35.690510",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice Log",
@@ -169,6 +176,7 @@
    "share": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
