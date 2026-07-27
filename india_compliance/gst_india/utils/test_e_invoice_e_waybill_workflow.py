@@ -460,15 +460,11 @@ class TestEWaybillWorkflow(WorkflowTestBase):
         frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
         frappe.db.commit()  # nosemgrep
 
-    def test_auto_gen_unhandled_exception_always_raises(self):
+    @check_error_logged_for_doc(doctype="Sales Invoice", error_substr="Unexpected")
+    def test_auto_gen_unhandled_exception_logs_and_sets_failed(self):
         with patch(E_WAYBILL_DATA) as mock_data:
             mock_data.side_effect = RuntimeError("Unexpected")
-            self.assertRaises(
-                RuntimeError,
-                _generate_e_waybill,
-                self.si,
-                throw=False,
-            )
+            _generate_e_waybill(self.si, throw=False)
 
         self.si.reload()
         self.assertEqual(self.si.e_waybill_status, "Failed")
