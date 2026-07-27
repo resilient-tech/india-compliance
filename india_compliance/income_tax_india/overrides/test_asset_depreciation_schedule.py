@@ -6,6 +6,8 @@ from erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_sched
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, date_diff, flt
 
+from india_compliance.tests.erpnext_test_utils import make_journal_entry
+
 from india_compliance.income_tax_india.overrides.asset_depreciation_schedule import (
     cancel_depreciation_entries,
     is_leap_year,
@@ -34,6 +36,7 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
     def setUpClass(cls):
         frappe.db.savepoint("before_test_asset_depr")
         cls.company = COMPANY
+        cls.cost_center = frappe.get_value("Company", cls.company, "cost_center")
         cls._create_accounts()
         cls._create_finance_books()
         cls._create_asset_category()
@@ -235,33 +238,55 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
         schedule = get_asset_depr_schedule_doc(asset.name, "Active", self.fb_it.name)
         self.assertTrue(schedule.flags.get("wdv_it_act_applied"))
 
-    def test_cancel_depreciation_entries_skips_non_it_fb(self):
+    def _create_je_and_link(self, schedule, row_idx, posting_date=None):
+        schedule_row = schedule.depreciation_schedule[row_idx]
+        je = make_journal_entry(
+            self.depr_exp_acc,
+            self.accum_depr_acc,
+            schedule_row.depreciation_amount,
+            cost_center=self.cost_center,
+            posting_date=posting_date or str(schedule_row.schedule_date),
+            company=self.company,
+            submit=True,
+        )
+        schedule_row.db_set("journal_entry", je.name)
+        return je
+
+    def test_cancel_skips_non_it_fb_entries(self):
         asset = self._create_asset("2024-04-01", finance_book=self.fb_regular.name)
         asset.submit()
 
-        try:
-            cancel_depreciation_entries(asset, "2025-01-01")
-        except Exception as e:
-            self.fail(f"cancel_depreciation_entries raised unexpectedly: {e}")
+        schedule = get_asset_depr_schedule_doc(asset.name, "Active", self.fb_regular.name)
+        je = self._create_je_and_link(schedule, 0, "2025-03-31")
 
-    def test_cancel_depreciation_entries_handles_multiple_finance_books(self):
+        cancel_depreciation_entries(asset, "2025-03-31")
+
+        je.reload()
+        self.assertEqual(je.docstatus, 1, "Non-IT FB JE should not be cancelled")
+
+    def test_cancel_cancels_it_act_fb_entries_in_current_fy(self):
+        asset = self._create_asset("2023-04-01", finance_book=self.fb_it.name)
+        asset.submit()
+
+        schedule = get_asset_depr_schedule_doc(asset.name, "Active", self.fb_it.name)
+        self.assertGreaterEqual(len(schedule.depreciation_schedule), 2,
+            "Need at least 2 depreciation rows to test FY boundary")
+
+        je_yr1 = self._create_je_and_link(schedule, 0, "2024-03-31")
+        je_yr2 = self._create_je_and_link(schedule, 1, "2025-03-31")
+
+        cancel_depreciation_entries(asset, "2025-01-15")
+
+        je_yr1.reload()
+        self.assertEqual(je_yr1.docstatus, 1,
+            "JE before current FY start should remain submitted")
+
+        je_yr2.reload()
+        self.assertEqual(je_yr2.docstatus, 2,
+            "JE in current FY should be cancelled")
+
+    def test_cancel_with_multiple_fbs_skips_regular_cancels_it(self):
         suffix = frappe.generate_hash(length=6)
-        fb_row_it = {
-            "finance_book": self.fb_it.name,
-            "depreciation_start_date": "2024-04-01",
-            "frequency_of_depreciation": 12,
-            "rate_of_depreciation": 15,
-            "total_number_of_depreciations": 7,
-            "daily_prorata_based": 0,
-        }
-        fb_row_regular = {
-            "finance_book": self.fb_regular.name,
-            "depreciation_start_date": "2024-04-01",
-            "frequency_of_depreciation": 12,
-            "rate_of_depreciation": 15,
-            "total_number_of_depreciations": 7,
-            "daily_prorata_based": 0,
-        }
 
         asset = frappe.get_doc(
             {
@@ -273,16 +298,89 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
                 "net_purchase_amount": 100000,
                 "gross_purchase_amount": 100000,
                 "available_for_use_date": "2024-04-01",
-                "finance_books": [fb_row_regular, fb_row_it],
+                "finance_books": [
+                    {
+                        "finance_book": self.fb_regular.name,
+                        "depreciation_start_date": "2024-04-01",
+                        "frequency_of_depreciation": 12,
+                        "rate_of_depreciation": 15,
+                        "total_number_of_depreciations": 7,
+                        "daily_prorata_based": 0,
+                    },
+                    {
+                        "finance_book": self.fb_it.name,
+                        "depreciation_start_date": "2024-04-01",
+                        "frequency_of_depreciation": 12,
+                        "rate_of_depreciation": 15,
+                        "total_number_of_depreciations": 7,
+                        "daily_prorata_based": 0,
+                    },
+                ],
             }
         )
         asset.insert()
         asset.submit()
 
-        try:
-            cancel_depreciation_entries(asset, "2025-03-31")
-        except Exception as e:
-            self.fail(f"cancel_depreciation_entries raised unexpectedly: {e}")
+        reg_schedule = get_asset_depr_schedule_doc(asset.name, "Active", self.fb_regular.name)
+        it_schedule = get_asset_depr_schedule_doc(asset.name, "Active", self.fb_it.name)
+
+        je_reg = self._create_je_and_link(reg_schedule, 0, "2025-03-31")
+        je_it = self._create_je_and_link(it_schedule, 0, "2025-03-31")
+
+        cancel_depreciation_entries(asset, "2025-03-31")
+
+        je_reg.reload()
+        self.assertEqual(je_reg.docstatus, 1,
+            "Regular FB JE should remain submitted")
+
+        je_it.reload()
+        self.assertEqual(je_it.docstatus, 2,
+            "IT Act FB JE should be cancelled")
+
+    def test_cancel_first_row_no_fb_processes_it_row(self):
+        suffix = frappe.generate_hash(length=6)
+
+        asset = frappe.get_doc(
+            {
+                "doctype": "Asset",
+                "asset_name": f"_Test FB Order Bug {suffix}",
+                "company": self.company,
+                "item_code": self.item_code,
+                "asset_category": self.asset_category.name,
+                "net_purchase_amount": 100000,
+                "gross_purchase_amount": 100000,
+                "available_for_use_date": "2024-04-01",
+                "finance_books": [
+                    {
+                        "depreciation_start_date": "2024-04-01",
+                        "frequency_of_depreciation": 12,
+                        "rate_of_depreciation": 15,
+                        "total_number_of_depreciations": 7,
+                        "daily_prorata_based": 0,
+                    },
+                    {
+                        "finance_book": self.fb_it.name,
+                        "depreciation_start_date": "2024-04-01",
+                        "frequency_of_depreciation": 12,
+                        "rate_of_depreciation": 15,
+                        "total_number_of_depreciations": 7,
+                        "daily_prorata_based": 0,
+                    },
+                ],
+            }
+        )
+        asset.insert()
+        asset.submit()
+
+        it_schedule = get_asset_depr_schedule_doc(asset.name, "Active", self.fb_it.name)
+        je = self._create_je_and_link(it_schedule, 0, "2025-03-31")
+
+        cancel_depreciation_entries(asset, "2025-03-31")
+
+        je.reload()
+        self.assertEqual(je.docstatus, 2,
+            "IT Act FB JE should be cancelled despite first row having no finance_book. "
+            "If this fails, CR-001 (return instead of continue in finance_books loop) is present.")
 
     def test_monthly_frequency_without_daily_prorata(self):
         asset = self._create_asset(
