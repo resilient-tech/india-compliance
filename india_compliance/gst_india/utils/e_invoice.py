@@ -59,6 +59,7 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.e_waybill import (
     _cancel_e_waybill,
     _get_e_waybill_threshold,
+    auto_cancel_e_waybill,
     generate_pending_e_waybills,
     log_and_process_e_waybill_generation,
 )
@@ -1010,21 +1011,47 @@ class EInvoiceData(GSTTransactionData):
 #######################################################################################
 
 
-def auto_cancel_e_invoice(doc, gst_settings=None):
+@frappe.whitelist()
+def cancel_e_invoice_e_waybill_after_commit(docname):
+    """cancel IRN / e-Waybill on portal, after the SI cancel saved. desk calls it now, rest queue it."""
+    doc = load_doc("Sales Invoice", docname, "cancel")
+
+    if not (doc.irn or doc.ewaybill):
+        return
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if not is_api_enabled(gst_settings):
+        return
+
+    try:
+        # IRN cancel takes its e-Waybill with it; else cancel e-Waybill alone
+        if not auto_cancel_e_invoice(doc, gst_settings=gst_settings):
+            auto_cancel_e_waybill(doc, gst_settings=gst_settings)
+    except Exception:
+        notify_action_failure(doc, _("e-Invoice / e-Waybill cancellation failed"))
+
+
+def can_auto_cancel_e_invoice(doc, gst_settings=None):
+    """auto-cancel setting on + IRN still within the 24h cancel window?"""
     gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
 
     if not (doc.irn and gst_settings.enable_e_invoice and gst_settings.auto_cancel_e_invoice):
-        return
+        return False
 
     generated_on = doc.get_onload().get("e_invoice_info", {}).get("acknowledged_on")
-    reason = gst_settings.reason_for_e_invoice_cancellation
+    return bool(generated_on) and add_days(generated_on, 1) >= get_datetime()
 
-    if not generated_on or (add_days(generated_on, 1) < get_datetime()):
+
+def auto_cancel_e_invoice(doc, gst_settings=None):
+    gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
+
+    if not can_auto_cancel_e_invoice(doc, gst_settings):
         return
 
     values = frappe._dict(
         {
-            "reason": reason,
+            "reason": gst_settings.reason_for_e_invoice_cancellation,
             "remark": "",
         }
     )

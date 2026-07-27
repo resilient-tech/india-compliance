@@ -4,6 +4,7 @@ from frappe import _, bold
 from frappe.desk.form.load import run_onload
 from frappe.utils import flt, fmt_money
 
+from india_compliance.exceptions import AlreadyGeneratedError, NotApplicableError
 from india_compliance.gst_india.constants import VALID_HSN_LENGTHS
 from india_compliance.gst_india.overrides.payment_entry import (
     get_proportionate_tax,
@@ -27,14 +28,14 @@ from india_compliance.gst_india.utils import (
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (
-    auto_cancel_e_invoice,
+    can_auto_cancel_e_invoice,
     get_e_invoice_info,
     validate_e_invoice_applicability,
     validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import (
     _get_e_waybill_threshold,
-    auto_cancel_e_waybill,
+    can_auto_cancel_e_waybill,
     get_e_waybill_info,
 )
 from india_compliance.gst_india.utils.transaction_data import (
@@ -167,32 +168,43 @@ def on_submit(doc, method=None):
     if not is_api_enabled(gst_settings):
         return
 
-    if (
-        validate_e_invoice_applicability(doc, gst_settings, throw=False)
-        and gst_settings.auto_generate_e_invoice
-    ):
-        frappe.enqueue(
-            "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
-            enqueue_after_commit=True,
-            queue="short",
-            docname=doc.name,
-        )
+    if gst_settings.auto_generate_e_invoice:
+        try:
+            validate_e_invoice_applicability(doc, gst_settings)
+        except AlreadyGeneratedError:
+            return
+        except NotApplicableError as e:
+            # not needed here -> mark it, tell user, let submit go through
+            _mark_not_applicable(doc, "einvoice_status", str(e))
+        else:
+            _handle_auto_generation(
+                method="india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
+                docname=doc.name,
+                throw=False,
+            )
 
-        return
+            return
 
-    if (
-        gst_settings.auto_generate_e_waybill
-        and is_e_waybill_applicable(doc, gst_settings)
-        and not doc.is_debit_note
-        and not doc.is_return
-    ):
-        frappe.enqueue(
-            "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
-            enqueue_after_commit=True,
-            queue="short",
-            doctype=doc.doctype,
-            docname=doc.name,
-        )
+    if gst_settings.auto_generate_e_waybill and not doc.is_debit_note and not doc.is_return:
+        if is_e_waybill_applicable(doc, gst_settings):
+            _handle_auto_generation(
+                method="india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
+                doctype=doc.doctype,
+                docname=doc.name,
+            )
+        else:
+            _mark_not_applicable(doc, "e_waybill_status", _("e-Waybill is not applicable for this invoice"))
+
+
+def _handle_auto_generation(method, **enqueue_kwargs):
+    frappe.enqueue(method, enqueue_after_commit=True, queue="short", **enqueue_kwargs)
+
+
+def _mark_not_applicable(doc, status_field, message):
+    """not needed -> mark it + tell user. don't block submit."""
+    doc.db_set(status_field, "Not Applicable")
+
+    frappe.msgprint(message, indicator="orange", alert=True)
 
 
 def before_cancel(doc, method=None):
@@ -238,15 +250,24 @@ def validate_cancellation_based_on_e_invoice(doc):
 
 
 def cancel_e_waybill_e_invoice(doc, method=None):
+    """portal cancel can't be undone. do it after commit, so a rolled-back cancel drops it too."""
+    if not (doc.irn or doc.ewaybill) or not is_api_enabled():
+        return
+
+    if getattr(doc, "_cancelled_from_ui", None):
+        return
+
     gst_settings = frappe.get_cached_doc("GST Settings")
 
-    if not is_api_enabled(gst_settings):
+    if not (can_auto_cancel_e_invoice(doc, gst_settings) or can_auto_cancel_e_waybill(doc, gst_settings)):
         return
 
-    if auto_cancel_e_invoice(doc, gst_settings=gst_settings):
-        return
-
-    auto_cancel_e_waybill(doc, gst_settings=gst_settings)
+    frappe.enqueue(
+        "india_compliance.gst_india.utils.e_invoice.cancel_e_invoice_e_waybill_after_commit",
+        enqueue_after_commit=True,
+        queue="short",
+        docname=doc.name,
+    )
 
 
 def is_e_waybill_applicable(doc, gst_settings=None):

@@ -25,7 +25,26 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     before_submit(frm) {
+        // desk tag: generate now (on_submit), don't queue it
         frm.doc._submitted_from_ui = 1;
+    },
+
+    before_cancel(frm) {
+        // desk tag: cancel now (after_cancel), don't queue it
+        frm.doc._cancelled_from_ui = 1;
+    },
+
+    after_cancel(frm) {
+        // auto-cancel: do it now. manual already did it in its dialog -> skip
+        if (!should_auto_cancel_e_invoice_e_waybill(frm)) return;
+
+        frappe.show_alert(__("Cancelling e-Invoice / e-Waybill..."));
+
+        frappe
+            .xcall("india_compliance.gst_india.utils.e_invoice.cancel_e_invoice_e_waybill_after_commit", {
+                docname: frm.doc.name,
+            })
+            .then(() => frm.reload_doc());
     },
 
     refresh(frm) {
@@ -55,6 +74,28 @@ frappe.ui.form.on(DOCTYPE, {
         );
     },
 });
+
+function should_auto_cancel_e_invoice_e_waybill(frm) {
+    // settings say auto-cancel this, and still in the cancel window? (like auto_generate_e_waybill)
+    if (!india_compliance.is_api_enabled()) return false;
+
+    // IRN cancel also cancels its e-Waybill
+    if (frm.doc.irn)
+        return (
+            india_compliance.is_e_invoice_enabled() &&
+            !!gst_settings.auto_cancel_e_invoice &&
+            is_irn_cancellable(frm)
+        );
+
+    if (frm.doc.ewaybill)
+        return (
+            gst_settings.enable_e_waybill &&
+            !!gst_settings.auto_cancel_e_waybill &&
+            is_e_waybill_cancellable(frm)
+        );
+
+    return false;
+}
 
 async function gst_invoice_warning(frm) {
     const contains_gst_account = frm.doc.taxes.some((row) => row.gst_tax_type);

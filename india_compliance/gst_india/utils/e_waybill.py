@@ -1931,22 +1931,27 @@ def before_cancel(doc, method=None):
     auto_cancel_e_waybill(doc, gst_settings=gst_settings)
 
 
-def auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
+def can_auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
+    """auto-cancel setting on + e-Waybill still within the 24h cancel window?"""
     gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
 
     if not (doc.ewaybill and gst_settings.enable_e_waybill and gst_settings.auto_cancel_e_waybill):
-        return
+        return False
 
     e_waybill_info = e_waybill_info or doc.get_onload().get("e_waybill_info", {})
     generated_on = e_waybill_info.get("created_on")
-    reason = gst_settings.reason_for_e_waybill_cancellation
+    return bool(generated_on) and add_days(generated_on, 1) >= get_datetime()
 
-    if not generated_on or (add_days(generated_on, 1) < get_datetime()):
+
+def auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
+    gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
+
+    if not can_auto_cancel_e_waybill(doc, gst_settings, e_waybill_info):
         return
 
     values = frappe._dict(
         {
-            "reason": reason,
+            "reason": gst_settings.reason_for_e_waybill_cancellation,
             "remark": "",
         }
     )
