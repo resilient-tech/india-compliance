@@ -154,15 +154,6 @@ class GSTInvoiceManagementSystem(Document):
 
         invoice_names = frappe.parse_json(invoice_names)
 
-        # record-level isolation: only act on this company's invoices
-        invoice_names = frappe.get_all(
-            "GST Inward Supply",
-            filters={"name": ["in", invoice_names], "company_gstin": self.company_gstin},
-            pluck="name",
-        )
-        if not invoice_names:
-            return
-
         GSTR2 = frappe.qb.DocType("GST Inward Supply")
 
         # When invoice is rejected then mark action as "Ignore" and copy current action to previous action
