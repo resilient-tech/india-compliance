@@ -242,14 +242,27 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
         return fields;
     }
 
+    get_address_title_field() {
+        return [
+            {
+                label: __("Address Title"),
+                fieldname: "_address_title",
+                fieldtype: "Data",
+                default: this.doc.address_title,
+                mandatory_depends_on: "eval: !doc.link_name",
+            },
+        ];
+    }
+
     async render_dialog() {
         const address_fields = this.get_address_fields();
         const fields_to_exclude = address_fields.map(({ fieldname }) => fieldname);
-        fields_to_exclude.push("pincode", "address_line1");
+        fields_to_exclude.push("pincode", "address_line1", "address_title");
 
         this.mandatory = [
             ...this.get_dynamic_link_fields(),
             ...this.get_gstin_field(),
+            ...this.get_address_title_field(),
             ...this.mandatory.filter((field) => !fields_to_exclude.includes(field.fieldname)),
             ...address_fields,
         ];
@@ -312,6 +325,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
 
     update_doc() {
         const doc = super.update_doc();
+        doc.address_title = doc._address_title;
 
         if (doc.link_doctype && doc.link_name) {
             const link = frappe.model.add_child(doc, "Dynamic Link", "links");
@@ -475,6 +489,11 @@ function map_gstin_info(doc, gstin_info) {
 function update_party_info(doc, gstin_info) {
     doc.gstin = doc._gstin;
     doc.gst_category = gstin_info.gst_category;
+
+    if (doc.doctype === "Address") {
+        doc._address_title = gstin_info.business_name;
+        return;
+    }
 
     if (!frappe.boot.gst_party_types.includes(doc.doctype)) return;
 
