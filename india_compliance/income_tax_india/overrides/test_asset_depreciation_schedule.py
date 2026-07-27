@@ -6,12 +6,11 @@ from erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_sched
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, date_diff, flt, getdate
 
-from india_compliance.tests.erpnext_test_utils import make_journal_entry
-
 from india_compliance.income_tax_india.overrides.asset_depreciation_schedule import (
     cancel_depreciation_entries,
     is_leap_year,
 )
+from india_compliance.tests.erpnext_test_utils import make_journal_entry
 
 COMPANY = "_Test Indian Registered Company"
 ABBR = "_TIRC"
