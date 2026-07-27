@@ -1010,9 +1010,8 @@ function is_accept_allowed(row, action) {
 const TAX_HEADS = ["igst", "cgst", "sgst", "cess"];
 
 function is_specified_row(row) {
-    // credit notes and downward amendments carry declared ITC
-    const classification = row._inward_supply.classification;
-    return row.doc_type === "Credit Note" || classification === "B2BA" || classification === "CDNRA";
+    // mirror server is_specified_record: credit notes and amendments carry declared ITC
+    return row.doc_type === "Credit Note" || !!row._inward_supply.is_amended;
 }
 
 function needs_itc_review(row) {

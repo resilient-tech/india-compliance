@@ -192,13 +192,7 @@ class GSTInvoiceManagementSystem(Document):
 
         # User corrections from the Phase 2 review dialog take precedence
         if declared_overrides:
-            declared_overrides = frappe.parse_json(declared_overrides)
-            allowed = set(invoice_names)
-            declared_overrides = {
-                name: values for name, values in declared_overrides.items() if name in allowed
-            }
-            if declared_overrides:
-                apply_declared_overrides(declared_overrides)
+            apply_declared_overrides(frappe.parse_json(declared_overrides))
 
     @frappe.whitelist()
     def get_invoice_details(self, purchase_name: str | None, inward_supply_name: str | None):

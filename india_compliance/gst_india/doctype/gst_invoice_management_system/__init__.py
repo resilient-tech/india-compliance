@@ -48,7 +48,9 @@ class InwardSupply:
         self.IMS = frappe.qb.DocType("GST Inward Supply")
 
     def get_all(self, company_gstin, names=None):
-        query = self.get_query(company_gstin, ["action", "doc_type", "is_itc_reduction_blocked"])
+        query = self.get_query(
+            company_gstin, ["action", "doc_type", "is_amended", "is_itc_reduction_blocked"]
+        )
 
         if names:
             query = query.where(self.IMS.name.isin(names))
@@ -293,7 +295,7 @@ DECLARED_FIELDS = (
     "declared_cess",
 )
 
-# what _clean_declared / _flag_if_declaration_changed need from a stored record
+# what _clean_declared / _declaration_changed need from a stored record
 DECLARATION_ROW_FIELDS = (
     "name",
     "is_itc_reduction_blocked",
@@ -305,15 +307,16 @@ DECLARATION_ROW_FIELDS = (
 )
 
 
-def _flag_if_declaration_changed(stored, declared):
-    """Re-queue an already-synced record for upload when its declaration changes.
+def _declaration_changed(stored, declared):
+    """Whether the declared block differs from what's already stored.
 
-    The action is unchanged, so ims_action == previous_ims_action and the record
-    would otherwise be skipped on save. previous_ims_action doubles as prev_status
-    in the payload, so it must stay put; this flag carries the "dirty" signal instead.
+    Callers skip the write when nothing changed, and re-queue the record for upload
+    when it did: the action is unchanged (ims_action == previous_ims_action), so the
+    record would otherwise be skipped on save. previous_ims_action doubles as
+    prev_status in the payload and must stay put, so is_declaration_pending_upload
+    carries the "dirty" signal instead.
     """
-    if any(flt(stored.get(field)) != flt(declared.get(field)) for field in DECLARED_FIELDS):
-        declared["is_declaration_pending_upload"] = 1
+    return any(flt(stored.get(field)) != flt(declared.get(field)) for field in DECLARED_FIELDS)
 
 
 def set_declared_itc(invoice_names, action):
@@ -341,8 +344,9 @@ def set_declared_itc(invoice_names, action):
     for row in specified:
         if book := books.get(row.link_name):
             declared = _declared_from_books(row, book)
-            _flag_if_declaration_changed(row, declared)
-            frappe.db.set_value("GST Inward Supply", row.name, declared)
+            if _declaration_changed(row, declared):
+                declared["is_declaration_pending_upload"] = 1
+                frappe.db.set_value("GST Inward Supply", row.name, declared)
 
 
 def _declared_from_books(document, book):
@@ -372,8 +376,9 @@ def apply_declared_overrides(overrides):
     for name, override in overrides.items():
         if doc := document.get(name):
             declared = _clean_declared(doc, override)
-            _flag_if_declaration_changed(doc, declared)
-            frappe.db.set_value("GST Inward Supply", name, declared)
+            if _declaration_changed(doc, declared):
+                declared["is_declaration_pending_upload"] = 1
+                frappe.db.set_value("GST Inward Supply", name, declared)
 
 
 def _clean_declared(document, declared):
