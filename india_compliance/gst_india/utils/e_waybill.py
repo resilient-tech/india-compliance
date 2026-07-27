@@ -163,6 +163,8 @@ def generate_e_waybill(*, doctype: str, docname: str, values: str | dict | None 
     doc = load_doc(doctype, docname, "submit")
     if values:
         update_transaction(doc, frappe.parse_json(values))
+        if not frappe.flags.in_test:
+            frappe.db.commit()  # save details even if generation fails: nosemgrep
 
     _generate_e_waybill(doc, throw=True if values else False, force=force)
 
