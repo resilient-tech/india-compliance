@@ -4,7 +4,7 @@ from erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_sched
     get_asset_depr_schedule_doc,
 )
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, date_diff, flt
+from frappe.utils import add_days, date_diff, flt, getdate
 
 from india_compliance.tests.erpnext_test_utils import make_journal_entry
 
