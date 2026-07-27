@@ -8,6 +8,13 @@ const FETCH_PROGRESS = "update_2a_2b_api_progress";
 const SAVE_PROGRESS = "update_2a_2b_transactions_progress";
 const EXPORT_MODULE = "india_compliance.gst_india.doctype.gst_return_export.gstr_2_export";
 const TAX_FIELDS = ["igst", "cgst", "sgst", "cess"];
+// Select labels are translated for display; the backend takes the keys of GROUP_BY_MONTHS.
+const GROUP_BY_VALUES = {
+    Monthly: "monthly",
+    Quarterly: "quarterly",
+    "Half Yearly": "half_yearly",
+    Yearly: "yearly",
+};
 
 // Handlers just delegate to the current return type's view.
 frappe.ui.form.on("GST Return Export", {
@@ -175,13 +182,56 @@ class ReturnExportView {
             if (!synced.length) return;
         }
 
+        const group_by = periods.length > 1 ? await this.ask_group_by(periods.length) : "monthly";
+        if (!group_by) return;
+
         const { message } = await frappe.call({
             method: `${EXPORT_MODULE}.export_return_as_excel`,
-            args: filters,
+            args: { ...filters, group_by },
         });
         if (message?.message) {
             frappe.show_alert({ message: message.message, indicator: "blue" });
         }
+    }
+
+    ask_group_by(period_count) {
+        return new Promise((resolve) => {
+            let chosen = null;
+            const dialog = new frappe.ui.Dialog({
+                title: __("Export to Excel"),
+                fields: [
+                    {
+                        fieldname: "group_by",
+                        fieldtype: "Select",
+                        label: __("One file per"),
+                        default: "Monthly",
+                        reqd: 1,
+                        options: [
+                            { label: __("Month"), value: "Monthly" },
+                            { label: __("Quarter"), value: "Quarterly" },
+                            { label: __("Half Year"), value: "Half Yearly" },
+                            { label: __("Financial Year"), value: "Yearly" },
+                        ],
+                    },
+                    {
+                        fieldname: "help",
+                        fieldtype: "HTML",
+                        options: `<p class="text-muted small">${__(
+                            "{0} months selected. Quarters and half-years follow the financial year (April to March). Multiple files are downloaded as a zip.",
+                            [period_count],
+                        )}</p>`,
+                    },
+                ],
+                primary_action_label: __("Export"),
+                primary_action: ({ group_by }) => {
+                    chosen = GROUP_BY_VALUES[group_by] || "monthly";
+                    dialog.hide();
+                },
+            });
+
+            dialog.$wrapper.on("hidden.bs.modal", () => resolve(chosen));
+            dialog.show();
+        });
     }
 
     show_progress(percent, message) {

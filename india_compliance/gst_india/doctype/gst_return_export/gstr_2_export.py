@@ -12,14 +12,16 @@ Each exporter holds its own template, sheet list and field maps; the module leve
 only the shared header-parsing and value-transform helpers.
 """
 
+import os
 import re
-from functools import partial
+import tempfile
+from functools import lru_cache, partial
 from typing import ClassVar
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import frappe
-from frappe.desk.utils import provide_binary_file
 from frappe.query_builder.functions import Max
-from frappe.utils import flt
+from frappe.utils import add_days, flt, now_datetime
 
 from india_compliance.gst_india.constants import GST_CATEGORY_MAP, STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
@@ -27,6 +29,8 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
 )
 from india_compliance.gst_india.utils import (
     get_data_file_path,
+    get_periods_between_dates,
+    is_production_api_enabled,
     validate_gstin_permission,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
@@ -35,6 +39,12 @@ from india_compliance.gst_india.utils.gstr_utils import ReturnType
 from india_compliance.gst_india.utils.returns_export import merge_raw, normalize_return_type
 
 HEADER_START_ROW = 5
+
+EXCEL_MAX_ROW = 1_048_576
+
+GROUP_BY_MONTHS = {"monthly": 1, "quarterly": 3, "half_yearly": 6, "yearly": 12}
+DEFAULT_GROUP_BY = "monthly"
+
 _REVISED = "revised details | "
 _ORIGINAL = "original details | "
 _WS = re.compile(r"\s+")
@@ -93,6 +103,7 @@ def _column_labels(ws, header_rows):
     return labels
 
 
+@lru_cache(maxsize=512)
 def _split_label(label):
     """(base_label, is_original) — strip a 'revised details |'/'original details |' prefix.
     Amendment sheets prefix each column so the same field map serves both blocks."""
@@ -139,6 +150,22 @@ def _financial_year(period):  # "MMYYYY" -> "2019-20" (Indian FY starts in April
     month, year = int(period[:2]), int(period[2:])
     start = year if month >= 4 else year - 1
     return f"{start}-{str(start + 1)[-2:]}"
+
+
+def _fy_month_index(period):
+    return (int(period[:2]) - 4) % 12
+
+
+def _group_periods(periods, group_by):
+    """Split periods into one list per workbook, on fiscal-year boundaries."""
+    months = GROUP_BY_MONTHS.get(group_by) or GROUP_BY_MONTHS[DEFAULT_GROUP_BY]
+
+    groups = {}
+    for period in sorted(periods, key=lambda p: (p[2:], p[:2])):
+        key = (_financial_year(period), _fy_month_index(period) // months)
+        groups.setdefault(key, []).append(period)
+
+    return [groups[key] for key in sorted(groups)]
 
 
 def _ryesno(value):
@@ -202,14 +229,21 @@ class GovReturnExporter:
         self.raw = _merged_raw(gstin, self.return_type, periods)
 
     def build(self):
-        filled = self.fill()
-        if not filled:
-            frappe.throw(frappe._("No data to export for the selected period(s). Sync first, then export."))
+        """(file_name, xlsx bytes), or None when these period(s) hold no data — a grouped
+        export skips the empty groups rather than failing the whole run."""
+        if not self.fill():
+            return None
+
         self.fill_readme()
         self._open_on_readme()
+        return f"{self.file_stem()}.xlsx", self.excel.save_workbook().getvalue()
+
+    def file_stem(self):
+        """`GSTR-2B-<gstin>-<first>_<last>` — first/last rather than every period, so a
+        yearly grouping doesn't produce a 90-character file name."""
         label = self.return_type.replace("GSTR", "GSTR-")
-        name = f"{label}-{self.gstin}-{'_'.join(self.periods)}.xlsx"
-        return name, self.excel.save_workbook().getvalue()
+        span = self.periods[0] if len(self.periods) == 1 else f"{self.periods[0]}_{self.periods[-1]}"
+        return f"{label}-{self.gstin}-{span}"
 
     def fill(self):
         raise NotImplementedError
@@ -227,11 +261,44 @@ class GovReturnExporter:
         header_rows, data_start = _header_extent(ws)
         labels = _column_labels(ws, header_rows)
         rows = build_rows(labels)
-        for offset, row in enumerate(rows or []):
-            for col, label in labels.items():
-                value = row.get(label)
-                ws.cell(row=data_start + offset, column=col, value="" if value is None else value)
-        return bool(rows)
+        if not rows:
+            return False
+
+        # both sides size themselves off the same capacity, so a length mismatch is a bug
+        for target, chunk in zip(
+            self._sheets_for(ws, sheet, len(rows), data_start),
+            self._chunk(rows, data_start),
+            strict=True,
+        ):
+            for offset, row in enumerate(chunk):
+                for col, label in labels.items():
+                    value = row.get(label)
+                    if value is None or value == "":
+                        continue
+                    target.cell(row=data_start + offset, column=col, value=value)
+        return True
+
+    @staticmethod
+    def _chunk(rows, data_start):
+        capacity = EXCEL_MAX_ROW - data_start + 1
+        if len(rows) <= capacity:
+            return [rows]
+        return [rows[i : i + capacity] for i in range(0, len(rows), capacity)]
+
+    def _sheets_for(self, ws, sheet, row_count, data_start):
+        """[ws] plus a "<sheet> Part N" copy for every chunk past the first.
+
+        The copies are taken while `ws` still holds nothing but the header block, so each one
+        arrives with the same merged multi-tier headers, column widths and styling."""
+        capacity = EXCEL_MAX_ROW - data_start + 1
+        parts = -(-row_count // capacity)
+
+        sheets = [ws]
+        for part in range(2, parts + 1):
+            copy = self.excel.wb.copy_worksheet(ws)
+            copy.title = f"{sheet} Part {part}"[:31]
+            sheets.append(copy)
+        return sheets
 
     @staticmethod
     def _records(supplier, list_key):
@@ -275,12 +342,19 @@ class GovReturnExporter:
             worksheet.sheet_view.tabSelected = index == active
 
     @staticmethod
-    def _live_gstin_info(gstin):
-        """GSTIN registry info for names the payload doesn't carry (company legal/trade for
-        the Read me header, 2A supplier names). Guarded so a lookup failure never breaks
-        the export."""
+    def _gstin_info(gstin):
+        """Legal/trade name for a GSTIN — for the names the payload doesn't carry (company
+        name on the Read me header, 2A supplier names)."""
         if not gstin:
             return {}
+
+        cached = frappe.db.get_value("GSTIN", gstin, ("legal_name", "trade_name"), as_dict=True)
+        if cached and (cached.legal_name or cached.trade_name):
+            return cached
+
+        if not is_production_api_enabled():
+            return {}
+
         try:
             from india_compliance.gst_india.utils.gstin_info import _get_gstin_info
 
@@ -509,7 +583,7 @@ class GSTR2BExporter(GovReturnExporter):
         if not self.excel.has_sheet("Read me"):
             return
         period = self.periods[-1]
-        info = self._live_gstin_info(self.gstin)
+        info = self._gstin_info(self.gstin)
         gendt = self.raw.get("gendt")
 
         ws = self.excel.wb["Read me"]
@@ -718,7 +792,7 @@ class GSTR2AExporter(GovReturnExporter):
 
     def fill(self):
         docdata = self.raw.get("docdata", self.raw)
-        resolve = self._name_resolver(self._supplier_names())
+        resolve = self._name_resolver(self._supplier_names(), self._registry_names(docdata))
         period = self.periods[-1]
         filled = []
         for section, sheet in self.SECTION_SHEETS.items():
@@ -738,7 +812,7 @@ class GSTR2AExporter(GovReturnExporter):
         if not self.excel.has_sheet("Read me"):
             return
         period = self.periods[-1]
-        info = self._live_gstin_info(self.gstin)
+        info = self._gstin_info(self.gstin)
         gendt = self.raw.get("gendt")
 
         ws = self.excel.wb["Read me"]
@@ -828,18 +902,49 @@ class GSTR2AExporter(GovReturnExporter):
         )
         return {row.supplier_gstin: row.supplier_name for row in rows if row.supplier_name}
 
+    def _registry_names(self, docdata):
+        """{gstin: legal_name} for every supplier in the payload, in one query per 5k GSTINs."""
+        gstins = {
+            group.get("ctin") or group.get("sgstin")
+            for section in self.RAW_SECTIONS.values()
+            for group in (docdata.get(section[0]) or [])
+            if isinstance(group, dict)
+        }
+        gstins.discard(None)
+        if not gstins:
+            return {}
+
+        gstins = list(gstins)
+        names = {}
+        for start in range(0, len(gstins), 5000):
+            names.update(
+                {
+                    row.name: row.legal_name
+                    for row in frappe.get_all(
+                        "GSTIN",
+                        filters={"name": ("in", gstins[start : start + 5000])},
+                        fields=["name", "legal_name"],
+                    )
+                    if row.legal_name
+                }
+            )
+        return names
+
     @staticmethod
-    def _name_resolver(gis_names):
+    def _name_resolver(gis_names, registry_names=None):
         """Resolve a supplier/operator name. The 2A raw doesn't carry it and the portal shows
-        the registered legal name, so prefer a cached live GSTIN lookup's legal name, then the
-        name synced to GIS, then the business name. One lookup per unique GSTIN."""
-        cache = {}
+        the registered legal name, so prefer the registry legal name, then the name synced to
+        GIS, then the business name.
+
+        `registry_names` is the batched pre-resolve; anything it misses (an operator `etin`, a
+        GSTIN we've never looked up) falls through to one lookup per unique GSTIN."""
+        cache = dict(registry_names or {})
 
         def resolve(gstin):
             if not gstin:
                 return ""
             if gstin not in cache:
-                info = GovReturnExporter._live_gstin_info(gstin)
+                info = GovReturnExporter._gstin_info(gstin)
                 cache[gstin] = (
                     info.get("legal_name") or gis_names.get(gstin) or info.get("business_name") or ""
                 )
@@ -854,33 +959,58 @@ EXPORTERS = {
 }
 
 
-def build_export(gstin, return_type, periods):
-    """Build the portal-format workbook for the return; returns (file_name, xlsx bytes)."""
+def build_export(gstin, return_type, periods, group_by=DEFAULT_GROUP_BY):
+    """Build the portal-format export; returns (file_name, bytes)."""
     exporter = EXPORTERS.get(normalize_return_type(return_type))
     if not exporter:
         frappe.throw(frappe._("Export is not supported for {0}").format(return_type))
-    return exporter(gstin, periods).build()
+
+    groups = _group_periods(periods, group_by)
+    if len(groups) == 1:
+        built = exporter(gstin, groups[0]).build()
+        if not built:
+            _throw_no_data()
+        return built
+
+    fd, zip_path = tempfile.mkstemp(suffix=".zip")
+    os.close(fd)
+    try:
+        written = 0
+        with ZipFile(zip_path, "w", ZIP_DEFLATED) as archive:
+            for group in groups:
+                if built := exporter(gstin, group).build():
+                    archive.writestr(*built)
+                    written += 1
+
+        if not written:
+            _throw_no_data()
+
+        with open(zip_path, "rb") as f:
+            content = f.read()
+    finally:
+        os.remove(zip_path)
+
+    label = normalize_return_type(return_type).replace("GSTR", "GSTR-")
+    return f"{label}-{gstin}-{periods[0]}_{periods[-1]}.zip", content
+
+
+def _throw_no_data():
+    frappe.throw(frappe._("No data to export for the selected period(s). Sync first, then export."))
 
 
 EXPORT_READY_EVENT = "gst_return_export_ready"
 DOCTYPE = "GST Return Export"
 
 
-def _resolve_periods(company_gstin, return_type, from_date, to_date):
-    from india_compliance.gst_india.doctype.purchase_reconciliation_tool import BaseUtil
-
-    return BaseUtil.get_periods([from_date, to_date], ReturnType(return_type), company_gstin)
-
-
-def generate_export_file(company_gstin, return_type, from_date, to_date, user):
-    """Background job: build the workbook, save it as a private File attached to the tool,
-    and notify the user (via realtime) with the File id to download. Errors are reported
-    the same way."""
+def generate_export_file(company_gstin, return_type, from_date, to_date, user, group_by=DEFAULT_GROUP_BY):
+    """Background job: build the export, save it as a private File attached to the tool, and
+    notify the user (via realtime) with the File id to download. Errors are reported the same
+    way."""
     try:
-        periods = _resolve_periods(company_gstin, return_type, from_date, to_date)
+        periods = get_periods_between_dates(from_date, to_date)
         if not periods:
             raise frappe.ValidationError(frappe._("No available periods in the selected range to export."))
-        file_name, content = build_export(company_gstin, return_type, periods)
+        file_name, content = build_export(company_gstin, return_type, periods, group_by)
         file = frappe.get_doc(
             {
                 "doctype": "File",
@@ -902,35 +1032,70 @@ def generate_export_file(company_gstin, return_type, from_date, to_date, user):
 
 @frappe.whitelist()
 def download_export_file(file_id: str):
-    """Stream a generated export to the browser. Guarded by the same `export` permission as
-    producing it, and restricted to files this tool created — so it can't be used to fetch
-    arbitrary private Files."""
+    """Stream a generated export to the browser, straight off disk (no full-file copy in
+    memory). Guarded by the same `export` permission as producing it, and restricted to files
+    this tool created — so it can't be used to fetch arbitrary private Files. The file itself
+    is reaped later by `delete_stale_export_files` (a streamed response can't safely unlink
+    mid-send)."""
     frappe.has_permission(DOCTYPE, "export", throw=True)
 
     file = frappe.get_doc("File", file_id)
     if file.attached_to_doctype != DOCTYPE or file.owner != frappe.session.user:
         frappe.throw(frappe._("This file is not a GST Return Export."), frappe.PermissionError)
 
-    provide_binary_file(file.file_name.removesuffix(".xlsx"), "xlsx", file.get_content(encodings=[]))
+    from frappe.utils.response import send_private_file
+
+    return send_private_file(file.file_url.split("/private", 1)[1], filename=file.file_name)
+
+
+def delete_stale_export_files():
+    """Daily: drop generated exports older than a day. These are download-once artifacts, so
+    without this every Export click leaks a multi-MB private File. Drained in batches so a
+    day's backlog can't outrun a single fixed cap."""
+    while True:
+        stale = frappe.get_all(
+            "File",
+            filters={
+                "attached_to_doctype": DOCTYPE,
+                "creation": ("<", add_days(now_datetime(), -1)),
+            },
+            pluck="name",
+            limit=500,
+            order_by="creation asc",
+        )
+        if not stale:
+            return
+        for name in stale:
+            frappe.delete_doc("File", name, ignore_permissions=True, delete_permanently=True)
+        frappe.db.commit()
 
 
 @frappe.whitelist()
 @validate_gstin_permission(doctype=DOCTYPE)
-def export_return_as_excel(company_gstin: str, return_type: str, from_date: str, to_date: str):
+def export_return_as_excel(
+    company_gstin: str,
+    return_type: str,
+    from_date: str,
+    to_date: str,
+    group_by: str = DEFAULT_GROUP_BY,
+):
     """Enqueue the export (async); the download is triggered via realtime when ready."""
     frappe.has_permission(DOCTYPE, "export", throw=True)
     return_type = normalize_return_type(return_type)
+    if group_by not in GROUP_BY_MONTHS:
+        group_by = DEFAULT_GROUP_BY
 
     frappe.enqueue(
         generate_export_file,
         queue="long",
         timeout=1500,
-        job_id=f"gst_return_export:{company_gstin}:{return_type}:{from_date}:{to_date}",
+        job_id=f"gst_return_export:{company_gstin}:{return_type}:{from_date}:{to_date}:{group_by}",
         deduplicate=True,
         company_gstin=company_gstin,
         return_type=return_type,
         from_date=from_date,
         to_date=to_date,
+        group_by=group_by,
         user=frappe.session.user,
     )
     return {"message": frappe._("Generating your export — the download will start when it's ready.")}

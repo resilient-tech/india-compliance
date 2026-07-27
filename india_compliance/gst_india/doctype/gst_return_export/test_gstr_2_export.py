@@ -9,17 +9,24 @@ Mocked unit builds for coverage, one integration test through build_export.
 
 from contextlib import ExitStack, contextmanager
 from io import BytesIO
-from unittest.mock import patch
+from typing import ClassVar
+from unittest.mock import Mock, patch
+from zipfile import ZipFile
 
+import frappe
 import openpyxl
 from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
+from frappe.utils import add_days, now_datetime
 
 from india_compliance.gst_india.doctype.gst_return_export.gstr_2_export import (
+    DOCTYPE,
     GovReturnExporter,
     GSTR2AExporter,
     GSTR2BExporter,
+    _group_periods,
     build_export,
+    delete_stale_export_files,
 )
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     store_raw_return_data,
@@ -115,7 +122,7 @@ def _mock_names(raw):
         stack.enter_context(
             patch.object(
                 GovReturnExporter,
-                "_live_gstin_info",
+                "_gstin_info",
                 staticmethod(
                     lambda gstin: {
                         "business_name": MOCK_BUSINESS,
@@ -442,6 +449,130 @@ class TestGSTR2AExport(IntegrationTestCase):
         self.assertIn(f"{PERIOD_2A}_062024", name)
 
 
+class TestPeriodGrouping(IntegrationTestCase):
+    """`group_by` decides how many periods share a workbook. Groups follow the financial
+    year (April-March), so they never straddle one even when the range does."""
+
+    FY_2024_25: ClassVar[list] = ["042024", "052024", "062024", "072024", "082024", "092024"]
+
+    def test_monthly_gives_one_group_per_period(self):
+        self.assertEqual(_group_periods(self.FY_2024_25, "monthly"), [[p] for p in self.FY_2024_25])
+
+    def test_quarterly_splits_on_fiscal_quarters(self):
+        self.assertEqual(
+            _group_periods(self.FY_2024_25, "quarterly"),
+            [["042024", "052024", "062024"], ["072024", "082024", "092024"]],
+        )
+
+    def test_half_yearly_and_yearly_keep_the_range_together(self):
+        self.assertEqual(_group_periods(self.FY_2024_25, "half_yearly"), [self.FY_2024_25])
+        self.assertEqual(_group_periods(self.FY_2024_25, "yearly"), [self.FY_2024_25])
+
+    def test_groups_never_straddle_a_financial_year(self):
+        """Feb-May is one calendar quarter-and-a-bit but two fiscal quarters: Feb-Mar closes
+        2023-24, Apr-May opens 2024-25. Merging them would report across two years."""
+        self.assertEqual(
+            _group_periods(["022024", "032024", "042024", "052024"], "quarterly"),
+            [["022024", "032024"], ["042024", "052024"]],
+        )
+
+    def test_yearly_splits_across_financial_years(self):
+        self.assertEqual(
+            _group_periods(["032024", "042024"], "yearly"),
+            [["032024"], ["042024"]],
+        )
+
+    def test_groups_come_back_in_chronological_order(self):
+        self.assertEqual(
+            _group_periods(["062024", "012025", "042024"], "monthly"),
+            [["042024"], ["062024"], ["012025"]],
+        )
+
+    def test_unknown_grouping_falls_back_to_monthly(self):
+        self.assertEqual(_group_periods(["042024", "052024"], "weekly"), [["042024"], ["052024"]])
+
+
+class TestGroupedExport(IntegrationTestCase):
+    """Several groups arrive as a zip of full portal-format workbooks, one per group."""
+
+    STEM_2A = f"GSTR-2a-{GSTIN_2A}"  # ReturnType.GSTR2A.value is "GSTR2a", hence the lowercase
+
+    def _export(self, periods, group_by, raw=RAW_2A):
+        with _mock_names(raw), patch.object(GSTR2AExporter, "_supplier_names", lambda self: {}):
+            return build_export(GSTIN_2A, "GSTR-2A", periods, group_by)
+
+    def test_single_group_stays_a_bare_workbook(self):
+        file_name, content = self._export(["042024", "052024", "062024"], "quarterly")
+
+        self.assertTrue(file_name.endswith(".xlsx"))
+        self.assertIn("042024_062024", file_name)
+        self.assertIn("B2B", _load(content).sheetnames)
+
+    def test_multiple_groups_are_zipped_one_workbook_each(self):
+        file_name, content = self._export(["042024", "052024", "062024"], "monthly")
+
+        self.assertTrue(file_name.endswith(".zip"))
+        with ZipFile(BytesIO(content)) as archive:
+            names = archive.namelist()
+            self.assertEqual(
+                names,
+                [f"{self.STEM_2A}-{period}.xlsx" for period in ("042024", "052024", "062024")],
+            )
+            # each entry is a real workbook, not a stub
+            ws = _load(archive.read(names[0]))["B2B"]
+            self.assertEqual(ws.cell(7, 1).value, GSTIN_2A)
+
+    def test_empty_groups_are_skipped_not_fatal(self):
+        """One unsynced month must not sink the rest of the range."""
+        raw_by_period = {"042024": RAW_2A, "052024": None}
+
+        with (
+            patch(
+                f"{EXPORT_MODULE}.get_raw_return_data",
+                side_effect=lambda gstin, return_type, period: raw_by_period[period],
+            ),
+            patch.object(GovReturnExporter, "_gstin_info", staticmethod(lambda gstin: {})),
+            patch.object(GSTR2AExporter, "_supplier_names", lambda self: {}),
+        ):
+            file_name, content = build_export(GSTIN_2A, "GSTR-2A", ["042024", "052024"], "monthly")
+
+        self.assertTrue(file_name.endswith(".zip"))
+        with ZipFile(BytesIO(content)) as archive:
+            self.assertEqual(archive.namelist(), [f"{self.STEM_2A}-042024.xlsx"])
+
+    def test_all_groups_empty_still_throws(self):
+        with (
+            patch(f"{EXPORT_MODULE}.get_raw_return_data", return_value=None),
+            self.assertRaises(frappe.ValidationError),
+        ):
+            build_export(GSTIN_2A, "GSTR-2A", ["042024", "052024"], "monthly")
+
+
+class TestSheetRowSpill(IntegrationTestCase):
+    """A section with more rows than Excel allows continues on "<sheet> Part N"."""
+
+    def test_overflow_continues_on_a_part_sheet(self):
+        # data starts at row 7, so this leaves room for 2 rows per sheet
+        with patch(f"{EXPORT_MODULE}.EXCEL_MAX_ROW", 8):
+            wb = _build(GSTR2AExporter, GSTIN_2A, PERIOD_2A, RAW_2A, supplier_names={})
+
+        self.assertIn("B2B Part 2", wb.sheetnames)
+
+        first, second = wb["B2B"], wb["B2B Part 2"]
+        # 2A B2B here is 4 rows (2 item rows, a total row, a blank separator)
+        self.assertEqual(first.cell(7, 1).value, GSTIN_2A)
+        self.assertEqual(first.cell(8, 1).value, GSTIN_2A)
+        self.assertEqual(second.cell(7, 1).value, GSTIN_2A)
+
+        # the continuation carries the template's headers and merges, not just values
+        self.assertEqual(_cells(first)[(5, 1)], _cells(second)[(5, 1)])
+        self.assertEqual(len(first.merged_cells.ranges), len(second.merged_cells.ranges))
+
+    def test_no_part_sheet_when_everything_fits(self):
+        wb = _build(GSTR2AExporter, GSTIN_2A, PERIOD_2A, RAW_2A, supplier_names={})
+        self.assertNotIn("B2B Part 2", wb.sheetnames)
+
+
 class TestGSTR2ExportIntegration(IntegrationTestCase):
     """End-to-end: store the payload in GST Return Log, then build via the public entry point."""
 
@@ -453,7 +584,7 @@ class TestGSTR2ExportIntegration(IntegrationTestCase):
 
     @patch.object(
         GovReturnExporter,
-        "_live_gstin_info",
+        "_gstin_info",
         staticmethod(
             lambda gstin: {
                 "business_name": MOCK_BUSINESS,
@@ -470,3 +601,138 @@ class TestGSTR2ExportIntegration(IntegrationTestCase):
         ws = _load(content)["B2B"]
         self.assertEqual(ws.cell(7, 1).value, GSTIN_2B)
         self.assertEqual(ws.cell(7, 3).value, "S008400")
+
+
+class TestSupplierNamesAreBatched(IntegrationTestCase):
+    """2A resolves a name per supplier. That must be one query for the whole payload, not one
+    round trip each — a large return has tens of thousands of suppliers."""
+
+    SUPPLIERS: ClassVar[list] = [f"24AACT{i:04d}F1Z5" for i in range(5)]
+
+    def setUp(self):
+        for gstin in self.SUPPLIERS:
+            frappe.get_doc({"doctype": "GSTIN", "gstin": gstin, "legal_name": f"LEGAL {gstin}"}).insert(
+                ignore_permissions=True
+            )
+
+    def tearDown(self):
+        for gstin in self.SUPPLIERS:
+            frappe.db.delete("GSTIN", {"gstin": gstin})
+
+    def _raw(self):
+        return {
+            "b2b": [
+                {"ctin": gstin, "inv": [{"inum": f"INV-{gstin}", "idt": "10-05-2024", "val": 100}]}
+                for gstin in self.SUPPLIERS
+            ],
+            # SEZ imports key the supplier as sgstin, so the batch must look there too
+            "impgsez": [{"sgstin": self.SUPPLIERS[0], "benum": "1", "bedt": "10-05-2024"}],
+        }
+
+    def test_registry_is_read_once_not_per_supplier(self):
+        per_gstin = Mock(return_value={})
+        with (
+            patch(f"{EXPORT_MODULE}.get_raw_return_data", return_value=self._raw()),
+            patch.object(GSTR2AExporter, "_supplier_names", lambda self: {}),
+            patch.object(GovReturnExporter, "_gstin_info", staticmethod(per_gstin)),
+        ):
+            _, content = GSTR2AExporter(GSTIN_2A, [PERIOD_2A]).build()
+
+        ws = _load(content)["B2B"]
+        self.assertEqual(ws.cell(7, 2).value, f"LEGAL {self.SUPPLIERS[0]}")
+
+        # the company's own GSTIN is still looked up once for the Read me header; no supplier
+        # should be, or the batch missed them and we're back to a round trip each
+        looked_up = {call.args[0] for call in per_gstin.call_args_list}
+        self.assertEqual(looked_up - {GSTIN_2A}, set())
+
+    def test_batches_beyond_the_chunk_size(self):
+        """The IN list is chunked; a payload larger than one chunk must still resolve fully."""
+        many = [f"24AACT{i:04d}F1Z5" for i in range(12_000)]
+        docdata = {"b2b": [{"ctin": g} for g in many]}
+
+        with patch.object(GSTR2AExporter, "_supplier_names", lambda self: {}):
+            names = GSTR2AExporter._registry_names(GSTR2AExporter.__new__(GSTR2AExporter), docdata)
+
+        # only the 5 seeded rows exist, but all 12k must have been queried without error
+        self.assertEqual(len(names), len(self.SUPPLIERS))
+
+
+class TestExportFileLifecycle(IntegrationTestCase):
+    """Generated exports are scratch files: handed over on download, swept if abandoned."""
+
+    def _make_export_file(self, creation=None):
+        file = frappe.get_doc(
+            {
+                "doctype": "File",
+                "file_name": f"GSTR-2B-{GSTIN_2B}-{PERIOD_2B}.xlsx",
+                "attached_to_doctype": DOCTYPE,
+                "attached_to_name": DOCTYPE,
+                "is_private": 1,
+                "content": b"not-a-real-xlsx",
+            }
+        ).insert(ignore_permissions=True)
+
+        if creation:
+            frappe.db.set_value("File", file.name, "creation", creation, update_modified=False)
+
+        return file.name
+
+    def test_sweep_drops_only_abandoned_files(self):
+        stale = self._make_export_file(creation=add_days(now_datetime(), -3))
+        fresh = self._make_export_file()
+
+        delete_stale_export_files()
+
+        self.assertFalse(frappe.db.exists("File", stale))
+        self.assertTrue(frappe.db.exists("File", fresh), "swept a file the user may still download")
+
+        frappe.delete_doc("File", fresh, ignore_permissions=True, delete_permanently=True)
+
+
+class TestGSTINNameLookup(IntegrationTestCase):
+    """`_gstin_info` runs once per unique supplier on a 2A export, so the public API must be
+    the last resort: registry hit first, then the production-API gate, then the call."""
+
+    LOOKUP = "india_compliance.gst_india.utils.gstin_info._get_gstin_info"
+
+    def tearDown(self):
+        frappe.db.delete("GSTIN", {"gstin": GSTIN_2A})
+
+    def _registry_row(self, **names):
+        frappe.get_doc({"doctype": "GSTIN", "gstin": GSTIN_2A, **names}).insert(ignore_permissions=True)
+
+    def test_registry_hit_skips_the_api(self):
+        self._registry_row(legal_name=MOCK_LEGAL, trade_name=MOCK_TRADE)
+
+        with (
+            patch(f"{EXPORT_MODULE}.is_production_api_enabled", return_value=True),
+            patch(self.LOOKUP) as lookup,
+        ):
+            info = GovReturnExporter._gstin_info(GSTIN_2A)
+
+        self.assertEqual(info.legal_name, MOCK_LEGAL)
+        self.assertEqual(info.trade_name, MOCK_TRADE)
+        lookup.assert_not_called()
+
+    def test_nameless_registry_row_still_falls_through(self):
+        """Rows created before names were cached carry status only — they must not shadow
+        the API, or those GSTINs would export blank names forever."""
+        self._registry_row(status="Active")
+
+        with (
+            patch(f"{EXPORT_MODULE}.is_production_api_enabled", return_value=True),
+            patch(self.LOOKUP, return_value={"legal_name": MOCK_LEGAL}) as lookup,
+        ):
+            self.assertEqual(GovReturnExporter._gstin_info(GSTIN_2A), {"legal_name": MOCK_LEGAL})
+
+        lookup.assert_called_once()
+
+    def test_skipped_when_production_api_is_off(self):
+        with (
+            patch(f"{EXPORT_MODULE}.is_production_api_enabled", return_value=False),
+            patch(self.LOOKUP) as lookup,
+        ):
+            self.assertEqual(GovReturnExporter._gstin_info(GSTIN_2A), {})
+
+        lookup.assert_not_called()

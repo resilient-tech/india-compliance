@@ -7,6 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "gstin",
+  "legal_name",
+  "trade_name",
   "registration_date",
   "status",
   "transporter_id_status",
@@ -26,6 +28,19 @@
    "label": "GSTIN",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "description": "Registered legal name, as returned by the public GSTIN search. Cached here so repeat lookups (e.g. supplier names on a GSTR-2A export) don't re-hit the API.",
+   "fieldname": "legal_name",
+   "fieldtype": "Data",
+   "label": "Legal Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "trade_name",
+   "fieldtype": "Data",
+   "label": "Trade Name",
+   "read_only": 1
   },
   {
    "fieldname": "status",
