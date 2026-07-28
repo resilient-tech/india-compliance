@@ -140,13 +140,6 @@ TRANSPORTER_NAME_PROPERTIES = [
         "property_type": "Check",
         "value": "1",
     },
-    {
-        "doctype_or_field": "DocField",
-        "fieldname": "transporter_name",
-        "property": "fetch_if_empty",
-        "property_type": "Check",
-        "value": "1",
-    },
 ]
 
 LR_NO_PROPERTIES = [
