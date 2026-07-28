@@ -37,7 +37,7 @@
             "totInvValue": 100.0,
             "transMode": 1,
             "transDistance": 10,
-            "transporterName": "Test Common Supplier",
+            "transporterName": "Test Transporter Without GST ID",
             "vehicleNo": "GJ06AA1123",
             "vehicleType": "R",
             "itemList": [
@@ -55,8 +55,7 @@
                     "cessNonAdvol": 0
                 }
             ],
-            "mainHsnCode": "61149090",
-            "transporterId": "05AAACG2140A1ZL"
+            "mainHsnCode": "61149090"
         },
         "params": "action=GENEWAYBILL",
         "response_data": {
@@ -123,11 +122,10 @@
             "transDistance": 10,
             "transMode": 1,
             "transactionType": 1,
-            "transporterName": "Test Common Supplier",
+            "transporterName": "Test Transporter Without GST ID",
             "userGstin": "05AAACG2115R1ZN",
             "vehicleNo": "GJ07DL9009",
-            "vehicleType": "R",
-            "transporterId": "05AAACG2140A1ZL"
+            "vehicleType": "R"
         },
         "params": "action=GENEWAYBILL",
         "response_data": {
@@ -144,19 +142,19 @@
     "update_transporter": {
         "params": "action=UPDATETRANSPORTER",
         "values": {
-            "transporter": "_Test Transporter with Enrolment No",
-            "gst_transporter_id": "88AAACD8017H1ZX"
+            "transporter": "_Test Common Supplier",
+            "gst_transporter_id": "05AAACG2140A1ZL"
         },
         "request_data": {
             "ewbNo": "301002999920",
-            "transporterId": "88AAACD8017H1ZX"
+            "transporterId": "05AAACG2140A1ZL"
         },
         "response_data": {
             "message": "Transporter details are updated successfully",
             "result": {
                 "ewayBillNo": "301002999920",
                 "transUpdateDate": "05/10/2022 12:45:00 PM",
-                "transporterId": "88AAACD8017H1ZX"
+                "transporterId": "05AAACG2140A1ZL"
             },
             "success": true
         }
@@ -1088,11 +1086,10 @@
             "transDistance": 10,
             "transMode": 1,
             "transactionType": 1,
-            "transporterName": "Test Common Supplier",
+            "transporterName": "Test Transporter Without GST ID",
             "userGstin": "05AAACG2115R1ZN",
             "vehicleNo": "GJ07DL9009",
-            "vehicleType": "R",
-            "transporterId": "05AAACG2140A1ZL"
+            "vehicleType": "R"
         },
         "params": "action=GENEWAYBILL",
         "response_data": {
@@ -1404,7 +1401,7 @@
             "totInvValue": 118.0,
             "transMode": 1,
             "transDistance": 10,
-            "transporterName": "Test Common Supplier",
+            "transporterName": "Test Transporter Without GST ID",
             "vehicleNo": "GJ07DL9009",
             "vehicleType": "R",
             "itemList": [
@@ -1422,8 +1419,7 @@
                     "cessNonAdvol": 0
                 }
             ],
-            "mainHsnCode": "61149090",
-            "transporterId": "05AAACG2140A1ZL"
+            "mainHsnCode": "61149090"
         },
         "params": "action=GENEWAYBILL",
         "response_data": {
