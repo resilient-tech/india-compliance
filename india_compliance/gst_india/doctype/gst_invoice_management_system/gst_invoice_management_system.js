@@ -150,6 +150,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                     "Exact Match",
                     "Suggested Match",
                     "Mismatch",
+                    "Residual Match",
                     "Manual Match",
                     "Missing in PI",
                     "Suggested Mark as Pending",
