@@ -332,6 +332,7 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
     )
 
     invoice_data = None
+    is_generated_with_ship_to = None
     if result.SignedInvoice:
         decoded_invoice = json.loads(
             jwt.decode(result.SignedInvoice, options={"verify_signature": False})[
@@ -340,15 +341,9 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
         )
         invoice_data = frappe.as_json(decoded_invoice, indent=4)
 
-    # ship-to sent during IRN generation can be replaced at e-Waybill generation for
-    # exports, but not for B2B / SEZ (NIC error 2324)
-    is_generated_with_ship_to = bool(
-        doc.shipping_address_name
-        and doc.shipping_address_name != doc.customer_address
-        and doc.gst_category in ("Registered Regular", "SEZ")
-        and frappe.get_cached_value("Address", doc.shipping_address_name, "gstin")
-        != doc.billing_address_gstin,
-    )
+        # ship-to sent during IRN generation can be replaced at e-Waybill generation for
+        # exports, but not for B2B / SEZ (NIC error 2324)
+        is_generated_with_ship_to = bool(decoded_invoice.get("ShipDtls"))
 
     log_e_invoice(
         doc,
