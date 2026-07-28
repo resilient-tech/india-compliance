@@ -1103,6 +1103,11 @@ class ITCReductionDialog {
                 fieldname: "remarks",
                 label: __("Remarks"),
                 editable: 1,
+                // required once any head is reduced below the supplier value
+                validate: (value, row) =>
+                    TAX_HEADS.some((head) => flt(row[head]) < flt(row[`supplier_${head}`] || 0))
+                        ? !!String(value || "").trim()
+                        : true,
             },
         ];
     }
@@ -1142,29 +1147,17 @@ class ITCReductionDialog {
     }
 
     confirm() {
-        // raw values; the server clamps to [0, document] and equalizes CGST/SGST
-        const values = this.table.get_values();
-
-        // remarks mandatory when a head is reduced below the supplier value
-        const missing = this.rows.filter((row, index) => {
-            const reduced = TAX_HEADS.some(
-                (head) => flt(values[index][head]) < flt(row._inward_supply[head] || 0),
-            );
-            return reduced && !(values[index].remarks || "").trim();
-        });
-        if (missing.length) {
-            frappe.msgprint({
-                title: __("Remarks Required"),
-                message: __("Add remarks for reduced records: {0}", [
-                    missing
-                        .map((row) => frappe.utils.escape_html(row.bill_no || row.inward_supply_name))
-                        .join(", "),
-                ]),
+        // remarks are mandatory on a reduction; the table paints invalid cells red
+        if (!this.table.is_valid()) {
+            frappe.show_alert({
+                message: __("Add remarks where you reduced below the supplier value."),
                 indicator: "red",
             });
             return;
         }
 
+        // raw values; the server clamps to [0, document] and equalizes CGST/SGST
+        const values = this.table.get_values();
         const overrides = {};
         this.rows.forEach((row, index) => (overrides[row.inward_supply_name] = values[index]));
 

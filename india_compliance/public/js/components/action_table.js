@@ -81,6 +81,12 @@ india_compliance.ActionTable = class ActionTable {
             e.preventDefault();
             this.actions[$(e.currentTarget).data("action")].action(this);
         });
+
+        // live validation: repaint a row's cells as its values change
+        this.$wrapper.on("input", "input[data-fieldname]", (e) =>
+            this.validate_row($(e.currentTarget).data("row")),
+        );
+        this.validate_all();
     }
 
     cell_class(column) {
@@ -133,14 +139,49 @@ india_compliance.ActionTable = class ActionTable {
 
     set_value(row_index, fieldname, value) {
         this.$input(row_index, fieldname).val(value);
+        this.validate_row(row_index);
+    }
+
+    editable_values(index) {
+        return Object.fromEntries(
+            this.columns
+                .filter((column) => column.editable)
+                .map((column) => [column.fieldname, this.get_value(index, column.fieldname)]),
+        );
     }
 
     get_values() {
-        const editable = this.columns.filter((column) => column.editable);
-        return this.data.map((row, index) =>
-            Object.fromEntries(
-                editable.map((column) => [column.fieldname, this.get_value(index, column.fieldname)]),
-            ),
-        );
+        return this.data.map((row, index) => this.editable_values(index));
+    }
+
+    // data refs (e.g. supplier_*) + current editable values, for validation
+    row_values(index) {
+        return { ...this.data[index], ...this.editable_values(index) };
+    }
+
+    validate_row(index) {
+        const row = this.row_values(index);
+        this.columns.forEach((column) => {
+            if (!column.editable || !column.validate) return;
+            const valid = column.validate(row[column.fieldname], row);
+            const color = valid ? "" : "var(--red-500, #e24c4c)";
+            this.$input(index, column.fieldname).css("border-color", color);
+        });
+    }
+
+    validate_all() {
+        this.data.forEach((row, index) => this.validate_row(index));
+    }
+
+    is_valid() {
+        return this.data.every((_row, index) => {
+            const values = this.row_values(index);
+            return this.columns.every(
+                (column) =>
+                    !column.editable ||
+                    !column.validate ||
+                    column.validate(values[column.fieldname], values),
+            );
+        });
     }
 };
