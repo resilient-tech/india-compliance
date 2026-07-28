@@ -247,6 +247,14 @@
             "is_transporter": 1
         },
         {
+            "name": "_Test Transporter Without GST ID",
+            "supplier_name": "_Test Transporter Without GST ID",
+            "supplier_type": "Company",
+            "gstin": "",
+            "gst_category": "Unregistered",
+            "is_transporter": 1
+        },
+        {
             "supplier_name": "Test Internal with ISD Supplier",
             "name": "Test Internal with ISD Supplier",
             "supplier_type": "Company",

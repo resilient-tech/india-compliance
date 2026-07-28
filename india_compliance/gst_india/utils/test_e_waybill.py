@@ -250,7 +250,7 @@ class TestEWaybill(FrappeTestCase):
                 "reference_name": transporter_data.get("request_data").get("ewbNo"),
                 "content": (
                     "Transporter Info has been updated by <strong>Administrator</strong>. "
-                    "Transporter ID changed from <strong>05AAACG2140A1ZL</strong> to <strong>88AAACD8017H1ZX</strong>."
+                    "Transporter ID changed from <strong>&lt;empty&gt;</strong> to <strong>05AAACG2140A1ZL</strong>."
                 ),
             },
             frappe.get_doc(
@@ -964,10 +964,6 @@ class TestEWaybill(FrappeTestCase):
         self._generate_e_waybill(si.name)
         doc = load_doc("Sales Invoice", si.name, "submit")
 
-        # When a transporter GST ID is set, only that transporter can extend the
-        # e-Waybill. Clear it so the company can extend it (self-transport).
-        doc.gst_transporter_id = ""
-
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(e-Waybill can be extended between.*)$"),
@@ -1405,6 +1401,7 @@ class TestEWaybill(FrappeTestCase):
             mode_of_transport="Road",
             do_not_submit=True,
         )
+        si.gst_transporter_id = ""
         si.submit()
 
         e_waybill_data = EWaybillData(si).get_data()
@@ -1430,6 +1427,7 @@ class TestEWaybill(FrappeTestCase):
             mode_of_transport="Road",
             do_not_submit=True,
         )
+        si.gst_transporter_id = ""
         si.submit()
 
         e_waybill_data = EWaybillData(si).get_data()
@@ -1794,7 +1792,10 @@ class TestEWaybill(FrappeTestCase):
         invoice_args = self.e_waybill_test_data.get(test_case).get("kwargs")
         invoice_args.update(
             {
-                "transporter": "_Test Common Supplier",
+                # Transporter without a GST Transporter ID: the transporter is
+                # linked (so transporterName is still sent), but the id itself
+                # stays blank, matching the mocked request bodies.
+                "transporter": "_Test Transporter Without GST ID",
                 "distance": 10,
                 "mode_of_transport": "Road",
             }
