@@ -183,6 +183,13 @@
             "customer_type": "Individual",
             "gstin": "",
             "gst_category": "Overseas"
+        },
+        {
+            "name": "_Test Unregistered Customer-1",
+            "customer_name": "_Test Unregistered Customer-1",
+            "customer_type": "Individual",
+            "gstin": "",
+            "gst_category": "Unregistered"
         }
     ],
     "Supplier": [
@@ -297,6 +304,78 @@
                 {
                     "link_doctype": "Customer",
                     "link_name": "_Test Registered Customer"
+                }
+            ]
+        },
+        {
+            "name": "_Test Registered Customer Warehouse-Shipping",
+            "address_title": "_Test Registered Customer Warehouse",
+            "address_type": "Shipping",
+            "address_line1": "Test Address - Customer Warehouse",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AANFA2641L1ZF",
+            "gst_category": "Registered Regular",
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Customer"
+                }
+            ]
+        },
+        {
+            "name": "_Test Unregistered Consignee-Shipping",
+            "address_title": "_Test Unregistered Consignee",
+            "address_type": "Shipping",
+            "address_line1": "Test Address - Unregistered Consignee",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "",
+            "gst_category": "Unregistered",
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Customer"
+                }
+            ]
+        },
+        {
+            "name": "_Test Unregistered Customer-1-Billing",
+            "address_title": "_Test Unregistered Customer-1",
+            "address_type": "Billing",
+            "address_line1": "Test Address - Unregistered Customer",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "",
+            "gst_category": "Unregistered",
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Unregistered Customer-1"
+                }
+            ]
+        },
+        {
+            "name": "_Test Unregistered Customer-1 Consignee-Shipping",
+            "address_title": "_Test Unregistered Customer-1 Consignee",
+            "address_type": "Shipping",
+            "address_line1": "Test Address - Unregistered Customer Consignee",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "",
+            "gst_category": "Unregistered",
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Unregistered Customer-1"
                 }
             ]
         },
