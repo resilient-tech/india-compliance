@@ -154,7 +154,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual("BILL-24-00002", upload_data["b2b"][0]["inum"])
 
     def test_declared_from_books(self):
-        # CR25787E: snap to supplier within tolerance, else use books capped at document
+        # snap to supplier within tolerance, else books capped at document
         document = {"igst": 100, "cgst": 900, "sgst": 900, "cess": 0}
 
         # books within ₹1 -> trust supplier value
@@ -250,33 +250,36 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual(cn.declared_sgst, cn.declared_cgst)  # govt: CGST == SGST
 
     def test_preserve_pending_itc_declaration(self):
-        # re-download keeps the user's un-uploaded declared values; portal flags still refresh
-        pending = {"declared_cgst": 10, "itc_reduction_required": 1, "is_itc_reduction_blocked": 0}
-        preserve_pending_itc_declaration(
-            frappe._dict(ims_action="Accepted", previous_ims_action="No Action"), pending
-        )
-        self.assertNotIn("declared_cgst", pending)
-        self.assertNotIn("itc_reduction_required", pending)
-        self.assertIn("is_itc_reduction_blocked", pending)
-
-        # no pending action -> portal's declared values are kept
-        refreshed = {"declared_cgst": 10}
-        preserve_pending_itc_declaration(
-            frappe._dict(ims_action="Accepted", previous_ims_action="Accepted"), refreshed
-        )
-        self.assertIn("declared_cgst", refreshed)
-
-        # declaration changed after upload (action unchanged) -> still un-synced, so protected
-        redeclared = {"declared_cgst": 10}
+        # ours differs from portal -> keep ours, flag for re-upload
+        downloaded = {"declared_cgst": 5, "itc_reduction_required": 1, "is_itc_reduction_blocked": 0}
         preserve_pending_itc_declaration(
             frappe._dict(
-                ims_action="Accepted",
-                previous_ims_action="Accepted",
-                is_declaration_pending_upload=1,
+                ims_action="Accepted", previous_ims_action="", declared_cgst=10, itc_reduction_required=1
             ),
-            redeclared,
+            downloaded,
         )
-        self.assertNotIn("declared_cgst", redeclared)
+        self.assertNotIn("declared_cgst", downloaded)
+        self.assertNotIn("itc_reduction_required", downloaded)
+        self.assertIn("is_itc_reduction_blocked", downloaded)  # not a declared field -> untouched
+        self.assertEqual(downloaded["is_declaration_pending_upload"], 1)
+
+        # portal already matches ours -> take the download, nothing pending
+        downloaded = {"declared_cgst": 10, "itc_reduction_required": 1}
+        preserve_pending_itc_declaration(
+            frappe._dict(
+                ims_action="Accepted", previous_ims_action="", declared_cgst=10, itc_reduction_required=1
+            ),
+            downloaded,
+        )
+        self.assertIn("declared_cgst", downloaded)
+        self.assertNotIn("is_declaration_pending_upload", downloaded)
+
+        # no local action -> take the download
+        downloaded = {"declared_cgst": 5}
+        preserve_pending_itc_declaration(
+            frappe._dict(ims_action="", previous_ims_action="", declared_cgst=10), downloaded
+        )
+        self.assertIn("declared_cgst", downloaded)
 
     def test_update_action_with_declared_overrides(self):
         cn = create_gst_inward_supply(

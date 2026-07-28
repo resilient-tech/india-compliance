@@ -188,10 +188,10 @@ class GSTInvoiceManagementSystem(Document):
 
         declared_overrides = frappe.parse_json(declared_overrides) if declared_overrides else {}
 
-        # Auto-declare from books only for specified accepts the user didn't correct below
+        # books default for accepts not corrected in the dialog
         set_declared_itc([name for name in invoice_names if name not in declared_overrides], action)
 
-        # User corrections from the Phase 2 review dialog take precedence
+        # user corrections win over the books default
         if declared_overrides:
             apply_declared_overrides(declared_overrides)
 

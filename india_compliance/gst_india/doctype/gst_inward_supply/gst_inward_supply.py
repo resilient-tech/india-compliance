@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import get_link_to_form
+from frappe.utils import flt, get_link_to_form
 
 from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
 
@@ -60,23 +60,22 @@ def create_inward_supply(transaction):
 
 
 def preserve_pending_itc_declaration(existing, transaction):
-    """Keep the user's un-uploaded declared ITC; portal returns stale values until upload."""
-    action_pending = existing.ims_action and existing.ims_action != existing.previous_ims_action
-    # declaration changed after upload (action unchanged) — still un-synced, so protect it too
-    declaration_pending = existing.is_declaration_pending_upload
-
-    if not (action_pending or declaration_pending):
+    # keep our un-uploaded declaration; portal sends stale values till we upload
+    if not (existing.ims_action and existing.ims_action != existing.previous_ims_action):
         return
 
-    for field in (
-        "itc_reduction_required",
-        "declared_igst",
-        "declared_cgst",
-        "declared_sgst",
-        "declared_cess",
-        "remarks",
-    ):
+    numeric = ("itc_reduction_required", "declared_igst", "declared_cgst", "declared_sgst", "declared_cess")
+    # portal already matches ours -> nothing pending
+    if all(flt(existing.get(f)) == flt(transaction.get(f)) for f in numeric) and (
+        existing.get("remarks") or ""
+    ) == (transaction.get("remarks") or ""):
+        return
+
+    for field in (*numeric, "remarks"):
         transaction.pop(field, None)
+
+    # ours differs -> keep it and re-upload
+    transaction["is_declaration_pending_upload"] = 1
 
 
 def update_reco_action(linked_doc, reco_action, transaction):
@@ -110,7 +109,7 @@ def update_previous_ims_action(transaction):
         filters,
         {
             "previous_ims_action": transaction.previous_ims_action or "No Action",
-            # declaration is now in sync with the portal; clear the re-upload flag
+            # uploaded -> declaration in sync
             "is_declaration_pending_upload": 0,
         },
     )

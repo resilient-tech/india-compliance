@@ -282,9 +282,9 @@ class PurchaseInvoice:
         return Abs(Sum(getattr(self.PI_ITEM, field)))
 
 
-# CR25787E: ITC reduction declaration on specified records
+# declared ITC reduction on specified records
 
-ITC_REDUCTION_TOLERANCE = 1  # books rounding noise; snap to supplier value within this
+ITC_REDUCTION_TOLERANCE = 1  # books rounding noise; snap to supplier within this
 
 DECLARED_FIELDS = (
     "itc_reduction_required",
@@ -294,7 +294,7 @@ DECLARED_FIELDS = (
     "declared_cess",
 )
 
-# what _clean_declared / _declaration_changed need from a stored record
+# fields needed from the stored record
 DECLARATION_ROW_FIELDS = (
     "name",
     "is_itc_reduction_blocked",
@@ -307,19 +307,12 @@ DECLARATION_ROW_FIELDS = (
 
 
 def _declaration_changed(stored, declared):
-    """Whether the declared block differs from what's already stored.
-
-    Callers skip the write when nothing changed, and re-queue the record for upload
-    when it did: the action is unchanged (ims_action == previous_ims_action), so the
-    record would otherwise be skipped on save. previous_ims_action doubles as
-    prev_status in the payload and must stay put, so is_declaration_pending_upload
-    carries the "dirty" signal instead.
-    """
+    # changed -> caller re-flags for upload (action stays put, flag carries the dirty signal)
     return any(flt(stored.get(field)) != flt(declared.get(field)) for field in DECLARED_FIELDS)
 
 
 def set_declared_itc(invoice_names, action):
-    """On accept, store declared ITC reduction from books for specified records."""
+    """On accept, save books-derived declared ITC on specified matched records."""
     if action != "Accepted":
         return
 
@@ -329,7 +322,7 @@ def set_declared_itc(invoice_names, action):
         fields=[*DECLARATION_ROW_FIELDS, "doc_type", "is_amended", "link_doctype", "link_name"],
     )
 
-    # skip GSTN-blocked records: declaration is read-only, don't overwrite stored values
+    # blocked -> read-only declaration, skip
     specified = [
         row
         for row in rows
@@ -354,7 +347,7 @@ def _declared_from_books(document, book):
         doc_amount = flt(document.get(head))
         book_amount = flt(book.get(head))
 
-        # books may carry rounding noise; trust supplier within tolerance, else books (usually less)
+        # within tolerance -> use supplier, else books (usually less)
         declared[head] = (
             doc_amount if abs(book_amount - doc_amount) <= ITC_REDUCTION_TOLERANCE else book_amount
         )
@@ -363,13 +356,13 @@ def _declared_from_books(document, book):
 
 
 def apply_declared_overrides(overrides):
-    """Store user-confirmed declared ITC from the Phase 2 review dialog."""
+    """Save user-confirmed declared ITC."""
     rows = frappe.get_all(
         "GST Inward Supply",
         filters={"name": ["in", list(overrides)]},
         fields=list(DECLARATION_ROW_FIELDS),
     )
-    # skip GSTN-blocked records: their declaration is read-only
+    # blocked -> read-only declaration, skip
     document = {row.name: row for row in rows if not row.is_itc_reduction_blocked}
 
     for name, override in overrides.items():
@@ -398,7 +391,7 @@ def _clean_declared(document, declared):
 
 
 def is_specified_record(invoice):
-    # CR25787E: credit notes and downward amendments (B2BA, B2BDNA) carry declared ITC
+    # credit notes + amendments carry declared ITC
     return invoice.doc_type == "Credit Note" or invoice.is_amended
 
 

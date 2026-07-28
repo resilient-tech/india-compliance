@@ -26,7 +26,7 @@ CLASSIFICATION_MAP = {
 
 
 class IMS:
-    # specified records (CR25787E) that carry the declared ITC reduction block
+    # specified records carry the declared ITC block
     EMITS_ITC_REDUCTION = False
 
     VALUE_MAPS = frappe._dict(
@@ -117,7 +117,7 @@ class IMS:
             "igst": invoice.iamt,
             "cess": invoice.cess,
             "taxable_value": invoice.txval,
-            # ITC reduction (CR25787E) - present only for specified records
+            # ITC reduction: specified records only
             "itc_reduction_required": 1 if invoice.itcRedReq == "Y" else 0,
             "is_itc_reduction_blocked": 1 if invoice.isItcRedReqBlocked == "Y" else 0,
             "declared_igst": invoice.declIgst,
@@ -160,7 +160,7 @@ class IMS:
         ):
             data["remarks"] = invoice.remarks
 
-        # declared ITC: specified records, accept only, when govt allows declaration
+        # declared ITC: specified accepts, if govt allows
         if (
             not self.EMITS_ITC_REDUCTION
             or invoice.ims_action != "Accepted"
@@ -210,9 +210,11 @@ class IMS:
         category, doc_type = get_mapped_value(self.ims_category(), self.VALUE_MAPS.classification)
         inward_supply = frappe.qb.DocType("GST Inward Supply")
 
+        # blank baseline; download re-fills action and re-flags declaration if ours differs
         (
             frappe.qb.update(inward_supply)
             .set(inward_supply.previous_ims_action, "")
+            .set(inward_supply.is_declaration_pending_upload, 0)
             .where(inward_supply.classification == category)
             .where(inward_supply.doc_type == doc_type)
             .where(inward_supply.company_gstin == self.company_gstin)

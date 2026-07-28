@@ -965,7 +965,7 @@ async function apply_action(frm, action, invoice_names) {
         );
     }
 
-    // Phase 2: review/correct declared ITC where books differ from supplier beyond rounding
+    // review declared ITC where books differ from supplier
     if (action === "Accepted") {
         const review_rows = frm.reconciliation_tabs.data.filter(
             (row) => invoice_names.includes(row.inward_supply_name) && needs_itc_review(row),
@@ -1010,12 +1010,12 @@ function is_accept_allowed(row, action) {
 const TAX_HEADS = ["igst", "cgst", "sgst", "cess"];
 
 function is_specified_row(row) {
-    // mirror server is_specified_record: credit notes and amendments carry declared ITC
+    // mirror server is_specified_record
     return row.doc_type === "Credit Note" || !!row._inward_supply.is_amended;
 }
 
 function needs_itc_review(row) {
-    // matched specified record, govt allows declaration, books differ from supplier beyond rounding
+    // matched specified record where books differ from supplier
     if (!is_specified_row(row) || !row.purchase_invoice_name) return false;
     if (row._inward_supply.is_itc_reduction_blocked) return false;
 
