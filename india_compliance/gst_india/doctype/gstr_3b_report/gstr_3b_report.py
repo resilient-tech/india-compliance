@@ -17,6 +17,7 @@ from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.utils import (
     get_data_file_path,
     get_period,
+    load_doc,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import (
@@ -54,51 +55,90 @@ class GSTR3BReport(Document):
         return status or "Not Filed"
 
     def validate(self):
-        self.json_output = ""
         if not self.company_gstin:
             frappe.throw(_("Please enter GSTIN for Company {0}").format(self.company))
 
-        self.generation_status = "In Process"
+        if self.is_new():
+            existing_report = frappe.db.get_value(
+                "GSTR 3B Report",
+                {
+                    "company_gstin": self.company_gstin,
+                    "month_or_quarter": self.month_or_quarter,
+                    "year": self.year,
+                },
+                "name",
+            )
 
-        if self.enqueue_report:
-            frappe.msgprint(_("Initiated report generation in background"), alert=True)
-            frappe.enqueue_doc("GSTR 3B Report", self.name, "get_data", queue="long")
-            return
-
-        self.get_data()
-
-    def get_data(self):
-        try:
-            self.report_dict = json.loads(get_json("gstr_3b_report_template"))
-            self.report_dict["gstin"] = self.company_gstin
-            self.report_dict["ret_period"] = get_period(self.month_or_quarter, self.year)
-            self.month_or_quarter_no = get_period(self.month_or_quarter)
-            self.from_date = get_first_day(f"{cint(self.year)}-{self.month_or_quarter_no[0]}-01")
-            self.to_date = get_last_day(f"{cint(self.year)}-{self.month_or_quarter_no[1]}-01")
-
-            self._process_outward_itc()
-            self._process_inward_itc()
-
-            self.report_dict = format_values(self.report_dict)
-            self.json_output = frappe.as_json(self.report_dict)
-            self.generation_status = "Generated"
-
-            if self.enqueue_report:
-                self.db_set(
-                    {
-                        "json_output": self.json_output,
-                        "generation_status": self.generation_status,
-                    }
+            if existing_report:
+                frappe.throw(
+                    _("GSTR-3B Report for {0} {1} already exists: {2}").format(
+                        self.month_or_quarter,
+                        self.year,
+                        frappe.utils.get_link_to_form("GSTR 3B Report", existing_report),
+                    ),
+                    title=_("Report Already Exists"),
                 )
 
-        except Exception as e:
-            self.generation_status = "Failed"
-            self.db_set({"generation_status": self.generation_status})
-            frappe.db.commit()  # nosemgrep
-            raise e
+        self.json_output = ""
+        self.generation_status = "In Process"
 
-        finally:
-            frappe.publish_realtime("gstr3b_report_generation", doctype=self.doctype, docname=self.name)
+        if not self.enqueue_report:
+            self.get_data()
+
+    def on_update(self):
+        if not self.enqueue_report:
+            return
+
+        frappe.msgprint(_("Initiated report generation in background"), alert=True)
+        frappe.enqueue_doc(
+            "GSTR 3B Report",
+            self.name,
+            "generate",
+            queue="long",
+            job_id=f"gstr_3b_report:{self.name}",
+            deduplicate=True,
+            now=frappe.flags.in_test,
+            enqueue_after_commit=True,
+        )
+
+    def generate(self):
+        """Generate the report in the background and persist the result."""
+        try:
+            self.get_data()
+            self.db_set(
+                {"json_output": self.json_output, "generation_status": "Generated"},
+                commit=not frappe.flags.in_test,  # nosemgrep
+            )
+            self.notify_generation_complete(after_commit=True)
+        except Exception:
+            if not frappe.flags.in_test:
+                frappe.db.rollback()  # nosemgrep
+            self.db_set("generation_status", "Failed", commit=not frappe.flags.in_test)  # nosemgrep
+            self.notify_generation_complete(after_commit=False)
+            raise
+
+    def get_data(self):
+        self.report_dict = json.loads(get_json("gstr_3b_report_template"))
+        self.report_dict["gstin"] = self.company_gstin
+        self.report_dict["ret_period"] = get_period(self.month_or_quarter, self.year)
+        self.month_or_quarter_no = get_period(self.month_or_quarter)
+        self.from_date = get_first_day(f"{cint(self.year)}-{self.month_or_quarter_no[0]}-01")
+        self.to_date = get_last_day(f"{cint(self.year)}-{self.month_or_quarter_no[1]}-01")
+
+        self._process_outward_itc()
+        self._process_inward_itc()
+
+        self.report_dict = format_values(self.report_dict)
+        self.json_output = frappe.as_json(self.report_dict)
+        self.generation_status = "Generated"
+
+    def notify_generation_complete(self, after_commit):
+        frappe.publish_realtime(
+            "gstr3b_report_generation",
+            doctype=self.doctype,
+            docname=self.name,
+            after_commit=after_commit,
+        )
 
     def _get_filters(self):
         return frappe._dict(
@@ -241,37 +281,47 @@ def format_values(data, precision=2):
     return data
 
 
-@frappe.whitelist()
-def view_report(name: str):
-    frappe.has_permission("GSTR 3B Report", throw=True)
+def get_report(name: str):
+    report = load_doc("GSTR 3B Report", name)
 
-    json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
-    return json.loads(json_data)
+    if not report.json_output:
+        frappe.throw(_("Report data not found"), title=_("Invalid Data"))
+
+    return report
+
+
+def get_file_name(report):
+    return f"GSTR-3B-{report.company_gstin}-{report.month_or_quarter.replace(' ', '')}-{report.year}"
 
 
 @frappe.whitelist()
 def make_json(name: str):
-    frappe.has_permission("GSTR 3B Report", throw=True)
+    report = get_report(name)
 
-    json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
-    file_name = "GST3B.json"
-    frappe.local.response.filename = file_name
-    frappe.local.response.filecontent = json_data
+    frappe.local.response.filename = f"{get_file_name(report)}.json"
+    frappe.local.response.filecontent = report.json_output
     frappe.local.response.type = "download"
 
 
 @frappe.whitelist()
 def download_gstr3b_as_excel(name: str):
     """Download GSTR 3B report as Excel file"""
-    frappe.has_permission("GSTR 3B Report", throw=True)
-    json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
+    report = get_report(name)
 
-    if not json_data:
-        frappe.throw(_("Report data not found. Please generate the report."))
+    exporter = GSTR3BExcelExporter(json.loads(report.json_output))
+    exporter.generate_excel(get_file_name(report))
 
-    data = json.loads(json_data)
-    exporter = GSTR3BExcelExporter(data)
-    exporter.generate_excel()
+
+@frappe.whitelist()
+def download_gstr3b_as_pdf(name: str):
+    """Download GSTR 3B report as PDF file"""
+    report = get_report(name)
+
+    frappe.local.response.filename = f"{get_file_name(report)}.pdf"
+    frappe.local.response.filecontent = frappe.get_print(
+        "GSTR 3B Report", name, print_format="GSTR-3B", as_pdf=True, no_letterhead=True
+    )
+    frappe.local.response.type = "pdf"
 
 
 class GSTR3BExcelExporter:
@@ -386,7 +436,7 @@ class GSTR3BExcelExporter:
         self.month = None
         self.fiscal_year = None
 
-    def generate_excel(self):
+    def generate_excel(self, file_name):
         """Generate and export Excel file"""
         if not os.path.exists(self.TEMPLATE_FILE):
             frappe.throw(_("GSTR 3B Excel template not found"))
@@ -394,11 +444,7 @@ class GSTR3BExcelExporter:
         excel = ExcelExporter(file=self.TEMPLATE_FILE)
         self._update_worksheet(excel)
 
-        file_name = self._get_filename()
         excel.export(file_name)
-
-    def _get_filename(self):
-        return f"GSTR-3B-{self.gstin}-{self.month}-{self.fiscal_year}"
 
     def _update_worksheet(self, excel):
         self.worksheet = excel.wb[self.WORKSHEET_NAME]

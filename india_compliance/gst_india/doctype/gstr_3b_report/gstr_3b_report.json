@@ -25,6 +25,8 @@
   {
    "fieldname": "company",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Company",
    "options": "Company",
    "set_only_once": 1
@@ -32,14 +34,16 @@
   {
    "fieldname": "year",
    "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Year",
    "set_only_once": 1
   },
   {
    "fieldname": "json_output",
    "fieldtype": "Code",
-   "hidden": 1,
-   "label": "JSON Output"
+   "label": "JSON Output",
+   "read_only": 1
   },
   {
    "default": "0",
@@ -64,9 +68,9 @@
    "hide_border": 1
   },
   {
+   "depends_on": "eval: doc.enqueue_report",
    "fieldname": "generation_status",
    "fieldtype": "Data",
-   "hidden": 1,
    "label": "Status",
    "read_only": 1
   },
@@ -81,6 +85,8 @@
   {
    "fieldname": "company_gstin",
    "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Company GSTIN",
    "set_only_once": 1
   },
@@ -104,13 +110,15 @@
   {
    "fieldname": "month_or_quarter",
    "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Month or Quarter",
    "options": "Apr - Jun\nJul - Sep\nOct - Dec\nJan - Mar\nJanuary\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember",
    "set_only_once": 1
   }
  ],
  "links": [],
- "modified": "2026-02-13 20:43:36.278214",
+ "modified": "2026-07-22 13:56:05.507571",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
