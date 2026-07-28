@@ -177,12 +177,17 @@ class IMS:
             "declCess": flt(invoice.declared_cess),
         }
 
-        # any reversal -> declare it; none -> nothing was claimed
-        if any(declared.values()):
-            data["itcRedReq"] = "Y"
-            data.update(declared)
-        else:
+        # nothing claimed -> no reversal
+        if not any(declared.values()):
             data["itcRedReq"] = "N"
+            return
+
+        data["itcRedReq"] = "Y"
+
+        # full reversal -> omit values (portal reads absence as full); partial -> send them
+        supplier = (invoice.igst, invoice.cgst, invoice.sgst, invoice.cess)
+        if any(flt(d, 2) != flt(s, 2) for d, s in zip(declared.values(), supplier)):
+            data.update(declared)
 
     def _declared_reversal(self, declared, supplier, itc_red_req):
         # specified record with no value = full reversal -> supplier

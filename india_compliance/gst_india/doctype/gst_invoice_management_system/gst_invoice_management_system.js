@@ -1103,6 +1103,12 @@ class ITCReductionDialog {
                         row[`supplier_${head}`],
                     )}`,
             })),
+            {
+                fieldname: "remarks",
+                label: __("Remarks"),
+                editable: 1,
+                description: () => __("required when you reduce below the supplier value"),
+            },
         ];
     }
 
@@ -1115,6 +1121,7 @@ class ITCReductionDialog {
                 data[`books_${head}`] = row._purchase_invoice[head] || 0;
                 data[`supplier_${head}`] = row._inward_supply[head] || 0;
             });
+            data.remarks = row._inward_supply.remarks || "";
             return data;
         });
     }
@@ -1128,6 +1135,27 @@ class ITCReductionDialog {
     confirm() {
         // raw values; the server clamps to [0, document] and equalizes CGST/SGST
         const values = this.table.get_values();
+
+        // remarks mandatory when a head is reduced below the supplier value
+        const missing = this.rows.filter((row, index) => {
+            const reduced = TAX_HEADS.some(
+                (head) => flt(values[index][head]) < flt(row._inward_supply[head] || 0),
+            );
+            return reduced && !(values[index].remarks || "").trim();
+        });
+        if (missing.length) {
+            frappe.msgprint({
+                title: __("Remarks Required"),
+                message: __("Add remarks for reduced records: {0}", [
+                    missing
+                        .map((row) => frappe.utils.escape_html(row.bill_no || row.inward_supply_name))
+                        .join(", "),
+                ]),
+                indicator: "red",
+            });
+            return;
+        }
+
         const overrides = {};
         this.rows.forEach((row, index) => (overrides[row.inward_supply_name] = values[index]));
 

@@ -159,10 +159,10 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual(data["declCgst"], 850)
         self.assertEqual(data["declSgst"], 850)
 
-        # full reversal (declared = supplier) -> Y with supplier values
+        # full reversal (declared = supplier) -> Y, values omitted (portal reads absence as full)
         data = handler.convert_data_to_gov_format(self.gov_invoice(declared_cgst=900, declared_sgst=900))
         self.assertEqual(data["itcRedReq"], "Y")
-        self.assertEqual(data["declCgst"], 900)
+        self.assertNotIn("declCgst", data)
 
         # zero reversal (nothing declared) -> N, no declared block
         data = handler.convert_data_to_gov_format(
@@ -252,14 +252,15 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             {"link_doctype": "Purchase Invoice", "link_name": self.pinv.name},
         )
 
-        # document (supplier) tax is cgst = sgst = 900; override above supplier -> capped
-        overrides = {cn.name: {"igst": 0, "cgst": 5000, "sgst": 5000, "cess": 0}}
+        # supplier tax cgst = sgst = 900; override above supplier -> capped; remarks stored
+        overrides = {cn.name: {"igst": 0, "cgst": 5000, "sgst": 5000, "cess": 0, "remarks": "as per books"}}
         self.gst_ims.update_action((cn.name,), "Accepted", declared_overrides=overrides)
 
         cn.reload()
         self.assertEqual(cn.declared_cgst, 900)  # capped at document
         self.assertEqual(cn.declared_sgst, cn.declared_cgst)  # govt: CGST == SGST
         self.assertEqual(cn.itc_reduction_required, 1)
+        self.assertEqual(cn.remarks, "as per books")  # remarks carried through
 
     def test_declaration_change_requeues_upload(self):
         # An already-uploaded accept (ims_action == previous_ims_action) must re-upload
