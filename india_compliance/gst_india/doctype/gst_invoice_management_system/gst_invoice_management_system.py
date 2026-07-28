@@ -20,7 +20,6 @@ from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     InwardSupply,
     PurchaseInvoice,
     apply_declared_overrides,
-    set_declared_itc,
 )
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     verify_request_in_progress,
@@ -186,14 +185,9 @@ class GSTInvoiceManagementSystem(Document):
 
         set_itc_claim_period_on_ims_action(invoice_names, action, ims_period=self.period)
 
-        declared_overrides = frappe.parse_json(declared_overrides) if declared_overrides else {}
-
-        # books default for accepts not corrected in the dialog
-        set_declared_itc([name for name in invoice_names if name not in declared_overrides], action)
-
-        # user corrections win over the books default
+        # user-confirmed declared reversal from the review dialog (default full comes from download)
         if declared_overrides:
-            apply_declared_overrides(declared_overrides)
+            apply_declared_overrides(frappe.parse_json(declared_overrides))
 
     @frappe.whitelist()
     def get_invoice_details(self, purchase_name: str | None, inward_supply_name: str | None):

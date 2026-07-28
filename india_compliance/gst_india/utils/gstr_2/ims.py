@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import flt
 from frappe.utils.data import format_date
 
 from india_compliance.gst_india.constants import (
@@ -117,13 +118,14 @@ class IMS:
             "igst": invoice.iamt,
             "cess": invoice.cess,
             "taxable_value": invoice.txval,
-            # ITC reduction: specified records only
+            # itcRedReq: Y = reduce ITC, N = nothing claimed, absent = no action yet
             "itc_reduction_required": 1 if invoice.itcRedReq == "Y" else 0,
             "is_itc_reduction_blocked": 1 if invoice.isItcRedReqBlocked == "Y" else 0,
-            "declared_igst": invoice.declIgst,
-            "declared_cgst": invoice.declCgst,
-            "declared_sgst": invoice.declSgst,
-            "declared_cess": invoice.declCess,
+            # declared reversal per head; portal omits values for a full reversal -> supplier
+            "declared_igst": self._declared_reversal(invoice.declIgst, invoice.iamt, invoice.itcRedReq),
+            "declared_cgst": self._declared_reversal(invoice.declCgst, invoice.camt, invoice.itcRedReq),
+            "declared_sgst": self._declared_reversal(invoice.declSgst, invoice.samt, invoice.itcRedReq),
+            "declared_cess": self._declared_reversal(invoice.declCess, invoice.cess, invoice.itcRedReq),
             "remarks": invoice.remarks,
             "is_remarks_blocked": 1 if invoice.isRemarksBlocked == "Y" else 0,
         }
@@ -152,15 +154,15 @@ class IMS:
         return data
 
     def set_itc_reduction(self, data, invoice):
-        # remarks: optional, any section, reject/pending only
+        # remarks: any action, when not blocked
         if (
-            invoice.ims_action in ("Rejected", "Pending")
+            invoice.ims_action in ("Accepted", "Rejected", "Pending")
             and invoice.remarks
             and not invoice.is_remarks_blocked
         ):
             data["remarks"] = invoice.remarks
 
-        # declared ITC: specified accepts, if govt allows
+        # declared reversal: specified accepts, if govt allows
         if (
             not self.EMITS_ITC_REDUCTION
             or invoice.ims_action != "Accepted"
@@ -168,17 +170,25 @@ class IMS:
         ):
             return
 
-        data["itcRedReq"] = "Y" if invoice.itc_reduction_required else "N"
+        declared = {
+            "declIgst": flt(invoice.declared_igst),
+            "declCgst": flt(invoice.declared_cgst),
+            "declSgst": flt(invoice.declared_sgst),
+            "declCess": flt(invoice.declared_cess),
+        }
 
-        if invoice.itc_reduction_required:
-            data.update(
-                {
-                    "declIgst": invoice.declared_igst,
-                    "declCgst": invoice.declared_cgst,
-                    "declSgst": invoice.declared_sgst,
-                    "declCess": invoice.declared_cess,
-                }
-            )
+        # any reversal -> declare it; none -> nothing was claimed
+        if any(declared.values()):
+            data["itcRedReq"] = "Y"
+            data.update(declared)
+        else:
+            data["itcRedReq"] = "N"
+
+    def _declared_reversal(self, declared, supplier, itc_red_req):
+        # specified record with no value = full reversal -> supplier
+        if self.EMITS_ITC_REDUCTION and itc_red_req != "N" and declared is None:
+            return supplier
+        return declared
 
     def get_existing_transactions(self):
         category, doc_type = get_mapped_value(self.ims_category(), self.VALUE_MAPS.classification)

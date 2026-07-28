@@ -284,8 +284,6 @@ class PurchaseInvoice:
 
 # declared ITC reduction on specified records
 
-ITC_REDUCTION_TOLERANCE = 1  # books rounding noise; snap to supplier within this
-
 DECLARED_FIELDS = (
     "itc_reduction_required",
     "declared_igst",
@@ -309,50 +307,6 @@ DECLARATION_ROW_FIELDS = (
 def _declaration_changed(stored, declared):
     # changed -> caller re-flags for upload (action stays put, flag carries the dirty signal)
     return any(flt(stored.get(field)) != flt(declared.get(field)) for field in DECLARED_FIELDS)
-
-
-def set_declared_itc(invoice_names, action):
-    """On accept, save books-derived declared ITC on specified matched records."""
-    if action != "Accepted":
-        return
-
-    rows = frappe.get_all(
-        "GST Inward Supply",
-        filters={"name": ["in", invoice_names]},
-        fields=[*DECLARATION_ROW_FIELDS, "doc_type", "is_amended", "link_doctype", "link_name"],
-    )
-
-    # blocked -> read-only declaration, skip
-    specified = [
-        row
-        for row in rows
-        if is_specified_record(row) and is_pi_matched(row) and not row.is_itc_reduction_blocked
-    ]
-    if not specified:
-        return
-
-    books = PurchaseInvoice().get_all(names=[row.link_name for row in specified])
-
-    for row in specified:
-        if book := books.get(row.link_name):
-            declared = _declared_from_books(row, book)
-            if _declaration_changed(row, declared):
-                declared["is_declaration_pending_upload"] = 1
-                frappe.db.set_value("GST Inward Supply", row.name, declared)
-
-
-def _declared_from_books(document, book):
-    declared = {}
-    for head in ("igst", "cgst", "sgst", "cess"):
-        doc_amount = flt(document.get(head))
-        book_amount = flt(book.get(head))
-
-        # within tolerance -> use supplier, else books (usually less)
-        declared[head] = (
-            doc_amount if abs(book_amount - doc_amount) <= ITC_REDUCTION_TOLERANCE else book_amount
-        )
-
-    return _clean_declared(document, declared)
 
 
 def apply_declared_overrides(overrides):
@@ -388,12 +342,3 @@ def _clean_declared(document, declared):
         "declared_sgst": values["sgst"],
         "declared_cess": values["cess"],
     }
-
-
-def is_specified_record(invoice):
-    # credit notes + amendments carry declared ITC
-    return invoice.doc_type == "Credit Note" or invoice.is_amended
-
-
-def is_pi_matched(invoice):
-    return invoice.link_doctype == "Purchase Invoice" and invoice.link_name

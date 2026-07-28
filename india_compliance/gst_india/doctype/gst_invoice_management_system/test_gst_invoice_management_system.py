@@ -7,10 +7,7 @@ from frappe.utils import add_to_date
 
 from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     InwardSupply,
-    PurchaseInvoice,
-    _declared_from_books,
     apply_declared_overrides,
-    set_declared_itc,
 )
 from india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system import (
     IMSReconciler,
@@ -153,53 +150,30 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         upload_data = get_data_for_upload("24AAQCA8719H1ZC", "reset")
         self.assertEqual("BILL-24-00002", upload_data["b2b"][0]["inum"])
 
-    def test_declared_from_books(self):
-        # snap to supplier within tolerance, else books capped at document
-        document = {"igst": 100, "cgst": 900, "sgst": 900, "cess": 0}
-
-        # books within ₹1 -> trust supplier value
-        self.assertEqual(
-            _declared_from_books(document, {"igst": 100.5, "cgst": 900, "sgst": 900, "cess": 0}),
-            {
-                "itc_reduction_required": 1,
-                "declared_igst": 100,
-                "declared_cgst": 900,
-                "declared_sgst": 900,
-                "declared_cess": 0,
-            },
-        )
-
-        # books lower (>₹1) -> books value, sgst mirrors cgst
-        self.assertEqual(
-            _declared_from_books(document, {"igst": 80, "cgst": 850, "sgst": 850, "cess": 0}),
-            {
-                "itc_reduction_required": 1,
-                "declared_igst": 80,
-                "declared_cgst": 850,
-                "declared_sgst": 850,
-                "declared_cess": 0,
-            },
-        )
-
-        # books higher -> capped at document
-        capped = _declared_from_books(document, {"igst": 500, "cgst": 1000, "sgst": 1000, "cess": 0})
-        self.assertEqual(capped["declared_cgst"], 900)
-
-        # no tax -> reduction not required
-        zero = _declared_from_books(
-            {"igst": 0, "cgst": 0, "sgst": 0, "cess": 0},
-            {"igst": 0, "cgst": 0, "sgst": 0, "cess": 0},
-        )
-        self.assertEqual(zero["itc_reduction_required"], 0)
-
     def test_gov_format_itc_reduction(self):
         handler = IMSB2BCN(self.gst_ims.company, self.gst_ims.company_gstin)
 
-        # accept -> declared block emitted
+        # partial reversal -> declared values sent
         data = handler.convert_data_to_gov_format(self.gov_invoice())
         self.assertEqual(data["itcRedReq"], "Y")
         self.assertEqual(data["declCgst"], 850)
         self.assertEqual(data["declSgst"], 850)
+
+        # full reversal (declared = supplier) -> Y with supplier values
+        data = handler.convert_data_to_gov_format(self.gov_invoice(declared_cgst=900, declared_sgst=900))
+        self.assertEqual(data["itcRedReq"], "Y")
+        self.assertEqual(data["declCgst"], 900)
+
+        # zero reversal (nothing declared) -> N, no declared block
+        data = handler.convert_data_to_gov_format(
+            self.gov_invoice(declared_igst=0, declared_cgst=0, declared_sgst=0, declared_cess=0)
+        )
+        self.assertEqual(data["itcRedReq"], "N")
+        self.assertNotIn("declCgst", data)
+
+        # remarks ride along on accept
+        data = handler.convert_data_to_gov_format(self.gov_invoice(remarks="as per books"))
+        self.assertEqual(data["remarks"], "as per books")
 
         # govt blocked -> suppressed
         data = handler.convert_data_to_gov_format(self.gov_invoice(is_itc_reduction_blocked=1))
@@ -218,36 +192,15 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         )
         self.assertNotIn("itcRedReq", data)
 
-    def test_set_declared_itc_on_accept(self):
-        cn = create_gst_inward_supply(
-            bill_no="CN-IMS-DECL",
-            bill_date="2024-12-11",
-            classification="CDNR",
-            doc_type="Credit Note",
-            is_amended=0,
-            previous_ims_action="No Action",
-            return_period_2b="122024",
-            gen_date_2b="2024-12-11",
-        )
-        self.addCleanup(self.delete_inward_supply, cn.name)
+    def test_download_declared_reversal(self):
+        # portal -> ERP: no value = full reversal (supplier); N / non-specified = as-is
+        specified = IMSB2BCN(self.gst_ims.company, self.gst_ims.company_gstin)
+        b2b = IMSB2B(self.gst_ims.company, self.gst_ims.company_gstin)
 
-        frappe.db.set_value(
-            "GST Inward Supply",
-            cn.name,
-            {"link_doctype": "Purchase Invoice", "link_name": self.pinv.name},
-        )
-
-        # expected declared = linked PI tax reconciled against the credit note's own tax
-        document = {head: cn.get(head) or 0 for head in ("igst", "cgst", "sgst", "cess")}
-        books = PurchaseInvoice().get_all(names=[self.pinv.name]).get(self.pinv.name) or {}
-        expected = _declared_from_books(document, books)
-
-        set_declared_itc((cn.name,), "Accepted")
-
-        cn.reload()
-        self.assertEqual(cn.itc_reduction_required, expected["itc_reduction_required"])
-        self.assertEqual(cn.declared_cgst, expected["declared_cgst"])
-        self.assertEqual(cn.declared_sgst, cn.declared_cgst)  # govt: CGST == SGST
+        self.assertEqual(specified._declared_reversal(None, 900, "Y"), 900)  # full
+        self.assertEqual(specified._declared_reversal(8, 900, "Y"), 8)  # partial
+        self.assertIsNone(specified._declared_reversal(None, 900, "N"))  # explicit zero
+        self.assertIsNone(b2b._declared_reversal(None, 900, "Y"))  # non-specified
 
     def test_preserve_pending_itc_declaration(self):
         # ours differs from portal -> keep ours, flag for re-upload
