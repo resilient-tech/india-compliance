@@ -9,6 +9,9 @@ def execute():
     Only invoices with an IRN but no e-Waybill yet are relevant: ship-to sent during
     IRN generation cannot be replaced at e-Waybill generation (NIC error 2324), so the
     shipping address must stay locked until the e-Waybill is generated.
+
+    This applies to B2B / SEZ only. For exports, ship-to can be replaced at e-Waybill
+    generation, so those invoices must not be flagged.
     """
     log = frappe.qb.DocType("e-Invoice Log")
     si = frappe.qb.DocType("Sales Invoice")
@@ -21,6 +24,7 @@ def execute():
         .where(IfNull(si.ewaybill, "") == "")
         .where(IfNull(si.shipping_address_name, "") != "")
         .where(si.shipping_address_name != IfNull(si.customer_address, ""))
+        .where(si.gst_category.isin(("Registered Regular", "SEZ")))
     )
 
     (

@@ -44,6 +44,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     EXTEND_VALIDITY_REASON_CODES,
     ITEM_LIMIT,
     PERMITTED_DOCTYPES,
+    SANDBOX_SHIP_TO,
     SHIP_TO_TRANSACTION_TYPES,
     SUB_SUPPLY_TYPES,
     TRANSIT_TYPES,
@@ -1288,9 +1289,12 @@ class EWaybillData(GSTTransactionData):
         if (
             is_e_waybill_changes_applicable(self.settings)
             and self.transaction_details.transaction_type in SHIP_TO_TRANSACTION_TYPES
+            and not frappe.get_cached_value(
+                "e-Invoice Log", {"irn": self.doc.irn, "is_generated_with_ship_to": 1}
+            )
         ):
             if self.sandbox_mode and self.ship_to.gstin and self.ship_to.gstin != "URP":
-                self.ship_to.update({"gstin": "02AMBPG7773M002", "state_number": "02", "pincode": 171302})
+                self.ship_to.update(SANDBOX_SHIP_TO)
 
             data["ExpShipDtls"] = {
                 "Gstin": self.ship_to.gstin,
@@ -1303,12 +1307,6 @@ class EWaybillData(GSTTransactionData):
             }
 
         return self.sanitize_data(data)
-
-    def irn_has_ship_to_details(self):
-        invoice_data = frappe.db.get_value("e-Invoice Log", self.doc.irn, "invoice_data")
-        if not invoice_data:
-            return ""
-        return (json.loads(invoice_data).get("ShipDtls") or {}).get("Gstin", "")
 
     def get_data_for_cancellation(self, values):
         self.validate_if_e_waybill_is_set()
@@ -1710,9 +1708,15 @@ class EWaybillData(GSTTransactionData):
             if side.gst_category == "SEZ":
                 side.state_number = 96
 
+        if has_different_to_address:
+            self.ship_to = self.get_address_details(address.ship_to)
+
+            # two addresses of the same party are a Regular transaction, since Ship To
+            # GSTIN can't be the same as Bill To GSTIN. "URP" denotes a missing GSTIN
+            has_different_to_address = self.ship_to.gstin != self.bill_to.gstin or self.ship_to.gstin == "URP"
+
         if has_different_to_address and has_different_from_address:
             transaction_type = 4
-            self.ship_to = self.get_address_details(address.ship_to)
             self.ship_from = self.get_address_details(address.ship_from)
 
         elif has_different_from_address:
@@ -1721,7 +1725,6 @@ class EWaybillData(GSTTransactionData):
 
         elif has_different_to_address:
             transaction_type = 2
-            self.ship_to = self.get_address_details(address.ship_to)
 
         self.transaction_details.transaction_type = transaction_type
 
@@ -1777,6 +1780,7 @@ class EWaybillData(GSTTransactionData):
             REGISTERED_GSTIN = "05AAACG2115R1ZN"
             OTHER_GSTIN = "05AAACG2140A1ZL"
             SEZ_GSTIN = "27AAJCS5738D1Z6"
+            SHIPPING_GSTIN = SANDBOX_SHIP_TO["gstin"]
 
             self.transaction_details.update(
                 {
@@ -1825,11 +1829,12 @@ class EWaybillData(GSTTransactionData):
 
             self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
             self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
-            if self.ship_to.gstin:
-                # ship to gstin can't be the same as bill to gstin
-                self.ship_to.gstin = _get_sandbox_gstin(self.ship_to, 0)
 
-            # TODO: in future add ship_to gstin in sandbox as SHIPPING_GSTIN = "07AAFCD5862R1ZX" and update the failing test cases
+            if (
+                self.ship_to.gstin != "URP"
+                and self.transaction_details.transaction_type in SHIP_TO_TRANSACTION_TYPES
+            ):
+                self.ship_to.gstin = SHIPPING_GSTIN
 
         if self.doc.get("is_return") or self.bill_to.gst_category == "SEZ":
             to_state_code = self.bill_to.state_number

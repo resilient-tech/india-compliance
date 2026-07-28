@@ -7,6 +7,12 @@ from frappe.utils import getdate
 # (already live in sandbox)
 E_WAYBILL_CHANGES_APPLICABLE_DATE = getdate("2026-08-01")
 
+SANDBOX_SHIP_TO = {
+    "gstin": "02AMBPG7773M002",
+    "state_number": "02",
+    "pincode": 171302,
+}
+
 selling_address = {
     "bill_from": "company_address",
     "bill_to": "customer_address",
