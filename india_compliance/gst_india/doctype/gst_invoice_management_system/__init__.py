@@ -310,11 +310,11 @@ def _declaration_changed(stored, declared):
 
 
 def apply_declared_overrides(overrides):
-    """Save user-confirmed declared ITC (and remarks for a partial reversal)."""
+    """Save user-confirmed declared ITC (and remarks) from the review dialog."""
     rows = frappe.get_all(
         "GST Inward Supply",
         filters={"name": ["in", list(overrides)]},
-        fields=[*DECLARATION_ROW_FIELDS, "remarks", "is_remarks_blocked"],
+        fields=list(DECLARATION_ROW_FIELDS),
     )
     # blocked -> read-only declaration, skip
     document = {row.name: row for row in rows if not row.is_itc_reduction_blocked}
@@ -324,18 +324,13 @@ def apply_declared_overrides(overrides):
             continue
 
         declared = _clean_declared(doc, override)
+        if not _declaration_changed(doc, declared):
+            continue
 
-        # remarks: mandatory on a partial reversal (enforced in the dialog), stored here
-        remarks = override.get("remarks")
-        remarks_changed = (
-            remarks is not None and not doc.is_remarks_blocked and (remarks or "") != (doc.remarks or "")
-        )
-        if remarks_changed:
-            declared["remarks"] = remarks
-
-        if _declaration_changed(doc, declared) or remarks_changed:
-            declared["is_declaration_pending_upload"] = 1
-            frappe.db.set_value("GST Inward Supply", name, declared)
+        # remarks travel with the declaration; the dialog makes them mandatory on a reduction
+        declared["remarks"] = override.get("remarks") or ""
+        declared["is_declaration_pending_upload"] = 1
+        frappe.db.set_value("GST Inward Supply", name, declared)
 
 
 def _clean_declared(document, declared):
