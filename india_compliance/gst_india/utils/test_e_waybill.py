@@ -1792,9 +1792,7 @@ class TestEWaybill(FrappeTestCase):
         invoice_args = self.e_waybill_test_data.get(test_case).get("kwargs")
         invoice_args.update(
             {
-                # Transporter without a GST Transporter ID: the transporter is
-                # linked (so transporterName is still sent), but the id itself
-                # stays blank, matching the mocked request bodies.
+                # used this supplier to match the mocked response without `transporterId`
                 "transporter": "_Test Transporter Without GST ID",
                 "distance": 10,
                 "mode_of_transport": "Road",
