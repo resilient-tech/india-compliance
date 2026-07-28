@@ -35,6 +35,7 @@ from india_compliance.gst_india.utils import (
     get_place_of_supply,
     get_place_of_supply_options,
     has_gst_taxes,
+    is_foreign_doc,
     is_import_transaction,
     is_overseas_doc,
     join_list_with_custom_separators,
@@ -2026,9 +2027,6 @@ ADDRESS_DEPENDENT_FIELDS = {
     "supplier_address": ("supplier_gstin", "gst_category"),
 }
 
-# ship-to address; not synced into any transaction field, only change-tracked
-SHIPPING_ADDRESS_FIELDS = ("shipping_address_name",)
-
 
 def sync_address_dependent_fields_on_submit(doc, method=None):
     if doc.docstatus != 1 or ignore_gst_validations(doc):
@@ -2039,8 +2037,8 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
 
     changed_address_fields = [field for field in ADDRESS_DEPENDENT_FIELDS if has_changed(field)]
 
-    if any(has_changed(field) for field in SHIPPING_ADDRESS_FIELDS):
-        validate_shipping_address_change(doc)
+    if has_changed("shipping_address_name") and is_shipping_address_change_restricted(doc):
+        changed_address_fields.append("shipping_address_name")
 
     if not changed_address_fields and not has_changed("place_of_supply"):
         return
@@ -2073,21 +2071,16 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
     GSTAccounts().validate(doc, is_sales_transaction)
 
 
-def validate_shipping_address_change(doc):
-    if not doc.get("irn"):
-        return
+def is_shipping_address_change_restricted(doc):
+    if doc.get("ewaybill"):
+        return True
 
-    if not doc.has_value_changed("shipping_address_name"):
-        return
+    # Once sent in e-invoice, shipping address cannot be changed in e-waybill using IRN.
+    # It can be replaced for exports, as their e-Waybill isn't generated using IRN.
+    if not doc.get("irn") or is_foreign_doc(doc):
+        return False
 
-    # e-Invoice Log is named after the IRN
-    if not frappe.get_cached_value("e-Invoice Log", doc.irn, "is_generated_with_ship_to"):
-        return
-
-    frappe.throw(
-        _("Cannot change the shipping address after it has been used to generate e-Invoice"),
-        title=_("Cannot change shipping address"),
-    )
+    return bool(frappe.get_cached_value("e-Invoice Log", doc.irn, "is_generated_with_ship_to"))
 
 
 def sync_gst_details_from_address(doc, changed_address_fields):
