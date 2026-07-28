@@ -400,12 +400,7 @@ class PurchaseInvoice:
 
         query = (
             self.get_query(is_return=is_return)
-            .where(self.PI.posting_date[self.from_date : self.to_date])
-            .where(
-                self.PI.name.notin(
-                    PurchaseInvoice.query_matched_purchase_invoice(self.from_date, self.to_date)
-                )
-            )
+            .where(IfNull(self.PI.reconciliation_status, "").notin(("Reconciled", "Match Found")))
             .where(self.PI.gst_category.isin(gst_category))
             .where(self.PI.is_return == is_return)
         )
@@ -547,8 +542,7 @@ class BillOfEntry:
         query = (
             self.get_query()
             .where(self.PI.gst_category == gst_category)
-            .where(self.BOE.posting_date[self.from_date : self.to_date])
-            .where(self.BOE.name.notin(BillOfEntry.query_matched_bill_of_entry(self.from_date, self.to_date)))
+            .where(IfNull(self.BOE.reconciliation_status, "").notin(("Reconciled", "Match Found")))
         )
 
         data = query.run(as_dict=True)
