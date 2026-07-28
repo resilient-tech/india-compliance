@@ -82,11 +82,11 @@ india_compliance.ActionTable = class ActionTable {
             this.actions[$(e.currentTarget).data("action")].action(this);
         });
 
-        // live validation: repaint a row's cells as its values change
-        this.$wrapper.on("input", "input[data-fieldname]", (e) =>
+        // live validation: validate a row's cells as its values change
+        this.$wrapper.on("input change", "input[data-fieldname]", (e) =>
             this.validate_row($(e.currentTarget).data("row")),
         );
-        this.validate_all();
+        this.data.forEach((_row, index) => this.validate_row(index)); // initial validation
     }
 
     cell_class(column) {
@@ -161,25 +161,22 @@ india_compliance.ActionTable = class ActionTable {
 
     validate_row(index) {
         const row = this.row_values(index);
+        let valid = true;
         this.columns.forEach((column) => {
             if (!column.editable || !column.validate) return;
-            const valid = column.validate(row[column.fieldname], row);
-            const color = valid ? "" : "var(--red-500, #e24c4c)";
-            this.$input(index, column.fieldname).css("border-color", color);
-        });
-    }
+            const ok = column.validate(row[column.fieldname], row);
+            const el = this.$input(index, column.fieldname)[0];
 
-    validate_all() {
-        this.data.forEach((row, index) => this.validate_row(index));
+            if (el) {
+                if (ok) el.style.removeProperty("border");
+                else el.style.setProperty("border", "1px solid var(--red-500, #e24c4c)", "important");
+            }
+            if (!ok) valid = false;
+        });
+        return valid;
     }
 
     is_valid() {
-        return this.data.every((_row, index) => {
-            const values = this.row_values(index);
-            return this.columns.every(
-                (column) =>
-                    !column.editable || !column.validate || column.validate(values[column.fieldname], values),
-            );
-        });
+        return this.data.map((_row, index) => this.validate_row(index)).every(Boolean);
     }
 };

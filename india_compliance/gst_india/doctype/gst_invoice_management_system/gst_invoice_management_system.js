@@ -1074,7 +1074,7 @@ class ITCReductionDialog {
                 },
                 {
                     label: __("Use supplier value (all)"),
-                    action: () => this.fill_all((row, head) => row[`supplier_${head}`]),
+                    action: () => this.use_supplier(),
                 },
             ],
         });
@@ -1126,10 +1126,12 @@ class ITCReductionDialog {
         });
     }
 
-    fill_all(get_value) {
-        this.table.data.forEach((row, index) =>
-            TAX_HEADS.forEach((head) => this.table.set_value(index, head, get_value(row, head))),
-        );
+    use_supplier() {
+        this.table.data.forEach((row, index) => {
+            TAX_HEADS.forEach((head) => this.table.set_value(index, head, row[`supplier_${head}`]));
+            if ((this.table.get_value(index, "remarks") || "").trim() === __("as per books"))
+                this.table.set_value(index, "remarks", "");
+        });
     }
 
     use_books() {
@@ -1158,8 +1160,9 @@ class ITCReductionDialog {
 
         // raw values; the server clamps to [0, document] and equalizes CGST/SGST
         const values = this.table.get_values();
-        const overrides = {};
-        this.rows.forEach((row, index) => (overrides[row.inward_supply_name] = values[index]));
+        const overrides = Object.fromEntries(
+            this.rows.map((row, index) => [row.inward_supply_name, values[index]]),
+        );
 
         this.confirmed = true;
         this.dialog.hide();
