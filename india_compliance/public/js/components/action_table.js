@@ -93,7 +93,7 @@ india_compliance.ActionTable = class ActionTable {
             : this.format_value(row, column);
 
         if (!column.description) return cell;
-        return `${cell}<br><small class="text-muted">${column.description(row)}</small>`;
+        return `${cell}<small class="text-muted">${column.description(row)}</small>`;
     }
 
     get_input_html(row, index, column) {
@@ -118,7 +118,7 @@ india_compliance.ActionTable = class ActionTable {
         const value = row[column.fieldname];
         if (column.format) return column.format(value, row);
         if (column.fieldtype) return frappe.format(value, { fieldtype: column.fieldtype });
-        return frappe.utils.escape_html(value ?? "");
+        return `${frappe.utils.escape_html(value ?? "")}<br>`;
     }
 
     $input(row_index, fieldname) {

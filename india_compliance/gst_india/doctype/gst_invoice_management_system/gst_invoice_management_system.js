@@ -1045,7 +1045,7 @@ class ITCReductionDialog {
                     fieldtype: "HTML",
                     fieldname: "help",
                     options: `<p class="text-muted">${__(
-                        "Books and supplier values differ for these records. Review the ITC to reduce. CGST and SGST are kept equal and values cannot exceed the supplier's tax.",
+                        "Books and supplier values differ for these records. Review the ITC to reduce. Values cannot exceed the supplier's reported values.",
                     )}</p>`,
                 },
                 { fieldtype: "HTML", fieldname: "itc_table" },
@@ -1097,15 +1097,12 @@ class ITCReductionDialog {
                 min: 0,
                 max: (row) => row[`supplier_${head}`],
                 description: (row) =>
-                    `${__("books")} ${format_number(row[`books_${head}`])} · ${__("doc")} ${format_number(
-                        row[`supplier_${head}`],
-                    )}`,
+                    `${__("B:")} ${row[`books_${head}`] || 0} · ${__("S:")} ${row[`supplier_${head}`] || 0}`,
             })),
             {
                 fieldname: "remarks",
                 label: __("Remarks"),
                 editable: 1,
-                description: () => __("required when you reduce below the supplier value"),
             },
         ];
     }
