@@ -981,21 +981,22 @@ async function apply_action(frm, action, invoice_names) {
     commit_action(frm, action, invoice_names, null);
 }
 
-function commit_action(frm, action, invoice_names, declared_overrides) {
-    const new_data = [];
-    frm.reconciliation_tabs.data.forEach((row) => {
-        if (invoice_names.includes(row.inward_supply_name)) {
-            row.ims_action = action;
-            // a declaration-only change keeps the action but still needs upload
-            const declared = declared_overrides && row.inward_supply_name in declared_overrides;
-            row.pending_upload = declared || row.ims_action !== row.previous_ims_action;
-        }
-        new_data.push({ ...row });
+async function commit_action(frm, action, invoice_names, declared_overrides) {
+    // apply on the server and pull back the stored (cleaned) values so the grid and a
+    // re-opened dialog reflect the latest declared amounts, remarks and pending_upload
+    const { message: updated } = await frm._call("update_action", {
+        invoice_names,
+        action,
+        declared_overrides,
     });
 
-    frm._call("update_action", { invoice_names, action, declared_overrides });
+    const by_name = Object.fromEntries((updated || []).map((row) => [row.inward_supply_name, row]));
+    const new_data = frm.reconciliation_tabs.data.map((row) =>
+        by_name[row.inward_supply_name] ? { ...row, ...by_name[row.inward_supply_name] } : row,
+    );
+
     frm.reconciliation_tabs.refresh(new_data);
-    frappe.show_alert({ message: "Action applied successfully", indicator: "green" });
+    frappe.show_alert({ message: __("Action applied successfully"), indicator: "green" });
 }
 
 function is_pending_allowed(row, action) {

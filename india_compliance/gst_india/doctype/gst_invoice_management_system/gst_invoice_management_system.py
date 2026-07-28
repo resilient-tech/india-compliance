@@ -189,6 +189,9 @@ class GSTInvoiceManagementSystem(Document):
         if declared_overrides:
             apply_declared_overrides(frappe.parse_json(declared_overrides))
 
+        # return the stored (cleaned) rows so the grid and a re-opened dialog reflect them
+        return self.get_invoice_data(inward_supply=invoice_names)
+
     @frappe.whitelist()
     def get_invoice_details(self, purchase_name: str | None, inward_supply_name: str | None):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
