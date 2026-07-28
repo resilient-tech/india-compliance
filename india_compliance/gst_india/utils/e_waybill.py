@@ -1204,9 +1204,7 @@ class EWaybillData(GSTTransactionData):
         if (
             is_e_waybill_changes_applicable(self.settings)
             and self.transaction_details.transaction_type in SHIP_TO_TRANSACTION_TYPES
-            and not frappe.get_cached_value(
-                "e-Invoice Log", {"irn": self.doc.irn, "is_generated_with_ship_to": 1}
-            )
+            and not frappe.get_cached_value("e-Invoice Log", self.doc.irn, "is_generated_with_ship_to")
         ):
             if self.sandbox_mode and self.ship_to.gstin and self.ship_to.gstin != "URP":
                 self.ship_to.update(SANDBOX_SHIP_TO)
