@@ -1281,6 +1281,7 @@ class TestEWaybill(FrappeTestCase):
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     @staticmethod
     def _create_unregistered_shipping_address():
         """Create (once) an unregistered, India-based Shipping address for URP tests."""
@@ -1398,6 +1399,8 @@ class TestEWaybill(FrappeTestCase):
             self.assertTrue(data["ExpShipDtls"].get("Gstin"))
 
 >>>>>>> 89815eb5 (fix: update e-invoice and e-waybill tests)
+=======
+>>>>>>> 292fe878 (fix: remove is_generated_with_ship_to field and related logic from e-Invoice and e-Waybill handling)
     def test_e_waybill_for_inter_state_sales_return(self):
         """Test e-waybill generation for inter-state sales return.
 

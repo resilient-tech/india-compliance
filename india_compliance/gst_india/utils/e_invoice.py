@@ -332,7 +332,6 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
     )
 
     invoice_data = None
-    is_generated_with_ship_to = None
     if result.SignedInvoice:
         decoded_invoice = json.loads(
             jwt.decode(result.SignedInvoice, options={"verify_signature": False})[
@@ -340,10 +339,6 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
             ]
         )
         invoice_data = frappe.as_json(decoded_invoice, indent=4)
-
-        # ship-to sent during IRN generation can be replaced at e-Waybill generation for
-        # exports, but not for B2B / SEZ (NIC error 2324)
-        is_generated_with_ship_to = bool(decoded_invoice.get("ShipDtls"))
 
     log_e_invoice(
         doc,
@@ -356,7 +351,6 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
             "signed_qr_code": result.SignedQRCode,
             "invoice_data": invoice_data,
             "is_generated_in_sandbox_mode": sandbox_mode,
-            "is_generated_with_ship_to": is_generated_with_ship_to,
         },
     )
 
@@ -797,23 +791,6 @@ class EInvoiceData(GSTTransactionData):
 
         return super().set_transporter_details()
 
-    def get_shipping_address(self):
-        ship_to_address = (
-            self.doc.port_address
-            if (is_foreign_doc(self.doc) and self.doc.port_address)
-            else self.doc.shipping_address_name
-        )
-
-        if not ship_to_address or ship_to_address == self.doc.customer_address:
-            return
-
-        shipping_address = self.get_address_details(ship_to_address)
-
-        if shipping_address.gstin != "URP" and shipping_address.gstin == self.billing_address.gstin:
-            return
-
-        return shipping_address
-
     def set_party_address_details(self):
         self.set_address_gstin_map()
 
@@ -825,10 +802,17 @@ class EInvoiceData(GSTTransactionData):
             self.doc.company_address, validate_gstin=True
         )
 
+        ship_to_address = (
+            self.doc.port_address
+            if (is_foreign_doc(self.doc) and self.doc.port_address)
+            else self.doc.shipping_address_name
+        )
+
         # Defaults
-        self.shipping_address = self.get_shipping_address()
+        self.shipping_address = None
         self.dispatch_address = None
 
+<<<<<<< HEAD
 <<<<<<< HEAD
         if ship_to_address and self.doc.customer_address != ship_to_address:
             self.shipping_address = self.get_address_details(ship_to_address)
@@ -841,6 +825,15 @@ class EInvoiceData(GSTTransactionData):
                 self.doc.dispatch_address_name
             )
 =======
+=======
+        if ship_to_address and self.doc.customer_address != ship_to_address:
+            shipping_address = self.get_address_details(ship_to_address)
+
+            # Ship To GSTIN can't be the same as Buyer GSTIN. "URP" denotes a missing GSTIN
+            if shipping_address.gstin == "URP" or shipping_address.gstin != self.billing_address.gstin:
+                self.shipping_address = shipping_address
+
+>>>>>>> 292fe878 (fix: remove is_generated_with_ship_to field and related logic from e-Invoice and e-Waybill handling)
         if self.doc.dispatch_address_name and self.doc.company_address != self.doc.dispatch_address_name:
             self.dispatch_address = self.get_address_details(self.doc.dispatch_address_name)
 >>>>>>> ac683b7b (fix: changes as per review)

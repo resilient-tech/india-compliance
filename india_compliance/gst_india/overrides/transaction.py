@@ -33,7 +33,6 @@ from india_compliance.gst_india.utils import (
 <<<<<<< HEAD
 =======
     has_gst_taxes,
-    is_foreign_doc,
     is_import_transaction,
 >>>>>>> 2de6c3ff (chore: refactor as per review)
     is_overseas_doc,
@@ -1761,7 +1760,7 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
 
     changed_address_fields = [field for field in ADDRESS_DEPENDENT_FIELDS if has_changed(field)]
 
-    if has_changed("shipping_address_name") and is_shipping_address_change_restricted(doc):
+    if doc.doctype == "Sales Invoice" and has_changed("shipping_address_name"):
         changed_address_fields.append("shipping_address_name")
 
     if not changed_address_fields and not has_changed("place_of_supply"):
@@ -1793,18 +1792,6 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
 
     validate_gst_category(doc.gst_category, gstin)
     GSTAccounts().validate(doc, is_sales_transaction)
-
-
-def is_shipping_address_change_restricted(doc):
-    if doc.get("ewaybill"):
-        return True
-
-    # Once sent in e-invoice, shipping address cannot be changed in e-waybill using IRN.
-    # It can be replaced for exports, as their e-Waybill isn't generated using IRN.
-    if not doc.get("irn") or is_foreign_doc(doc):
-        return False
-
-    return bool(frappe.get_cached_value("e-Invoice Log", doc.irn, "is_generated_with_ship_to"))
 
 
 def sync_gst_details_from_address(doc, changed_address_fields):

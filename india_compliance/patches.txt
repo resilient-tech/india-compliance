@@ -70,6 +70,5 @@ execute:import frappe; frappe.db.set_single_value("GST Settings", "nil_exempt_e_
 india_compliance.patches.post_install.set_india_compliance_default_tax_category
 india_compliance.patches.post_install.remove_tax_category_gst_state
 india_compliance.patches.v16.remove_gstr_2a_category_preferences
-india_compliance.patches.v16.set_is_generated_with_ship_to_in_e_invoice_log
 
 >>>>>>> ed45b7c6 (fix: backfill is_generated_with_ship_to in e-Invoice Log for invoices with IRN and no e-Waybill)
