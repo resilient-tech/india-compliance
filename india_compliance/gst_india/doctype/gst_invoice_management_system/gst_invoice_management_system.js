@@ -986,7 +986,9 @@ function commit_action(frm, action, invoice_names, declared_overrides) {
     frm.reconciliation_tabs.data.forEach((row) => {
         if (invoice_names.includes(row.inward_supply_name)) {
             row.ims_action = action;
-            row.pending_upload = row.ims_action !== row.previous_ims_action;
+            // a declaration-only change keeps the action but still needs upload
+            const declared = declared_overrides && row.inward_supply_name in declared_overrides;
+            row.pending_upload = declared || row.ims_action !== row.previous_ims_action;
         }
         new_data.push({ ...row });
     });
@@ -1022,11 +1024,6 @@ function needs_itc_review(row) {
     return TAX_HEADS.some(
         (head) => Math.abs((row._purchase_invoice[head] || 0) - (row._inward_supply[head] || 0)) > 1,
     );
-}
-
-function declared_default(row, head) {
-    // books value, capped at supplier (usually less only)
-    return Math.min(row._purchase_invoice[head] || 0, row._inward_supply[head] || 0);
 }
 
 class ITCReductionDialog {
@@ -1072,7 +1069,7 @@ class ITCReductionDialog {
             actions: [
                 {
                     label: __("Use books value (all)"),
-                    action: () => this.fill_all((row, head) => row[head]),
+                    action: () => this.use_books(),
                 },
                 {
                     label: __("Use supplier value (all)"),
@@ -1117,7 +1114,7 @@ class ITCReductionDialog {
         return this.rows.map((row) => {
             const data = { supplier_name: row.supplier_name, bill_no: row.bill_no };
             TAX_HEADS.forEach((head) => {
-                data[head] = declared_default(row, head);
+                data[head] = row._inward_supply[`declared_${head}`] || 0; // last saved declared value
                 data[`books_${head}`] = row._purchase_invoice[head] || 0;
                 data[`supplier_${head}`] = row._inward_supply[head] || 0;
             });
@@ -1130,6 +1127,20 @@ class ITCReductionDialog {
         this.table.data.forEach((row, index) =>
             TAX_HEADS.forEach((head) => this.table.set_value(index, head, get_value(row, head))),
         );
+    }
+
+    use_books() {
+        this.table.data.forEach((row, index) => {
+            let reduced = false;
+            TAX_HEADS.forEach((head) => {
+                const books = Math.min(row[`books_${head}`] || 0, row[`supplier_${head}`] || 0);
+                if (books < (row[`supplier_${head}`] || 0)) reduced = true;
+                this.table.set_value(index, head, books);
+            });
+            // books reduces below supplier and no remark yet -> suggest one
+            if (reduced && !(this.table.get_value(index, "remarks") || "").trim())
+                this.table.set_value(index, "remarks", __("as per books"));
+        });
     }
 
     confirm() {

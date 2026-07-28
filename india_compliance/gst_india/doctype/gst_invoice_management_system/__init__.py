@@ -48,7 +48,18 @@ class InwardSupply:
 
     def get_all(self, company_gstin, names=None):
         query = self.get_query(
-            company_gstin, ["action", "doc_type", "is_amended", "is_itc_reduction_blocked"]
+            company_gstin,
+            [
+                "action",
+                "doc_type",
+                "is_amended",
+                "is_itc_reduction_blocked",
+                "declared_igst",
+                "declared_cgst",
+                "declared_sgst",
+                "declared_cess",
+                "remarks",
+            ],
         )
 
         if names:
