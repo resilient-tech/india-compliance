@@ -799,12 +799,6 @@ class Reconciler(BaseReconciliation):
                     if not self.is_doc_matching(purchase, inward_supply, rules):
                         continue
 
-                    if match_status == MatchStatus.RESIDUAL_MATCH.value:
-                        if inward_supply.supplier_gstin == purchase.supplier_gstin:
-                            match_status = MatchStatus.SUGGESTED_MATCH.value
-                        else:
-                            match_status = MatchStatus.MISMATCH.value
-
                     self.update_matching_doc(
                         match_status,
                         purchase.name,

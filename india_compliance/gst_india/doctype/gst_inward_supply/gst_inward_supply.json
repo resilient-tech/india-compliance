@@ -301,7 +301,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Match Status",
-   "options": "\nExact Match\nSuggested Match\nMismatch\nManual Match\nUnlinked\nAmended"
+   "options": "\nExact Match\nSuggested Match\nMismatch\nResidual Match\nManual Match\nUnlinked\nAmended"
   },
   {
    "fieldname": "link_name",

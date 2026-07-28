@@ -266,6 +266,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                     "Exact Match",
                     "Suggested Match",
                     "Mismatch",
+                    "Residual Match",
                     "Manual Match",
                     "Missing in 2A/2B",
                     "Missing in PI",
