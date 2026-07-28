@@ -33,9 +33,13 @@ Object.assign(reconciliation, {
                 );
         });
 
+        const exclude_from_reconciliation = await reconciliation.prompt_unlink_intent();
+        if (exclude_from_reconciliation === null) return; // cancelled
+
         // unlink documents & update table
         const { message: r } = await frm._call("unlink_documents", {
             data: selected_rows,
+            exclude_from_reconciliation,
         });
 
         const unlinked_docs = reconciliation.get_unlinked_docs(selected_rows);
@@ -48,6 +52,33 @@ Object.assign(reconciliation, {
         new_data.push(...r);
         _class.refresh(new_data);
         reconciliation.after_successful_action(invoice_tab);
+    },
+
+    prompt_unlink_intent() {
+        // Resolves to a boolean (exclude flag) or null if cancelled.
+        return new Promise((resolve) => {
+            const dialog = new frappe.ui.Dialog({
+                title: __("Unlink Documents"),
+                fields: [
+                    {
+                        fieldtype: "Check",
+                        fieldname: "exclude_from_reconciliation",
+                        label: __("Do not reconcile these again automatically"),
+                        description: __(
+                            "Enable this for incorrect matches. Leave unchecked to re-match them on the next reconciliation.",
+                        ),
+                        default: 0,
+                    },
+                ],
+                primary_action_label: __("Unlink"),
+                primary_action(values) {
+                    resolve(!!values.exclude_from_reconciliation);
+                    dialog.hide();
+                },
+            });
+            dialog.onhide = () => resolve(null); // no-op if primary already resolved
+            dialog.show();
+        });
     },
 
     async link_documents(frm, purchase_invoice_name, inward_supply_name, link_doctype, alert = true) {
