@@ -37,6 +37,27 @@ for (const doctype of ["Sales Invoice", "Sales Order", "Delivery Note"]) {
     set_e_commerce_ecommerce_supply_type(doctype);
 }
 
+const TRANSPORTER_DOCTYPES = [
+    "Sales Invoice",
+    "Purchase Invoice",
+    "Delivery Note",
+    "Purchase Receipt",
+    "Stock Entry",
+    "Subcontracting Receipt",
+];
+
+for (const doctype of TRANSPORTER_DOCTYPES) {
+    reset_gst_transporter_id_on_removal(doctype);
+}
+
+function reset_gst_transporter_id_on_removal(doctype) {
+    frappe.ui.form.on(doctype, {
+        transporter(frm) {
+            if (!frm.doc.transporter) frm.set_value("gst_transporter_id", "");
+        },
+    });
+}
+
 function fetch_gst_details(doctype) {
     const event_fields = ["tax_category", "company_gstin", "place_of_supply", "is_reverse_charge"];
 
