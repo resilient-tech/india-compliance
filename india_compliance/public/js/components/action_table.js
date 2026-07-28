@@ -178,9 +178,7 @@ india_compliance.ActionTable = class ActionTable {
             const values = this.row_values(index);
             return this.columns.every(
                 (column) =>
-                    !column.editable ||
-                    !column.validate ||
-                    column.validate(values[column.fieldname], values),
+                    !column.editable || !column.validate || column.validate(values[column.fieldname], values),
             );
         });
     }
