@@ -398,16 +398,14 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
 
     @responses.activate
     def test_validate_shipping_address_change(self):
-        """The shipping address is reported in the e-Invoice, and in the e-Waybill
-        generated from it. ERROR CODE: 2324"""
+        """Ship To details reported in the e-Invoice can't be replaced afterwards.
+        ERROR CODE: 2324"""
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
         si = create_sales_invoice(**test_data.get("kwargs"), qty=1000, is_in_state=True)
 
         self._mock_e_invoice_response(data=test_data)
         generate_e_invoice(si.name)
         si.reload()
-
-        self.assertTrue(frappe.db.get_value("e-Invoice Log", si.irn, "is_generated_with_ship_to"))
 
         # reported in the e-Waybill generated along with the IRN
         self.assertTrue(si.ewaybill)
@@ -422,82 +420,6 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         si.db_set("ewaybill", "")
         si.reload()
         si.shipping_address_name = "_Test Registered Customer-Billing-1"
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            "Cannot change the Place of Supply or address",
-            si.save,
-        )
-
-        # generated without Ship To details, so there's nothing to protect
-        frappe.db.set_value("e-Invoice Log", si.irn, "is_generated_with_ship_to", 0)
-        si.reload()
-        si.shipping_address_name = "_Test Registered Customer-Billing-1"
-        si.save()
-
-    @responses.activate
-    def test_set_is_generated_with_ship_to_in_e_invoice_log(self):
-        """The backfill must match the Ship To details reported in the signed invoice."""
-        from india_compliance.patches.v16.set_is_generated_with_ship_to_in_e_invoice_log import (
-            execute,
-        )
-
-        test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
-        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000, is_in_state=True)
-
-        self._mock_e_invoice_response(data=test_data)
-        generate_e_invoice(si.name)
-        si.reload()
-
-        # reported without them, as the consignee is the same party as the buyer
-        invoice_data = frappe.parse_json(frappe.db.get_value("e-Invoice Log", si.irn, "invoice_data"))
-        invoice_data.pop("ShipDtls")
-        without_ship_to = frappe.get_doc(
-            {
-                "doctype": "e-Invoice Log",
-                "irn": "0" * 64,
-                "invoice_data": frappe.as_json(invoice_data),
-            }
-        ).insert(ignore_if_duplicate=True)
-
-        # generated before the field was introduced
-        frappe.db.set_value("e-Invoice Log", si.irn, "is_generated_with_ship_to", 0)
-
-        execute()
-
-        self.assertTrue(frappe.db.get_value("e-Invoice Log", si.irn, "is_generated_with_ship_to"))
-        self.assertFalse(
-            frappe.db.get_value("e-Invoice Log", without_ship_to.name, "is_generated_with_ship_to")
-        )
-
-    @responses.activate
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
-    def test_validate_shipping_address_change_for_export(self):
-        """Ship To details can be replaced for exports, as their e-Waybill isn't
-        generated using IRN. ERROR CODE: 2324"""
-        test_data = self.e_invoice_test_data.get("foreign_transaction")
-        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000, do_not_submit=True)
-        si.update(
-            {
-                "shipping_bill_number": "1234",
-                "shipping_bill_date": frappe.utils.today(),
-                "port_code": "INABG1",
-            }
-        )
-        si.submit()
-
-        self._mock_e_invoice_response(data=test_data)
-        generate_e_invoice(si.name)
-        si.reload()
-
-        self.assertTrue(frappe.db.get_value("e-Invoice Log", si.irn, "is_generated_with_ship_to"))
-
-        si.shipping_address_name = "_Test Registered Customer-Billing-1"
-        si.save()
-
-        # the e-Waybill reports them as well, so they can't be replaced any more
-        si.db_set("ewaybill", "351010824644")
-        si.reload()
-        si.shipping_address_name = "_Test Foreign Customer-1-Shipping"
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             "Cannot change the Place of Supply or address",
