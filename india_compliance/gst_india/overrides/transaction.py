@@ -1929,11 +1929,11 @@ def validate_shipping_address_change(doc):
     if not doc.get("irn"):
         return
 
-    # e-Invoice Log is named after the IRN
-    if not frappe.get_cached_value("e-Invoice Log", doc.irn, "is_generated_with_ship_to"):
+    if not doc.has_value_changed("shipping_address_name"):
         return
 
-    if not doc.has_value_changed("shipping_address_name"):
+    # e-Invoice Log is named after the IRN
+    if not frappe.get_cached_value("e-Invoice Log", doc.irn, "is_generated_with_ship_to"):
         return
 
     frappe.throw(
