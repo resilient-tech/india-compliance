@@ -186,7 +186,7 @@ class IMS:
 
         # full reversal -> omit values (portal reads absence as full); partial -> send them
         supplier = (invoice.igst, invoice.cgst, invoice.sgst, invoice.cess)
-        if any(flt(d, 2) != flt(s, 2) for d, s in zip(declared.values(), supplier)):
+        if any(flt(d, 2) != flt(s, 2) for d, s in zip(declared.values(), supplier, strict=True)):
             data.update(declared)
 
     def _declared_reversal(self, declared, supplier, itc_red_req):
