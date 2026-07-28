@@ -1011,6 +1011,7 @@ function is_accept_allowed(row, action) {
 }
 
 const TAX_HEADS = ["igst", "cgst", "sgst", "cess"];
+const ITC_REVIEW_TOLERANCE = 1;
 
 function is_specified_row(row) {
     // mirror server is_specified_record
@@ -1023,7 +1024,9 @@ function needs_itc_review(row) {
     if (row._inward_supply.is_itc_reduction_blocked) return false;
 
     return TAX_HEADS.some(
-        (head) => Math.abs((row._purchase_invoice[head] || 0) - (row._inward_supply[head] || 0)) > 1,
+        (head) =>
+            Math.abs((row._purchase_invoice[head] || 0) - (row._inward_supply[head] || 0)) >
+            ITC_REVIEW_TOLERANCE,
     );
 }
 

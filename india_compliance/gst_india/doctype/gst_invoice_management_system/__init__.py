@@ -307,6 +307,7 @@ DECLARED_FIELDS = (
 DECLARATION_ROW_FIELDS = (
     "name",
     "is_itc_reduction_blocked",
+    "remarks",
     "igst",
     "cgst",
     "sgst",
@@ -317,6 +318,9 @@ DECLARATION_ROW_FIELDS = (
 
 def _declaration_changed(stored, declared):
     # changed -> caller re-flags for upload (action stays put, flag carries the dirty signal)
+    # remarks travel with the declaration, so a remarks-only edit counts as a change too
+    if (stored.get("remarks") or "") != (declared.get("remarks") or ""):
+        return True
     return any(flt(stored.get(field)) != flt(declared.get(field)) for field in DECLARED_FIELDS)
 
 
@@ -335,11 +339,11 @@ def apply_declared_overrides(overrides):
             continue
 
         declared = _clean_declared(doc, override)
+        declared["remarks"] = override.get("remarks") or ""
+
         if not _declaration_changed(doc, declared):
             continue
 
-        # remarks travel with the declaration; the dialog makes them mandatory on a reduction
-        declared["remarks"] = override.get("remarks") or ""
         declared["is_declaration_pending_upload"] = 1
         frappe.db.set_value("GST Inward Supply", name, declared)
 
