@@ -27,7 +27,6 @@ from india_compliance.gst_india.utils.e_waybill import EWaybillData
 from india_compliance.gst_india.utils.tests import (
     append_item,
     create_sales_invoice,
-    create_unregistered_shipping_address,
 )
 
 
@@ -99,7 +98,7 @@ class TestEInvoice(FrappeTestCase):
             dispatch_address_name="_Test Indian Registered Company-Shipping",  # dispatch differs
             customer="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
-            shipping_address_name=create_unregistered_shipping_address(),  # ship-to differs
+            shipping_address_name="_Test Unregistered Consignee-Shipping",  # ship-to differs
             is_in_state=True,
             do_not_submit=True,
         )
@@ -112,6 +111,26 @@ class TestEInvoice(FrappeTestCase):
         self.assertTrue(data["ShipDtls"]["LglNm"])
         # both blocks present -> the type-4 analog
         self.assertIn("DispDtls", data)
+
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    def test_e_invoice_for_same_buyer_and_ship_to_gstin(self):
+        """
+        Two addresses of the same party is a regular transaction, since Ship To GSTIN
+        can't be the same as Buyer GSTIN. ERROR CODE: 2323
+        """
+        si = create_sales_invoice(
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            # different address, same GSTIN as the billing address
+            shipping_address_name="_Test Registered Customer Warehouse-Shipping",
+            is_in_state=True,
+            do_not_submit=True,
+        )
+
+        data = EInvoiceData(si).get_data()
+
+        self.assertNotIn("ShipDtls", data)
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_request_data_for_foreign_transactions(self):
@@ -146,7 +165,7 @@ class TestEInvoice(FrappeTestCase):
             company_address="_Test Indian Registered Company-Billing",
             customer="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
-            shipping_address_name=create_unregistered_shipping_address(),
+            shipping_address_name="_Test Unregistered Consignee-Shipping",
             is_in_state=True,
             do_not_submit=True,
         )
