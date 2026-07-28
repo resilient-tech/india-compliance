@@ -14,6 +14,10 @@ function setup_e_waybill_actions(doctype) {
         mode_of_transport(frm) {
             frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
         },
+        transporter(frm) {
+            // gst_transporter_id is fetch_if_empty, so clear it explicitly on removal
+            if (!frm.doc.transporter) frm.set_value("gst_transporter_id", "");
+        },
         setup(frm) {
             if (!india_compliance.is_api_enabled()) return;
 
