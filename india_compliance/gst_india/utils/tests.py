@@ -490,30 +490,3 @@ def _append_taxes(
                 tax["add_deduct_tax"] = "Deduct"
 
         transaction.append("taxes", tax)
-
-
-def create_unregistered_shipping_address():
-    """Create (once) an unregistered, India-based Shipping address for URP tests."""
-    name = "_Test Unregistered Consignee-Shipping"
-    if frappe.db.exists("Address", name):
-        return name
-
-    return (
-        frappe.get_doc(
-            {
-                "doctype": "Address",
-                "address_title": "_Test Unregistered Consignee",
-                "address_type": "Shipping",
-                "address_line1": "Test Address - Unregistered Consignee",
-                "city": "Test City",
-                "state": "Gujarat",
-                "pincode": "380015",
-                "country": "India",
-                "gstin": "",
-                "gst_category": "Unregistered",
-                "links": [{"link_doctype": "Customer", "link_name": "_Test Registered Customer"}],
-            }
-        )
-        .insert(ignore_if_duplicate=True)
-        .name
-    )
