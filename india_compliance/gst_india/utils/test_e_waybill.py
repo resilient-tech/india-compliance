@@ -121,6 +121,38 @@ class TestEWaybill(IntegrationTestCase):
             frappe.get_doc("e-Waybill Log", {"reference_name": si.name}),
         )
 
+    def test_validate_shipping_address_change(self):
+        """The shipping address is reported in every e-Waybill, including the ones
+        generated without an IRN."""
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            is_in_state=1,
+            distance=10,
+            transporter="_Test Common Supplier",
+            mode_of_transport="Road",
+        )
+
+        mark_e_waybill_as_generated(
+            si.doctype,
+            si.name,
+            values={
+                "ewaybill": "351002721233",
+                "e_waybill_date": str(now_datetime()),
+                "valid_upto": str(add_to_date(now_datetime(), days=1)),
+            },
+        )
+        si.reload()
+
+        si.shipping_address_name = "_Test Registered Customer-Billing-1"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            "Cannot change the Place of Supply or address",
+            si.save,
+        )
+
     @responses.activate
     def test_update_vehicle_info(self):
         """Test whitelisted function `update_vehicle_info`"""
@@ -1534,15 +1566,9 @@ class TestEWaybill(IntegrationTestCase):
 
     @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_irn_exp_ship_dtls(self):
-        """testing ExpShipDtls on the e-waybill by IRN (get_data_with_irn).
-
-        - registered shipping address -> block added with the sandbox GSTIN override
-        - unregistered shipping address -> block added with 'URP'
-        - IRN already generated with ship-to -> block skipped (ERROR CODE: 2324)
-        - ship-to same as bill-to (transaction type 1) -> block skipped
-        - ship-to a different address of the same party (same gstin) -> block skipped (ERROR CODE: 618)
-        """
-        # registered shipping address, no e-Invoice Log -> ExpShipDtls added, sandbox GSTIN
+        """Ship To details are sent in the e-Waybill by IRN, where the e-Invoice was
+        generated without them, and the consignee is a distinct party."""
+        # registered consignee
         si = self._create_sales_invoice_with_irn("_Test Registered Customer-Billing-1", "12345678901234561")
         data = EWaybillData(si).get_data(with_irn=True)
         exp_ship_dtls = data.get("ExpShipDtls")
@@ -1553,12 +1579,12 @@ class TestEWaybill(IntegrationTestCase):
         for field in ("TrdNm", "Addr1", "Loc"):
             self.assertTrue(exp_ship_dtls.get(field), f"ExpShipDtls.{field} must be set")
 
-        # unregistered shipping address -> ExpShipDtls.Gstin == 'URP'
+        # unregistered consignee
         si = self._create_sales_invoice_with_irn("_Test Unregistered Consignee-Shipping", "12345678901234562")
         data = EWaybillData(si).get_data(with_irn=True)
         self.assertEqual((data.get("ExpShipDtls") or {}).get("Gstin"), "URP")
 
-        # IRN generated with ship-to -> ExpShipDtls skipped
+        # generated with Ship To details, so they can't be sent again. ERROR CODE: 2324
         irn = "12345678901234563"
         si = self._create_sales_invoice_with_irn("_Test Registered Customer-Billing-1", irn)
         frappe.get_doc(
@@ -1572,14 +1598,9 @@ class TestEWaybill(IntegrationTestCase):
         data = EWaybillData(si).get_data(with_irn=True)
         self.assertNotIn("ExpShipDtls", data)
 
-        si = self._create_sales_invoice_with_irn("_Test Registered Customer-Billing", "12345678901234565")
-        self.assertEqual(EWaybillData(si).get_data().get("transactionType"), 1)
-        data = EWaybillData(si).get_data(with_irn=True)
-        self.assertNotIn("ExpShipDtls", data)
-
-        # different address, same GSTIN as bill to -> Regular transaction, so no block
+        # same party as bill to, so it's a Regular transaction. ERROR CODE: 618
         si = self._create_sales_invoice_with_irn(
-            "_Test Registered Customer Warehouse-Shipping", "12345678901234566"
+            "_Test Registered Customer Warehouse-Shipping", "12345678901234565"
         )
         self.assertEqual(EWaybillData(si).get_data().get("transactionType"), 1)
         self.assertNotIn("ExpShipDtls", EWaybillData(si).get_data(with_irn=True))
