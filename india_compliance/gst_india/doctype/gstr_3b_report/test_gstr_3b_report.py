@@ -32,16 +32,12 @@ from india_compliance.gst_india.utils.tests import (
 )
 
 
-<<<<<<< HEAD
 class TestGSTR3BReport(FrappeTestCase):
-=======
-class TestGSTR3BReport(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
 
->>>>>>> cbbe2419 (test: skip committing in test)
     def setUp(self):
         frappe.set_user("Administrator")
         filters = {"company": "_Test Indian Registered Company"}
