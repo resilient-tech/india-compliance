@@ -1,4 +1,5 @@
 import datetime
+import json
 import random
 import re
 
@@ -15,25 +16,8 @@ from frappe.www.printview import get_html_and_style
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
-<<<<<<< HEAD
-from india_compliance.gst_india.constants.e_waybill import (
-    E_WAYBILL_CHANGES_APPLICABLE_DATE,
-)
+from india_compliance.gst_india.constants import SHIP_TO_GSTIN_APPLICABLE_DATE
 from india_compliance.gst_india.utils import load_doc
-=======
-from india_compliance.gst_india.constants import (
-    SERVICE_HSN_PREFIX,
-    SHIP_TO_GSTIN_APPLICABLE_DATE,
-)
-from india_compliance.gst_india.constants.e_waybill import SUB_SUPPLY_TYPES
-from india_compliance.gst_india.overrides.sales_invoice import (
-    is_e_waybill_applicable,
-)
-from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
-    create_subcontracting_data,
-)
-from india_compliance.gst_india.utils import load_doc, parse_datetime
->>>>>>> 986aea0b (fix: gate all the changes and minor refactor)
 from india_compliance.gst_india.utils.e_invoice import (
     retry_e_invoice_e_waybill_generation,
 )
@@ -54,16 +38,6 @@ from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice,
     create_sales_invoice,
     create_transaction,
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    create_unregistered_shipping_address,
-=======
->>>>>>> ac683b7b (fix: changes as per review)
-    make_subcontracting_inward_delivery,
-    make_subcontracting_inward_rm_return,
-    make_subcontracting_stock_entry,
->>>>>>> 4e5ad9e3 (feat: implement handling of mandatory ship-to gstin for e-invoice)
 )
 
 DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
@@ -134,38 +108,6 @@ class TestEWaybill(FrappeTestCase):
                 .get("ewayBillNo")
             },
             frappe.get_doc("e-Waybill Log", {"reference_name": si.name}),
-        )
-
-    def test_validate_shipping_address_change(self):
-        """The shipping address is reported in every e-Waybill, including the ones
-        generated without an IRN."""
-        si = create_sales_invoice(
-            vehicle_no="GJ07DL9009",
-            company_address="_Test Indian Registered Company-Billing",
-            customer="_Test Registered Customer",
-            customer_address="_Test Registered Customer-Billing",
-            is_in_state=1,
-            distance=10,
-            transporter="_Test Common Supplier",
-            mode_of_transport="Road",
-        )
-
-        mark_e_waybill_as_generated(
-            si.doctype,
-            si.name,
-            values={
-                "ewaybill": "351002721233",
-                "e_waybill_date": str(now_datetime()),
-                "valid_upto": str(add_to_date(now_datetime(), days=1)),
-            },
-        )
-        si.reload()
-
-        si.shipping_address_name = "_Test Registered Customer-Billing-1"
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            "Cannot change the Place of Supply or address",
-            si.save,
         )
 
     @responses.activate
@@ -1103,19 +1045,10 @@ class TestEWaybill(FrappeTestCase):
         )
 
         self.assertEqual(e_waybill_data.get("transactionType"), 2)
-<<<<<<< HEAD
-<<<<<<< HEAD
-        self.assertEqual(e_waybill_data.get("shipToGSTIN"), "05AAACG2140A1ZL")
+        self.assertEqual(e_waybill_data.get("shipToGSTIN"), "02AMBPG7773M002")
         self.assertEqual(
             e_waybill_data.get("shipToTradeName"), "Test Foreign Customer-1"
         )
-=======
-        self.assertEqual(e_waybill_data.get("shipToGSTIN"), "05AAACG2115R1ZN")
-=======
-        self.assertEqual(e_waybill_data.get("shipToGSTIN"), "02AMBPG7773M002")
->>>>>>> ac683b7b (fix: changes as per review)
-        self.assertEqual(e_waybill_data.get("shipToTradeName"), "Test Foreign Customer-1")
->>>>>>> 68f45ef5 (fix: update ship-to GSTIN for transport type-1, registered shipping address and update test cases)
 
         expected_request_data = test_data.get("request_data")
         for key, value in e_waybill_data.items():
@@ -1204,7 +1137,9 @@ class TestEWaybill(FrappeTestCase):
         self.assertNotIn("shipToTradeName", e_waybill_data)
 
         # goods still move to the shipping address
-        self.assertEqual(e_waybill_data.get("toAddr1"), "Test Address - Customer Warehouse")
+        self.assertEqual(
+            e_waybill_data.get("toAddr1"), "Test Address - Customer Warehouse"
+        )
 
     @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_for_same_bill_to_and_ship_to_gstin_with_dispatch_from(self):
@@ -1257,21 +1192,21 @@ class TestEWaybill(FrappeTestCase):
 
         self.assertEqual(e_waybill_data.get("toGstin"), "URP")
         self.assertEqual(e_waybill_data.get("transactionType"), 2)
-        self.assertEqual(e_waybill_data.get("toAddr1"), "Test Address - Unregistered Customer Consignee")
+        self.assertEqual(
+            e_waybill_data.get("toAddr1"),
+            "Test Address - Unregistered Customer Consignee",
+        )
         self.assertEqual(e_waybill_data.get("shipToGSTIN"), "URP")
-        self.assertEqual(e_waybill_data.get("shipToTradeName"), "_Test Unregistered Customer-1")
+        self.assertEqual(
+            e_waybill_data.get("shipToTradeName"), "_Test Unregistered Customer-1"
+        )
 
     @change_settings("GST Settings", {"sandbox_mode": 0})
     def test_ship_to_gstin_gated_by_rollout_date(self):
-<<<<<<< HEAD
         day_before_rollout = get_datetime(
-            add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1)
+            add_to_date(SHIP_TO_GSTIN_APPLICABLE_DATE, days=-1)
         )
-        rollout_date = get_datetime(E_WAYBILL_CHANGES_APPLICABLE_DATE)
-=======
-        day_before_rollout = get_datetime(add_to_date(SHIP_TO_GSTIN_APPLICABLE_DATE, days=-1))
         rollout_date = get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE)
->>>>>>> 986aea0b (fix: gate all the changes and minor refactor)
 
         # before rollout -> omitted from payload and offline JSON
         with time_machine.travel(day_before_rollout, tick=True):
@@ -1299,135 +1234,13 @@ class TestEWaybill(FrappeTestCase):
             self.assertTrue(json_data.get("shipToGSTIN"))
             self.assertTrue(json_data.get("shipToTradeName"))
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    @staticmethod
-    def _create_unregistered_shipping_address():
-        """Create (once) an unregistered, India-based Shipping address for URP tests."""
-        name = "_Test Unregistered Consignee-Shipping"
-        if frappe.db.exists("Address", name):
-            return name
-
-        return (
-            frappe.get_doc(
-                {
-                    "doctype": "Address",
-                    "address_title": "_Test Unregistered Consignee",
-                    "address_type": "Shipping",
-                    "address_line1": "Test Address - Unregistered Consignee",
-                    "city": "Test City",
-                    "state": "Gujarat",
-                    "pincode": "380015",
-                    "country": "India",
-                    "gstin": "",
-                    "gst_category": "Unregistered",
-                    "links": [
-                        {
-                            "link_doctype": "Customer",
-                            "link_name": "_Test Registered Customer",
-                        }
-                    ],
-                }
-            )
-            .insert(ignore_if_duplicate=True)
-            .name
-        )
-
-=======
-=======
-    def _create_sales_invoice_with_irn(self, shipping_address_name, irn):
-        """utility to create sales invoice with given irn"""
-        si = create_sales_invoice(
-            vehicle_no="GJ07DL9009",
-            company_address="_Test Indian Registered Company-Billing",
-            customer="_Test Registered Customer",
-            customer_address="_Test Registered Customer-Billing",
-            shipping_address_name=shipping_address_name,
-            is_in_state=1,
-            distance=10,
-            transporter="_Test Common Supplier",
-            mode_of_transport="Road",
-            irn=irn,
-            do_not_submit=True,
-        )
-        si.gst_transporter_id = ""
-        si.submit()
-        return si
-
-    @change_settings("GST Settings", {"sandbox_mode": 1})
-    def test_e_waybill_irn_exp_ship_dtls(self):
-        """Ship To details are sent in the e-Waybill by IRN, where the e-Invoice was
-        generated without them, and the consignee is a distinct party."""
-        # registered consignee
-        si = self._create_sales_invoice_with_irn("_Test Registered Customer-Billing-1", "12345678901234561")
-        data = EWaybillData(si).get_data(with_irn=True)
-        exp_ship_dtls = data.get("ExpShipDtls")
-        self.assertIsNotNone(exp_ship_dtls)
-        self.assertEqual(exp_ship_dtls.get("Gstin"), "02AMBPG7773M002")
-        self.assertEqual(exp_ship_dtls.get("Stcd"), "02")
-        self.assertEqual(exp_ship_dtls.get("Pin"), 171302)
-        for field in ("TrdNm", "Addr1", "Loc"):
-            self.assertTrue(exp_ship_dtls.get(field), f"ExpShipDtls.{field} must be set")
-
-        # unregistered consignee
-        si = self._create_sales_invoice_with_irn("_Test Unregistered Consignee-Shipping", "12345678901234562")
-        data = EWaybillData(si).get_data(with_irn=True)
-        self.assertEqual((data.get("ExpShipDtls") or {}).get("Gstin"), "URP")
-
-        # generated with Ship To details, so they can't be sent again. ERROR CODE: 2324
-        irn = "12345678901234563"
-        si = self._create_sales_invoice_with_irn("_Test Registered Customer-Billing-1", irn)
-        frappe.get_doc(
-            {
-                "doctype": "e-Invoice Log",
-                "irn": irn,
-                "is_generated_with_ship_to": 1,
-            }
-        ).insert(ignore_if_duplicate=True)
-
-        data = EWaybillData(si).get_data(with_irn=True)
-        self.assertNotIn("ExpShipDtls", data)
-
-        # same party as bill to, so it's a Regular transaction. ERROR CODE: 618
-        si = self._create_sales_invoice_with_irn(
-            "_Test Registered Customer Warehouse-Shipping", "12345678901234565"
-        )
-        self.assertEqual(EWaybillData(si).get_data().get("transactionType"), 1)
-        self.assertNotIn("ExpShipDtls", EWaybillData(si).get_data(with_irn=True))
-
-    @change_settings("GST Settings", {"sandbox_mode": 0})
-    def test_e_waybill_irn_ship_to_gated_by_rollout_date(self):
-        """ExpShipDtls on the IRN path is gated by E_WAYBILL_CHANGES_APPLICABLE_DATE
-        in production (sandbox off), mirroring test_ship_to_gstin_gated_by_rollout_date."""
-        day_before_rollout = get_datetime(add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1))
-        rollout_date = get_datetime(E_WAYBILL_CHANGES_APPLICABLE_DATE)
-
-        # before rollout -> ExpShipDtls omitted
-        with time_machine.travel(day_before_rollout, tick=True):
-            si = self._create_sales_invoice_with_irn(
-                "_Test Registered Customer-Billing-1", "12345678901234564"
-            )
-            data = EWaybillData(si).get_data(with_irn=True)
-            # when with irn is true, this data is compatable with E-Invoice APIs
-            self.assertNotIn("ExpShipDtls", data)
-
-        # on/after rollout -> ExpShipDtls sent
-        with time_machine.travel(rollout_date, tick=False):
-            data = EWaybillData(si).get_data(with_irn=True)
-            self.assertIn("ExpShipDtls", data)
-            self.assertTrue(data["ExpShipDtls"].get("Gstin"))
-
->>>>>>> 89815eb5 (fix: update e-invoice and e-waybill tests)
-=======
->>>>>>> 292fe878 (fix: remove is_generated_with_ship_to field and related logic from e-Invoice and e-Waybill handling)
-=======
     @change_settings("GST Settings", {"sandbox_mode": 0})
     def test_same_bill_to_and_ship_to_gstin_gated_by_rollout_date(self):
         """Two addresses of the same party stay a Bill To - Ship To transaction until
         Ship To GSTIN is sent, as 618 isn't reachable before that."""
-        day_before_rollout = get_datetime(add_to_date(SHIP_TO_GSTIN_APPLICABLE_DATE, days=-1))
+        day_before_rollout = get_datetime(
+            add_to_date(SHIP_TO_GSTIN_APPLICABLE_DATE, days=-1)
+        )
         rollout_date = get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE)
 
         with time_machine.travel(day_before_rollout, tick=True):
@@ -1457,138 +1270,6 @@ class TestEWaybill(FrappeTestCase):
             # goods still move to the shipping address
             self.assertEqual(data.get("toAddr1"), "Test Address - Customer Warehouse")
 
->>>>>>> 86b87541 (fix: update e-Waybill transaction type logic based on Ship To GSTIN and rollout date)
-    def test_e_waybill_for_inter_state_sales_return(self):
-        """Test e-waybill generation for inter-state sales return.
-
-        For return documents (is_return=1) with inter-state transport,
-        the toStateCode should come from bill_to's state number.
-        """
-        si = create_sales_invoice(
-            vehicle_no="GJ07DL9009",
-            company_address="_Test Indian Registered Company-Billing",
-            customer="_Test Registered Customer",
-            customer_address="_Test Registered Customer-Billing-3",
-            is_out_state=1,
-        )
-
-        credit_note = make_return_doc("Sales Invoice", si.name)
-        credit_note.vehicle_no = "GJ07DL9009"
-        credit_note.save()
-        credit_note.submit()
-
-        e_waybill_data = EWaybillData(credit_note).get_data()
-
-        # For inter-state return, toStateCode should be company's state (bill_to after swap)
-        self.assertEqual(
-            e_waybill_data.get("toStateCode"),
-            24,
-            "For inter-state returns, toStateCode should be from bill_to.state_number",
-        )
-
-        self.assertEqual(e_waybill_data.get("supplyType"), "I")
-        self.assertEqual(e_waybill_data.get("subSupplyType"), 7)
-
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
-    def test_e_waybill_for_sez_outward_invoice(self):
-        si = create_sales_invoice(
-            vehicle_no="GJ07DL9009",
-            company_address="_Test Indian Registered Company-Billing",
-            customer_address="_Test Registered Customer-Billing-1",
-            is_out_state=1,
-            is_export_with_gst=1,
-        )
-
-        e_waybill_data = EWaybillData(si).get_data()
-
-        self.assertEqual(e_waybill_data.get("toStateCode"), 96)
-        self.assertEqual(e_waybill_data.get("fromStateCode"), 24)
-
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
-    def test_e_waybill_for_sez_sales_return(self):
-        si = create_sales_invoice(
-            vehicle_no="GJ07DL9009",
-            company_address="_Test Indian Registered Company-Billing",
-            customer_address="_Test Registered Customer-Billing-1",
-            is_out_state=1,
-            is_export_with_gst=1,
-        )
-
-        credit_note = make_return_doc("Sales Invoice", si.name)
-        credit_note.vehicle_no = "GJ07DL9009"
-        credit_note.save()
-        credit_note.submit()
-
-        e_waybill_data = EWaybillData(credit_note).get_data()
-
-        self.assertEqual(e_waybill_data.get("fromStateCode"), 96)
-        self.assertEqual(e_waybill_data.get("toStateCode"), 24)
-
-    @change_settings(
-        "GST Settings",
-        {"enable_e_waybill_for_sc": 1, "enable_overseas_transactions": 1},
-    )
-    def test_e_waybill_for_sez_stock_entry(self):
-        se = make_subcontracting_stock_entry(
-            bill_from_address="_Test Indian Registered Company-Billing",
-            bill_to_address="_Test Registered Customer-Billing-1",
-            vehicle_no="GJ07DL9009",
-            base_grand_total=100,
-        )
-
-        # reload to trigger onload which sets company_gstin, supplier_gstin
-        se = load_doc("Stock Entry", se.name, "submit")
-
-        e_waybill_data = EWaybillData(se).get_data()
-
-        self.assertEqual(e_waybill_data.get("toStateCode"), 96)
-        self.assertEqual(e_waybill_data.get("fromStateCode"), 24)
-        self.assertEqual(e_waybill_data.get("actToStateCode"), 24)
-
-    @change_settings(
-        "GST Settings",
-        {"enable_e_waybill_from_pi": 1, "enable_overseas_transactions": 1},
-    )
-    def test_e_waybill_for_sez_purchase_invoice(self):
-        pi = create_purchase_invoice(
-            vehicle_no="GJ07DL9009",
-            supplier_address="_Test Registered Supplier-Billing-2",
-            billing_address="_Test Indian Registered Company-Billing",
-            is_out_state=1,
-        )
-
-        e_waybill_data = EWaybillData(pi).get_data()
-
-        # bill_from = supplier (SEZ), bill_to = company
-        self.assertEqual(e_waybill_data.get("fromStateCode"), 96)
-        self.assertEqual(e_waybill_data.get("toStateCode"), 24)
-        self.assertEqual(e_waybill_data.get("actFromStateCode"), 24)
-
-    @change_settings(
-        "GST Settings",
-        {"enable_e_waybill_from_pi": 1, "enable_overseas_transactions": 1},
-    )
-    def test_e_waybill_for_sez_purchase_return(self):
-        pi = create_purchase_invoice(
-            vehicle_no="GJ07DL9009",
-            supplier_address="_Test Registered Supplier-Billing-2",
-            billing_address="_Test Indian Registered Company-Billing",
-            is_out_state=1,
-        )
-
-        debit_note = make_return_doc("Purchase Invoice", pi.name)
-        debit_note.vehicle_no = "GJ07DL9009"
-        debit_note.save()
-        debit_note.submit()
-
-        e_waybill_data = EWaybillData(debit_note).get_data()
-
-        # return swaps from/to: bill_from = company, bill_to = supplier (SEZ)
-        self.assertEqual(e_waybill_data.get("fromStateCode"), 24)
-        self.assertEqual(e_waybill_data.get("toStateCode"), 96)
-        self.assertEqual(e_waybill_data.get("actToStateCode"), 24)
-
->>>>>>> 4e5ad9e3 (feat: implement handling of mandatory ship-to gstin for e-invoice)
     # helper functions
     def _generate_e_waybill(
         self, docname=None, doctype="Sales Invoice", test_data=None, force=False

@@ -813,20 +813,6 @@ class EInvoiceData(GSTTransactionData):
         self.shipping_address = None
         self.dispatch_address = None
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-        if ship_to_address and self.doc.customer_address != ship_to_address:
-            self.shipping_address = self.get_address_details(ship_to_address)
-
-        if (
-            self.doc.dispatch_address_name
-            and self.doc.company_address != self.doc.dispatch_address_name
-        ):
-            self.dispatch_address = self.get_address_details(
-                self.doc.dispatch_address_name
-            )
-=======
-=======
         if ship_to_address and self.doc.customer_address != ship_to_address:
             self.shipping_address = self.get_address_details(ship_to_address)
 
@@ -838,10 +824,13 @@ class EInvoiceData(GSTTransactionData):
             ):
                 self.shipping_address = None
 
->>>>>>> 292fe878 (fix: remove is_generated_with_ship_to field and related logic from e-Invoice and e-Waybill handling)
-        if self.doc.dispatch_address_name and self.doc.company_address != self.doc.dispatch_address_name:
-            self.dispatch_address = self.get_address_details(self.doc.dispatch_address_name)
->>>>>>> ac683b7b (fix: changes as per review)
+        if (
+            self.doc.dispatch_address_name
+            and self.doc.company_address != self.doc.dispatch_address_name
+        ):
+            self.dispatch_address = self.get_address_details(
+                self.doc.dispatch_address_name
+            )
 
         self.billing_address.legal_name = self.transaction_details.party_name
         self.company_address.legal_name = self.transaction_details.company_name

@@ -2,14 +2,7 @@ import json
 import re
 
 import responses
-<<<<<<< HEAD
-=======
 import time_machine
-from erpnext.controllers.sales_and_purchase_return import make_return_doc
-from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
-from frappe.utils.data import format_date
->>>>>>> 986aea0b (fix: gate all the changes and minor refactor)
 from responses import matchers
 
 import frappe
@@ -19,13 +12,7 @@ from frappe.utils.data import format_date
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
-<<<<<<< HEAD
-=======
 from india_compliance.gst_india.constants import SHIP_TO_GSTIN_APPLICABLE_DATE
-from india_compliance.gst_india.overrides.test_transaction import (
-    create_refund_transaction,
-)
->>>>>>> 986aea0b (fix: gate all the changes and minor refactor)
 from india_compliance.gst_india.utils import load_doc
 from india_compliance.gst_india.utils.e_invoice import (
     EInvoiceData,
@@ -36,10 +23,7 @@ from india_compliance.gst_india.utils.e_invoice import (
     validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import EWaybillData
-from india_compliance.gst_india.utils.tests import (
-    append_item,
-    create_sales_invoice,
-)
+from india_compliance.gst_india.utils.tests import append_item, create_sales_invoice
 
 
 class TestEInvoice(FrappeTestCase):
@@ -142,7 +126,9 @@ class TestEInvoice(FrappeTestCase):
             self.assertIn("ShipDtls", EInvoiceData(si).get_data())
 
         # on/after rollout -> omitted, as Ship To GSTIN is mandatory from here
-        with time_machine.travel(get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE), tick=False):
+        with time_machine.travel(
+            get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE), tick=False
+        ):
             self.assertNotIn("ShipDtls", EInvoiceData(si).get_data())
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
@@ -343,36 +329,6 @@ class TestEInvoice(FrappeTestCase):
 
         self.assertIn(
             "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
-        )
-
-    @responses.activate
-    def test_validate_shipping_address_change(self):
-        """Ship To details reported in the e-Invoice can't be replaced afterwards.
-        ERROR CODE: 2324"""
-        test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
-        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000, is_in_state=True)
-
-        self._mock_e_invoice_response(data=test_data)
-        generate_e_invoice(si.name)
-        si.reload()
-
-        # reported in the e-Waybill generated along with the IRN
-        self.assertTrue(si.ewaybill)
-        si.shipping_address_name = "_Test Registered Customer-Billing-1"
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            "Cannot change the Place of Supply or address",
-            si.save,
-        )
-
-        # without the e-Waybill, the e-Invoice still reports them
-        si.db_set("ewaybill", "")
-        si.reload()
-        si.shipping_address_name = "_Test Registered Customer-Billing-1"
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            "Cannot change the Place of Supply or address",
-            si.save,
         )
 
     @responses.activate

@@ -37,11 +37,7 @@ from india_compliance.gst_india.constants import (
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
-<<<<<<< HEAD
-=======
-    SERVICE_HSN_PREFIX,
     SHIP_TO_GSTIN_APPLICABLE_DATE,
->>>>>>> 986aea0b (fix: gate all the changes and minor refactor)
     STATE_NUMBERS,
     STATE_PINCODE_MAPPING,
     TCS,

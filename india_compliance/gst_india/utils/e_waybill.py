@@ -42,11 +42,7 @@ from india_compliance.gst_india.constants.e_waybill import (
 from india_compliance.gst_india.utils import (
     handle_server_errors,
     is_foreign_doc,
-<<<<<<< HEAD
-=======
-    is_outward_stock_entry,
     is_ship_to_gstin_applicable,
->>>>>>> 986aea0b (fix: gate all the changes and minor refactor)
     load_doc,
     parse_datetime,
     send_updated_doc,
@@ -1592,25 +1588,16 @@ class EWaybillData(GSTTransactionData):
         self.ship_to = self.bill_to.copy()
         self.ship_from = self.bill_from.copy()
 
-<<<<<<< HEAD
-=======
-        # for SEZ, e-Waybill API expects billing state as 96 - Other Countries
-        # only billing state (fromStateCode/toStateCode), not shipping (actFromStateCode/actToStateCode)
-        # ERROR CODE: 641, 642
-        for side in (self.bill_from, self.bill_to):
-            if side.gst_category == "SEZ":
-                side.state_number = 96
-
         if has_different_to_address:
             self.ship_to = self.get_address_details(address.ship_to)
 
             # if same gstin then regular transaction, once Ship To GSTIN is sent
             if is_ship_to_gstin_applicable(self.settings):
                 has_different_to_address = (
-                    self.ship_to.gstin != self.bill_to.gstin or self.ship_to.gstin == "URP"
+                    self.ship_to.gstin != self.bill_to.gstin
+                    or self.ship_to.gstin == "URP"
                 )
 
->>>>>>> ac683b7b (fix: changes as per review)
         if has_different_to_address and has_different_from_address:
             transaction_type = 4
             self.ship_from = self.get_address_details(address.ship_from)
@@ -1678,11 +1665,7 @@ class EWaybillData(GSTTransactionData):
         if self.sandbox_mode:
             REGISTERED_GSTIN = "05AAACG2115R1ZN"
             OTHER_GSTIN = "05AAACG2140A1ZL"
-<<<<<<< HEAD
-=======
-            SEZ_GSTIN = "27AAJCS5738D1Z6"
             SHIPPING_GSTIN = SANDBOX_SHIP_TO["gstin"]
->>>>>>> ac683b7b (fix: changes as per review)
 
             self.transaction_details.update(
                 {
@@ -1727,7 +1710,8 @@ class EWaybillData(GSTTransactionData):
 
             if (
                 self.ship_to.gstin != "URP"
-                and self.transaction_details.transaction_type in SHIP_TO_TRANSACTION_TYPES
+                and self.transaction_details.transaction_type
+                in SHIP_TO_TRANSACTION_TYPES
             ):
                 self.ship_to.gstin = SHIPPING_GSTIN
 
