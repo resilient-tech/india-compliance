@@ -804,7 +804,6 @@ class EInvoiceData(GSTTransactionData):
             self.shipping_address = self.get_address_details(ship_to_address)
 
             # Ship To GSTIN can't be the same as Buyer GSTIN, once it's mandatory.
-            # "URP" denotes a missing GSTIN. ERROR CODE: 2323
             if (
                 is_ship_to_gstin_applicable(self.settings)
                 and self.shipping_address.gstin != "URP"
