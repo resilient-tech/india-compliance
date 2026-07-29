@@ -591,13 +591,13 @@
     },
     "shipping_details": {
         "ShipDtls": {
-            "Gstin": "36AMBPG7773M002",
+            "Gstin": "02AMBPG7773M002",
             "LglNm": "Test Registered Customer",
             "TrdNm": "Test Registered Customer",
             "Addr1": "Test Address - 4",
             "Loc": "Test City",
-            "Pin": 500055,
-            "Stcd": "36"
+            "Pin": 171302,
+            "Stcd": "02"
         }
     },
     "foreign_transaction": {

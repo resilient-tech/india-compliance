@@ -2,6 +2,7 @@ import json
 import re
 
 import responses
+import time_machine
 from responses import matchers
 
 import frappe
@@ -11,6 +12,7 @@ from frappe.utils.data import format_date
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+from india_compliance.gst_india.constants import SHIP_TO_GSTIN_APPLICABLE_DATE
 from india_compliance.gst_india.utils import load_doc
 from india_compliance.gst_india.utils.e_invoice import (
     EInvoiceData,
@@ -79,6 +81,56 @@ class TestEInvoice(FrappeTestCase):
             EInvoiceData(si).get_data(),
         )
 
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    def test_e_invoice_ship_to_gstin_outside_sandbox(self):
+        """Outside sandbox, an unregistered consignee yields ShipDtls.Gstin == 'URP'
+        while the registered buyer keeps its real GSTIN. A differing dispatch address
+        adds DispDtls (the e-Waybill transaction-type-4 analog: both dispatch and
+        ship-to differ).
+        """
+        si = create_sales_invoice(
+            company_address="_Test Indian Registered Company-Billing",
+            dispatch_address_name="_Test Indian Registered Company-Shipping",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name="_Test Unregistered Consignee-Shipping",
+            is_in_state=True,
+            do_not_submit=True,
+        )
+
+        data = EInvoiceData(si).get_data()
+
+        self.assertNotEqual(data["BuyerDtls"]["Gstin"], "URP")
+        self.assertEqual(data["ShipDtls"]["Gstin"], "URP")
+        self.assertTrue(data["ShipDtls"]["LglNm"])
+        self.assertIn("DispDtls", data)
+
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    def test_e_invoice_for_same_buyer_and_ship_to_gstin(self):
+        """Two addresses of the same party is a regular transaction, since Ship To
+        GSTIN can't be the same as Buyer GSTIN. ERROR CODE: 2323"""
+        si = create_sales_invoice(
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            # different address, same GSTIN as the billing address
+            shipping_address_name="_Test Registered Customer Warehouse-Shipping",
+            is_in_state=True,
+            do_not_submit=True,
+        )
+
+        # before rollout -> reported as-is, so production is unaffected
+        with time_machine.travel(
+            get_datetime(add_to_date(SHIP_TO_GSTIN_APPLICABLE_DATE, days=-1)), tick=True
+        ):
+            self.assertIn("ShipDtls", EInvoiceData(si).get_data())
+
+        # on/after rollout -> omitted, as Ship To GSTIN is mandatory from here
+        with time_machine.travel(
+            get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE), tick=False
+        ):
+            self.assertNotIn("ShipDtls", EInvoiceData(si).get_data())
+
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_request_data_for_foreign_transactions(self):
         test_data = self.e_invoice_test_data.foreign_transaction
@@ -97,6 +149,39 @@ class TestEInvoice(FrappeTestCase):
             test_data.get("request_data"),
             EInvoiceData(si).get_data(),
         )
+
+    @change_settings("GST Settings", {"sandbox_mode": 1})
+    def test_e_invoice_ship_to_gstin_in_sandbox(self):
+        """In sandbox (Bill To-Ship To), ShipDtls.Gstin is mandatory:
+        - in case GSTIN is not present "URP" is used
+        - for registered sanbox's GSTIN is provided, which must differ
+          from the buyer GSTIN ('buyer and shipping gstin can't be the same')
+        """
+        # unregistered shipping address -> ShipDtls stays URP, buyer substituted
+        si = create_sales_invoice(
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name="_Test Unregistered Consignee-Shipping",
+            is_in_state=True,
+            do_not_submit=True,
+        )
+        data = EInvoiceData(si).get_data()
+        self.assertEqual(data["ShipDtls"]["Gstin"], "URP")
+        self.assertEqual(data["BuyerDtls"]["Gstin"], "36AMBPG7773M002")
+
+        # registered consignee -> sandbox GSTIN, distinct from the buyer GSTIN
+        si = create_sales_invoice(
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name="_Test Registered Customer-Billing-1",
+            is_in_state=True,
+            do_not_submit=True,
+        )
+        data = EInvoiceData(si).get_data()
+        self.assertEqual(data["ShipDtls"]["Gstin"], "02AMBPG7773M002")
+        self.assertNotEqual(data["ShipDtls"]["Gstin"], data["BuyerDtls"]["Gstin"])
 
     def test_progressive_item_tax_amount(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill

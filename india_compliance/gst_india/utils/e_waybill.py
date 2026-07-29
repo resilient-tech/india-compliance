@@ -13,7 +13,6 @@ from frappe.utils import (
     get_datetime_str,
     get_fullname,
     get_link_to_form,
-    getdate,
     random_string,
     sbool,
 )
@@ -31,10 +30,10 @@ from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
     CANCEL_REASON_CODES,
     CONSIGNMENT_STATUS,
-    E_WAYBILL_CHANGES_APPLICABLE_DATE,
     EXTEND_VALIDITY_REASON_CODES,
     ITEM_LIMIT,
     PERMITTED_DOCTYPES,
+    SANDBOX_SHIP_TO,
     SHIP_TO_TRANSACTION_TYPES,
     SUB_SUPPLY_TYPES,
     TRANSIT_TYPES,
@@ -43,6 +42,7 @@ from india_compliance.gst_india.constants.e_waybill import (
 from india_compliance.gst_india.utils import (
     handle_server_errors,
     is_foreign_doc,
+    is_ship_to_gstin_applicable,
     load_doc,
     parse_datetime,
     send_updated_doc,
@@ -1152,14 +1152,6 @@ def get_billing_shipping_address_map(doc):
 #######################################################################################
 
 
-def is_e_waybill_changes_applicable(settings=None):
-    # changes are live in sandbox and apply in production from E_WAYBILL_CHANGES_APPLICABLE_DATE
-    if not settings:
-        settings = frappe.get_cached_doc("GST Settings")
-
-    return settings.sandbox_mode or getdate() >= E_WAYBILL_CHANGES_APPLICABLE_DATE
-
-
 class EWaybillData(GSTTransactionData):
     def __init__(self, *args, **kwargs):
         self.for_json = kwargs.pop("for_json", False)
@@ -1596,9 +1588,18 @@ class EWaybillData(GSTTransactionData):
         self.ship_to = self.bill_to.copy()
         self.ship_from = self.bill_from.copy()
 
+        if has_different_to_address:
+            self.ship_to = self.get_address_details(address.ship_to)
+
+            # if same gstin then regular transaction, once Ship To GSTIN is sent
+            if is_ship_to_gstin_applicable(self.settings):
+                has_different_to_address = (
+                    self.ship_to.gstin != self.bill_to.gstin
+                    or self.ship_to.gstin == "URP"
+                )
+
         if has_different_to_address and has_different_from_address:
             transaction_type = 4
-            self.ship_to = self.get_address_details(address.ship_to)
             self.ship_from = self.get_address_details(address.ship_from)
 
         elif has_different_from_address:
@@ -1607,7 +1608,6 @@ class EWaybillData(GSTTransactionData):
 
         elif has_different_to_address:
             transaction_type = 2
-            self.ship_to = self.get_address_details(address.ship_to)
 
         self.transaction_details.transaction_type = transaction_type
 
@@ -1665,6 +1665,7 @@ class EWaybillData(GSTTransactionData):
         if self.sandbox_mode:
             REGISTERED_GSTIN = "05AAACG2115R1ZN"
             OTHER_GSTIN = "05AAACG2140A1ZL"
+            SHIPPING_GSTIN = SANDBOX_SHIP_TO["gstin"]
 
             self.transaction_details.update(
                 {
@@ -1706,8 +1707,13 @@ class EWaybillData(GSTTransactionData):
 
             self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
             self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
-            if self.ship_to.gstin:
-                self.ship_to.gstin = _get_sandbox_gstin(self.ship_to, 1)
+
+            if (
+                self.ship_to.gstin != "URP"
+                and self.transaction_details.transaction_type
+                in SHIP_TO_TRANSACTION_TYPES
+            ):
+                self.ship_to.gstin = SHIPPING_GSTIN
 
         to_state_code = int(self.transaction_details.pos_state_code)
 
@@ -1761,7 +1767,7 @@ class EWaybillData(GSTTransactionData):
         }
 
         if (
-            is_e_waybill_changes_applicable(self.settings)
+            is_ship_to_gstin_applicable(self.settings)
             and self.transaction_details.transaction_type in SHIP_TO_TRANSACTION_TYPES
         ):
             data.update(
