@@ -73,6 +73,14 @@ def load_doc(doctype, name, perm="read"):
     return doc
 
 
+def has_changed(doc, fieldname):
+    return doc.meta.has_field(fieldname) and doc.has_value_changed(fieldname)
+
+
+def get_changed_fields(doc, fieldnames):
+    return [fieldname for fieldname in fieldnames if has_changed(doc, fieldname)]
+
+
 def update_onload(doc, key, value):
     """Set or update onload key in doc"""
 
