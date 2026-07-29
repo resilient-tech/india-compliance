@@ -49,6 +49,7 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     is_foreign_doc,
     is_overseas_doc,
+    is_ship_to_gstin_applicable,
     load_doc,
     parse_datetime,
     send_updated_doc,
@@ -800,11 +801,16 @@ class EInvoiceData(GSTTransactionData):
         self.dispatch_address = None
 
         if ship_to_address and self.doc.customer_address != ship_to_address:
-            shipping_address = self.get_address_details(ship_to_address)
+            self.shipping_address = self.get_address_details(ship_to_address)
 
-            # Ship To GSTIN can't be the same as Buyer GSTIN. "URP" denotes a missing GSTIN
-            if shipping_address.gstin == "URP" or shipping_address.gstin != self.billing_address.gstin:
-                self.shipping_address = shipping_address
+            # Ship To GSTIN can't be the same as Buyer GSTIN, once it's mandatory.
+            # "URP" denotes a missing GSTIN. ERROR CODE: 2323
+            if (
+                is_ship_to_gstin_applicable(self.settings)
+                and self.shipping_address.gstin != "URP"
+                and self.shipping_address.gstin == self.billing_address.gstin
+            ):
+                self.shipping_address = None
 
         if self.doc.dispatch_address_name and self.doc.company_address != self.doc.dispatch_address_name:
             self.dispatch_address = self.get_address_details(self.doc.dispatch_address_name)

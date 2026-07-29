@@ -43,6 +43,7 @@ from india_compliance.gst_india.constants import (
     PINCODE_FORMAT,
     SALES_DOCTYPES,
     SERVICE_HSN_PREFIX,
+    SHIP_TO_GSTIN_APPLICABLE_DATE,
     STATE_NUMBERS,
     STATE_PINCODE_MAPPING,
     TAX_TYPES,
@@ -436,6 +437,16 @@ def is_overseas_transaction(doctype, gst_category, place_of_supply):
         return is_foreign_transaction(gst_category, place_of_supply)
 
     return gst_category == "Overseas"
+
+
+def is_ship_to_gstin_applicable(settings=None):
+    """Ship To GSTIN is mandatory, and must differ from Bill To GSTIN, in both the
+    e-Invoice and e-Waybill APIs. Live in sandbox, and in production from the rollout date.
+    """
+    if not settings:
+        settings = frappe.get_cached_doc("GST Settings")
+
+    return settings.sandbox_mode or getdate() >= SHIP_TO_GSTIN_APPLICABLE_DATE
 
 
 def is_foreign_doc(doc):
