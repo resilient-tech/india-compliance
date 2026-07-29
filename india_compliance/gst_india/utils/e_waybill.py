@@ -1695,8 +1695,11 @@ class EWaybillData(GSTTransactionData):
         if has_different_to_address:
             self.ship_to = self.get_address_details(address.ship_to)
 
-            # if same gstin then regular  transaction
-            has_different_to_address = self.ship_to.gstin != self.bill_to.gstin or self.ship_to.gstin == "URP"
+            # if same gstin then regular transaction, once Ship To GSTIN is sent
+            if is_e_waybill_changes_applicable(self.settings):
+                has_different_to_address = (
+                    self.ship_to.gstin != self.bill_to.gstin or self.ship_to.gstin == "URP"
+                )
 
         if has_different_to_address and has_different_from_address:
             transaction_type = 4
