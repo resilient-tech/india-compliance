@@ -21,15 +21,11 @@ from india_compliance.gst_india.constants import (
     STATE_NUMBERS,
     SUBCONTRACTING_DOCTYPES,
     TAX_TYPES,
-<<<<<<< HEAD
-=======
-    TAXABLE_GST_TREATMENTS,
     TRANSPORTER_FIELDS,
 )
 from india_compliance.gst_india.constants.custom_fields import (
     E_WAYBILL_FIELDS,
     E_WAYBILL_INV_FIELDS,
->>>>>>> ae60505e (fix: add validation for transporter id,refactor and test)
 )
 from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
     restrict_gstr_1_transaction_for,
@@ -37,11 +33,7 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
 from india_compliance.gst_india.doctype.gstin.gstin import get_and_validate_gstin_status
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
-<<<<<<< HEAD
-=======
     get_changed_fields,
-    get_gst_account_by_item_tax_template,
->>>>>>> b71e49d9 (refactor: implement has_changed and get_changed_fields utility functions)
     get_gst_account_gst_tax_type_map,
     get_gst_accounts_by_type,
     get_hsn_settings,

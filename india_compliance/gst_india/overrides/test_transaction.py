@@ -25,13 +25,8 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     update_regional_gl_entries,
 )
 from frappe.model.mapper import get_mapped_doc
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import add_days, flt, getdate, today
-=======
-from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_days, add_to_date, flt, getdate, now_datetime, today
->>>>>>> ae60505e (fix: add validation for transporter id,refactor and test)
 from parameterized import parameterized_class
 
 from india_compliance.gst_india.constants import (
@@ -359,7 +354,7 @@ class TestTransaction(FrappeTestCase):
 
         self.assertRaises(
             frappe.exceptions.ValidationError,
-            sync_address_dependent_fields_on_submit,
+            sync_address_dependent_fields_after_submit,
             doc,
         )
 
@@ -377,7 +372,7 @@ class TestTransaction(FrappeTestCase):
 
         self.assertRaises(
             frappe.exceptions.ValidationError,
-            sync_address_dependent_fields_on_submit,
+            sync_address_dependent_fields_after_submit,
             doc,
         )
 
@@ -424,7 +419,7 @@ class TestTransaction(FrappeTestCase):
 
         self.assertRaises(
             frappe.exceptions.ValidationError,
-            sync_address_dependent_fields_on_submit,
+            sync_address_dependent_fields_after_submit,
             doc,
         )
 
@@ -445,7 +440,7 @@ class TestTransaction(FrappeTestCase):
 
         self.assertRaises(
             frappe.exceptions.ValidationError,
-            sync_address_dependent_fields_on_submit,
+            sync_address_dependent_fields_after_submit,
             doc,
         )
 

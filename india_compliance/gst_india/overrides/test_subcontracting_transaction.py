@@ -17,22 +17,13 @@ from erpnext.stock.doctype.stock_entry.stock_entry import make_stock_in_entry
 from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order import (
     make_subcontracting_receipt,
 )
-<<<<<<< HEAD
 from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
     create_subcontracting_order,
 )
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import add_to_date, getdate, now_datetime
 
-=======
-from frappe.contacts.doctype.address.address import get_default_address
-from frappe.tests import IntegrationTestCase, UnitTestCase, change_settings
-from frappe.utils import add_to_date, flt, getdate, now_datetime
-
-from india_compliance.gst_india.overrides.subcontracting_transaction import (
-    is_e_waybill_applicable,
-)
 from india_compliance.gst_india.utils.e_waybill import mark_e_waybill_as_generated
->>>>>>> ae60505e (fix: add validation for transporter id,refactor and test)
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
     set_item_wise_tax_rates,
@@ -44,11 +35,7 @@ from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_RM_ITEM_1,
     SUBCONTRACTING_TEST_RM_ITEM_2,
     SUBCONTRACTING_TEST_SERVICE_ITEM,
-<<<<<<< HEAD
-=======
     TRANSPORTER_DETAILS,
-    create_subcontracting_inward_order,
->>>>>>> ae60505e (fix: add validation for transporter id,refactor and test)
     create_transaction,
     make_subcontracting_stock_entry,
 )
