@@ -15,7 +15,6 @@ from frappe.utils import (
     get_datetime_str,
     get_fullname,
     get_link_to_form,
-    getdate,
     random_string,
 )
 from frappe.utils.file_manager import save_file
@@ -40,7 +39,6 @@ from india_compliance.gst_india.constants.e_waybill import (
     BUYING_DOCTYPES,
     CANCEL_REASON_CODES,
     CONSIGNMENT_STATUS,
-    E_WAYBILL_CHANGES_APPLICABLE_DATE,
     EXTEND_VALIDITY_REASON_CODES,
     ITEM_LIMIT,
     PERMITTED_DOCTYPES,
@@ -59,6 +57,7 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     is_foreign_doc,
     is_outward_stock_entry,
+    is_ship_to_gstin_applicable,
     load_doc,
     parse_datetime,
     send_updated_doc,
@@ -1238,14 +1237,6 @@ def get_billing_shipping_address_map(doc):
 #######################################################################################
 
 
-def is_e_waybill_changes_applicable(settings=None):
-    # changes are live in sandbox and apply in production from E_WAYBILL_CHANGES_APPLICABLE_DATE
-    if not settings:
-        settings = frappe.get_cached_doc("GST Settings")
-
-    return settings.sandbox_mode or getdate() >= E_WAYBILL_CHANGES_APPLICABLE_DATE
-
-
 class EWaybillData(GSTTransactionData):
     def __init__(self, *args, **kwargs):
         self.for_json = kwargs.pop("for_json", False)
@@ -1696,7 +1687,7 @@ class EWaybillData(GSTTransactionData):
             self.ship_to = self.get_address_details(address.ship_to)
 
             # if same gstin then regular transaction, once Ship To GSTIN is sent
-            if is_e_waybill_changes_applicable(self.settings):
+            if is_ship_to_gstin_applicable(self.settings):
                 has_different_to_address = (
                     self.ship_to.gstin != self.bill_to.gstin or self.ship_to.gstin == "URP"
                 )
@@ -1877,7 +1868,7 @@ class EWaybillData(GSTTransactionData):
         }
 
         if (
-            is_e_waybill_changes_applicable(self.settings)
+            is_ship_to_gstin_applicable(self.settings)
             and self.transaction_details.transaction_type in SHIP_TO_TRANSACTION_TYPES
         ):
             data.update(

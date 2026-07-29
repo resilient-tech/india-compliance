@@ -15,10 +15,17 @@ from frappe.www.printview import get_html_and_style
 from responses import matchers
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+<<<<<<< HEAD
 from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
 from india_compliance.gst_india.constants.e_waybill import (
     E_WAYBILL_CHANGES_APPLICABLE_DATE,
+=======
+from india_compliance.gst_india.constants import (
+    SERVICE_HSN_PREFIX,
+    SHIP_TO_GSTIN_APPLICABLE_DATE,
+>>>>>>> 986aea0b (fix: gate all the changes and minor refactor)
 )
+from india_compliance.gst_india.constants.e_waybill import SUB_SUPPLY_TYPES
 from india_compliance.gst_india.overrides.sales_invoice import (
     is_e_waybill_applicable,
 )
@@ -1533,8 +1540,8 @@ class TestEWaybill(FrappeTestCase):
 
     @change_settings("GST Settings", {"sandbox_mode": 0})
     def test_ship_to_gstin_gated_by_rollout_date(self):
-        day_before_rollout = get_datetime(add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1))
-        rollout_date = get_datetime(E_WAYBILL_CHANGES_APPLICABLE_DATE)
+        day_before_rollout = get_datetime(add_to_date(SHIP_TO_GSTIN_APPLICABLE_DATE, days=-1))
+        rollout_date = get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE)
 
         # before rollout -> omitted from payload and offline JSON
         with time_machine.travel(day_before_rollout, tick=True):
@@ -1564,8 +1571,8 @@ class TestEWaybill(FrappeTestCase):
     def test_same_bill_to_and_ship_to_gstin_gated_by_rollout_date(self):
         """Two addresses of the same party stay a Bill To - Ship To transaction until
         Ship To GSTIN is sent, as 618 isn't reachable before that."""
-        day_before_rollout = get_datetime(add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1))
-        rollout_date = get_datetime(E_WAYBILL_CHANGES_APPLICABLE_DATE)
+        day_before_rollout = get_datetime(add_to_date(SHIP_TO_GSTIN_APPLICABLE_DATE, days=-1))
+        rollout_date = get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE)
 
         with time_machine.travel(day_before_rollout, tick=True):
             si = create_sales_invoice(
