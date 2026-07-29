@@ -3,7 +3,7 @@ from erpnext.controllers.subcontracting_controller import make_rm_stock_entry
 from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
     create_subcontracting_order,
 )
-from frappe.utils import getdate
+from frappe.utils import add_days, getdate, today
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -14,6 +14,18 @@ SUBCONTRACTING_TEST_SERVICE_ITEM = "Subcontracted Service Item 1"
 SUBCONTRACTING_TEST_FINISHED_ITEM = "Subcontracted Item SA1"
 SUBCONTRACTING_TEST_FINISHED_ITEM_2 = "Subcontracted Item SA2"
 SUBCONTRACTING_TEST_FINISHED_ITEM_TG = "Subcontracted Item Trading Goods"
+
+# Values differ from the defaults, so that each field is seen as changed
+TRANSPORTER_DETAILS = {
+    "transporter": "_Test Common Supplier",
+    "gst_transporter_id": "05AAACG2140A1ZL",
+    "lr_no": "_Test Transport Receipt",
+    "lr_date": add_days(today(), -1),
+    "vehicle_no": "GJ01AA1234",
+    "distance": 10,
+    "mode_of_transport": "Rail",
+    "gst_vehicle_type": "Over Dimensional Cargo (ODC)",
+}
 
 
 def create_sales_invoice(**data):

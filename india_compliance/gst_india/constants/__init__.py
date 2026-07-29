@@ -1,8 +1,13 @@
 import re
 
 from erpnext.stock.get_item_details import sales_doctypes
+from frappe.utils import getdate
 
 TIMEZONE = "Asia/Kolkata"
+
+# Date from which NIC requires Ship To GSTIN in the e-Invoice and e-Waybill APIs
+# in production (already live in sandbox)
+SHIP_TO_GSTIN_APPLICABLE_DATE = getdate("2026-08-01")
 
 ABBREVIATIONS = {"SEZ", "GST", "CGST", "SGST", "IGST", "CESS", "HSN"}
 
@@ -23,6 +28,21 @@ GST_REFUND_TAX_TYPES = tuple(tax_type + "_refund" for tax_type in GST_TAX_TYPES)
 TAX_TYPES = (*GST_TAX_TYPES, *GST_RCM_TAX_TYPES, *GST_REFUND_TAX_TYPES)
 
 GST_PARTY_TYPES = ("Customer", "Supplier", "Company")
+
+# Transporter fields that stay editable after submit until an e-Waybill is generated.
+TRANSPORTER_FIELDS = (
+    "transporter",
+    "transporter_name",
+    "gst_transporter_id",
+    "driver",
+    "driver_name",
+    "lr_no",
+    "lr_date",
+    "vehicle_no",
+    "distance",
+    "mode_of_transport",
+    "gst_vehicle_type",
+)
 
 # Map for e-Invoice Supply Type
 GST_CATEGORIES = {
@@ -1481,6 +1501,10 @@ ORIGINAL_VS_AMENDED = (
     {
         "original": "IMPGSEZ",
         "amended": "",
+    },
+    {
+        "original": "ECOM",
+        "amended": "ECOMA",
     },
 )
 

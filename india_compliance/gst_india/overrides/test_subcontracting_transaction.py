@@ -21,7 +21,9 @@ from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_ord
     create_subcontracting_order,
 )
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import add_to_date, getdate, now_datetime
 
+from india_compliance.gst_india.utils.e_waybill import mark_e_waybill_as_generated
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
     set_item_wise_tax_rates,
@@ -33,6 +35,7 @@ from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_RM_ITEM_1,
     SUBCONTRACTING_TEST_RM_ITEM_2,
     SUBCONTRACTING_TEST_SERVICE_ITEM,
+    TRANSPORTER_DETAILS,
     create_transaction,
     make_subcontracting_stock_entry,
 )
@@ -270,6 +273,57 @@ class TestSubcontractingTransaction(FrappeTestCase):
         stock_entry.save()
 
         self.assertEqual(stock_entry.select_print_heading, "Credit Note")
+
+    def _make_submitted_subcontracting_receipt(self):
+        sco = make_sco()
+        make_stock_transfer_entry(sco_no=sco.name, rm_items=get_rm_items(sco.supplied_items))
+
+        scr = make_subcontracting_receipt(sco.name)
+        scr.submit()
+
+        return scr
+
+    def test_transporter_details_after_submit(self):
+        """Transporter details stay editable after submit, until an e-Waybill is generated."""
+        for doc in (
+            make_subcontracting_stock_entry(),
+            self._make_submitted_subcontracting_receipt(),
+        ):
+            with self.subTest(doctype=doc.doctype):
+                doc.reload()
+                self.assertFalse(doc.ewaybill)
+
+                # editable as long as no e-Waybill is generated
+                doc.update(TRANSPORTER_DETAILS)
+                doc.save()
+
+                doc.reload()
+                for fieldname, value in TRANSPORTER_DETAILS.items():
+                    self.assertEqual(
+                        doc.get(fieldname),
+                        getdate(value) if fieldname == "lr_date" else value,
+                        msg=f"{doc.doctype}.{fieldname} must be editable after submit",
+                    )
+
+                mark_e_waybill_as_generated(
+                    doc.doctype,
+                    doc.name,
+                    values={
+                        "ewaybill": "351002721233",
+                        "e_waybill_date": str(now_datetime()),
+                        "valid_upto": str(add_to_date(now_datetime(), days=1)),
+                    },
+                )
+
+                # locked once the e-Waybill is generated
+                doc.reload()
+                doc.vehicle_no = "GJ01AA5678"
+
+                self.assertRaisesRegex(
+                    frappe.ValidationError,
+                    "Cannot change transporter details after the e-Waybill",
+                    doc.save,
+                )
 
     def test_for_unregistered_company(self):
         po = create_purchase_order(

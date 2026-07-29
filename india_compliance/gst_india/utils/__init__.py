@@ -1,6 +1,7 @@
 import copy
 import datetime
 import functools
+import inspect
 import io
 import tarfile
 
@@ -42,6 +43,7 @@ from india_compliance.gst_india.constants import (
     PINCODE_FORMAT,
     SALES_DOCTYPES,
     SERVICE_HSN_PREFIX,
+    SHIP_TO_GSTIN_APPLICABLE_DATE,
     STATE_NUMBERS,
     STATE_PINCODE_MAPPING,
     TAX_TYPES,
@@ -69,6 +71,14 @@ def load_doc(doctype, name, perm="read"):
     run_onload(doc)
 
     return doc
+
+
+def has_changed(doc, fieldname):
+    return doc.meta.has_field(fieldname) and doc.has_value_changed(fieldname)
+
+
+def get_changed_fields(doc, fieldnames):
+    return [fieldname for fieldname in fieldnames if has_changed(doc, fieldname)]
 
 
 def update_onload(doc, key, value):
@@ -153,6 +163,76 @@ def get_party_for_gstin(gstin: str, party_type: str = "Supplier"):
     )
     if party:
         return party[0][0]
+
+
+def validate_company_access(company, doctype="GST Inward Supply"):
+    """Throw unless the user may read doctype data for company."""
+    if not company:
+        return
+
+    reference = frappe.new_doc(doctype)
+    reference.company = company
+    if not frappe.has_permission(doctype, "read", doc=reference):
+        frappe.throw(
+            _("You are not permitted to access data for Company {0}.").format(company),
+            frappe.PermissionError,
+        )
+
+
+def validate_company_gstin_access(company_gstin, doctype="GST Inward Supply"):
+    """Throw unless the user may read doctype data for company_gstin's Company."""
+    if not company_gstin or company_gstin == "All":
+        return
+
+    company = get_party_for_gstin(company_gstin, "Company")
+    if not company:
+        frappe.throw(
+            _("GSTIN {0} is not linked to any Company.").format(company_gstin),
+            frappe.ValidationError,
+        )
+
+    validate_company_access(company, doctype)
+
+
+def validate_gstin_permission(fn=None, *, doctype=None):
+    """Whitelist decorator gating a method on its company_gstin / gstin argument.
+    Place below @frappe.whitelist() and above @otp_handler.
+    """
+    if fn is None:
+        return functools.partial(validate_gstin_permission, doctype=doctype)
+
+    signature = inspect.signature(fn)
+    if "company_gstin" in signature.parameters:
+        field = "company_gstin"
+    elif "gstin" in signature.parameters:
+        field = "gstin"
+    else:
+        raise ValueError(
+            f"validate_gstin_permission requires '{fn.__name__}' to declare a "
+            "'company_gstin' or 'gstin' parameter."
+        )
+
+    resolved_doctype = doctype or "GST Inward Supply"
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        bound = signature.bind_partial(*args, **kwargs)
+        company_gstin = bound.arguments.get(field)
+
+        if company_gstin == "All":
+            company = bound.arguments.get("company") or getattr(bound.arguments.get("self"), "company", None)
+            if not company:
+                frappe.throw(
+                    _("Company is required to validate access for all GSTINs."),
+                    frappe.PermissionError,
+                )
+            validate_company_access(company, resolved_doctype)
+        else:
+            validate_company_gstin_access(company_gstin, resolved_doctype)
+
+        return fn(*args, **kwargs)
+
+    return wrapper
 
 
 @frappe.whitelist()
@@ -365,6 +445,16 @@ def is_overseas_transaction(doctype, gst_category, place_of_supply):
         return is_foreign_transaction(gst_category, place_of_supply)
 
     return gst_category == "Overseas"
+
+
+def is_ship_to_gstin_applicable(settings=None):
+    """Ship To GSTIN is mandatory, and must differ from Bill To GSTIN, in both the
+    e-Invoice and e-Waybill APIs. Live in sandbox, and in production from the rollout date.
+    """
+    if not settings:
+        settings = frappe.get_cached_doc("GST Settings")
+
+    return settings.sandbox_mode or getdate(as_ist()) >= SHIP_TO_GSTIN_APPLICABLE_DATE
 
 
 def is_foreign_doc(doc):

@@ -19,6 +19,7 @@ from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     IMSReconciler,
     InwardSupply,
     PurchaseInvoice,
+    apply_declared_overrides,
 )
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     verify_request_in_progress,
@@ -39,6 +40,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     unlink_documents as _unlink_documents,
 )
+from india_compliance.gst_india.utils import validate_gstin_permission
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstin_info import (
     get_latest_3b_filed_period,
@@ -143,10 +145,13 @@ class GSTInvoiceManagementSystem(Document):
         )
 
     @frappe.whitelist()
-    def update_action(self, invoice_names: str | list, action: str):
+    def update_action(
+        self, invoice_names: str | list, action: str, declared_overrides: str | dict | None = None
+    ):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         invoice_names = frappe.parse_json(invoice_names)
+
         GSTR2 = frappe.qb.DocType("GST Inward Supply")
 
         # When invoice is rejected then mark action as "Ignore" and copy current action to previous action
@@ -179,6 +184,13 @@ class GSTInvoiceManagementSystem(Document):
         # Bulk update ITC claim periods for linked Purchase Invoices
 
         set_itc_claim_period_on_ims_action(invoice_names, action, ims_period=self.period)
+
+        # user-confirmed declared reversal from the review dialog (default full comes from download)
+        if declared_overrides:
+            apply_declared_overrides(frappe.parse_json(declared_overrides))
+
+        # return the stored (cleaned) rows so the grid and a re-opened dialog reflect them
+        return self.get_invoice_data(inward_supply=invoice_names)
 
     @frappe.whitelist()
     def get_invoice_details(self, purchase_name: str | None, inward_supply_name: str | None):
@@ -250,6 +262,7 @@ class GSTInvoiceManagementSystem(Document):
 
 
 @frappe.whitelist()
+@validate_gstin_permission
 @otp_handler
 def download_invoices(company_gstin: str):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
@@ -273,6 +286,7 @@ def download_invoices(company_gstin: str):
 
 
 @frappe.whitelist()
+@validate_gstin_permission
 @otp_handler
 def save_invoices(company_gstin: str):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
@@ -282,6 +296,7 @@ def save_invoices(company_gstin: str):
 
 
 @frappe.whitelist()
+@validate_gstin_permission
 @otp_handler
 def reset_invoices(company_gstin: str):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
@@ -291,6 +306,7 @@ def reset_invoices(company_gstin: str):
 
 
 @frappe.whitelist()
+@validate_gstin_permission
 @otp_handler
 def sync_with_gstn_and_reupload(company_gstin: str):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
@@ -306,6 +322,7 @@ def sync_with_gstn_and_reupload(company_gstin: str):
 
 
 @frappe.whitelist()
+@validate_gstin_permission(doctype="GST Return Log")
 @otp_handler
 def check_action_status(company_gstin: str, action: str):
     frappe.has_permission("GST Return Log", "write", throw=True)
@@ -327,6 +344,7 @@ def download_excel_report(data: str | list, doc: str | dict | frappe._dict):
 
 
 @frappe.whitelist()
+@validate_gstin_permission
 def get_period_options(company: str, company_gstin: str):
     def format_period(period):
         return period[2:] + period[:2]
