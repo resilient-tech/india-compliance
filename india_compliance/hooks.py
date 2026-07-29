@@ -143,7 +143,10 @@ doc_events = {
         ],
         "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
         "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
-        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.sync_address_dependent_fields_on_submit",
+        "before_update_after_submit": [
+            "india_compliance.gst_india.overrides.transaction.validate_transporter_fields_after_submit",
+            "india_compliance.gst_india.overrides.transaction.sync_address_dependent_fields_after_submit",
+        ],
         "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
         "validate": "india_compliance.gst_india.overrides.delivery_note.validate",
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
@@ -179,7 +182,10 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
         "before_save": "india_compliance.gst_india.overrides.transaction.update_valuation_rate",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_valuation_rate",
-        "before_update_after_submit": "india_compliance.gst_india.overrides.purchase_invoice.before_update_after_submit",
+        "before_update_after_submit": [
+            "india_compliance.gst_india.overrides.transaction.validate_transporter_fields_after_submit",
+            "india_compliance.gst_india.overrides.purchase_invoice.before_update_after_submit",
+        ],
         "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
         "on_cancel": "india_compliance.gst_india.overrides.purchase_invoice.on_cancel",
@@ -209,7 +215,10 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.purchase_receipt.validate",
         "before_save": "india_compliance.gst_india.overrides.transaction.update_valuation_rate",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_valuation_rate",
-        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.sync_address_dependent_fields_on_submit",
+        "before_update_after_submit": [
+            "india_compliance.gst_india.overrides.transaction.validate_transporter_fields_after_submit",
+            "india_compliance.gst_india.overrides.transaction.sync_address_dependent_fields_after_submit",
+        ],
         "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },
@@ -222,7 +231,10 @@ doc_events = {
         "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
         "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
-        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.sync_address_dependent_fields_on_submit",
+        "before_update_after_submit": [
+            "india_compliance.gst_india.overrides.transaction.validate_transporter_fields_after_submit",
+            "india_compliance.gst_india.overrides.transaction.sync_address_dependent_fields_after_submit",
+        ],
         "on_update_after_submit": (
             "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit"
         ),
@@ -245,6 +257,7 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
         "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
         "before_submit": "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
+        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.validate_transporter_fields_after_submit",
         "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
         "after_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.after_mapping_stock_entry",
     },
@@ -260,6 +273,7 @@ doc_events = {
             "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
             "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
         ],
+        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.validate_transporter_fields_after_submit",
         "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
         "before_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.before_mapping_subcontracting_receipt",
     },
