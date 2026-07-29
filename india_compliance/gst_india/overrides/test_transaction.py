@@ -21,10 +21,14 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
 )
 from frappe.model.mapper import get_mapped_doc
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import add_days, flt, getdate, today
+from frappe.utils import add_days, add_to_date, flt, getdate, now_datetime, today
 from parameterized import parameterized_class
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
+from india_compliance.gst_india.constants import (
+    GST_TAX_TYPES,
+    SALES_DOCTYPES,
+)
+from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_FIELDS
 from india_compliance.gst_india.overrides.transaction import (
     ADDRESS_DEPENDENT_FIELDS,
     DOCTYPES_WITH_GST_DETAIL,
@@ -35,12 +39,14 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_gst_refund_accounts,
     validate_item_tax_template,
 )
-from india_compliance.gst_india.setup.property_setters import (
-    ADDRESS_FIELDS_BY_DOCTYPE,
-    TRANSPORTER_FIELDS_BY_DOCTYPE,
+from india_compliance.gst_india.setup.property_setters import ADDRESS_FIELDS_BY_DOCTYPE
+from india_compliance.gst_india.utils.e_waybill import (
+    mark_e_waybill_as_cancelled,
+    mark_e_waybill_as_generated,
 )
 from india_compliance.gst_india.utils.jinja import get_gst_breakup
 from india_compliance.gst_india.utils.tests import (
+    TRANSPORTER_DETAILS,
     _append_taxes,
     append_item,
     create_purchase_invoice,
@@ -472,42 +478,74 @@ class TestTransaction(IntegrationTestCase):
             doc.save,
         )
 
-    def test_allow_transporter_change_after_submit_without_ewaybill(self):
-        """Transporter details stay editable after submit while no e-Waybill exists."""
-        if self.doctype not in TRANSPORTER_FIELDS_BY_DOCTYPE:
+    def test_transporter_details_after_submit(self):
+        """Transporter details stay editable after submit, until an e-Waybill is generated."""
+        if self.doctype not in E_WAYBILL_FIELDS:
             return
 
         doc = create_transaction(**self.transaction_details)
-        doc.reload()
-        self.assertEqual(doc.docstatus, 1)
-        self.assertFalse(doc.get("ewaybill"))
+        self.assertFalse(doc.ewaybill)
 
-        doc.vehicle_no = "GJ01AA1234"
+        # editable as long as no e-Waybill is generated
+        doc.update(TRANSPORTER_DETAILS)
         doc.save()
 
         doc.reload()
-        self.assertEqual(doc.vehicle_no, "GJ01AA1234")
+        for fieldname, value in TRANSPORTER_DETAILS.items():
+            self.assertEqual(
+                doc.get(fieldname),
+                getdate(value) if fieldname == "lr_date" else value,
+                msg=f"{self.doctype}.{fieldname} must be editable after submit",
+            )
 
-    def test_block_transporter_change_when_ewaybill_exists(self):
-        """Once an e-Waybill exists, transporter details can no longer be edited."""
-        if self.doctype not in TRANSPORTER_FIELDS_BY_DOCTYPE:
-            return
+        # transporter_name follows transporter, even though it isn't set explicitly
+        self.assertEqual(doc.transporter_name, TRANSPORTER_DETAILS["transporter"])
 
-        if not frappe.get_meta(self.doctype).has_field("ewaybill"):
-            return
+        # validate isn't run after submit, and hence validated by the guard
+        doc.gst_transporter_id = "05AAACG2140A1Z"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            "GST Transporter ID.*must have 15 characters",
+            doc.save,
+        )
 
-        doc = create_transaction(**self.transaction_details)
         doc.reload()
+        mark_e_waybill_as_generated(
+            doc.doctype,
+            doc.name,
+            values={
+                "ewaybill": "351002721233",
+                "e_waybill_date": str(now_datetime()),
+                "valid_upto": str(add_to_date(now_datetime(), days=1)),
+            },
+        )
 
-        # fake an e-Waybill, then edit a transporter field
-        doc.ewaybill = "123456789012"
-        doc.vehicle_no = "GJ01AA1234"
-
+        # locked once the e-Waybill is generated
+        doc.reload()
+        doc.vehicle_no = "GJ01AA5678"
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             "Cannot change transporter details after the e-Waybill",
             doc.save,
         )
+
+        mark_e_waybill_as_cancelled(
+            doc.doctype,
+            doc.name,
+            values={
+                "reason": "Data Entry Mistake",
+                "remark": "Manually Cancelled",
+                "cancelled_on": str(now_datetime()),
+            },
+        )
+
+        # editable again, as the e-Waybill is cancelled
+        doc.reload()
+        doc.vehicle_no = "GJ01AA5678"
+        doc.save()
+
+        doc.reload()
+        self.assertEqual(doc.vehicle_no, "GJ01AA5678")
 
     def test_validate_mandatory_gst_category(self):
         doc = create_transaction(**self.transaction_details, do_not_submit=True)

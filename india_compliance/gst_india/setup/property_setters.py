@@ -76,7 +76,7 @@ def get_property_setters(*, include_defaults=False):
         *PURCHASE_RECEIPT_PROPERTIES,
         *SUBCONTRACTING_RECEIPT_PROPERTIES,
         *ADDRESS_ALLOW_ON_SUBMIT_PROPERTIES,
-        *TRANSPORTER_ALLOW_ON_SUBMIT_PROPERTIES,
+        *get_transporter_properties(),
     ]
 
     if include_defaults:
@@ -103,6 +103,25 @@ def get_options_property_setter(doctype, fieldname, new_options, prepend=True):
         "value": options,
     }
 
+
+# Transporter details stay editable after submit until an e-Waybill is generated
+ALLOW_ON_SUBMIT_PROPERTY = {
+    "property": "allow_on_submit",
+    "property_type": "Check",
+    "value": "1",
+}
+
+EWAYBILL_READ_ONLY_PROPERTY = {
+    "property": "read_only_depends_on",
+    "property_type": "Code",
+    "value": "eval: doc.ewaybill",
+}
+
+FETCH_IF_EMPTY_PROPERTY = {
+    "property": "fetch_if_empty",
+    "property_type": "Check",
+    "value": "1",
+}
 
 TRANSPORTER_NAME_PROPERTIES = [
     {
@@ -244,61 +263,39 @@ ADDRESS_ALLOW_ON_SUBMIT_PROPERTIES = [
     for fieldname in fieldnames
 ]
 
-COMMON_TRANSPORTER_FIELDS = (
-    "transporter",
-    "transporter_name",
-    "gst_transporter_id",
-    "lr_no",
-    "lr_date",
-    "vehicle_no",
-    "distance",
-    "mode_of_transport",
-    "gst_vehicle_type",
-)
 
-# driver_name is fetched from driver, so pair them like transporter_name above
-DRIVER_FIELDS = ("driver", "driver_name")
-
-TRANSPORTER_FIELDS = COMMON_TRANSPORTER_FIELDS + DRIVER_FIELDS
-
-TRANSPORTER_FIELDS_BY_DOCTYPE = {
-    "Sales Invoice": TRANSPORTER_FIELDS,
-    "Purchase Invoice": TRANSPORTER_FIELDS,
-    "Delivery Note": TRANSPORTER_FIELDS,
-    "Purchase Receipt": TRANSPORTER_FIELDS,
-    "Stock Entry": COMMON_TRANSPORTER_FIELDS,
-    "Subcontracting Receipt": COMMON_TRANSPORTER_FIELDS,
+ERPNEXT_TRANSPORTER_FIELDS = {
+    "Delivery Note": (
+        "transporter",
+        "transporter_name",
+        "driver",
+        "driver_name",
+        "lr_no",
+        "lr_date",
+        "vehicle_no",
+    ),
+    "Purchase Receipt": ("transporter_name", "lr_no", "lr_date"),
+    "Subcontracting Receipt": ("transporter_name", "lr_no", "lr_date"),
 }
 
-
-def get_transporter_read_only_condition(fieldname):
-    # keep old Ship lock too
-    if fieldname == "gst_vehicle_type":
-        return "eval: doc.ewaybill || doc.mode_of_transport == 'Ship'"
-
-    return "eval: doc.ewaybill"
+# fetched from transporter / driver needs fetch if empty.
+ERPNEXT_FETCHED_TRANSPORTER_FIELDS = ("transporter_name", "driver_name")
 
 
-TRANSPORTER_ALLOW_ON_SUBMIT_PROPERTIES = [
-    property_setter
-    for doctype, fieldnames in TRANSPORTER_FIELDS_BY_DOCTYPE.items()
-    for fieldname in fieldnames
-    for property_setter in (
-        {
-            "doctype": doctype,
-            "fieldname": fieldname,
-            "property": "allow_on_submit",
-            "property_type": "Check",
-            "value": "1",
-        },
-        {
-            "doctype": doctype,
-            "fieldname": fieldname,
-            "property": "read_only_depends_on",
-            "value": get_transporter_read_only_condition(fieldname),
-        },
-    )
-]
+def get_transporter_properties():
+    properties = []
+
+    for doctype, fieldnames in ERPNEXT_TRANSPORTER_FIELDS.items():
+        for fieldname in fieldnames:
+            field = {"doctype": doctype, "fieldname": fieldname}
+
+            properties.append({**field, **ALLOW_ON_SUBMIT_PROPERTY})
+            properties.append({**field, **EWAYBILL_READ_ONLY_PROPERTY})
+
+            if fieldname in ERPNEXT_FETCHED_TRANSPORTER_FIELDS:
+                properties.append({**field, **FETCH_IF_EMPTY_PROPERTY})
+
+    return properties
 
 
 # Customizable property setters that are set by default
