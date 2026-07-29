@@ -1545,6 +1545,40 @@ class TestEWaybill(IntegrationTestCase):
             self.assertTrue(json_data.get("shipToGSTIN"))
             self.assertTrue(json_data.get("shipToTradeName"))
 
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    def test_same_bill_to_and_ship_to_gstin_gated_by_rollout_date(self):
+        """Two addresses of the same party stay a Bill To - Ship To transaction until
+        Ship To GSTIN is sent, as 618 isn't reachable before that."""
+        day_before_rollout = get_datetime(add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1))
+        rollout_date = get_datetime(E_WAYBILL_CHANGES_APPLICABLE_DATE)
+
+        with time_machine.travel(day_before_rollout, tick=True):
+            si = create_sales_invoice(
+                vehicle_no="GJ07DL9009",
+                company_address="_Test Indian Registered Company-Billing",
+                customer="_Test Registered Customer",
+                customer_address="_Test Registered Customer-Billing",
+                shipping_address_name="_Test Registered Customer Warehouse-Shipping",
+                is_in_state=1,
+                distance=10,
+                transporter="_Test Common Supplier",
+                mode_of_transport="Road",
+                do_not_submit=True,
+            )
+            si.gst_transporter_id = ""
+            si.submit()
+
+            self.assertEqual(EWaybillData(si).get_data().get("transactionType"), 2)
+
+        # on/after rollout -> degrades to Regular. ERROR CODE: 618
+        with time_machine.travel(rollout_date, tick=False):
+            data = EWaybillData(si).get_data()
+            self.assertEqual(data.get("transactionType"), 1)
+            self.assertNotIn("shipToGSTIN", data)
+
+            # goods still move to the shipping address
+            self.assertEqual(data.get("toAddr1"), "Test Address - Customer Warehouse")
+
     def test_e_waybill_for_inter_state_sales_return(self):
         """Test e-waybill generation for inter-state sales return.
 
