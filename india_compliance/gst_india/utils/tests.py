@@ -6,7 +6,7 @@ from erpnext.manufacturing.doctype.work_order.work_order import (
 from erpnext.selling.doctype.sales_order.mapper import (
     make_subcontracting_inward_order as map_subcontracting_inward_order,
 )
-from frappe.utils import getdate
+from frappe.utils import add_days, getdate, today
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -23,6 +23,18 @@ SUBCONTRACTING_INWARD_TEST_FG_ITEM = "Subcontracted Inward FG Item"
 SUBCONTRACTING_INWARD_TEST_RM_ITEM = "Subcontracted Inward CRM Item"
 SUBCONTRACTING_INWARD_TEST_SERVICE_ITEM = "Subcontracted Inward Service Item"
 SUBCONTRACTING_INWARD_TEST_CUSTOMER_WAREHOUSE = "_Test Registered Customer Warehouse - _TIRC"
+
+# Values differ from the defaults, so that each field is seen as changed
+TRANSPORTER_DETAILS = {
+    "transporter": "_Test Common Supplier",
+    "gst_transporter_id": "05AAACG2140A1ZL",
+    "lr_no": "_Test Transport Receipt",
+    "lr_date": add_days(today(), -1),
+    "vehicle_no": "GJ01AA1234",
+    "distance": 10,
+    "mode_of_transport": "Rail",
+    "gst_vehicle_type": "Over Dimensional Cargo (ODC)",
+}
 
 
 def create_sales_invoice(**data):
