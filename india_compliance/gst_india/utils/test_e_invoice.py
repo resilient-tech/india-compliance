@@ -106,21 +106,19 @@ class TestEInvoice(FrappeTestCase):
         """
         si = create_sales_invoice(
             company_address="_Test Indian Registered Company-Billing",
-            dispatch_address_name="_Test Indian Registered Company-Shipping",  # dispatch differs
+            dispatch_address_name="_Test Indian Registered Company-Shipping",
             customer="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
-            shipping_address_name="_Test Unregistered Consignee-Shipping",  # ship-to differs
+            shipping_address_name="_Test Unregistered Consignee-Shipping",
             is_in_state=True,
             do_not_submit=True,
         )
 
         data = EInvoiceData(si).get_data()
 
-        # registered buyer keeps its real GSTIN; only the unregistered consignee is URP
         self.assertNotEqual(data["BuyerDtls"]["Gstin"], "URP")
         self.assertEqual(data["ShipDtls"]["Gstin"], "URP")
         self.assertTrue(data["ShipDtls"]["LglNm"])
-        # both blocks present -> the type-4 analog
         self.assertIn("DispDtls", data)
 
     @change_settings("GST Settings", {"sandbox_mode": 0})

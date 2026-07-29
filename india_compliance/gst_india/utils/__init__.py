@@ -374,7 +374,7 @@ def is_ship_to_gstin_applicable(settings=None):
     if not settings:
         settings = frappe.get_cached_doc("GST Settings")
 
-    return settings.sandbox_mode or getdate() >= SHIP_TO_GSTIN_APPLICABLE_DATE
+    return settings.sandbox_mode or getdate(as_ist()) >= SHIP_TO_GSTIN_APPLICABLE_DATE
 
 
 def is_foreign_doc(doc):
