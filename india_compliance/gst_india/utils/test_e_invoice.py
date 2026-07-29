@@ -2,6 +2,14 @@ import json
 import re
 
 import responses
+<<<<<<< HEAD
+=======
+import time_machine
+from erpnext.controllers.sales_and_purchase_return import make_return_doc
+from frappe.tests import IntegrationTestCase, change_settings
+from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
+from frappe.utils.data import format_date
+>>>>>>> 986aea0b (fix: gate all the changes and minor refactor)
 from responses import matchers
 
 import frappe
@@ -11,6 +19,13 @@ from frappe.utils.data import format_date
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+<<<<<<< HEAD
+=======
+from india_compliance.gst_india.constants import SHIP_TO_GSTIN_APPLICABLE_DATE
+from india_compliance.gst_india.overrides.test_transaction import (
+    create_refund_transaction,
+)
+>>>>>>> 986aea0b (fix: gate all the changes and minor refactor)
 from india_compliance.gst_india.utils import load_doc
 from india_compliance.gst_india.utils.e_invoice import (
     EInvoiceData,
@@ -122,9 +137,15 @@ class TestEInvoice(FrappeTestCase):
             do_not_submit=True,
         )
 
-        data = EInvoiceData(si).get_data()
+        # before rollout -> reported as-is, so production is unaffected
+        with time_machine.travel(
+            get_datetime(add_to_date(SHIP_TO_GSTIN_APPLICABLE_DATE, days=-1)), tick=True
+        ):
+            self.assertIn("ShipDtls", EInvoiceData(si).get_data())
 
-        self.assertNotIn("ShipDtls", data)
+        # on/after rollout -> omitted, as Ship To GSTIN is mandatory from here
+        with time_machine.travel(get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE), tick=False):
+            self.assertNotIn("ShipDtls", EInvoiceData(si).get_data())
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_request_data_for_foreign_transactions(self):
