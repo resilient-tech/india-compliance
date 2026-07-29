@@ -7,16 +7,63 @@ from frappe.utils import flt
 
 from india_compliance.gst_india.utils import get_data_file_path
 
+# Single DocTypes where the company is stored as a filter in `tabSingles`
+SINGLES_WITH_COMPANY = (
+    "GST Invoice Management System",
+    "GSTR-1",
+    "Purchase Reconciliation Tool",
+)
 
-def delete_gst_settings_for_company(doc, method=None):
+# Child tables of GST Settings with a company
+GST_SETTINGS_COMPANY_TABLES = (
+    "gst_accounts",
+    "credentials",
+    "e_invoice_applicable_companies",
+)
+
+
+def on_trash(doc, method=None):
     if doc.country != "India":
         return
 
+    reset_company_in_singles(doc.name)
+    delete_gst_settings_for_company(doc.name)
+
+
+def reset_company_in_singles(company):
+    """Clear the deleted company from Single DocTypes, since these aren't cleared on delete."""
+    singles = frappe.qb.DocType("Singles")
+
+    doctypes = (
+        frappe.qb.from_(singles)
+        .select(singles["doctype"])
+        .where(
+            singles["doctype"].isin(SINGLES_WITH_COMPANY)
+            & (singles.field == "company")
+            & (singles.value == company)
+        )
+    ).run(pluck=True)
+
+    if not doctypes:
+        return
+
+    (
+        frappe.qb.update(singles)
+        .set(singles.value, "")
+        .where(singles["doctype"].isin(doctypes) & singles.field.isin(("company", "company_gstin")))
+    ).run()
+
+    for doctype in doctypes:
+        frappe.clear_document_cache(doctype, doctype)
+
+
+def delete_gst_settings_for_company(company):
     gst_settings = frappe.get_doc("GST Settings")
 
-    gst_settings.gst_accounts = [
-        row for row in gst_settings.get("gst_accounts", []) if row.company != doc.name
-    ]
+    for fieldname in GST_SETTINGS_COMPANY_TABLES:
+        gst_settings.set(
+            fieldname, [row for row in gst_settings.get(fieldname, []) if row.company != company]
+        )
 
     gst_settings.flags.ignore_mandatory = True
     gst_settings.save()
