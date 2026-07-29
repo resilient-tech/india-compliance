@@ -29,12 +29,14 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
 from india_compliance.gst_india.doctype.gstin.gstin import get_and_validate_gstin_status
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
+    get_changed_fields,
     get_gst_account_by_item_tax_template,
     get_gst_account_gst_tax_type_map,
     get_gst_accounts_by_type,
     get_hsn_settings,
     get_place_of_supply,
     get_place_of_supply_options,
+    has_changed,
     has_gst_taxes,
     is_import_transaction,
     is_overseas_doc,
@@ -1883,17 +1885,12 @@ ADDRESS_DEPENDENT_FIELDS = {
 }
 
 
-def get_changed_fields(doc, fieldnames):
-    return [
-        fieldname
-        for fieldname in fieldnames
-        if doc.meta.has_field(fieldname) and doc.has_value_changed(fieldname)
-    ]
-
-
 def validate_transporter_fields_after_submit(doc, method=None):
     """Transporter details stay editable after submit until an e-Waybill is generated"""
-    if doc.docstatus != 1 or doc.doctype not in E_WAYBILL_FIELDS:
+    if doc.docstatus != 1 or ignore_gst_validations(doc):
+        return
+
+    if doc.doctype not in E_WAYBILL_FIELDS:
         return
 
     changed_fields = get_changed_fields(doc, TRANSPORTER_FIELDS)
@@ -1917,15 +1914,12 @@ def sync_address_dependent_fields_after_submit(doc, method=None):
     if doc.docstatus != 1 or ignore_gst_validations(doc):
         return
 
-    def has_changed(field):
-        return doc.meta.has_field(field) and doc.has_value_changed(field)
-
     changed_fields = get_changed_fields(doc, ADDRESS_DEPENDENT_FIELDS)
 
-    if doc.doctype == "Sales Invoice" and has_changed("shipping_address_name"):
+    if doc.doctype == "Sales Invoice" and has_changed(doc, "shipping_address_name"):
         changed_fields.append("shipping_address_name")
 
-    if not changed_fields and not has_changed("place_of_supply"):
+    if not changed_fields and not has_changed(doc, "place_of_supply"):
         return
 
     if doc.get("ewaybill") or doc.get("irn"):
