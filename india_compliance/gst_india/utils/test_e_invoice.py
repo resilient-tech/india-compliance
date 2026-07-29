@@ -58,6 +58,9 @@ class EInvoiceTestMixin:
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
         enable_custom_gst_charge_types()
+        # Meta is cached with the (uncommitted) options; clear it once the class tears
+        # down so later test classes start from the rolled-back charge_type options.
+        cls.addClassCleanup(frappe.clear_cache, doctype="Sales Taxes and Charges")
 
     def _mock_e_invoice_response(self, data, api="ei/api/invoice"):
         """Mock response for e-Invoice API"""
