@@ -1433,10 +1433,10 @@ class TestEWaybill(FrappeTestCase):
         si = create_sales_invoice(
             vehicle_no="GJ07DL9009",
             company_address="_Test Indian Registered Company-Billing",
-            dispatch_address_name="_Test Indian Registered Company-Shipping",  # ship-from differs
+            dispatch_address_name="_Test Indian Registered Company-Shipping",
             customer="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
-            shipping_address_name="_Test Unregistered Consignee-Shipping",  # ship-to differs
+            shipping_address_name="_Test Unregistered Consignee-Shipping",
             is_in_state=1,
             distance=10,
             transporter="_Test Common Supplier",
@@ -1489,7 +1489,7 @@ class TestEWaybill(FrappeTestCase):
         si = create_sales_invoice(
             vehicle_no="GJ07DL9009",
             company_address="_Test Indian Registered Company-Billing",
-            dispatch_address_name="_Test Indian Registered Company-Shipping",  # ship-from differs
+            dispatch_address_name="_Test Indian Registered Company-Shipping",
             customer="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
             # different address, same GSTIN as the billing address
