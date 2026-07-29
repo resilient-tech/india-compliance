@@ -37,7 +37,7 @@
             "totInvValue": 100.0,
             "transMode": 1,
             "transDistance": 10,
-            "transporterName": "Test Common Supplier",
+            "transporterName": "Test Transporter Without GST ID",
             "vehicleNo": "GJ06AA1123",
             "vehicleType": "R",
             "itemList": [
@@ -122,7 +122,7 @@
             "transDistance": 10,
             "transMode": 1,
             "transactionType": 1,
-            "transporterName": "Test Common Supplier",
+            "transporterName": "Test Transporter Without GST ID",
             "userGstin": "05AAACG2115R1ZN",
             "vehicleNo": "GJ07DL9009",
             "vehicleType": "R"
@@ -1086,7 +1086,7 @@
             "transDistance": 10,
             "transMode": 1,
             "transactionType": 1,
-            "transporterName": "Test Common Supplier",
+            "transporterName": "Test Transporter Without GST ID",
             "userGstin": "05AAACG2115R1ZN",
             "vehicleNo": "GJ07DL9009",
             "vehicleType": "R"
@@ -1401,7 +1401,7 @@
             "totInvValue": 118.0,
             "transMode": 1,
             "transDistance": 10,
-            "transporterName": "Test Common Supplier",
+            "transporterName": "Test Transporter Without GST ID",
             "vehicleNo": "GJ07DL9009",
             "vehicleType": "R",
             "itemList": [

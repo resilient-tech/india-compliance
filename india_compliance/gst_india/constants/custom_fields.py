@@ -1465,6 +1465,8 @@ E_WAYBILL_DN_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "description": ("Set as zero to update distance as per the e-Waybill portal (if available)"),
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "gst_transporter_id",
@@ -1472,9 +1474,12 @@ E_WAYBILL_DN_FIELDS = [
         "fieldtype": "Data",
         "insert_after": "transporter",
         "fetch_from": "transporter.gst_transporter_id",
+        "fetch_if_empty": 1,
         "print_hide": 1,
         "no_copy": 1,
         "translatable": 0,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "mode_of_transport",
@@ -1486,6 +1491,8 @@ E_WAYBILL_DN_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "translatable": 0,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "gst_vehicle_type",
@@ -1493,12 +1500,13 @@ E_WAYBILL_DN_FIELDS = [
         "fieldtype": "Select",
         "options": "Regular\nOver Dimensional Cargo (ODC)",
         "depends_on": 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
-        "read_only_depends_on": "eval: doc.mode_of_transport == 'Ship'",
         "default": "Regular",
         "insert_after": "lr_date",
         "print_hide": 1,
         "no_copy": 1,
         "translatable": 0,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill || doc.mode_of_transport == 'Ship'",
     },
 ]
 
@@ -1520,6 +1528,8 @@ E_WAYBILL_INV_FIELDS = [
         "options": "Supplier",
         "print_hide": 1,
         "no_copy": 1,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "driver",
@@ -1529,6 +1539,8 @@ E_WAYBILL_INV_FIELDS = [
         "options": "Driver",
         "print_hide": 1,
         "no_copy": 1,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "lr_no",
@@ -1539,6 +1551,8 @@ E_WAYBILL_INV_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "length": 30,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "vehicle_no",
@@ -1549,6 +1563,8 @@ E_WAYBILL_INV_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "length": 15,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "transporter_col_break",
@@ -1561,10 +1577,13 @@ E_WAYBILL_INV_FIELDS = [
         "fieldtype": "Small Text",
         "insert_after": "transporter_col_break",
         "fetch_from": "transporter.supplier_name",
+        "fetch_if_empty": 1,
         "read_only": 1,
         "print_hide": 1,
         "no_copy": 1,
         "translatable": 0,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "driver_name",
@@ -1572,9 +1591,12 @@ E_WAYBILL_INV_FIELDS = [
         "fieldtype": "Small Text",
         "insert_after": "mode_of_transport",
         "fetch_from": "driver.full_name",
+        "fetch_if_empty": 1,
         "print_hide": 1,
         "no_copy": 1,
         "translatable": 0,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "lr_date",
@@ -1584,6 +1606,8 @@ E_WAYBILL_INV_FIELDS = [
         "default": "Today",
         "print_hide": 1,
         "no_copy": 1,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     *E_WAYBILL_DN_FIELDS,
 ]
@@ -1597,6 +1621,8 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
         "options": "Supplier",
         "print_hide": 1,
         "no_copy": 1,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "driver",
@@ -1606,6 +1632,8 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
         "options": "Driver",
         "print_hide": 1,
         "no_copy": 1,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "vehicle_no",
@@ -1616,6 +1644,8 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "length": 15,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "driver_name",
@@ -1623,9 +1653,12 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
         "fieldtype": "Small Text",
         "insert_after": "driver",
         "fetch_from": "driver.full_name",
+        "fetch_if_empty": 1,
         "print_hide": 1,
         "no_copy": 1,
         "translatable": 0,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     *E_WAYBILL_DN_FIELDS,
 ]
@@ -1648,6 +1681,8 @@ E_WAYBILL_SE_FIELDS = [
         "options": "Supplier",
         "print_hide": 1,
         "no_copy": 1,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "lr_no",
@@ -1658,6 +1693,8 @@ E_WAYBILL_SE_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "length": 30,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "vehicle_no",
@@ -1668,6 +1705,8 @@ E_WAYBILL_SE_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "length": 15,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "transporter_col_break",
@@ -1680,10 +1719,13 @@ E_WAYBILL_SE_FIELDS = [
         "fieldtype": "Small Text",
         "insert_after": "transporter_col_break",
         "fetch_from": "transporter.supplier_name",
+        "fetch_if_empty": 1,
         "read_only": 1,
         "print_hide": 1,
         "no_copy": 1,
         "translatable": 0,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "lr_date",
@@ -1693,6 +1735,8 @@ E_WAYBILL_SE_FIELDS = [
         "default": "Today",
         "print_hide": 1,
         "no_copy": 1,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     *E_WAYBILL_DN_FIELDS,
 ]
@@ -1706,6 +1750,8 @@ E_WAYBILL_SCR_FIELDS = [
         "options": "Supplier",
         "print_hide": 1,
         "no_copy": 1,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "gst_transporter_id",
@@ -1713,9 +1759,12 @@ E_WAYBILL_SCR_FIELDS = [
         "fieldtype": "Data",
         "insert_after": "transporter_name",
         "fetch_from": "transporter.gst_transporter_id",
+        "fetch_if_empty": 1,
         "print_hide": 1,
         "no_copy": 1,
         "translatable": 0,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "vehicle_no",
@@ -1726,6 +1775,8 @@ E_WAYBILL_SCR_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "length": 15,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "distance",
@@ -1735,6 +1786,8 @@ E_WAYBILL_SCR_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "description": ("Set as zero to update distance as per the e-Waybill portal (if available)"),
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "mode_of_transport",
@@ -1746,6 +1799,8 @@ E_WAYBILL_SCR_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "translatable": 0,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill",
     },
     {
         "fieldname": "gst_vehicle_type",
@@ -1753,12 +1808,13 @@ E_WAYBILL_SCR_FIELDS = [
         "fieldtype": "Select",
         "options": "Regular\nOver Dimensional Cargo (ODC)",
         "depends_on": 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
-        "read_only_depends_on": "eval: doc.mode_of_transport == 'Ship'",
         "default": "Regular",
         "insert_after": "lr_date",
         "print_hide": 1,
         "no_copy": 1,
         "translatable": 0,
+        "allow_on_submit": 1,
+        "read_only_depends_on": "eval: doc.ewaybill || doc.mode_of_transport == 'Ship'",
     },
 ]
 

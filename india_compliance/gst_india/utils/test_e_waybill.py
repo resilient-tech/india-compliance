@@ -1786,7 +1786,8 @@ class TestEWaybill(IntegrationTestCase):
         invoice_args = self.e_waybill_test_data.get(test_case).get("kwargs")
         invoice_args.update(
             {
-                "transporter": "_Test Common Supplier",
+                # used this supplier to match the mocked response without `transporterId`
+                "transporter": "_Test Transporter Without GST ID",
                 "distance": 10,
                 "mode_of_transport": "Road",
             }
@@ -1796,7 +1797,6 @@ class TestEWaybill(IntegrationTestCase):
         update_dates_for_test_data(self.e_waybill_test_data)
 
         si = create_sales_invoice(**invoice_args, do_not_submit=True)
-        si.gst_transporter_id = ""
         si.submit()
 
         return si
