@@ -9,5 +9,14 @@ div[data-page-route="GST Return Export"] .section-body {
 }
 
 .gst-return-summary .section-table {
+	margin-bottom: var(--margin-sm);
+}
+
+.gst-return-summary button.section-table-footer {
 	margin-bottom: var(--margin-lg);
+}
+
+.datepicker--cell.-current-.-disabled-:not(.-selected-) {
+	color: var(--gray-500);
+	font-weight: normal;
 }

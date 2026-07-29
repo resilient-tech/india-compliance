@@ -13,6 +13,7 @@ from unittest.mock import patch
 import frappe
 from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
+from frappe.utils import getdate
 
 from india_compliance.gst_india.doctype.gst_return_export import gst_return_export as controller
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
@@ -319,6 +320,19 @@ class TestGSTReturnExportController(IntegrationTestCase):
         with patch.object(controller, "is_job_enqueued", return_value=True):
             result = self.doc.sync_return_data(GSTIN, "GSTR-2B", ["032020"])
         self.assertIn("already in progress", result["message"])
+
+    def test_sync_status_stops_at_the_portal_cut_off(self):
+        """2B for a month isn't generated until the 14th of the next one, so the picker
+        must not offer months past `BaseUtil._getdate` — nor anything at all when the whole
+        range is past it."""
+        cut_off = "india_compliance.gst_india.doctype.purchase_reconciliation_tool.BaseUtil._getdate"
+        with patch(cut_off, return_value=getdate("2020-05-20")):
+            status = self.doc.get_sync_status(GSTIN, "GSTR-2B", "2020-03-01", "2020-08-01")
+            future = self.doc.get_sync_status(GSTIN, "GSTR-2B", "2020-06-01", "2020-08-01")
+
+        self.assertEqual([p["period"] for p in status["periods"]], ["032020", "042020", "052020"])
+        self.assertEqual(future["periods"], [])
+        self.assertFalse(future["has_missing_sync"])
 
     def test_sync_reports_nothing_to_sync(self):
         with (

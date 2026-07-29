@@ -4,12 +4,14 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import get_first_day, getdate
 from frappe.utils.background_jobs import is_job_enqueued
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
     otp_handler,
 )
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool import BaseUtil
 from india_compliance.gst_india.utils import (
     get_periods_between_dates,
     validate_gstin_permission,
@@ -88,8 +90,22 @@ class GSTReturnExport(Document):
         frappe.has_permission("GST Return Export", "export", throw=True)
         return_type = normalize_return_type(return_type)
 
-        periods = get_periods_between_dates(from_date, to_date)
+        periods = _portal_periods(return_type, from_date, to_date)
         return ReturnAdapter.for_return(return_type, company_gstin).get_sync_status(periods)
+
+    @frappe.whitelist()
+    def get_latest_month(self, return_type: str):
+        """First day of the newest month the portal can serve."""
+        return get_first_day(BaseUtil._getdate(ReturnType(normalize_return_type(return_type))))
+
+
+def _portal_periods(return_type, from_date, to_date):
+    """The months of the range the portal can serve."""
+    cut_off = BaseUtil._getdate(ReturnType(return_type))
+    if getdate(from_date) > cut_off:
+        return []
+
+    return get_periods_between_dates(from_date, min(getdate(to_date), cut_off))
 
 
 def _sync_return_data(company_gstin, return_type, periods):

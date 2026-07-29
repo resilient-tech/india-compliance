@@ -8,13 +8,15 @@ const FETCH_PROGRESS = "update_2a_2b_api_progress";
 const SAVE_PROGRESS = "update_2a_2b_transactions_progress";
 const EXPORT_MODULE = "india_compliance.gst_india.doctype.gst_return_export.gstr_2_export";
 const TAX_FIELDS = ["igst", "cgst", "sgst", "cess"];
-// Select labels are translated for display; the backend takes the keys of GROUP_BY_MONTHS.
-const GROUP_BY_VALUES = {
-    Monthly: "monthly",
-    Quarterly: "quarterly",
-    "Half Yearly": "half_yearly",
-    Yearly: "yearly",
+const GROUP_BY_LABELS = {
+    monthly: "Monthly",
+    quarterly: "Quarterly",
+    half_yearly: "Half Yearly",
+    yearly: "Yearly",
+    all: "All",
 };
+const DEFAULT_GROUP_BY = "all";
+const MONTH_FORMAT = "MM-YYYY";
 
 // Handlers just delegate to the current return type's view.
 frappe.ui.form.on("GST Return Export", {
@@ -22,22 +24,18 @@ frappe.ui.form.on("GST Return Export", {
         frappe.require("gst_return_export.bundle.js");
         set_realtime_listeners(frm);
         frm.doc.company ||= frappe.defaults.get_user_default("Company");
+        apply_period_bounds(frm);
         frm.trigger("company");
     },
 
     refresh(frm) {
         frm.disable_save();
         frm.page.clear_indicator();
-
-        const today = frappe.datetime.str_to_obj(frappe.datetime.get_today());
-        for (const field of ["from_date", "to_date"]) {
-            frm.fields_dict[field].datepicker?.update("maxDate", today);
-        }
+        setup_period_fields(frm);
 
         const view = get_view(frm);
         view.setup_actions();
-        view.render_placeholder();
-        view.render_missing_sync_alert();
+        view.refresh_sync_state();
     },
 
     async company(frm) {
@@ -49,10 +47,70 @@ frappe.ui.form.on("GST Return Export", {
     },
 
     company_gstin: (frm) => get_view(frm).refresh_sync_state(),
-    gst_return: (frm) => get_view(frm).refresh_sync_state(),
-    from_date: (frm) => get_view(frm).refresh_sync_state(),
-    to_date: (frm) => get_view(frm).refresh_sync_state(),
+
+    gst_return: (frm) => apply_period_bounds(frm),
+
+    from_date: (frm) => on_period_change(frm),
+
+    to_date: (frm) => on_period_change(frm),
 });
+
+function on_period_change(frm) {
+    const latest = frm._latest_month;
+    if (latest) {
+        if (!frm.doc.from_date || frm.doc.from_date > latest) {
+            return frm.set_value("from_date", fiscal_year_start(latest));
+        }
+        if (!frm.doc.to_date || frm.doc.to_date > latest) {
+            return frm.set_value("to_date", latest);
+        }
+    }
+
+    setup_period_fields(frm);
+    get_view(frm).refresh_sync_state();
+}
+
+function month_start(date) {
+    return moment(date).startOf("month").format("YYYY-MM-DD");
+}
+
+function fiscal_year_start(date) {
+    const month = moment(date);
+    return month_start([month.month() >= 3 ? month.year() : month.year() - 1, 3, 1]);
+}
+
+async function apply_period_bounds(frm) {
+    if (frm.doc.gst_return) {
+        const { message } = await frm.call("get_latest_month", {
+            return_type: frm.doc.gst_return,
+        });
+        frm._latest_month = message;
+    }
+
+    on_period_change(frm);
+}
+
+function parse_month(value) {
+    const date = moment(value, [MONTH_FORMAT, "YYYY-MM-DD"], true);
+    return date.isValid() ? month_start(date) : "";
+}
+
+function format_month(value) {
+    return value ? moment(value).format(MONTH_FORMAT) : "";
+}
+
+function setup_period_fields(frm) {
+    const to_obj = (value) => (value ? frappe.datetime.str_to_obj(value) : false);
+    const latest = to_obj(frm._latest_month || frappe.datetime.get_today());
+    const { from_date, to_date } = frm.fields_dict;
+
+    for (const field of [from_date, to_date]) {
+        Object.assign(field, { parse: parse_month, format_for_input: format_month });
+    }
+
+    from_date.datepicker?.update({ maxDate: to_obj(frm.doc.to_date) || latest });
+    to_date.datepicker?.update({ minDate: to_obj(frm.doc.from_date), maxDate: latest });
+}
 
 function get_view(frm) {
     if (!frm._view || frm._view.return_type !== frm.doc.gst_return) {
@@ -102,6 +160,8 @@ function on_export_ready({ file_id, file_name, error }) {
 }
 
 class ReturnExportView {
+    export_module = null;
+
     constructor(frm) {
         this.frm = frm;
         this.return_type = frm.doc.gst_return;
@@ -110,7 +170,6 @@ class ReturnExportView {
 
     setup_actions() {
         this.frm.add_custom_button(__("Sync"), () => this.sync());
-        this.frm.add_custom_button(__("Show Summary"), () => this.show_summary());
         this.frm
             .add_custom_button(__("Export to Excel"), () => this.export_to_excel())
             .addClass("btn-primary");
@@ -134,11 +193,19 @@ class ReturnExportView {
     async refresh_sync_state() {
         if (!this.get_filters()) {
             this.sync_status = null;
-            return this.remove_missing_sync_alert();
+            this.remove_missing_sync_alert();
+            return this.render_placeholder();
         }
 
-        await this.fetch_sync_status();
+        const token = (this._render_token = {});
+        const [, { message: summary }] = await Promise.all([
+            this.fetch_sync_status(),
+            this.frm.call("get_summary", this.get_filters()),
+        ]);
+        if (token !== this._render_token) return;
+
         this.render_missing_sync_alert();
+        this.render_summary(summary);
     }
 
     async sync() {
@@ -151,19 +218,6 @@ class ReturnExportView {
 
         const status = await this.fetch_sync_status();
         this.open_sync_dialog(status?.periods || []);
-    }
-
-    async show_summary() {
-        if (!this.get_filters()) {
-            frappe.show_alert({
-                message: __("Select Company, GSTIN, GST Return and the period first."),
-                indicator: "orange",
-            });
-            return;
-        }
-
-        const { message } = await this.frm.call("get_summary", this.get_filters());
-        this.render_summary(message);
     }
 
     async export_to_excel() {
@@ -182,11 +236,11 @@ class ReturnExportView {
             if (!synced.length) return;
         }
 
-        const group_by = periods.length > 1 ? await this.ask_group_by(periods.length) : "monthly";
+        const group_by = periods.length > 1 ? await this.ask_group_by() : DEFAULT_GROUP_BY;
         if (!group_by) return;
 
         const { message } = await frappe.call({
-            method: `${EXPORT_MODULE}.export_return_as_excel`,
+            method: `${this.export_module}.export_return_as_excel`,
             args: { ...filters, group_by },
         });
         if (message?.message) {
@@ -194,7 +248,7 @@ class ReturnExportView {
         }
     }
 
-    ask_group_by(period_count) {
+    ask_group_by() {
         return new Promise((resolve) => {
             let chosen = null;
             const dialog = new frappe.ui.Dialog({
@@ -203,28 +257,25 @@ class ReturnExportView {
                     {
                         fieldname: "group_by",
                         fieldtype: "Select",
-                        label: __("One file per"),
-                        default: "Monthly",
+                        label: __("One file"),
+                        default: DEFAULT_GROUP_BY,
                         reqd: 1,
-                        options: [
-                            { label: __("Month"), value: "Monthly" },
-                            { label: __("Quarter"), value: "Quarterly" },
-                            { label: __("Half Year"), value: "Half Yearly" },
-                            { label: __("Financial Year"), value: "Yearly" },
-                        ],
+                        options: Object.entries(GROUP_BY_LABELS).map(([value, label]) => ({
+                            label: __(label),
+                            value,
+                        })),
                     },
                     {
                         fieldname: "help",
                         fieldtype: "HTML",
                         options: `<p class="text-muted small">${__(
-                            "{0} months selected. Quarters and half-years follow the financial year (April to March). Multiple files are downloaded as a zip.",
-                            [period_count],
+                            "Multiple files are downloaded as a zip. All puts every month in a single file.",
                         )}</p>`,
                     },
                 ],
                 primary_action_label: __("Export"),
                 primary_action: ({ group_by }) => {
-                    chosen = GROUP_BY_VALUES[group_by] || "monthly";
+                    chosen = group_by;
                     dialog.hide();
                 },
             });
@@ -234,23 +285,19 @@ class ReturnExportView {
         });
     }
 
-    show_progress(percent, message) {
-        this.frm.dashboard.show_progress(__("Sync Progress"), percent, message);
-    }
-
     render_placeholder(message) {
-        const fallback = __(
-            "Click Show Summary to view the last synced data, or Sync to fetch it fresh from the GST Portal.",
-        );
+        const fallback = __("Select Company, GSTIN, GST Return and the period to see the summary.");
         this.set_summary_html(`<p class="text-muted">${message || fallback}</p>`);
     }
 
     set_summary_html(inner_html) {
-        this.frm.get_field("summary_html")?.$wrapper.html(`
+        const $wrapper = this.frm.get_field("summary_html")?.$wrapper;
+        $wrapper?.html(`
             <div class="gst-return-summary">
                 <div class="summary-heading">${__("Summary")}</div>
                 ${inner_html}
             </div>`);
+        return $wrapper;
     }
 
     render_missing_sync_alert() {
@@ -303,9 +350,14 @@ class ReturnExportView {
 }
 
 class GSTR2View extends ReturnExportView {
+    export_module = EXPORT_MODULE;
+
     open_sync_dialog(periods) {
         if (!periods.length) {
-            frappe.show_alert({ message: __("No months in the selected period."), indicator: "orange" });
+            frappe.show_alert({
+                message: __("No months in the selected period are available on the GST Portal yet."),
+                indicator: "orange",
+            });
             return;
         }
 
@@ -319,6 +371,7 @@ class GSTR2View extends ReturnExportView {
                     label: __("Months"),
                     columns: 1,
                     sort_options: false,
+                    select_all: 1,
                     options: periods.map((period) => ({
                         value: period.period,
                         checked: !period.synced,
@@ -352,6 +405,10 @@ class GSTR2View extends ReturnExportView {
         dialog.show();
     }
 
+    show_progress(percent, message) {
+        this.frm.dashboard.show_progress(__("Sync Progress"), percent, message);
+    }
+
     update_progress({ current_progress, return_period, is_last_period }, is_fetch_phase) {
         const percent = is_fetch_phase ? current_progress / 2 : 50 + current_progress / 2;
         const message = is_fetch_phase
@@ -370,7 +427,6 @@ class GSTR2View extends ReturnExportView {
         setTimeout(() => {
             this.frm.dashboard.hide();
             this.frm.dashboard.set_headline(__("Successfully Synced"));
-            this.show_summary();
             this.refresh_sync_state();
             setTimeout(() => this.frm.dashboard.clear_headline(), 2000);
         }, 1000);
@@ -383,9 +439,8 @@ class GSTR2View extends ReturnExportView {
             : `<p class="text-muted">${__(
                   "No data synced yet — click Sync to fetch it from the GST Portal.",
               )}</p>`;
-        this.set_summary_html(this.extras_html(data) + body);
+        const $wrapper = this.set_summary_html(this.extras_html(data) + body);
 
-        const $wrapper = this.frm.get_field("summary_html").$wrapper;
         this.mount_extras($wrapper, data);
         if (has_data) {
             this.mount_section_table($wrapper.find(".section-table"), data.sections, data.totals);
@@ -410,24 +465,15 @@ class GSTR2View extends ReturnExportView {
     }
 
     mount_section_table($wrapper, sections, totals) {
-        const cells = (row) => ({
-            documents: row.documents,
-            taxable_value: row.taxable_value,
-            igst: row.igst,
-            cgst: row.cgst,
-            sgst: row.sgst,
-            cess: row.cess,
-        });
-
         const data = [];
         for (const section of sections) {
-            data.push({ section: section.section, indent: 0, ...cells(section) });
+            data.push({ ...section, indent: 0 });
             for (const month of section.months) {
-                data.push({ section: format_period(month.period), indent: 1, ...cells(month) });
+                data.push({ ...month, section: format_period(month.period), indent: 1 });
             }
         }
 
-        new india_compliance.DataTableManager({
+        const table = new india_compliance.DataTableManager({
             $wrapper,
             data,
             columns: [
@@ -451,9 +497,25 @@ class GSTR2View extends ReturnExportView {
                 cellHeight: 34,
                 hooks: {
                     columnTotal: (_, row) =>
-                        row.column.fieldname === "section" ? __("Total") : totals[row.column.fieldname] ?? 0,
+                        row.column.fieldname === "section" ? __("Total") : totals[row.column.fieldname] ?? "",
                 },
             },
+        });
+
+        table.datatable.rowmanager.collapseAllNodes();
+        this.mount_tree_footer($wrapper, table.datatable.rowmanager);
+    }
+
+    mount_tree_footer($wrapper, rowmanager) {
+        let expanded = false;
+        const $button = $(
+            `<button class="btn btn-xs btn-default section-table-footer">${__("Expand All")}</button>`,
+        ).insertAfter($wrapper);
+
+        $button.on("click", () => {
+            expanded = !expanded;
+            rowmanager[expanded ? "expandAllNodes" : "collapseAllNodes"]();
+            $button.text(expanded ? __("Collapse All") : __("Expand All"));
         });
     }
 }
@@ -462,11 +524,11 @@ class GSTR2AView extends GSTR2View {}
 
 class GSTR2BView extends GSTR2View {
     extras_html(data) {
-        return data.itc ? `<div class="itc-summary"></div>` : "";
+        return data?.itc ? `<div class="itc-summary"></div>` : "";
     }
 
     mount_extras($wrapper, data) {
-        if (data.itc) this.mount_itc_cards($wrapper.find(".itc-summary"), data.itc);
+        if (data?.itc) this.mount_itc_cards($wrapper.find(".itc-summary"), data.itc);
     }
 
     mount_itc_cards($wrapper, itc) {

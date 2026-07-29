@@ -60,8 +60,6 @@ GSTR_2A_ACTIONS = {
     "TCS": GSTRCategory.TCS,
 }
 
-GSTR_2A_RESPONSE_KEYS = {"TCS": "tcs_data"}
-
 IMS_ACTIONS = {
     "B2B": GSTRCategory.B2B,
     "B2BA": GSTRCategory.B2BA,

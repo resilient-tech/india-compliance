@@ -44,6 +44,7 @@ HEADER_START_ROW = 5
 EXCEL_MAX_ROW = 1_048_576
 
 GROUP_BY_MONTHS = {"monthly": 1, "quarterly": 3, "half_yearly": 6, "yearly": 12}
+GROUP_BY_ALL = "all"
 DEFAULT_GROUP_BY = "monthly"
 
 _REVISED = "revised details | "
@@ -159,10 +160,14 @@ def _fy_month_index(period):
 
 def _group_periods(periods, group_by):
     """Split periods into one list per workbook, on fiscal-year boundaries."""
+    periods = sorted(periods, key=lambda p: (p[2:], p[:2]))
+    if group_by == GROUP_BY_ALL:
+        return [periods]
+
     months = GROUP_BY_MONTHS.get(group_by) or GROUP_BY_MONTHS[DEFAULT_GROUP_BY]
 
     groups = {}
-    for period in sorted(periods, key=lambda p: (p[2:], p[:2])):
+    for period in periods:
         key = (_financial_year(period), _fy_month_index(period) // months)
         groups.setdefault(key, []).append(period)
 
@@ -1082,7 +1087,7 @@ def export_return_as_excel(
     """Enqueue the export (async); the download is triggered via realtime when ready."""
     frappe.has_permission(DOCTYPE, "export", throw=True)
     return_type = normalize_return_type(return_type)
-    if group_by not in GROUP_BY_MONTHS:
+    if group_by not in {*GROUP_BY_MONTHS, GROUP_BY_ALL}:
         group_by = DEFAULT_GROUP_BY
 
     frappe.enqueue(

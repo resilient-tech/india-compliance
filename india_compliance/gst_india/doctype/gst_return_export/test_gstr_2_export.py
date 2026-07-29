@@ -489,6 +489,12 @@ class TestPeriodGrouping(IntegrationTestCase):
             [["042024"], ["062024"], ["012025"]],
         )
 
+    def test_all_clubs_every_period_into_one_group(self):
+        self.assertEqual(
+            _group_periods(["042024", "032024"], "all"),
+            [["032024", "042024"]],
+        )
+
     def test_unknown_grouping_falls_back_to_monthly(self):
         self.assertEqual(_group_periods(["042024", "052024"], "weekly"), [["042024"], ["052024"]])
 

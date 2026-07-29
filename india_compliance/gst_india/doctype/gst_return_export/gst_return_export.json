@@ -55,7 +55,7 @@
    "fieldname": "from_date",
    "fieldtype": "Date",
    "label": "From Month",
-   "options": "{\"minView\": \"months\", \"view\": \"months\"}"
+   "options": "{\"minView\": \"months\", \"view\": \"months\", \"dateFormat\": \"mm-yyyy\", \"todayButton\": false}"
   },
   {
    "fieldname": "column_break_filters_3",
@@ -65,7 +65,7 @@
    "fieldname": "to_date",
    "fieldtype": "Date",
    "label": "To Month",
-   "options": "{\"minView\": \"months\", \"view\": \"months\"}"
+   "options": "{\"minView\": \"months\", \"view\": \"months\", \"dateFormat\": \"mm-yyyy\", \"todayButton\": false}"
   },
   {
    "fieldname": "summary_section",
