@@ -1,12 +1,6 @@
 # Just for reference
 # DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
 
-from frappe.utils import getdate
-
-# Date from which NIC requires shipToGSTIN/shipToTradeName in production
-# (already live in sandbox)
-E_WAYBILL_CHANGES_APPLICABLE_DATE = getdate("2026-08-01")
-
 SANDBOX_SHIP_TO = {
     "gstin": "02AMBPG7773M002",
     "state_number": "02",
