@@ -1704,6 +1704,7 @@ class TestSpecificTransactions(IntegrationTestCase):
             do_not_save=True,
         )
         enable_custom_gst_charge_types()
+        self.addCleanup(frappe.clear_cache, doctype="Sales Taxes and Charges")
         doc.items[0].gst_retail_sale_price = 120
         for tax in doc.taxes:
             tax.charge_type = "On MRP"
@@ -1782,6 +1783,10 @@ class TestSpecificTransactions(IntegrationTestCase):
     def test_charge_type_options_gated_by_settings(self):
         """On MRP / On Margin appear as charge_type options only when their GST Setting is on."""
         from india_compliance.gst_india.setup.property_setters import toggle_charge_type_options
+
+        # This test repeatedly clears and repopulates the meta-cache with uncommitted
+        # options; clear it once more after rollback so the next test isn't left stale.
+        self.addCleanup(frappe.clear_cache, doctype="Sales Taxes and Charges")
 
         def options():
             frappe.clear_cache(doctype="Sales Taxes and Charges")
