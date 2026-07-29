@@ -124,7 +124,7 @@ doc_events = {
         "on_update": ["india_compliance.gst_india.overrides.address.update_party_gstin_and_gst_category"],
     },
     "Company": {
-        "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company",
+        "on_trash": "india_compliance.gst_india.overrides.company.on_trash",
         "on_update": [
             "india_compliance.income_tax_india.overrides.company.make_company_fixtures",
             "india_compliance.gst_india.overrides.company.make_company_fixtures",
