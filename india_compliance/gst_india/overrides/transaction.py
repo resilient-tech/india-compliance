@@ -1888,6 +1888,9 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
 
     changed_address_fields = [field for field in ADDRESS_DEPENDENT_FIELDS if has_changed(field)]
 
+    if doc.doctype == "Sales Invoice" and has_changed("shipping_address_name"):
+        changed_address_fields.append("shipping_address_name")
+
     if not changed_address_fields and not has_changed("place_of_supply"):
         return
 
