@@ -30,6 +30,7 @@ def set_bootinfo(bootinfo):
 
     bootinfo["gst_settings"] = gst_settings
     bootinfo["india_state_options"] = list(INDIAN_STATES)
+    bootinfo["gst_state_by_number"] = {number: state for state, number in INDIAN_STATES.items()}
     bootinfo["ic_api_enabled_from_conf"] = bool(frappe.conf.ic_api_secret)
 
     set_indian_registered_companies(bootinfo)

@@ -8,7 +8,6 @@ const tooltip_info = {
 };
 
 const api_enabled = india_compliance.is_api_enabled();
-const GST_CATEGORIES = ["B2B", "B2BA", "CDNR", "CDNRA", "ISD", "IMPG", "IMPGSEZ"];
 const ALERT_HTML = `
     <div class="gstr2b-alert alert alert-primary fade show d-flex align-items-center justify-content-between border-0" role="alert">
         <div>
@@ -28,8 +27,6 @@ const ReturnType = {
     GSTR2A: "GSTR2a",
     GSTR2B: "GSTR2b",
 };
-
-const RECO_2A_CATEGORIES_KEY = "purchase_reco_2a_categories";
 
 const RECO_MODULE =
     "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool";
@@ -94,6 +91,9 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     refresh(frm) {
+        frm.disable_save();
+        frm.page.clear_indicator();
+
         frm.reco_tool_actions = new PurchaseReconciliationToolAction(frm);
         frm.reco_tool_actions.setup_actions();
     },
@@ -288,7 +288,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 label: "Classification",
                 fieldname: "classification",
                 fieldtype: "Select",
-                options: ["B2B", "B2BA", "CDNR", "CDNRA", "ISD", "ISDA", "IMPG", "IMPGSEZ"],
+                options: ["B2B", "B2BA", "CDNR", "CDNRA", "ISD", "ISDA", "IMPG", "IMPGSEZ", "ECOM", "ECOMA"],
             },
             {
                 label: "Is Reverse Charge",
@@ -652,14 +652,42 @@ class PurchaseReconciliationToolAction {
         this.setup_row_actions();
     }
 
+    validate_filters() {
+        const doc = this.frm.doc;
+        const missing_labels = [];
+
+        if (!doc.company && !doc.company_gstin) {
+            missing_labels.push(__("Company or Company GSTIN"));
+        }
+
+        if (!doc.gst_return) {
+            missing_labels.push(__(frappe.meta.get_label(DOCTYPE, "gst_return")));
+        }
+
+        const period_fields = ["purchase_period", "inward_supply_period"];
+
+        for (const fieldname of period_fields) {
+            const prefix = fieldname.replace("_period", "");
+            if (!doc[`${prefix}_from_date`] || !doc[`${prefix}_to_date`]) {
+                missing_labels.push(__(frappe.meta.get_label(DOCTYPE, fieldname)));
+            }
+        }
+
+        if (!missing_labels.length) return;
+
+        frappe.throw({
+            title: __("Missing Filters"),
+            message: __("Please set the following mandatory filters to generate the report:<br>{0}", [
+                `<ul>${missing_labels.map((label) => `<li>${label}</li>`).join("")}</ul>`,
+            ]),
+        });
+    }
+
     setup_document_actions() {
         // Primary Action
         this.frm.disable_save();
         this.frm.page.set_primary_action(__("Generate"), async () => {
-            if (!this.frm.doc.company && !this.frm.doc.company_gstin) {
-                frappe.throw(__("Please provide either a Company name or Company GSTIN."));
-            }
-
+            this.validate_filters();
             this.get_reconciliation_data(this.frm);
         });
 
@@ -822,7 +850,6 @@ class ImportDialog {
             title: __("Download Data from GSTN"),
             fields: [
                 ...this.get_gstr_fields(),
-                ...this.get_2a_category_fields(),
                 ...this.get_fields_for_pending_downloads(),
                 ...this.get_fields_for_download_history(),
             ],
@@ -865,23 +892,13 @@ class ImportDialog {
 
     setup_dialog_actions() {
         if (this.for_download) {
-            if (this.return_type === ReturnType.GSTR2A) {
-                this.dialog.set_primary_action(__("Download All"), () => {
-                    this.download_gstr_by_category(false);
-                });
-                this.dialog.set_secondary_action_label(__("Download Missing"));
-                this.dialog.set_secondary_action(() => {
-                    this.download_gstr_by_category(true);
-                });
-            } else if (this.return_type === ReturnType.GSTR2B) {
-                this.dialog.set_primary_action(__("Download All"), () => {
-                    this.download_gstr_by_period(false);
-                });
-                this.dialog.set_secondary_action_label(__("Download Missing"));
-                this.dialog.set_secondary_action(() => {
-                    this.download_gstr_by_period(true);
-                });
-            }
+            this.dialog.set_primary_action(__("Download All"), () => {
+                this.download_gstr_by_period(false);
+            });
+            this.dialog.set_secondary_action_label(__("Download Missing"));
+            this.dialog.set_secondary_action(() => {
+                this.download_gstr_by_period(true);
+            });
         } else {
             this.dialog.set_primary_action(__("Upload"), () => {
                 const file_path = this.dialog.get_value("attach_file");
@@ -895,26 +912,6 @@ class ImportDialog {
                 this.dialog.hide();
             });
         }
-    }
-
-    download_gstr_by_category(only_missing) {
-        const marked_gst_categories = this.dialog.get_value("gst_categories") || [];
-        if (marked_gst_categories.length === 0) {
-            frappe.throw(__("Please select at least one Category to Download"));
-        }
-
-        save_2a_categories(marked_gst_categories);
-
-        download_gstr(
-            this.frm,
-            this.date_range,
-            this.return_type,
-            this.company_gstin,
-            null,
-            only_missing,
-            marked_gst_categories,
-        );
-        this.dialog.hide();
     }
 
     download_gstr_by_period(only_missing) {
@@ -1078,36 +1075,6 @@ class ImportDialog {
         ];
     }
 
-    get_2a_category_fields() {
-        const saved = get_saved_2a_categories();
-        const import_categories = ["IMPG", "IMPGSEZ"];
-        const rare_categories = ["ISD"];
-        const overseas_enabled = gst_settings.enable_overseas_transactions;
-
-        const is_default_checked = (category) => {
-            if (rare_categories.includes(category)) return false;
-            if (import_categories.includes(category) && !overseas_enabled) return false;
-            return true;
-        };
-
-        return [
-            { fieldtype: "Section Break", depends_on: "eval:doc.return_type == 'GSTR2a'" },
-            {
-                fieldname: "gst_categories",
-                fieldtype: "MultiCheck",
-                label: __("Categories"),
-                select_all: true,
-                columns: 4,
-                sort_options: false,
-                options: GST_CATEGORIES.map((category) => ({
-                    label: category,
-                    value: category,
-                    checked: saved ? saved.includes(category) : is_default_checked(category),
-                })),
-            },
-        ];
-    }
-
     get_fields_for_pending_downloads() {
         const label = this.for_download ? "🟠 Pending Download" : "🟠 Pending Upload";
         return [
@@ -1137,7 +1104,6 @@ async function download_gstr(
     company_gstin,
     return_period,
     only_missing = true,
-    gst_categories = null,
 ) {
     let company_gstins;
     if (company_gstin == "All") company_gstins = await india_compliance.get_gstin_options(frm.doc.company);
@@ -1150,7 +1116,6 @@ async function download_gstr(
             date_range,
             return_period,
             force: !only_missing,
-            gst_categories,
         };
         frm.events.show_progress(frm, "download");
         const { message } = await frm.taxpayer_api_call("download_gstr", args);
@@ -1161,21 +1126,6 @@ async function download_gstr(
                 indicator: message?.indicator || "blue",
             });
         }
-    });
-}
-
-function get_saved_2a_categories() {
-    return india_compliance.get_user_default_json(RECO_2A_CATEGORIES_KEY);
-}
-
-function save_2a_categories(categories) {
-    const serialized = JSON.stringify(categories);
-
-    frappe.defaults.set_user_default_local(RECO_2A_CATEGORIES_KEY, serialized);
-
-    frappe.call({
-        method: `${RECO_MODULE}.set_category_preference`,
-        args: { categories: serialized },
     });
 }
 
