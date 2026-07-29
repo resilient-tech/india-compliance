@@ -169,15 +169,7 @@
    "share": 1
   }
  ],
-<<<<<<< HEAD
-<<<<<<< HEAD
- "sort_field": "modified",
-=======
- "row_format": "Dynamic",
-=======
->>>>>>> 292fe878 (fix: remove is_generated_with_ship_to field and related logic from e-Invoice and e-Waybill handling)
  "sort_field": "creation",
->>>>>>> b838d94b (fix: add support for tracking ship-to address changes in e-invoice and e-waybill processes)
  "sort_order": "DESC",
  "states": [],
  "title_field": "reference_name"

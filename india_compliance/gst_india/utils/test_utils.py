@@ -3,12 +3,8 @@ from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
 
 import frappe
-<<<<<<< HEAD
-from frappe.tests.utils import FrappeTestCase
-=======
 import time_machine
-from frappe.tests import IntegrationTestCase, change_settings
->>>>>>> 4e695ae8 (fix: add test for is_ship_to_gstin_applicable rollover behavior in IST)
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import getdate
 
 from india_compliance.gst_india.utils import is_ship_to_gstin_applicable, validate_pincode

@@ -15,17 +15,10 @@ from frappe.www.printview import get_html_and_style
 from responses import matchers
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
-<<<<<<< HEAD
-from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
-from india_compliance.gst_india.constants.e_waybill import (
-    E_WAYBILL_CHANGES_APPLICABLE_DATE,
-=======
 from india_compliance.gst_india.constants import (
     SERVICE_HSN_PREFIX,
     SHIP_TO_GSTIN_APPLICABLE_DATE,
->>>>>>> 986aea0b (fix: gate all the changes and minor refactor)
 )
-from india_compliance.gst_india.constants.e_waybill import SUB_SUPPLY_TYPES
 from india_compliance.gst_india.overrides.sales_invoice import (
     is_e_waybill_applicable,
 )
@@ -58,15 +51,6 @@ from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice,
     create_sales_invoice,
     create_transaction,
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    create_unregistered_shipping_address,
-=======
->>>>>>> ac683b7b (fix: changes as per review)
-    make_subcontracting_inward_delivery,
-    make_subcontracting_inward_rm_return,
->>>>>>> 4e5ad9e3 (feat: implement handling of mandatory ship-to gstin for e-invoice)
     make_subcontracting_stock_entry,
 )
 
