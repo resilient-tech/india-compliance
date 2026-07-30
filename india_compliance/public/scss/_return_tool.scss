@@ -26,8 +26,9 @@
         padding: 0;
     }
 
-    // net GST liability cards above the tabs
-    .gst-ledger-difference {
+    // the count strips above the tabs: net GST liability, actions performed
+    .gst-ledger-difference,
+    .action-performed-summary {
         @include full-bleed-divider;
     }
 }
