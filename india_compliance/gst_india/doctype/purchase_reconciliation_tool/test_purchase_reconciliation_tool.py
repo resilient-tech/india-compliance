@@ -505,6 +505,64 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         )
         self.assertIsInstance(result, list)
 
+    def test_unlink_documents_skips_rows_with_nothing_to_unlink(self):
+        """
+        A batch with unlinked rows must still unlink the linked ones and return both sides.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="GID-006",
+            bill_date="2024-01-01",
+            posting_date="2024-01-01",
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="GID-006",
+            bill_date="2024-01-01",
+            return_period_2b="012024",
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "purchase_period": "Custom",
+                "purchase_from_date": "2024-01-01",
+                "purchase_to_date": "2024-01-31",
+                "inward_supply_period": "Custom",
+                "inward_supply_from_date": "2024-01-01",
+                "inward_supply_to_date": "2024-01-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        prt.reconcile_and_generate_data()
+        self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+
+        result = prt.unlink_documents(
+            [
+                {
+                    "purchase_invoice_name": pinv.name,
+                    "inward_supply_name": gst_is.name,
+                    "purchase_doctype": "Purchase Invoice",
+                },
+                # nothing to unlink, must be skipped
+                {
+                    "purchase_invoice_name": "",
+                    "inward_supply_name": gst_is.name,
+                    "purchase_doctype": "Purchase Invoice",
+                },
+            ]
+        )
+
+        self.assertFalse(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv.name, "reconciliation_status"),
+            "Unreconciled",
+        )
+
+        # both sides come back so the list can be refreshed
+        names = {row.purchase_invoice_name for row in result} | {row.inward_supply_name for row in result}
+        self.assertIn(pinv.name, names)
+        self.assertIn(gst_is.name, names)
+
 
 def create_purchase_invoice(**kwargs):
     args = PURCHASE_INVOICE_DEFAULT_ARGS.copy()

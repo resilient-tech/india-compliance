@@ -1,6 +1,20 @@
 frappe.provide("reconciliation");
 
 Object.assign(reconciliation, {
+    // checked rows of the open tab, as invoices. a summary row stands for many
+    get_affected_rows(frm) {
+        const _class = frm.reconciliation_tabs;
+        const active_tab = frm.get_active_tab()?.df.fieldname;
+        const checked = _class.tabs[active_tab]?.datatable.get_checked_items() || [];
+
+        if (active_tab == "invoice_tab") return checked;
+
+        const matches = _class.summary_matchers[active_tab];
+        if (!matches) return [];
+
+        return _class.filtered_data.filter((row) => checked.some((item) => matches(item, row)));
+    },
+
     get_unlinked_docs(selected_rows) {
         const unlinked_docs = new Set();
         selected_rows.forEach((row) => {
@@ -12,37 +26,32 @@ Object.assign(reconciliation, {
     },
 
     async unlink_documents(frm, selected_rows) {
-        if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
         const _class = frm.reconciliation_tabs;
-        const { invoice_tab } = _class.tabs;
-        if (!selected_rows) selected_rows = invoice_tab.datatable.get_checked_items();
+        const tab = _class.tabs[frm.get_active_tab()?.df.fieldname];
+        if (!selected_rows) selected_rows = reconciliation.get_affected_rows(frm);
 
-        if (!selected_rows.length)
+        // nothing to unlink where a side is missing
+        const rows = selected_rows.filter((row) => row.purchase_invoice_name && row.inward_supply_name);
+
+        if (!rows.length)
             return frappe.show_alert({
-                message: __("Please select rows to unlink"),
+                message: __("Please select linked rows to unlink"),
                 indicator: "red",
             });
 
-        // validate selected rows
-        selected_rows.forEach((row) => {
-            if (row.match_status.includes("Missing"))
-                frappe.throw(
-                    __(
-                        "You have selected rows where no match is available. Please remove them before unlinking.",
-                    ),
-                );
-        });
-
-        const exclude_from_reconciliation = await reconciliation.prompt_unlink_intent();
+        const exclude_from_reconciliation = await reconciliation.prompt_unlink_intent(
+            rows.length,
+            selected_rows.length - rows.length,
+        );
         if (exclude_from_reconciliation === null) return; // cancelled
 
         // unlink documents & update table
         const { message: r } = await frm._call("unlink_documents", {
-            data: selected_rows,
+            data: rows,
             exclude_from_reconciliation,
         });
 
-        const unlinked_docs = reconciliation.get_unlinked_docs(selected_rows);
+        const unlinked_docs = reconciliation.get_unlinked_docs(rows);
 
         const new_data = _class.data.filter(
             (row) =>
@@ -51,22 +60,31 @@ Object.assign(reconciliation, {
 
         new_data.push(...r);
         _class.refresh(new_data);
-        reconciliation.after_successful_action(invoice_tab);
+        reconciliation.after_successful_action(tab);
     },
 
-    prompt_unlink_intent() {
-        // Resolves to a boolean (exclude flag) or null if cancelled.
+    prompt_unlink_intent(count, skipped) {
+        // gives back the exclude flag, or null if cancelled
         return new Promise((resolve) => {
             const dialog = new frappe.ui.Dialog({
-                title: __("Unlink Documents"),
+                title: __("Unlink {0} Documents", [count]),
                 fields: [
+                    ...(skipped
+                        ? [
+                              {
+                                  fieldtype: "HTML",
+                                  options: `<p class="text-muted">${__(
+                                      "{0} selected rows have nothing to unlink. They will be left as is.",
+                                      [skipped],
+                                  )}</p>`,
+                              },
+                          ]
+                        : []),
                     {
                         fieldtype: "Check",
                         fieldname: "exclude_from_reconciliation",
                         label: __("Do not reconcile these again automatically"),
-                        description: __(
-                            "Enable this for incorrect matches. Leave unchecked to re-match them on the next reconciliation.",
-                        ),
+                        description: __("Enable this where you intend to manually reconcile them"),
                         default: 0,
                     },
                 ],

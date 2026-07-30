@@ -79,6 +79,11 @@ frappe.ui.form.on(DOCTYPE, {
 });
 
 class IMS extends reconciliation.reconciliation_tabs {
+    summary_matchers = {
+        match_summary_tab: (item, row) => item.match_status == row.match_status,
+        action_summary_tab: (item, row) => category_map[item.category] == row.doc_type,
+    };
+
     render_data(data) {
         this.process_data(data);
         super.render_data(data);
@@ -895,24 +900,21 @@ function render_empty_state(frm) {
 }
 
 function apply_bulk_action(frm, action) {
-    const active_tab = frm.get_active_tab()?.df.fieldname;
-    if (!active_tab) return;
+    const tab = frm.reconciliation_tabs.tabs[frm.get_active_tab()?.df.fieldname];
+    const affected_rows = reconciliation.get_affected_rows(frm);
 
-    const tab = frm.reconciliation_tabs.tabs[active_tab];
-
-    // from current tab
-    const selected_rows = tab.datatable.get_checked_items();
-    if (!selected_rows.length) {
+    if (!affected_rows.length) {
         frappe.show_alert({ message: __("Please select invoices"), indicator: "red" });
         return;
     }
 
-    // summary => invoice
-    const affected_rows = get_affected_rows(active_tab, selected_rows, frm.reconciliation_tabs.filtered_data);
+    apply_action(
+        frm,
+        action,
+        affected_rows.map((row) => row.inward_supply_name),
+    );
 
-    apply_action(frm, action, affected_rows);
-
-    if (tab) tab.datatable.clear_checked_items();
+    tab?.datatable.clear_checked_items();
 }
 
 async function apply_action(frm, action, invoice_names) {
@@ -1179,23 +1181,6 @@ function get_icon(value, column, data) {
     return `<button class="btn eye" data-name="${data.inward_supply_name}">
                 <i class="fa fa-eye"></i>
             </button>`;
-}
-
-function get_affected_rows(tab, selection, data) {
-    let invoices = [];
-    if (tab == "invoice_tab") invoices = selection;
-
-    if (tab == "match_summary_tab")
-        invoices = data.filter(
-            (inv) => selection.filter((row) => row.match_status == inv.match_status).length,
-        );
-
-    if (tab == "action_summary_tab")
-        invoices = data.filter(
-            (inv) => selection.filter((row) => category_map[row.category] == inv.doc_type).length,
-        );
-
-    return invoices.map((row) => row.inward_supply_name);
 }
 
 function show_download_invoices_message(frm) {
