@@ -279,7 +279,7 @@ class PurchaseReconciliationTool(Document):
         return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()
-    def unlink_documents(self, data: str | list, exclude_from_reconciliation=False):
+    def unlink_documents(self, data: str | list, exclude_from_reconciliation: bool = False):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         purchases, inward_supplies = _unlink_documents(data, exclude_from_reconciliation)

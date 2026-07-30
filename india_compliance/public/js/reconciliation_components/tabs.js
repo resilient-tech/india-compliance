@@ -20,6 +20,9 @@ function get_gstin_indicator_color(status) {
 }
 
 reconciliation.reconciliation_tabs = class ReconciliationTabs {
+    // summary tab -> how its rows pick invoices. set by each tool
+    summary_matchers = {};
+
     constructor(frm, tabs, data_field) {
         this.frm = frm;
         this.data = [];

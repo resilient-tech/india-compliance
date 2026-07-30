@@ -206,6 +206,11 @@ frappe.ui.form.on(DOCTYPE, {
 });
 
 class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
+    summary_matchers = {
+        supplier_tab: (item, row) => item.supplier_gstin == row.supplier_gstin,
+        summary_tab: (item, row) => item.match_status == row.match_status,
+    };
+
     get_tab_group_fields() {
         return [
             {
@@ -700,14 +705,13 @@ class PurchaseReconciliationToolAction {
         const action_group = __("Actions");
 
         if (!this.frm.reconciliation_tabs?.data?.length) return;
-        if (this.frm.get_active_tab()?.df.fieldname == "invoice_tab") {
-            this.frm.add_custom_button(
-                __("Unlink"),
-                () => reconciliation.unlink_documents(this.frm),
-                action_group,
-            );
-            this.frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
-        }
+
+        this.frm.add_custom_button(
+            __("Unlink"),
+            () => reconciliation.unlink_documents(this.frm),
+            action_group,
+        );
+        this.frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
 
         // Setup Actions
         ["Accept", "Pending", "Ignore"].forEach((action) =>
@@ -1269,11 +1273,9 @@ function apply_action(frm, action, selected_rows) {
     if (!active_tab) return;
 
     const tab = frm.reconciliation_tabs.tabs[active_tab];
-    if (!selected_rows) selected_rows = tab.datatable.get_checked_items();
+    const { data } = frm.reconciliation_tabs;
 
-    // get affected rows
-    const { filtered_data, data } = frm.reconciliation_tabs;
-    let affected_rows = get_affected_rows(active_tab, selected_rows, filtered_data);
+    let affected_rows = selected_rows || reconciliation.get_affected_rows(frm);
 
     if (!affected_rows.length)
         return frappe.show_alert({
@@ -1348,18 +1350,6 @@ function apply_action(frm, action, selected_rows) {
 
 function has_matching_row(row, array) {
     return array.filter((item) => JSON.stringify(item) === JSON.stringify(row)).length;
-}
-
-function get_affected_rows(tab, selection, data) {
-    if (tab == "invoice_tab") return selection;
-
-    if (tab == "supplier_tab")
-        return data.filter(
-            (inv) => selection.filter((row) => row.supplier_gstin == inv.supplier_gstin).length,
-        );
-
-    if (tab == "summary_tab")
-        return data.filter((inv) => selection.filter((row) => row.match_status == inv.match_status).length);
 }
 
 function render_empty_state(frm) {
