@@ -21,7 +21,7 @@ const ACTION_MAP = {
 
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
-        await frappe.require("ims.bundle.js");
+        await frappe.require(["ims.bundle.js", "india_compliance.bundle.css"]);
 
         frm.reconciliation_tabs = new IMS(
             frm,
