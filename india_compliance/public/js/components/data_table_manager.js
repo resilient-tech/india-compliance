@@ -9,6 +9,7 @@ india_compliance.DataTableManager = class DataTableManager {
     }
 
     make() {
+        this.$wrapper.addClass("ic-datatable");
         this.format_data(this.data);
         this.make_no_data();
         this.render_datatable();
