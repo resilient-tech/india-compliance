@@ -1,0 +1,31 @@
+// styles js/components/filter_group.js
+
+.custom-button-group .filter-selector {
+    margin-bottom: 8px;
+    margin-left: 8px;
+
+    // match the Actions button: same height, same icon gap. flex centring,
+    // else the forced height leaves the label sitting high.
+    .btn {
+        height: calc(var(--spacing) * 7);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: calc(var(--spacing) * 2);
+    }
+
+    // frappe keeps the next two under .page-form, out of our reach. copy them.
+    .filter-label {
+        display: inline-block;
+        font-weight: 600;
+        color: var(--text-color);
+        background-color: var(--control-bg);
+        min-width: 21px;
+        border-radius: 22px;
+        margin-left: 6px;
+    }
+
+    .filter-button.btn-primary-light {
+        z-index: 1;
+    }
+}

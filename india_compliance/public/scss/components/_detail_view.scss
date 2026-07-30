@@ -1,0 +1,11 @@
+// styles the detail view dialog in js/reconciliation_components/tabs.js
+
+.modal-dialog [data-fieldname="detail_table"] .table > tbody > tr > td {
+    text-align: center;
+    width: 30%;
+}
+
+// value differs between books and the portal
+.not-matched {
+    color: red;
+}
