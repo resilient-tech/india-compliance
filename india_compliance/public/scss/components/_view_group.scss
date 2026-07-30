@@ -1,0 +1,27 @@
+// styles js/components/view_group.js
+// frappe v16 ships no segmented control, so this is our own pill rail
+
+.view-group .custom-tabs {
+    > .nav-item > .nav-link {
+        // 29px, to sit level with the filter and Actions buttons beside it
+        padding: 3px 8px;
+        color: var(--text-color);
+    }
+
+    > .nav-item:first-child > .nav-link {
+        border-radius: 0.4rem 0 0 0.4rem;
+    }
+
+    > .nav-item:last-child > .nav-link {
+        border-radius: 0 0.4rem 0.4rem 0;
+    }
+
+    > .nav-item:not(:has(.disabled)):hover > .nav-link:not(.active) {
+        background-color: var(--btn-default-hover-bg);
+    }
+
+    > .nav-item > .nav-link.active {
+        background-color: var(--control-bg);
+        color: var(--primary);
+    }
+}
