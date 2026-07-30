@@ -83,19 +83,14 @@ class PurchaseReconciliationTool(Document):
             "company",
             "company_gstin",
             "gst_return",
-            "purchase_from_date",
-            "purchase_to_date",
-            "inward_supply_from_date",
-            "inward_supply_to_date",
+            "from_date",
+            "to_date",
             "include_ignored",
         )
         return {field: self.get(field) for field in fields}
 
     def onload(self):
-        date_range = [
-            self.inward_supply_from_date,
-            self.inward_supply_to_date,
-        ]
+        date_range = [self.from_date, self.to_date]
 
         self.set_onload(
             "has_missing_2b_documents",
@@ -658,10 +653,8 @@ class AutoReconcile:
                 "company": company,
                 "company_gstin": "All",
                 "gst_return": "Both GSTR 2A & 2B",
-                "purchase_from_date": frappe.utils.add_years(self.today, -1),
-                "purchase_to_date": self.today,
-                "inward_supply_from_date": self.inward_supply_from_date,
-                "inward_supply_to_date": self.today,
+                "from_date": self.inward_supply_from_date,
+                "to_date": self.today,
             }
         )
 
@@ -769,7 +762,7 @@ class BuildExcel:
         """Add filters to the sheet"""
 
         label = "2B" if self.doc.gst_return == "GSTR 2B" else "2A/2B"
-        self.period = f"{self.doc.inward_supply_from_date} to {self.doc.inward_supply_to_date}"
+        self.period = f"{self.doc.from_date} to {self.doc.to_date}"
 
         self.filters = frappe._dict(
             {
