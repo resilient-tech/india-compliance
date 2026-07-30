@@ -10,13 +10,9 @@
   "column_break_2",
   "company_gstin",
   "column_break_3",
-  "purchase_period",
-  "purchase_from_date",
-  "purchase_to_date",
-  "column_break_6",
-  "inward_supply_period",
-  "inward_supply_from_date",
-  "inward_supply_to_date",
+  "period",
+  "from_date",
+  "to_date",
   "column_break_12",
   "gst_return",
   "section_break_11",
@@ -41,50 +37,25 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "purchase_period",
+   "fieldname": "period",
    "fieldtype": "Select",
-   "label": "Purchase Period",
+   "label": "Period",
    "options": "\nThis Month\nThis Quarter to Last Month\nThis Quarter\nThis Fiscal Year to Last Month\nThis Fiscal Year\nLast Month\nLast Quarter\nLast Fiscal Year\nCustom",
    "reqd": 1
   },
   {
-   "depends_on": "eval: doc.purchase_period == 'Custom'",
-   "fieldname": "purchase_from_date",
+   "depends_on": "eval: doc.period == 'Custom'",
+   "fieldname": "from_date",
    "fieldtype": "Date",
    "label": "From Date",
-   "read_only_depends_on": "eval: doc.purchase_period != 'Custom'"
+   "read_only_depends_on": "eval: doc.period != 'Custom'"
   },
   {
-   "depends_on": "eval: doc.purchase_period == 'Custom'",
-   "fieldname": "purchase_to_date",
+   "depends_on": "eval: doc.period == 'Custom'",
+   "fieldname": "to_date",
    "fieldtype": "Date",
    "label": "To Date",
-   "read_only_depends_on": "eval: doc.purchase_period != 'Custom'"
-  },
-  {
-   "fieldname": "column_break_6",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "inward_supply_period",
-   "fieldtype": "Select",
-   "label": "Inward Supply Period",
-   "options": "\nThis Month\nThis Quarter to Last Month\nThis Quarter\nThis Fiscal Year to Last Month\nThis Fiscal Year\nLast Month\nLast Quarter\nLast Fiscal Year\nCustom",
-   "reqd": 1
-  },
-  {
-   "depends_on": "eval: doc.inward_supply_period == 'Custom'",
-   "fieldname": "inward_supply_from_date",
-   "fieldtype": "Date",
-   "label": "From Date",
-   "read_only_depends_on": "eval: doc.inward_supply_period != 'Custom'"
-  },
-  {
-   "depends_on": "eval: doc.inward_supply_period == 'Custom'",
-   "fieldname": "inward_supply_to_date",
-   "fieldtype": "Date",
-   "label": "To Date",
-   "read_only_depends_on": "eval: doc.inward_supply_period != 'Custom'"
+   "read_only_depends_on": "eval: doc.period != 'Custom'"
   },
   {
    "fieldname": "section_break_11",
