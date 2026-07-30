@@ -24,7 +24,8 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
         this.frm = frm;
         this.data = [];
         this._tabs = tabs;
-        this.$wrapper = frm.get_field(data_field).$wrapper;
+        this.$wrapper = frm.get_field(data_field).$wrapper.addClass("gst-return-tabs");
+        frm.$wrapper.addClass("gst-return-tool");
 
         this.render_tab_group();
         this.setup_filter_button(frm.doctype);
