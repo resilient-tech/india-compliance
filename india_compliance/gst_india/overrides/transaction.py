@@ -1732,8 +1732,98 @@ def before_update_after_submit(doc, method=None):
 
     GSTAccounts().validate(doc, is_sales_transaction)
     update_taxable_values(doc)
+<<<<<<< HEAD
     validate_item_wise_tax_detail(doc)
     update_gst_details(doc)
+=======
+    update_item_gst_details(doc)
+    validate_item_tax_template(doc)
+
+
+ADDRESS_DEPENDENT_FIELDS = {
+    "customer_address": ("billing_address_gstin", "gst_category"),
+    "supplier_address": ("supplier_gstin", "gst_category"),
+}
+
+
+def validate_transporter_fields_after_submit(doc, method=None):
+    """Transporter details stay editable after submit until an e-Waybill is generated"""
+    if doc.docstatus != 1 or ignore_gst_validations(doc):
+        return
+
+    if doc.doctype not in E_WAYBILL_FIELDS:
+        return
+
+    changed_fields = get_changed_fields(doc, TRANSPORTER_FIELDS)
+    if not changed_fields:
+        return
+
+    if doc.get("ewaybill"):
+        frappe.throw(
+            _(
+                "Cannot change transporter details after the e-Waybill has been"
+                " generated. Cancel the e-Waybill first, or use the Update Transporter"
+                " / Update Vehicle Info actions instead."
+            ),
+            title=_("Cannot Update After Submit"),
+        )
+
+    validate_gst_transporter_id(doc)
+
+
+def sync_address_dependent_fields_after_submit(doc, method=None):
+    if doc.docstatus != 1 or ignore_gst_validations(doc):
+        return
+
+    changed_fields = get_changed_fields(doc, ADDRESS_DEPENDENT_FIELDS)
+
+    if not changed_fields and not has_changed(doc, "place_of_supply"):
+        return
+
+    if doc.get("ewaybill") or doc.get("irn"):
+        frappe.throw(
+            _(
+                "Cannot change the Place of Supply or address after the e-Waybill or"
+                " e-Invoice has been generated. Cancel it first."
+            ),
+            title=_("Cannot Update After Submit"),
+        )
+
+    if doc.doctype == "Sales Invoice":
+        validate_backdated_transaction(doc, action="update")
+
+    if changed_fields:
+        sync_gst_details_from_address(doc, changed_fields)
+
+    is_sales_transaction = doc.doctype in SALES_DOCTYPES
+    gstin = doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin
+
+    validate_place_of_supply(doc)
+    validate_overseas_gst_category(doc)
+
+    if gstin:
+        validate_gstin_status(gstin, doc)
+
+    validate_gst_category(doc.gst_category, gstin)
+    GSTAccounts().validate(doc, is_sales_transaction)
+
+
+def sync_gst_details_from_address(doc, changed_address_fields):
+    for address_field, (gstin_field, category_field) in ADDRESS_DEPENDENT_FIELDS.items():
+        if address_field not in changed_address_fields:
+            continue
+
+        address = doc.get(address_field)
+        gstin, gst_category = (
+            frappe.db.get_value("Address", address, ("gstin", "gst_category")) if address else (None, None)
+        )
+
+        if doc.meta.has_field(gstin_field):
+            doc.set(gstin_field, gstin or "")
+
+        if category_field and doc.meta.has_field(category_field):
+            doc.set(category_field, gst_category or "Unregistered")
+>>>>>>> 7f50e5e6 (fix: block e-waybill shiptogstin changes.)
 
 
 def set_ecommerce_supply_type(doc):

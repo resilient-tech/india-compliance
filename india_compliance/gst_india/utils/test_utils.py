@@ -1,6 +1,7 @@
 import re
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 import time_machine
 
@@ -8,10 +9,15 @@ import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import getdate
 
+<<<<<<< HEAD
 from india_compliance.gst_india.utils import (
     is_ship_to_gstin_applicable,
     validate_pincode,
 )
+=======
+from india_compliance.gst_india.constants import SHIP_TO_GSTIN_APPLICABLE_DATE, TIMEZONE
+from india_compliance.gst_india.utils import is_ship_to_gstin_applicable, validate_pincode
+>>>>>>> 7f50e5e6 (fix: block e-waybill shiptogstin changes.)
 
 
 class TestUtils(FrappeTestCase):
@@ -61,9 +67,15 @@ class TestUtils(FrappeTestCase):
     @change_settings("GST Settings", {"sandbox_mode": 0})
     def test_is_ship_to_gstin_applicable_rolls_over_in_ist(self):
         """NIC rolls over at midnight IST, whatever the site's own timezone is."""
+<<<<<<< HEAD
         rollover = datetime(
             2026, 7, 31, 18, 30, tzinfo=timezone.utc
         )  # 2026-08-01 00:00 IST
+=======
+        rollover = datetime.combine(
+            SHIP_TO_GSTIN_APPLICABLE_DATE, time(), tzinfo=ZoneInfo(TIMEZONE)
+        ).astimezone(timezone.utc)
+>>>>>>> 7f50e5e6 (fix: block e-waybill shiptogstin changes.)
 
         for time_zone in ("UTC", "Pacific/Kiritimati"):  # behind IST, then ahead of it
             with change_settings("System Settings", {"time_zone": time_zone}):
