@@ -1,5 +1,3 @@
-from enum import Enum
-
 import frappe
 from frappe import _
 from frappe.query_builder.terms import Criterion
@@ -25,30 +23,7 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.gstr_2 import gstr_2a, gstr_2b, ims
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
-
-
-class GSTRCategory(Enum):
-    B2B = "B2B"
-    B2BA = "B2BA"
-    CDNR = "CDNR"
-    CDNRA = "CDNRA"
-    ISD = "ISD"
-    ISDA = "ISDA"  # for GSTR 2B only
-    IMPG = "IMPG"
-    IMPGSEZ = "IMPGSEZ"
-
-    # IMS
-    B2BCN = "B2BCN"
-    B2BCNA = "B2BCNA"
-    B2BDN = "B2BDN"
-    B2BDNA = "B2BDNA"
-
-    # GSTR 2A only
-    ECOM = "ECOM"
-    ECOMA = "ECOMA"
-    TDS = "TDS"
-    TCS = "TCS"
-
+from india_compliance.gst_returns.fields.gstr2 import Category as GSTRCategory
 
 GSTR_2A_ACTIONS = {
     "B2B": GSTRCategory.B2B,
