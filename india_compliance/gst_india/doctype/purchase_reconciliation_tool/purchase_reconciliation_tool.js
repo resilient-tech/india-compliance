@@ -9,13 +9,13 @@ const tooltip_info = {
 
 const api_enabled = india_compliance.is_api_enabled();
 const ALERT_HTML = `
-    <div class="gstr2b-alert alert alert-primary fade show d-flex align-items-center justify-content-between border-0" role="alert">
+    <div class="d-flex align-items-center justify-content-between">
         <div>
             You have missing GSTR-2B downloads
         </div>
         ${
             api_enabled
-                ? `<a id="download-gstr2b-button" href="#" class="alert-link">
+                ? `<a href="#" class="download-gstr2b">
                     Download 2B
                 </a>`
                 : ""
@@ -31,36 +31,28 @@ const ReturnType = {
 const RECO_MODULE =
     "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool";
 
-function remove_gstr2b_alert(alert) {
-    if (alert.length === 0) return;
-    $(alert).remove();
-}
-
-async function add_gstr2b_alert(frm) {
-    let existing_alert = frm.layout.wrapper.find(".gstr2b-alert");
+function add_gstr2b_alert(frm) {
+    let alert = frm.layout.wrapper.find(".gstr2b-alert");
 
     if (!frm.doc.inward_supply_period || !frm.doc.__onload?.has_missing_2b_documents) {
-        remove_gstr2b_alert(existing_alert);
+        alert.remove();
         return;
     }
 
-    // Add alert only if there is no existing alert
-    if (existing_alert.length !== 0) return;
+    if (alert.length) return;
 
-    existing_alert = $(ALERT_HTML).prependTo(frm.layout.wrapper);
-    $(existing_alert)
-        .find("#download-gstr2b-button")
-        .on("click", async function () {
-            await download_gstr(
-                frm,
-                [frm.doc.inward_supply_from_date, frm.doc.inward_supply_to_date],
-                ReturnType.GSTR2B,
-                frm.doc.company_gstin,
-                null,
-                true,
-            );
-            remove_gstr2b_alert(existing_alert);
-        });
+    alert = india_compliance.show_doc_alert(frm, ALERT_HTML, "blue").addClass("gstr2b-alert");
+    alert.find(".download-gstr2b").on("click", async function () {
+        await download_gstr(
+            frm,
+            [frm.doc.inward_supply_from_date, frm.doc.inward_supply_to_date],
+            ReturnType.GSTR2B,
+            frm.doc.company_gstin,
+            null,
+            true,
+        );
+        alert.remove();
+    });
 }
 
 frappe.ui.form.on(DOCTYPE, {
@@ -68,7 +60,7 @@ frappe.ui.form.on(DOCTYPE, {
         patch_set_active_tab(frm);
         new india_compliance.quick_info_popover(frm, tooltip_info);
 
-        await frappe.require("purchase_reconciliation_tool.bundle.js");
+        await frappe.require(["purchase_reconciliation_tool.bundle.js", "india_compliance.bundle.css"]);
 
         frm.doc.company = frappe.defaults.get_user_default("Company");
         frm.trigger("company");
@@ -84,13 +76,14 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     onload(frm) {
-        add_gstr2b_alert(frm);
-
         frm.trigger("purchase_period");
         frm.trigger("inward_supply_period");
     },
 
     refresh(frm) {
+        // refresh wipes the message area, so put it back
+        add_gstr2b_alert(frm);
+
         frm.disable_save();
         frm.page.clear_indicator();
 
