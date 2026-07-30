@@ -47,6 +47,7 @@
 
     .form-tabs-list {
         @include full-bleed-divider;
+
         display: flex;
         justify-content: space-between;
         align-items: center;
