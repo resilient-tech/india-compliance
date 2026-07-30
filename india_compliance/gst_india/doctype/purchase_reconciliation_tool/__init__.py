@@ -9,14 +9,18 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 )
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Abs, IfNull, Sum
+from frappe.query_builder.functions import Abs, IfNull, Max, Sum
 from frappe.utils import add_months, cint, format_date, getdate, rounded
 from pypika.terms import LiteralValue
 from rapidfuzz import fuzz, process
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, TAXABLE_GST_TREATMENTS
 from india_compliance.gst_india.utils import get_gstin_list, get_party_for_gstin, get_periods_between_dates
-from india_compliance.gst_india.utils.gstr_2 import IMPORT_CATEGORY, ReturnType
+from india_compliance.gst_india.utils.gstr_2 import (
+    IMPORT_CATEGORY,
+    NON_RECONCILE_CATEGORY,
+    ReturnType,
+)
 from india_compliance.gst_india.utils.itc_claim import (
     SUPPORTED_DOCTYPES,
     set_itc_claim_period_on_match,
@@ -304,6 +308,8 @@ class InwardSupply:
         query = (
             frappe.qb.from_(self.GSTR2)
             .where(IfNull(self.GSTR2.match_status, "") != "Amended")
+            # download-only categories (TDS/TCS) are stored but never reconciled
+            .where(self.GSTR2.classification.notin(NON_RECONCILE_CATEGORY))
             .select(*fields, ConstantColumn("GST Inward Supply").as_("doctype"))
         )
 
@@ -388,7 +394,7 @@ class PurchaseInvoice:
                 "Tax Collector",
                 "Input Service Distributor",
             )
-            if category in ("B2B", "CDNR", "ISD")
+            if category in ("B2B", "CDNR", "ISD", "ECOM")
             else ("SEZ", "Overseas", "UIN Holders")
         )
         is_return = 1 if category == "CDNR" else 0
@@ -593,8 +599,8 @@ class BillOfEntry:
             self.BOE.bill_of_entry_date.as_("bill_date"),
             self.BOE.posting_date,
             self.BOE.company_gstin,
-            self.PI.supplier_name,
-            self.PI.is_reverse_charge,
+            Max(self.PI.supplier_name).as_("supplier_name"),
+            Max(self.PI.is_reverse_charge).as_("is_reverse_charge"),
             *tax_fields,
         ]
 
@@ -603,7 +609,9 @@ class BillOfEntry:
 
         for field in purchase_fields:
             fields.append(
-                Case().when(self.PI.gst_category == "SEZ", getattr(self.PI, field)).else_(None).as_(field)
+                Max(Case().when(self.PI.gst_category == "SEZ", getattr(self.PI, field)).else_(None)).as_(
+                    field
+                )
             )
 
         # Add only boe fields

@@ -32,7 +32,7 @@ india_compliance.quick_info_popover = class QuickInfoPopover {
     }
     create_info_icon(field) {
         let field_area = this.frm.get_field(field).$wrapper.find(".clearfix");
-        this.info_btn = $(`<i class="fa fa-info-circle"></i>`).appendTo(field_area);
+        this.info_btn = $(frappe.utils.icon("info", "sm")).appendTo(field_area);
     }
     get_content_html(field, info) {
         let field_lable = frappe.meta.get_label(this.frm.doctype, field);

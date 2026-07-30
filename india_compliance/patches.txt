@@ -5,8 +5,8 @@ execute:from frappe.installer import add_module_defs; add_module_defs("india_com
 
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
-execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #74
-execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #12
+execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #75
+execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #14
 execute:from india_compliance.income_tax_india.setup import create_custom_fields; create_custom_fields() #7
 india_compliance.patches.post_install.remove_old_fields #2
 india_compliance.patches.post_install.set_gst_tax_type
@@ -89,4 +89,5 @@ india_compliance.patches.v16.update_tds_section_display_name
 execute:import frappe; frappe.db.set_single_value("GST Settings", "nil_exempt_e_invoice_treatment", "Do Not Generate")
 india_compliance.patches.post_install.set_india_compliance_default_tax_category
 india_compliance.patches.post_install.remove_tax_category_gst_state
+india_compliance.patches.v16.remove_gstr_2a_category_preferences
 india_compliance.patches.post_install.create_isd_provisional_account

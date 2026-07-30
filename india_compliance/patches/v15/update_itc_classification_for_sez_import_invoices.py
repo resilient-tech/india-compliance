@@ -54,13 +54,17 @@ def execute():
     )
 
     # For non-BOE sez invoice items with taxes, pending_boe_qty should be 0
-    (
-        frappe.qb.update(pi_item)
-        .join(pi)
-        .on(pi_item.parent == pi.name)
-        .set(pi_item.pending_boe_qty, 0)
+    sez_invoices_with_gst_taxes = (
+        frappe.qb.from_(pi)
+        .select(pi.name)
         .where(pi.docstatus == 1)
         .where(pi.gst_category == "SEZ")
         .where(pi.name.isin(invoices_with_gst_taxes))
+    )
+
+    (
+        frappe.qb.update(pi_item)
+        .set(pi_item.pending_boe_qty, 0)
+        .where(pi_item.parent.isin(sez_invoices_with_gst_taxes))
         .run()
     )

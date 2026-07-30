@@ -2,6 +2,7 @@ import frappe
 from erpnext.setup.setup_wizard.operations.taxes_setup import (
     from_detailed_data,
 )
+from frappe import _
 from frappe.utils import flt
 
 from india_compliance.gst_india.utils import get_data_file_path
@@ -142,6 +143,10 @@ def update_gst_settings(company):
             as_list=1,
         )
     )
+
+    if not gst_accounts:
+        frappe.msgprint(_("GST Settings not updated as default GST accounts are missing for the company."))
+        return
 
     add_accounts_in_gst_settings(
         company,

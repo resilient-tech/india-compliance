@@ -68,6 +68,17 @@ repos:
       - id: ruff-format
         name: "Run ruff formatter"
 
+  - repo: local
+    hooks:
+      # Ported from ERPNext: https://github.com/frappe/erpnext/blob/develop/.github/helper/postgres_compat.py
+      - id: postgres-compat
+        name: "PostgreSQL compatibility (static check)"
+        description: "Flags MySQL-only SQL that breaks on Postgres; the label-gated PG test job is the backstop for semantic divergences."
+        entry: .github/helper/postgres_compat.py
+        language: script
+        files: ^india_compliance/.*\.py$
+        exclude: ^india_compliance/tests/test_postgres_compat\.py$
+
 ci:
   autoupdate_schedule: weekly
   skip: []

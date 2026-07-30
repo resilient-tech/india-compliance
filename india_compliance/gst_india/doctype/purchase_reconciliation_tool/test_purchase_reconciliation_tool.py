@@ -4,16 +4,11 @@
 import datetime
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.tests.utils import make_test_objects
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
-)
-from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
-    RECO_2A_CATEGORIES_KEY,
-    VALID_2A_CATEGORIES,
-    set_category_preference,
 )
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
@@ -145,6 +140,80 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                 cls.reconciled_data[(pi.get("name"), gst_is.get("name"))] = _reconciled_data
 
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 0)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_bill_of_entry_over_multiple_invoices_is_one_row(self):
+        dates = {"bill_date": "2023-08-11", "posting_date": "2023-08-11"}
+
+        # no GST taxes on the invoice: that is what makes an import BoE-applicable
+        invoices = [
+            create_purchase_invoice(
+                bill_no=f"BOE-MULTI-{index}",
+                supplier="_Test Foreign Supplier",
+                supplier_gstin="",
+                gst_category="Overseas",
+                is_in_state=0,
+                **dates,
+            )
+            for index in (1, 2)
+        ]
+
+        boe = make_bill_of_entry(invoices[0].name)
+        boe.get_items_from_purchase_invoice([invoices[1].name])
+        boe.update(
+            {
+                "bill_of_entry_no": "BOE-MULTI-PI",
+                "bill_of_entry_date": dates["bill_date"],
+                "posting_date": dates["posting_date"],
+            }
+        )
+        boe.save(ignore_permissions=True).submit()
+
+        # the BoE really does span both invoices, else the test proves nothing
+        self.assertEqual(
+            {item.purchase_invoice for item in boe.items},
+            {invoice.name for invoice in invoices},
+        )
+
+        tool = frappe.get_doc("Purchase Reconciliation Tool")
+        tool.update(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "purchase_period": "Custom",
+                "purchase_from_date": "2023-08-01",
+                "purchase_to_date": "2023-08-31",
+                "inward_supply_period": "Custom",
+                "inward_supply_from_date": "2023-08-01",
+                "inward_supply_to_date": "2023-08-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        rows = [row for row in tool.reconcile_and_generate_data() if row.purchase_invoice_name == boe.name]
+
+        self.assertEqual(len(rows), 1, "a Bill of Entry must reconcile as exactly one row")
+        row = rows[0]
+
+        self.assertEqual(row.purchase_doctype, "Bill of Entry")
+        self.assertEqual(row.supplier_name, invoices[0].supplier_name)
+        self.assertEqual(row.bill_no, boe.bill_of_entry_no)
+        self.assertEqual(row.classification, "IMPG")
+        self.assertEqual(row.match_status, "Missing in 2A/2B")
+
+        # nothing to reconcile against, so the differences are the BoE's own totals, summed
+        # over every item of both invoices rather than taken from one of them
+        self.assertEqual(row.taxable_value_difference, -boe.total_taxable_value)
+        self.assertEqual(row.tax_difference, -sum(item.igst_amount for item in boe.items))
+
+        # the detail view keeps the BoE doc, so the per-invoice fields can be checked directly
+        purchase = tool.get_invoice_details(boe.name, None)._purchase_invoice
+        self.assertEqual(purchase.taxable_value, boe.total_taxable_value)
+        self.assertEqual(purchase.igst, sum(item.igst_amount for item in boe.items))
+
+        # reported for SEZ invoices only, so an overseas import carries none of them
+        self.assertIsNone(purchase.supplier_gstin)
+        self.assertIsNone(purchase.gst_category)
+        self.assertIsNone(purchase.place_of_supply)
 
     def test_itc_claim_period_on_reconciliation_match(self):
         """
@@ -509,69 +578,6 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             link_doctype=None,
         )
         self.assertIsInstance(result, list)
-
-
-class TestCategoryPreference(IntegrationTestCase):
-    """Tests for the GSTR-2A download category user-preference (set_category_preference)."""
-
-    def tearDown(self):
-        # set_category_preference writes a user default; reset it between tests so
-        # one test's stored value cannot leak into another.
-        frappe.defaults.clear_user_default(RECO_2A_CATEGORIES_KEY)
-
-    def get_saved_categories(self):
-        raw = frappe.defaults.get_user_default(RECO_2A_CATEGORIES_KEY)
-        return frappe.parse_json(raw) if raw else None
-
-    def test_stores_valid_categories(self):
-        set_category_preference(["B2B", "ISD"])
-        self.assertEqual(self.get_saved_categories(), ["B2B", "ISD"])
-
-    def test_drops_invalid_categories(self):
-        # "GARBAGE" is not a real category; "ISDA" is a GSTR-2B-only category and so
-        # is not a valid GSTR-2A download category. Both must be filtered out while the
-        # valid entries are kept in the original order.
-        set_category_preference(["B2B", "GARBAGE", "ISD", "ISDA"])
-        self.assertEqual(self.get_saved_categories(), ["B2B", "ISD"])
-
-    def test_accepts_json_string(self):
-        # This is the real call path: the JS client sends a JSON-serialised string.
-        set_category_preference(frappe.as_json(["B2B", "CDNR"]))
-        self.assertEqual(self.get_saved_categories(), ["B2B", "CDNR"])
-
-    def test_accepts_python_list(self):
-        set_category_preference(["B2BA", "CDNRA"])
-        self.assertEqual(self.get_saved_categories(), ["B2BA", "CDNRA"])
-
-    def test_all_valid_categories_round_trip(self):
-        all_categories = sorted(VALID_2A_CATEGORIES)
-        set_category_preference(all_categories)
-        self.assertEqual(sorted(self.get_saved_categories()), all_categories)
-
-    def test_none_stores_empty_list(self):
-        set_category_preference(None)
-        self.assertEqual(self.get_saved_categories(), [])
-
-    def test_empty_string_stores_empty_list(self):
-        set_category_preference("")
-        self.assertEqual(self.get_saved_categories(), [])
-
-    def test_empty_list_stores_empty_list(self):
-        set_category_preference([])
-        self.assertEqual(self.get_saved_categories(), [])
-
-    def test_all_invalid_stores_empty_list(self):
-        set_category_preference(["GARBAGE", "ISDA"])
-        self.assertEqual(self.get_saved_categories(), [])
-
-    def test_overwrites_previous_preference(self):
-        set_category_preference(["B2B", "ISD"])
-        set_category_preference(["CDNR"])
-        self.assertEqual(self.get_saved_categories(), ["CDNR"])
-
-    def test_requires_write_permission(self):
-        with self.set_user("Guest"):
-            self.assertRaises(frappe.PermissionError, set_category_preference, ["B2B"])
 
 
 def create_purchase_invoice(**kwargs):

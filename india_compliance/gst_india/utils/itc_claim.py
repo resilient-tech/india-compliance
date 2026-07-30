@@ -21,7 +21,11 @@ from frappe.utils import (
 )
 
 from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
-from india_compliance.gst_india.utils import get_period, get_periods_between_dates
+from india_compliance.gst_india.utils import (
+    get_period,
+    get_periods_between_dates,
+    validate_gstin_permission,
+)
 
 SUPPORTED_DOCTYPES = frozenset(("Purchase Invoice", "Bill of Entry", "ISD Recipient Invoice"))
 SUPPORTED_TABLE_NAMES = frozenset(get_table_name(dt) for dt in SUPPORTED_DOCTYPES)
@@ -114,6 +118,7 @@ def set_itc_claim_period_on_ims_action(
 
 
 @frappe.whitelist()
+@validate_gstin_permission(doctype="GST Return Log")
 def get_itc_period_options(company_gstin: str | None = None, posting_date: str | None = None) -> list[str]:
     if not company_gstin or not posting_date:
         return []
@@ -142,6 +147,7 @@ def get_itc_period_options(company_gstin: str | None = None, posting_date: str |
 
 
 @frappe.whitelist()
+@validate_gstin_permission(doctype="GST Return Log")
 def update_gstr3b_filing_status(
     company_gstin: str, month_or_quarter: str, year: int | str, status: str
 ) -> None:
@@ -163,8 +169,9 @@ def update_gstr3b_filing_status(
         )
 
     frappe.msgprint(
-        _("GSTR-3B for {0} {1} marked as {2}.").format(month_or_quarter, year, FILING_STATUS[status]),
+        _("GSTR-3B for {0} {1} marked as {2}").format(month_or_quarter, year, FILING_STATUS[status]),
         indicator="green",
+        alert=True,
     )
 
 

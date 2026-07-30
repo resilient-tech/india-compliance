@@ -1090,7 +1090,7 @@ class TabManager {
             <div class="m-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center">
                     <div class="tab-back-button mr-4">
-                        <a><i class="fa fa-arrow-left"></i></a>
+                        <a>${frappe.utils.icon("arrow-left", "md")}</a>
                     </div>
                     <div>
                         <div class="tab-title-text">&nbsp</div>
@@ -1315,7 +1315,7 @@ class TabManager {
             class="btn ${icon} reconcile-row"
             data-row-index='${data.idx}'
         >
-            <i class="fa fa-${icon}"></i>
+            ${frappe.utils.icon(icon, "md")}
         </button>`;
     }
 
