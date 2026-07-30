@@ -335,3 +335,76 @@ def create_fiscal_year(company, year_start_date, year_end_date):
             fy_doc.append("companies", {"company": company})
             fy_doc.save()
         return fy_doc
+
+
+# from erpnext.assets.doctype.asset.test_asset import create_asset
+def create_asset(**args):
+    args = frappe._dict(args)
+
+    asset = frappe.get_doc(
+        {
+            "doctype": "Asset",
+            "asset_name": args.asset_name or "Macbook Pro 1",
+            "asset_category": args.asset_category,
+            "item_code": args.item_code,
+            "company": args.company or "_Test Indian Registered Company",
+            "purchase_date": args.purchase_date or args.available_for_use_date,
+            "available_for_use_date": args.available_for_use_date,
+            "calculate_depreciation": args.calculate_depreciation or 0,
+            "opening_accumulated_depreciation": args.opening_accumulated_depreciation or 0,
+            "opening_number_of_booked_depreciations": args.opening_number_of_booked_depreciations or 0,
+            "net_purchase_amount": args.net_purchase_amount or 100000,
+            "purchase_amount": args.purchase_amount or args.net_purchase_amount or 100000,
+            "location": args.location,
+            "cost_center": args.cost_center,
+            "asset_owner": args.asset_owner or "Company",
+            "asset_type": args.asset_type or "",
+            "asset_quantity": args.get("asset_quantity") or 1,
+        }
+    )
+
+    if asset.calculate_depreciation:
+        # a row may set only what differs; the rest falls back to args
+        def value(row, fieldname, default=None):
+            return row.get(fieldname) or args.get(fieldname) or default
+
+        for finance_book in args.finance_books or [{}]:
+            row = frappe._dict(finance_book)
+            asset.append(
+                "finance_books",
+                {
+                    "finance_book": value(row, "finance_book"),
+                    "depreciation_method": value(row, "depreciation_method", "Written Down Value"),
+                    "frequency_of_depreciation": value(row, "frequency_of_depreciation", 12),
+                    "total_number_of_depreciations": value(row, "total_number_of_depreciations", 5),
+                    "expected_value_after_useful_life": value(row, "expected_value_after_useful_life", 0),
+                    "depreciation_start_date": value(
+                        row, "depreciation_start_date", args.available_for_use_date
+                    ),
+                    "daily_prorata_based": value(row, "daily_prorata_based", 0),
+                    "rate_of_depreciation": value(row, "rate_of_depreciation", 0),
+                },
+            )
+
+    if not args.do_not_save:
+        asset.insert()
+
+    if args.submit:
+        asset.submit()
+
+    return asset
+
+
+# from erpnext.assets.doctype.asset.test_asset import set_depreciation_settings_in_company
+def set_depreciation_settings_in_company(company, accounts):
+    frappe.db.set_value(
+        "Company",
+        company,
+        {
+            "accumulated_depreciation_account": accounts["accumulated_depreciation_account"],
+            "depreciation_expense_account": accounts["depreciation_expense_account"],
+            "disposal_account": accounts["disposal_account"],
+            "depreciation_cost_center": accounts["depreciation_cost_center"],
+        },
+    )
+    frappe.db.set_single_value("Accounts Settings", "book_asset_depreciation_entry_automatically", 1)
