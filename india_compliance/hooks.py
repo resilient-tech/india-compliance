@@ -61,6 +61,7 @@ doctype_js = {
         "gst_india/client_scripts/party.js",
         "gst_india/client_scripts/address.js",
     ],
+    "Asset Movement": "gst_india/client_scripts/asset_movement.js",
     "Company": [
         "gst_india/client_scripts/party.js",
         "gst_india/client_scripts/company.js",
@@ -138,6 +139,9 @@ doc_events = {
             "india_compliance.gst_india.overrides.party.set_docs_with_previous_gstin",
         ],
         "on_update": ["india_compliance.gst_india.overrides.address.update_party_gstin_and_gst_category"],
+    },
+    "Asset Movement": {
+        "validate": "india_compliance.gst_india.overrides.asset_movement.validate",
     },
     "Company": {
         "on_trash": "india_compliance.gst_india.overrides.company.on_trash",
@@ -427,6 +431,7 @@ override_doctype_dashboards = {
     "Subcontracting Receipt": (
         "india_compliance.gst_india.overrides.subcontracting_transaction.get_dashboard_data"
     ),
+    "Asset Movement": ("india_compliance.gst_india.overrides.asset_movement.get_dashboard_data"),
 }
 
 override_doctype_class = {
