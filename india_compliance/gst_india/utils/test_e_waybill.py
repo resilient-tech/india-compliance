@@ -1208,12 +1208,18 @@ class TestEWaybill(FrappeTestCase):
         )
         rollout_date = get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE)
 
+        # created outside the travel, as only the payload depends on the rollout date
+        si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")  # type 2
+
         # before rollout -> omitted from payload and offline JSON
         with time_machine.travel(day_before_rollout, tick=True):
+<<<<<<< HEAD
             si = self.create_sales_invoice_for(
                 "overseas_customer_domestic_shipping"
             )  # type 2
 
+=======
+>>>>>>> 86e91891 (fix(test): refactor sales invoice creation for e-waybill tests to improve clarity)
             data = EWaybillData(si).get_data()
             self.assertEqual(data.get("transactionType"), 2)
             self.assertNotIn("shipToGSTIN", data)
@@ -1243,22 +1249,23 @@ class TestEWaybill(FrappeTestCase):
         )
         rollout_date = get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE)
 
-        with time_machine.travel(day_before_rollout, tick=True):
-            si = create_sales_invoice(
-                vehicle_no="GJ07DL9009",
-                company_address="_Test Indian Registered Company-Billing",
-                customer="_Test Registered Customer",
-                customer_address="_Test Registered Customer-Billing",
-                shipping_address_name="_Test Registered Customer Warehouse-Shipping",
-                is_in_state=1,
-                distance=10,
-                transporter="_Test Common Supplier",
-                mode_of_transport="Road",
-                do_not_submit=True,
-            )
-            si.gst_transporter_id = ""
-            si.submit()
+        # created outside the travel, as only the payload depends on the rollout date
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name="_Test Registered Customer Warehouse-Shipping",
+            is_in_state=1,
+            distance=10,
+            transporter="_Test Common Supplier",
+            mode_of_transport="Road",
+            do_not_submit=True,
+        )
+        si.gst_transporter_id = ""
+        si.submit()
 
+        with time_machine.travel(day_before_rollout, tick=True):
             self.assertEqual(EWaybillData(si).get_data().get("transactionType"), 2)
 
         # on/after rollout -> degrades to Regular. ERROR CODE: 618
