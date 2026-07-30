@@ -646,8 +646,8 @@ class BaseReconciliation:
         return InwardSupply(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.inward_supply_from_date,
-            to_date=self.inward_supply_to_date,
+            from_date=self.from_date,
+            to_date=self.to_date,
             gst_return=self.gst_return,
             include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
@@ -656,8 +656,8 @@ class BaseReconciliation:
         return InwardSupply(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.inward_supply_from_date,
-            to_date=self.inward_supply_to_date,
+            from_date=self.from_date,
+            to_date=self.to_date,
             gst_return=self.gst_return,
             include_ignored=self.include_ignored,
         ).get_unmatched(category, amended_category)
@@ -666,8 +666,8 @@ class BaseReconciliation:
         query = InwardSupply(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.inward_supply_from_date,
-            to_date=self.inward_supply_to_date,
+            from_date=self.from_date,
+            to_date=self.to_date,
             gst_return=self.gst_return,
             include_ignored=self.include_ignored,
         )
@@ -678,8 +678,8 @@ class BaseReconciliation:
         return PurchaseInvoice(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.purchase_from_date,
-            to_date=self.purchase_to_date,
+            from_date=self.from_date,
+            to_date=self.to_date,
             include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
 
@@ -687,8 +687,6 @@ class BaseReconciliation:
         return PurchaseInvoice(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.purchase_from_date,
-            to_date=self.purchase_to_date,
             include_ignored=self.include_ignored,
         ).get_unmatched(category)
 
@@ -703,8 +701,8 @@ class BaseReconciliation:
         return BillOfEntry(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.purchase_from_date,
-            to_date=self.purchase_to_date,
+            from_date=self.from_date,
+            to_date=self.to_date,
             include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
 
@@ -712,8 +710,6 @@ class BaseReconciliation:
         return BillOfEntry(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.purchase_from_date,
-            to_date=self.purchase_to_date,
             include_ignored=self.include_ignored,
         ).get_unmatched(category)
 

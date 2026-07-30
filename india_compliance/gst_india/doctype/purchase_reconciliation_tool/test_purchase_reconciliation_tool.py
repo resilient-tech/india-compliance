@@ -89,12 +89,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             {
                 # Reconcile all companies
                 "company_gstin": "All",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-11-01",
-                "purchase_to_date": "2023-12-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-11-01",
-                "inward_supply_to_date": "2023-12-31",
+                "period": "Custom",
+                "from_date": "2023-11-01",
+                "to_date": "2023-12-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -180,12 +177,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             {
                 "company": "_Test Indian Registered Company",
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-08-01",
-                "purchase_to_date": "2023-08-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-08-01",
-                "inward_supply_to_date": "2023-08-31",
+                "period": "Custom",
+                "from_date": "2023-08-01",
+                "to_date": "2023-08-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -236,12 +230,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-09-01",
-                "purchase_to_date": "2023-09-30",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-09-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2023-09-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -272,12 +263,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-10-01",
-                "purchase_to_date": "2023-10-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-10-01",
-                "inward_supply_to_date": "2023-10-31",
+                "period": "Custom",
+                "from_date": "2023-10-01",
+                "to_date": "2023-10-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -307,12 +295,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-10-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2023-10-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -344,12 +329,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-10-01",
-                "purchase_to_date": "2023-10-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-10-01",
-                "inward_supply_to_date": "2023-10-31",
+                "period": "Custom",
+                "from_date": "2023-10-01",
+                "to_date": "2023-10-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -390,12 +372,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-08-01",
-                "purchase_to_date": "2023-08-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-08-01",
-                "inward_supply_to_date": "2023-09-30",
+                "period": "Custom",
+                "from_date": "2023-08-01",
+                "to_date": "2023-09-30",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -427,12 +406,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -461,12 +437,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -495,12 +468,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -526,12 +496,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -562,12 +529,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -598,12 +562,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
