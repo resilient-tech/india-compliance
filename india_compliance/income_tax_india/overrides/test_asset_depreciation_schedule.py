@@ -257,38 +257,51 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
             flt(12750 * 366 / 365, 2),
         )
 
-    def test_monthly_depreciation_totals_the_annual_rate(self):
+    def test_second_year_applies_full_rate_after_a_halved_first_year(self):
         asset = self._create_asset(
-            "2024-04-01",
-            depreciation_start_date="2024-04-30",
+            "2024-11-01",
+            depreciation_start_date="2025-03-31",
+            finance_book=self.fb_income_tax.name,
+        )
+
+        # the proviso halves only the first year; the second is 15% of 92500
+        self.assertEqual(self._get_depreciation_amount(asset, self.fb_income_tax.name), 7500)
+        self.assertEqual(self._get_depreciation_amount(asset, self.fb_income_tax.name, row_idx=1), 13875)
+
+    def _create_monthly_asset(self, **args):
+        # put to use mid-year, so the first year spans 5 months and 151 days -- a
+        # full-year asset would leave `1 / no_of_months` and the day count
+        # indistinguishable from `1 / 12` and 365
+        return self._create_asset(
+            "2024-11-01",
+            depreciation_start_date="2024-11-30",
             finance_book=self.fb_income_tax.name,
             frequency_of_depreciation=1,
             total_number_of_depreciations=60,
+            **args,
         )
 
-        # twelve monthly rows must add up to the annual rate
-        self.assertEqual(self._get_first_year_total(asset, "2025-03-31"), 15000)
+    def test_monthly_depreciation_totals_the_annual_rate(self):
+        asset = self._create_monthly_asset()
+
+        # the monthly rows of each year must add up to what the yearly schedule charges
+        self.assertEqual(self._get_year_total(asset, "2024-04-01", "2025-03-31"), 7500)
+        self.assertEqual(self._get_year_total(asset, "2025-04-01", "2026-03-31"), 13875)
 
     def test_monthly_daily_prorata_depreciation_totals_the_annual_rate(self):
-        asset = self._create_asset(
-            "2024-04-01",
-            depreciation_start_date="2024-04-30",
-            finance_book=self.fb_income_tax.name,
-            frequency_of_depreciation=1,
-            total_number_of_depreciations=60,
-            daily_prorata_based=1,
-        )
+        asset = self._create_monthly_asset(daily_prorata_based=1)
 
         # each row is rounded to currency precision, so allow a paisa each
-        self.assertAlmostEqual(self._get_first_year_total(asset, "2025-03-31"), 15000, delta=0.12)
+        self.assertAlmostEqual(self._get_year_total(asset, "2024-04-01", "2025-03-31"), 7500, delta=0.12)
+        self.assertAlmostEqual(self._get_year_total(asset, "2025-04-01", "2026-03-31"), 13875, delta=0.12)
 
-    def _get_first_year_total(self, asset, fiscal_year_end):
+    def _get_year_total(self, asset, from_date, to_date):
         schedule = self._get_schedule(asset, self.fb_income_tax.name)
         return flt(
             sum(
                 row.depreciation_amount
                 for row in schedule.depreciation_schedule
-                if getdate(row.schedule_date) <= getdate(fiscal_year_end)
+                if getdate(from_date) <= getdate(row.schedule_date) <= getdate(to_date)
             ),
             2,
         )
