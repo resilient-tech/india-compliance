@@ -49,7 +49,11 @@ india_compliance.ViewGroup = class ViewGroup {
             e.preventDefault();
             e.stopImmediatePropagation();
 
-            const target_view = $(e.currentTarget).attr("data-fieldname");
+            const $pill = $(e.currentTarget);
+            // css alone only stops the mouse, keyboard still gets through
+            if ($pill.is("[data-disabled]")) return;
+
+            const target_view = $pill.attr("data-fieldname");
 
             this.set_active_view(target_view);
             this.callback && this.callback(target_view);
@@ -57,10 +61,13 @@ india_compliance.ViewGroup = class ViewGroup {
     }
 
     disable_view(view, title) {
-        this.views[`${view}_view`].attr({ title, "data-disabled": "" });
+        this.views[`${view}_view`].attr({ title, "data-disabled": "", "aria-disabled": "true" });
     }
 
     enable_view(view) {
-        this.views[`${view}_view`].removeAttr("title").removeAttr("data-disabled");
+        this.views[`${view}_view`]
+            .removeAttr("title")
+            .removeAttr("data-disabled")
+            .removeAttr("aria-disabled");
     }
 };

@@ -31,7 +31,7 @@ const FILTER_GROUP_BUTTON = $(
                     </span>
                     <span class="button-label hidden-xs">
                         ${__("Filter")}
-                    <span>
+                    </span>
                 </button>
                 <button class="btn btn-default btn-sm filter-x-button" title="${__("Clear all filters")}">
                     <span class="filter-icon button-icon">
