@@ -4,7 +4,6 @@ Export GSTR-1 data to excel or json
 
 from collections import defaultdict
 from datetime import datetime
-from enum import Enum
 from typing import ClassVar
 
 import frappe
@@ -16,7 +15,14 @@ from india_compliance.gst_india.utils import (
     get_period,
     validate_gstin_permission,
 )
-from india_compliance.gst_india.utils.exporter import ExcelExporter
+from india_compliance.gst_india.utils.exporter import (
+    AMOUNT_FORMAT,
+    COLOR_PALLATE,
+    DATE_FORMAT,
+    PERCENT_FORMAT,
+    ExcelExporter,
+    ExcelWidth,
+)
 from india_compliance.gst_india.utils.gstr_1 import (
     HSN_BIFURCATION_FROM,
     JSON_CATEGORY_EXCEL_CATEGORY_MAPPING,
@@ -36,15 +42,6 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
 
 # Used for storing user preferences for GSTR-1 download sections.
 GSTR1_SECTIONS_DEFAULT_KEY = "gstr1_download_sections"
-
-
-class ExcelWidth(Enum):
-    XS = 10
-    SM = 15
-    MD = 20  # Default
-    LG = 25
-    XL = 30
-    XXL = 35
 
 
 CATEGORIES_WITH_ITEMS = {
@@ -147,9 +144,9 @@ class GovExcel(DataProcessor):
     Returns Offline Tool download link - https://www.gst.gov.in/download/returns
     """
 
-    AMOUNT_FORMAT = "#,##0.00"
-    DATE_FORMAT = "dd-mmm-yy"
-    PERCENT_FORMAT = "0.00"
+    AMOUNT_FORMAT = AMOUNT_FORMAT
+    DATE_FORMAT = DATE_FORMAT
+    PERCENT_FORMAT = PERCENT_FORMAT
 
     FIELD_TRANSFORMATIONS: ClassVar[dict] = {
         inv_f.DIFF_PERCENTAGE: lambda value: value * 100 if value != 0 else None,
@@ -1285,21 +1282,10 @@ class BooksExcel(DataProcessor):
 
 
 class ReconcileExcel:
-    AMOUNT_FORMAT = "#,##0.00"
-    DATE_FORMAT = "dd-mmm-yy"
+    AMOUNT_FORMAT = AMOUNT_FORMAT
+    DATE_FORMAT = DATE_FORMAT
 
-    COLOR_PALLATE = frappe._dict(
-        {
-            "dark_gray": "d9d9d9",
-            "light_gray": "f2f2f2",
-            "dark_pink": "e6b9b8",
-            "light_pink": "f2dcdb",
-            "sky_blue": "c6d9f1",
-            "light_blue": "dce6f2",
-            "green": "d7e4bd",
-            "light_green": "ebf1de",
-        }
-    )
+    COLOR_PALLATE = COLOR_PALLATE
 
     DEFAULT_HEADER_FORMAT: ClassVar[dict] = {"bg_color": COLOR_PALLATE.dark_gray}
     DEFAULT_DATA_FORMAT: ClassVar[dict] = {"bg_color": COLOR_PALLATE.light_gray}
