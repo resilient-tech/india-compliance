@@ -111,7 +111,7 @@ EMAIL_TEMPLATE_DATA = {
     "subject": "2A/2B Reconciliation for {{ supplier_name }}-{{ supplier_gstin }}",
     "response": (
         "Hello,<br><br>We have made a purchase reconciliation"
-        " for the period {{ inward_supply_from_date }} to {{ inward_supply_to_date }}"
+        " for the period {{ from_date }} to {{ to_date }}"
         " for purchases made by {{ company }} from you.<br><br>You are requested to kindly"
         " make necessary corrections to the GST Portal on your end if required."
         " The attached sheet is for your reference."

@@ -3,8 +3,7 @@
 
 const DOCTYPE = "Purchase Reconciliation Tool";
 const tooltip_info = {
-    purchase_period: "Returns purchases during this period where no match is found.",
-    inward_supply_period: "Returns all documents from GSTR 2A/2B during this return period.",
+    period: "Documents from GSTR 2A/2B for this return period, and purchases of the same period with no match.",
 };
 
 const api_enabled = india_compliance.is_api_enabled();
@@ -39,14 +38,20 @@ function remove_gstr2b_alert(alert) {
 async function add_gstr2b_alert(frm) {
     let existing_alert = frm.layout.wrapper.find(".gstr2b-alert");
 
+<<<<<<< HEAD
     if (!frm.doc.inward_supply_period || !frm.doc.__onload?.has_missing_2b_documents) {
         remove_gstr2b_alert(existing_alert);
+=======
+    if (!frm.doc.period || !frm.doc.__onload?.has_missing_2b_documents) {
+        alert.remove();
+>>>>>>> 0832e0c8 (fix: only one date filter in purchase reco tool)
         return;
     }
 
     // Add alert only if there is no existing alert
     if (existing_alert.length !== 0) return;
 
+<<<<<<< HEAD
     existing_alert = $(ALERT_HTML).prependTo(frm.layout.wrapper);
     $(existing_alert)
         .find("#download-gstr2b-button")
@@ -61,6 +66,20 @@ async function add_gstr2b_alert(frm) {
             );
             remove_gstr2b_alert(existing_alert);
         });
+=======
+    alert = india_compliance.show_doc_alert(frm, ALERT_HTML, "blue").addClass("gstr2b-alert");
+    alert.find(".download-gstr2b").on("click", async function () {
+        await download_gstr(
+            frm,
+            [frm.doc.from_date, frm.doc.to_date],
+            ReturnType.GSTR2B,
+            frm.doc.company_gstin,
+            null,
+            true,
+        );
+        alert.remove();
+    });
+>>>>>>> 0832e0c8 (fix: only one date filter in purchase reco tool)
 }
 
 frappe.ui.form.on(DOCTYPE, {
@@ -84,10 +103,14 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     onload(frm) {
+<<<<<<< HEAD
         add_gstr2b_alert(frm);
 
         frm.trigger("purchase_period");
         frm.trigger("inward_supply_period");
+=======
+        frm.trigger("period");
+>>>>>>> 0832e0c8 (fix: only one date filter in purchase reco tool)
     },
 
     refresh(frm) {
@@ -108,20 +131,14 @@ frappe.ui.form.on(DOCTYPE, {
 
     async company_gstin(frm) {
         render_empty_state(frm);
-        await fetch_date_range(frm, "inward_supply", "get_date_range_and_check_missing_documents");
+        await fetch_date_range(frm, "get_date_range_and_check_missing_documents");
         add_gstr2b_alert(frm);
     },
 
-    async purchase_period(frm) {
+    async period(frm) {
         render_empty_state(frm);
-        await fetch_date_range(frm, "purchase");
-        set_date_range_description(frm, "purchase");
-    },
-
-    async inward_supply_period(frm) {
-        render_empty_state(frm);
-        await fetch_date_range(frm, "inward_supply", "get_date_range_and_check_missing_documents");
-        set_date_range_description(frm, "inward_supply");
+        await fetch_date_range(frm, "get_date_range_and_check_missing_documents");
+        set_date_range_description(frm);
         add_gstr2b_alert(frm);
     },
 
@@ -670,13 +687,8 @@ class PurchaseReconciliationToolAction {
             missing_labels.push(__(frappe.meta.get_label(DOCTYPE, "gst_return")));
         }
 
-        const period_fields = ["purchase_period", "inward_supply_period"];
-
-        for (const fieldname of period_fields) {
-            const prefix = fieldname.replace("_period", "");
-            if (!doc[`${prefix}_from_date`] || !doc[`${prefix}_to_date`]) {
-                missing_labels.push(__(frappe.meta.get_label(DOCTYPE, fieldname)));
-            }
+        if (!doc.from_date || !doc.to_date) {
+            missing_labels.push(__(frappe.meta.get_label(DOCTYPE, "period")));
         }
 
         if (!missing_labels.length) return;
@@ -823,7 +835,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
     }
 
     _get_default_date_range() {
-        return [this.frm.doc.purchase_from_date, this.frm.doc.purchase_to_date];
+        return [this.frm.doc.from_date, this.frm.doc.to_date];
     }
 }
 
@@ -1049,8 +1061,8 @@ class ImportDialog {
                 label: "Period",
                 fieldname: "period",
                 fieldtype: "Select",
-                options: this.frm.get_field("inward_supply_period").df.options,
-                default: this.frm.doc.inward_supply_period,
+                options: this.frm.get_field("period").df.options,
+                default: this.frm.doc.period,
                 onchange: async () => {
                     const period = this.dialog.get_value("period");
                     if (!period) return;
@@ -1070,7 +1082,7 @@ class ImportDialog {
                 label: "Date Range",
                 fieldname: "date_range",
                 fieldtype: "DateRange",
-                default: [this.frm.doc.inward_supply_from_date, this.frm.doc.inward_supply_to_date],
+                default: [this.frm.doc.from_date, this.frm.doc.to_date],
                 depends_on: "eval:doc.period == 'Custom'",
                 onchange: () => {
                     this.date_range = this.dialog.get_value("date_range");
@@ -1205,33 +1217,25 @@ class EmailDialog {
     }
 }
 
-async function fetch_date_range(frm, field_prefix, method) {
-    const from_date_field = field_prefix + "_from_date";
-    const to_date_field = field_prefix + "_to_date";
-
-    const period = frm.doc[field_prefix + "_period"];
+async function fetch_date_range(frm, method) {
+    const { period } = frm.doc;
     if (!period || period == "Custom") return;
 
     const { message } = await frm._call(method || "get_date_range", { period });
 
-    frm.set_value(from_date_field, message[0]);
-    frm.set_value(to_date_field, message[1]);
+    frm.set_value("from_date", message[0]);
+    frm.set_value("to_date", message[1]);
 }
 
-function set_date_range_description(frm, field_prefixes) {
-    if (!field_prefixes) field_prefixes = ["inward_supply", "purchase"];
-    else field_prefixes = [field_prefixes];
+function set_date_range_description(frm) {
+    const { period } = frm.doc;
+    const field = frm.get_field("period");
 
-    field_prefixes.forEach((prefix) => {
-        const period_field = prefix + "_period";
-        const period = frm.doc[period_field];
+    if (!period || period == "Custom") return field.set_description("");
 
-        if (!period || period == "Custom") return frm.get_field(period_field).set_description("");
-
-        const from_date = frappe.datetime.str_to_user(frm.doc[prefix + "_from_date"]);
-        const to_date = frappe.datetime.str_to_user(frm.doc[prefix + "_to_date"]);
-        frm.get_field(period_field).set_description(`${from_date} to ${to_date}`);
-    });
+    const from_date = frappe.datetime.str_to_user(frm.doc.from_date);
+    const to_date = frappe.datetime.str_to_user(frm.doc.to_date);
+    field.set_description(`${from_date} to ${to_date}`);
 }
 
 function get_icon(value, column, data, icon) {

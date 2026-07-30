@@ -87,12 +87,9 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
             {
                 # Reconcile all companies
                 "company_gstin": "All",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-11-01",
-                "purchase_to_date": "2023-12-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-11-01",
-                "inward_supply_to_date": "2023-12-31",
+                "period": "Custom",
+                "from_date": "2023-11-01",
+                "to_date": "2023-12-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -139,6 +136,80 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
 
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 0)
 
+<<<<<<< HEAD
+=======
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_bill_of_entry_over_multiple_invoices_is_one_row(self):
+        dates = {"bill_date": "2023-08-11", "posting_date": "2023-08-11"}
+
+        # no GST taxes on the invoice: that is what makes an import BoE-applicable
+        invoices = [
+            create_purchase_invoice(
+                bill_no=f"BOE-MULTI-{index}",
+                supplier="_Test Foreign Supplier",
+                supplier_gstin="",
+                gst_category="Overseas",
+                is_in_state=0,
+                **dates,
+            )
+            for index in (1, 2)
+        ]
+
+        boe = make_bill_of_entry(invoices[0].name)
+        boe.get_items_from_purchase_invoice([invoices[1].name])
+        boe.update(
+            {
+                "bill_of_entry_no": "BOE-MULTI-PI",
+                "bill_of_entry_date": dates["bill_date"],
+                "posting_date": dates["posting_date"],
+            }
+        )
+        boe.save(ignore_permissions=True).submit()
+
+        # the BoE really does span both invoices, else the test proves nothing
+        self.assertEqual(
+            {item.purchase_invoice for item in boe.items},
+            {invoice.name for invoice in invoices},
+        )
+
+        tool = frappe.get_doc("Purchase Reconciliation Tool")
+        tool.update(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2023-08-01",
+                "to_date": "2023-08-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        rows = [row for row in tool.reconcile_and_generate_data() if row.purchase_invoice_name == boe.name]
+
+        self.assertEqual(len(rows), 1, "a Bill of Entry must reconcile as exactly one row")
+        row = rows[0]
+
+        self.assertEqual(row.purchase_doctype, "Bill of Entry")
+        self.assertEqual(row.supplier_name, invoices[0].supplier_name)
+        self.assertEqual(row.bill_no, boe.bill_of_entry_no)
+        self.assertEqual(row.classification, "IMPG")
+        self.assertEqual(row.match_status, "Missing in 2A/2B")
+
+        # nothing to reconcile against, so the differences are the BoE's own totals, summed
+        # over every item of both invoices rather than taken from one of them
+        self.assertEqual(row.taxable_value_difference, -boe.total_taxable_value)
+        self.assertEqual(row.tax_difference, -sum(item.igst_amount for item in boe.items))
+
+        # the detail view keeps the BoE doc, so the per-invoice fields can be checked directly
+        purchase = tool.get_invoice_details(boe.name, None)._purchase_invoice
+        self.assertEqual(purchase.taxable_value, boe.total_taxable_value)
+        self.assertEqual(purchase.igst, sum(item.igst_amount for item in boe.items))
+
+        # reported for SEZ invoices only, so an overseas import carries none of them
+        self.assertIsNone(purchase.supplier_gstin)
+        self.assertIsNone(purchase.gst_category)
+        self.assertIsNone(purchase.place_of_supply)
+
+>>>>>>> 0832e0c8 (fix: only one date filter in purchase reco tool)
     def test_itc_claim_period_on_reconciliation_match(self):
         """
         Test ITC Claim Period is updated when a Purchase Invoice is matched
@@ -160,12 +231,9 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-09-01",
-                "purchase_to_date": "2023-09-30",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-09-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2023-09-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -196,12 +264,9 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-10-01",
-                "purchase_to_date": "2023-10-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-10-01",
-                "inward_supply_to_date": "2023-10-31",
+                "period": "Custom",
+                "from_date": "2023-10-01",
+                "to_date": "2023-10-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -231,12 +296,9 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-10-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2023-10-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -268,12 +330,9 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-10-01",
-                "purchase_to_date": "2023-10-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-10-01",
-                "inward_supply_to_date": "2023-10-31",
+                "period": "Custom",
+                "from_date": "2023-10-01",
+                "to_date": "2023-10-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -314,12 +373,9 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-08-01",
-                "purchase_to_date": "2023-08-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-08-01",
-                "inward_supply_to_date": "2023-09-30",
+                "period": "Custom",
+                "from_date": "2023-08-01",
+                "to_date": "2023-09-30",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -351,12 +407,9 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -385,12 +438,9 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -419,12 +469,9 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -450,12 +497,9 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -486,12 +530,9 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -522,12 +563,9 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
