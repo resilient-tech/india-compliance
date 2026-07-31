@@ -5,9 +5,10 @@ from erpnext.stock.get_item_details import sales_doctypes
 
 TIMEZONE = "Asia/Kolkata"
 
-# Date from which NIC requires Ship To GSTIN in the e-Invoice and e-Waybill APIs
-# in production (already live in sandbox)
-SHIP_TO_GSTIN_APPLICABLE_DATE = getdate("2026-08-01")
+# Date from which NIC requires Ship To GSTIN in the e-Invoice and e-Waybill APIs.
+# Kept on hold by GSTN advisory dated 29.07.2026 with no revised date, so this is
+# deliberately unreachable. Sandbox stays reachable via sandbox_mode.
+SHIP_TO_GSTIN_APPLICABLE_DATE = getdate("2099-12-31")
 
 ABBREVIATIONS = {"SEZ", "GST", "CGST", "SGST", "IGST", "CESS", "HSN"}
 
