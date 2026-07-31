@@ -1,7 +1,25 @@
-from india_compliance.income_tax_india.constants import OLD_TDS_SECTIONS, TDS_ENTITY_TYPE
+import frappe
+
+from india_compliance.income_tax_india.constants import (
+    NEW_TDS_SECTIONS,
+    OLD_TDS_SECTIONS,
+    TDS_ENTITY_TYPE,
+    get_tds_section_value,
+)
 
 old_tds_section_options = "\n" + "\n".join(sorted(OLD_TDS_SECTIONS))
 tds_entity_type_options = "\n" + "\n".join(sorted(TDS_ENTITY_TYPE))
+
+tds_section_options = frappe.as_json(
+    [
+        {
+            "label": get_tds_section_value(section),
+            "value": get_tds_section_value(section),
+            "description": section.get("description", ""),
+        }
+        for section in NEW_TDS_SECTIONS
+    ]
+)
 
 party_fields = [
     {
@@ -42,7 +60,7 @@ CUSTOM_FIELDS = {
             "fieldname": "tds_section",
             "insert_after": "income_tax_details_section",
             "fieldtype": "Autocomplete",
-            "options": None,
+            "options": tds_section_options,
             "translatable": 0,
             "mandatory_depends_on": "eval:doc.entity_type",
         },
