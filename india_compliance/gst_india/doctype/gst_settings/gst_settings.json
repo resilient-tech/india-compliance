@@ -18,6 +18,7 @@
   "enable_rcm_for_unregistered_supplier",
   "rcm_threshold",
   "distribute_expense_with_isd_credit",
+  "auto_create_isd_recipient_invoice",
   "api_section",
   "enable_api",
   "enable_retry_einv_ewb_generation",
@@ -373,6 +374,13 @@
     "fieldtype": "Check",
     "default": "1",
     "description": "The expense of the ISD applicable Purchase Invoice is distributed to the recipient branch along with the Input Tax Credit"
+  },
+  {
+    "fieldname": "auto_create_isd_recipient_invoice",
+    "label": "Auto Create ISD Recipient Invoice for Intra-Company Distributions",
+    "fieldtype": "Check",
+    "default": "0",
+    "description": "Applicable when is_against_party is false"
   },
   {
    "default": "0",

@@ -99,9 +99,8 @@ frappe.query_reports["ISD Invoice Register"] = {
                 'eval:["ISD Distribution Invoice", "ISD Recipient Invoice"].includes(doc.report_view)',
             allow_custom: true,
             get_query() {
-                return {
-                    query: "india_compliance.gst_india.utils.isd.get_non_isd_gstins",
-                };
+                const company = frappe.query_report.get_filter_value("company");
+                return india_compliance.get_gstin_query(company, "Company", true);
             },
         },
         {

@@ -54,6 +54,7 @@
   "total_ineligible",
   "column_break_mfrl",
   "total_expense",
+  "grand_total",
   "address_tab",
   "address_section",
   "column_break_upnr",
@@ -186,8 +187,7 @@
   },
   {
    "fieldname": "dimension_col_break",
-   "fieldtype": "Column Break",
-   "is_virtual": 1
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "project",
@@ -272,6 +272,13 @@
   {
    "fieldname": "column_break_mfrl",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "grand_total",
+   "fieldtype": "Data",
+   "is_virtual": 1,
+   "label": "Grand Total",
+   "read_only": 1
   },
   {
    "fieldname": "address_tab",
@@ -368,7 +375,7 @@
   {
    "fieldname": "isd_provisional_account",
    "fieldtype": "Link",
-   "label": "ISD Provisional Account ",
+   "label": "ISD Provisional Account",
    "options": "Account"
   },
   {
@@ -379,7 +386,8 @@
    "fieldname": "isd_provisional_amount",
    "fieldtype": "Currency",
    "label": "ISD Provisional Amount",
-   "options": "Company:company:default_currency"
+   "options": "Company:company:default_currency",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_sbcz",
@@ -439,7 +447,6 @@
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
- "links": [],
  "modified": "2026-07-14 09:32:15.891619",
  "modified_by": "Administrator",
  "module": "GST India",
@@ -495,5 +502,6 @@
  "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

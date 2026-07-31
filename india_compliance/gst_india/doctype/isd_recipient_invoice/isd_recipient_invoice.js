@@ -14,6 +14,7 @@ frappe.ui.form.on("ISD Recipient Invoice", {
         if (frm.is_new() && !frm.doc.company) {
             frm.set_value("company", frappe.defaults.get_user_default("Company"));
         }
+        india_compliance.set_itc_claim_period_status(frm);
     },
 
     refresh(frm) {
@@ -51,5 +52,32 @@ frappe.ui.form.on("ISD Recipient Invoice", {
     recipient_address(frm) {
         frm.isd_controller.set_address_display("recipient_address", "recipient_address_display");
         frm.isd_controller.set_pos("recipient_address", "recipient_pos");
+    },
+
+    // the credit received is driven by distributed_*, so the ratio is informational here
+    branch_turnover(frm) {
+        frm.isd_controller.calculate_distribution_ratio();
+    },
+
+    total_turnover(frm) {
+        frm.isd_controller.calculate_distribution_ratio();
+    },
+});
+
+const recalculate = (frm) => frm.isd_controller.recalculate();
+
+frappe.ui.form.on("ISD Source Item", {
+    ...Object.fromEntries(
+        [
+            ...frappe.boot.gst_tax_types.map((tax_type) => `distributed_${tax_type}`),
+            "distributed_expense",
+            "is_ineligible_for_itc",
+            "source_items_remove",
+        ].map((field) => [field, recalculate]),
+    ),
+
+    source_items_add(frm) {
+        frm.isd_controller.set_default_expense_head();
+        recalculate(frm);
     },
 });

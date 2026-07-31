@@ -4,8 +4,6 @@
 frappe.provide("india_compliance");
 
 india_compliance.ISD_GST_CATEGORY = "Input Service Distributor";
-india_compliance.GST_TAX_TYPES = ["cgst", "sgst", "igst", "cess", "cess_non_advol"];
-india_compliance.IMPORT_GST_CATEGORIES = ["Overseas", "SEZ"];
 
 india_compliance.get_address_query = function (link_doctype, link_name, extra_filters = []) {
     return {
@@ -258,12 +256,13 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
     dialog.show();
     render_summary({});
 
-    // frappe does not fire a grid trigger on row removal
+    // frappe does not fire a grid trigger on row removal, but the grid triggers "change" on the
+    // wrapper once it has re-rendered (Grid.remove_rows -> Grid.refresh)
     distribution_grid.wrapper.on("click", ".grid-remove-rows", () => {
-        setTimeout(() => {
+        distribution_grid.wrapper.one("change", () => {
             fill_total_turnover();
             calculate_distribution_ratios();
-        }, 1000); // frappe takes ~1s to remove the rows
+        });
     });
 
     frappe.call({
@@ -333,8 +332,9 @@ india_compliance.ISDController = class ISDController {
 
         const grid = this.frm.fields_dict.source_items?.grid;
         if (grid) {
-            grid.update_docfield_property("total_expense", "hidden", hidden);
-            grid.update_docfield_property("distributed_expense", "hidden", hidden);
+            for (const field of ["total_expense", "distributed_expense", "expense_head"]) {
+                grid.update_docfield_property(field, "hidden", hidden);
+            }
             this.frm.refresh_field("source_items");
         }
     }
@@ -346,8 +346,21 @@ india_compliance.ISDController = class ISDController {
 
     async load_company_defaults() {
         await this.fetch_gst_accounts();
-        await this.fetch_default_cost_center();
-        if (this.frm.is_new()) this.set_available_taxes();
+        await this.fetch_company_defaults();
+        if (this.frm.is_new()) {
+            this.set_available_taxes();
+            this.set_default_expense_head();
+        }
+    }
+
+    set_default_expense_head() {
+        if (!this.distribute_expense) return;
+
+        for (const row of this.frm.doc.source_items || []) {
+            if (!row.expense_head) row.expense_head = this.default_expense_account;
+        }
+
+        this.frm.refresh_field("source_items");
     }
 
     set_available_taxes() {
@@ -355,7 +368,7 @@ india_compliance.ISDController = class ISDController {
         const accounts = this.gst_accounts || {};
         const existing = Object.fromEntries((this.frm.doc.taxes || []).map((tax) => [tax.gst_tax_type, tax]));
 
-        for (const t of india_compliance.GST_TAX_TYPES) {
+        for (const t of frappe.boot.gst_tax_types) {
             const account_head = accounts[`${t}_account`];
             if (!account_head) continue;
 
@@ -444,7 +457,7 @@ india_compliance.ISDController = class ISDController {
 
         if (!frm.doc.company) {
             frappe.show_alert({ message: __("Please set Company first"), indicator: "orange" });
-            return { filters: {} };
+            return india_compliance.get_address_query("", "", extra);
         }
 
         // invoice owner address is linked by frm.doc.company
@@ -461,7 +474,7 @@ india_compliance.ISDController = class ISDController {
                 message: __("Please set Party Type and Party first"),
                 indicator: "orange",
             });
-            return { filters: {} };
+            return india_compliance.get_address_query("", "", extra);
         }
         return india_compliance.get_address_query(frm.doc.party_type, frm.doc.party, extra);
     }
@@ -532,13 +545,24 @@ india_compliance.ISDController = class ISDController {
                 frm.doc.recipient_address,
                 "gst_category",
             );
-            if (india_compliance.IMPORT_GST_CATEGORIES.includes(message?.gst_category)) return true;
+            if (frappe.boot.import_gst_categories.includes(message?.gst_category)) return true;
         }
 
         if (frm.doc.distribution_pos && frm.doc.recipient_pos)
             return frm.doc.distribution_pos !== frm.doc.recipient_pos;
 
         return false;
+    }
+
+    calculate_distribution_ratio() {
+        const { branch_turnover, total_turnover } = this.frm.doc;
+
+        const distribution_ratio = total_turnover ? (flt(branch_turnover) / flt(total_turnover)) * 100 : 0;
+        if (distribution_ratio > 100) {
+            frappe.throw(__("Distribution Ratio cannot be greater than 100%"));
+        }
+
+        this.frm.set_value("distribution_ratio", distribution_ratio);
     }
 
     get signed_ratio() {
@@ -576,12 +600,15 @@ india_compliance.ISDController = class ISDController {
     async recalculate() {
         if (!(this.frm.doc.source_items || []).length) return;
 
-        const inter_state = await this.is_inter_state_distribution();
-        for (const row of this.frm.doc.source_items) {
-            this._calculate_distribution_row(row, inter_state);
+        if (this.is_distribution_side) {
+            const inter_state = await this.is_inter_state_distribution();
+            for (const row of this.frm.doc.source_items) {
+                this._calculate_distribution_row(row, inter_state);
+            }
+
+            this.frm.refresh_field("source_items");
         }
 
-        this.frm.refresh_field("source_items");
         this.calculate_taxes_and_totals();
     }
 
@@ -590,7 +617,7 @@ india_compliance.ISDController = class ISDController {
         const distribution_side = this.is_distribution_side;
         const ratio = this.signed_ratio;
 
-        const totals = Object.fromEntries(india_compliance.GST_TAX_TYPES.map((t) => [t, 0]));
+        const totals = Object.fromEntries(frappe.boot.gst_tax_types.map((t) => [t, 0]));
         let total_eligible = 0,
             total_ineligible = 0,
             total_expense = 0;
@@ -598,7 +625,7 @@ india_compliance.ISDController = class ISDController {
         for (const r of rows) {
             const _p = precision("distributed_igst", r);
             let row_total = 0;
-            for (const t of india_compliance.GST_TAX_TYPES) {
+            for (const t of frappe.boot.gst_tax_types) {
                 row_total += r[`distributed_${t}`] || 0;
 
                 totals[t] += distribution_side
@@ -632,13 +659,23 @@ india_compliance.ISDController = class ISDController {
             "total_expense",
             "isd_provisional_amount",
         ]);
+
+        this.set_grand_total();
+    }
+
+    set_grand_total() {
+        const { total_eligible, total_ineligible, total_expense, company } = this.frm.doc;
+        const grand_total = flt(total_eligible) + flt(total_ineligible) + flt(total_expense);
+
+        this.frm.doc.grand_total = format_currency(grand_total, erpnext.get_currency(company));
+        this.frm.refresh_field("grand_total");
     }
 
     set_tax_amounts(totals) {
         const accounts = this.gst_accounts || {};
         const existing = Object.fromEntries((this.frm.doc.taxes || []).map((tax) => [tax.gst_tax_type, tax]));
 
-        for (const t of india_compliance.GST_TAX_TYPES) {
+        for (const t of frappe.boot.gst_tax_types) {
             let row = existing[t];
             if (!row) {
                 const account_head = accounts[`${t}_account`];
@@ -662,10 +699,14 @@ india_compliance.ISDController = class ISDController {
         this.gst_accounts = message || {};
     }
 
-    async fetch_default_cost_center() {
+    async fetch_company_defaults() {
         if (!this.frm.doc.company) return;
-        const { message } = await frappe.db.get_value("Company", this.frm.doc.company, "cost_center");
+        const { message } = await frappe.db.get_value("Company", this.frm.doc.company, [
+            "cost_center",
+            "default_expense_account",
+        ]);
         this.default_cost_center = message?.cost_center || null;
+        this.default_expense_account = message?.default_expense_account || null;
     }
 
     set_common_buttons() {

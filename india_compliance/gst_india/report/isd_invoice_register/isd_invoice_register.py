@@ -8,6 +8,7 @@ from frappe.query_builder import Order
 from frappe.query_builder.functions import Sum
 from pypika.terms import Case
 
+from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.utils.isd import (
     get_report_company_currency,
     validate_common_report_filters,
@@ -16,6 +17,10 @@ from india_compliance.gst_india.utils.isd import (
 DISTRIBUTION_DOCTYPE = "ISD Distribution Invoice"
 RECIPIENT_DOCTYPE = "ISD Recipient Invoice"
 SOURCE_ITEM_DOCTYPE = "ISD Source Item"
+
+
+def get_pos_for_state(state):
+    return f"{STATE_NUMBERS.get(state)}-{state}"
 
 
 def execute(filters=None):
@@ -174,7 +179,7 @@ def get_distribution_invoice_data(filters):
         query = query.where(dist.recipient_gstin == filters.recipient_gstin)
 
     if filters.get("recipient_state"):
-        query = query.where(dist.recipient_pos.like(f"%-{filters.recipient_state}"))
+        query = query.where(dist.recipient_pos == get_pos_for_state(filters.recipient_state))
 
     if filters.get("is_credit_note"):
         query = query.where(dist.is_credit_note == 1)
@@ -234,7 +239,7 @@ def get_recipient_invoice_data(filters):
         query = query.where(rec.recipient_gstin == filters.recipient_gstin)
 
     if filters.get("recipient_state"):
-        query = query.where(rec.recipient_pos.like(f"%-{filters.recipient_state}"))
+        query = query.where(rec.recipient_pos == get_pos_for_state(filters.recipient_state))
 
     if filters.get("is_credit_note"):
         query = query.where(rec.is_credit_note == 1)

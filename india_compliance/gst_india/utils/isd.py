@@ -29,6 +29,7 @@ from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 ISD_GST_CATEGORY = "Input Service Distributor"
+ISD_DOCTYPES = ("ISD Distribution Invoice", "ISD Recipient Invoice")
 
 
 def sum_row_tax_by_type(row, prefix):
@@ -37,7 +38,7 @@ def sum_row_tax_by_type(row, prefix):
 
 
 def validate_common_report_filters(filters):
-    """Shared filter validation for ISD reports)."""
+    """Shared filter validation for ISD reports"""
     filters = frappe._dict(filters or {})
 
     if filters.company:
@@ -167,10 +168,11 @@ def calculate_distribution(doc):
 
 @frappe.whitelist()
 def get_source_items_from_purchase_invoice(purchase_invoice: str):
-    frappe.has_permission("Purchase Invoice", "read", doc=purchase_invoice, throw=True)
 
     if not purchase_invoice:
         return []
+
+    frappe.has_permission("Purchase Invoice", "read", doc=purchase_invoice, throw=True)
 
     pi_items = frappe.get_all(
         "Purchase Invoice Item",
@@ -195,6 +197,7 @@ def get_source_items_from_purchase_invoice(purchase_invoice: str):
     )
 
     source_items = []
+    distribute_expense = should_distribute_expense()
     for item in pi_items:
         source_items.append(
             {
@@ -205,7 +208,7 @@ def get_source_items_from_purchase_invoice(purchase_invoice: str):
                 "is_ineligible_for_itc": item.is_ineligible_for_itc,
                 "cost_center": item.cost_center,
                 "project": item.project,
-                "expense_head": item.expense_account,
+                "expense_head": item.expense_account if distribute_expense else None,
                 "total_expense": item.base_net_amount,
                 "total_igst": item.igst_amount,
                 "total_cgst": item.cgst_amount,
@@ -220,18 +223,8 @@ def get_source_items_from_purchase_invoice(purchase_invoice: str):
 
 @frappe.whitelist()
 def get_input_gst_accounts(company: str):
+    frappe.has_permission("Company", doc=company, throw=True)
     return get_gst_accounts_by_type(company, "Input")
-
-
-@frappe.whitelist()
-def get_non_isd_gstins():
-    """Get all GSTINs that are not Input Service Distributors."""
-    return frappe.get_list(
-        "Address",
-        filters={"gstin": ("is", "set"), "gst_category": ["!=", ISD_GST_CATEGORY]},
-        pluck="gstin",
-        distinct=True,
-    )
 
 
 # ---------------------------------------------------------------------------- autofill
@@ -252,7 +245,11 @@ def _resolve_isd_party(doc):
 
     internal_field = "is_internal_customer" if doc.party_type == "Customer" else "is_internal_supplier"
     parties = frappe.get_list(
-        doc.party_type, filters={internal_field: 1, "disabled": 0}, pluck="name", limit=1
+        doc.party_type,
+        filters={internal_field: 1, "disabled": 0},
+        pluck="name",
+        order_by="name",
+        limit=1,
     )
     return parties[0] if parties else None
 
@@ -271,7 +268,7 @@ def _fetch_isd_address(link_doctype, link_name, *, isd):
             ["gst_category", "=" if isd else "!=", ISD_GST_CATEGORY],
         ],
         pluck="name",
-        order_by="is_primary_address DESC",
+        order_by="is_primary_address DESC, name",
         limit=1,
     )
     return results[0] if results else None
@@ -323,17 +320,25 @@ def _resolve_recipient_branch_turnover(doc):
     if not doc.recipient_address:
         return doc.branch_turnover
 
-    gstin, gst_state = frappe.get_cached_value("Address", doc.recipient_address, ["gstin", "gst_state"])
+    gst_state = frappe.get_cached_value("Address", doc.recipient_address, "gst_state")
 
-    return get_turnover_amount(gstin, gst_state, doc.posting_date)
+    return get_turnover_amount(gst_state, doc.posting_date)
 
 
 @frappe.whitelist()
 def get_isd_autofill_values(doctype: str, changed_field: str, doc: str | dict):
     """Single-call autofill for both ISD doctypes"""
+    if doctype not in ISD_DOCTYPES:
+        frappe.throw(_("{0} is not an ISD doctype").format(doctype))
+
+    frappe.has_permission(doctype, throw=True)
+
     doc = frappe._dict(frappe.parse_json(doc))
     doc.is_against_party = cint(doc.is_against_party)
     is_distribution_side = doctype == "ISD Distribution Invoice"
+
+    if doc.company:
+        frappe.has_permission("Company", doc=doc.company, throw=True)
 
     if changed_field in _PARTY_CHAIN:
         downstream = _PARTY_CHAIN[_PARTY_CHAIN.index(changed_field) + 1 :]
@@ -343,7 +348,12 @@ def get_isd_autofill_values(doctype: str, changed_field: str, doc: str | dict):
             doc.party = _resolve_isd_party(doc)
 
         doc.isd_provisional_account = _resolve_isd_provisional_account(doc)
-        doc.distribution_address, doc.recipient_address = _resolve_isd_addresses(doc, is_distribution_side)
+        distribution_address, recipient_address = _resolve_isd_addresses(doc, is_distribution_side)
+        # company owned address is only changed when company is changing
+        if changed_field == "company" or not is_distribution_side:
+            doc.distribution_address = distribution_address
+        if changed_field == "company" or is_distribution_side:
+            doc.recipient_address = recipient_address
 
     if is_distribution_side:
         doc.branch_turnover = (
@@ -376,8 +386,7 @@ def get_distribution_addresses(party_type: str, party: str, pi_posting_date: str
         .on(dynamic_link.parent == addr.name)
         .left_join(turnover_record)
         .on(
-            (IfNull(turnover_record.gstin, "") == IfNull(addr.gstin, ""))
-            & (IfNull(turnover_record.gst_state, "") == IfNull(addr.gst_state, ""))
+            (IfNull(turnover_record.gst_state, "") == IfNull(addr.gst_state, ""))
             & (turnover_record.from_date <= fy_to)
             & (turnover_record.to_date >= fy_from)
         )
@@ -399,11 +408,11 @@ def get_distribution_addresses(party_type: str, party: str, pi_posting_date: str
         query = query.where(addr.name == address)
 
     data = query.run(as_dict=True)
-    if not frappe.qb.get_query("Turnover Record").run():
-        company = party if party_type == "Company" else None
-        for row in data:
-            if not flt(row.turnover_amount):
-                row.turnover_amount = get_turnover_from_sales_invoices(row.gstin, fy_from, fy_to, company)
+    company = party if party_type == "Company" else None
+    for row in data:
+        # no Turnover Record for this state/period -> fall back to the sales invoices
+        if not flt(row.turnover_amount):
+            row.turnover_amount = get_turnover_from_sales_invoices(row.gstin, fy_from, fy_to, company)
 
     return data
 
@@ -462,7 +471,7 @@ def bulk_create_isd_distribution_invoices(
     posting_date: str,
     total_turnover: float | str | None = None,
 ):
-    frappe.has_permission("ISD Distribution Invoice", "write", throw=True)
+    frappe.has_permission("ISD Distribution Invoice", "create", throw=True)
     frappe.has_permission("Purchase Invoice", "read", doc=purchase_invoice, throw=True)
 
     if isinstance(distribution_table, str):

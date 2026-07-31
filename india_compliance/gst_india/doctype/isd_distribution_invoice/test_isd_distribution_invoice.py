@@ -450,15 +450,20 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
 
     def test_recipient_address_autofills_branch_turnover(self):
         # The distribution side pulls the Recipient Branch Turnover from the Turnover Record matching
-        # the recipient's state (narrowed by GSTIN) for the invoice's fiscal year.
+        # the recipient's state for the invoice's fiscal year.
         from erpnext.accounts.utils import get_fiscal_year
 
         _, from_date, to_date = get_fiscal_year(today())
 
-        # one Turnover Record per state per period, so clear any overlapping Gujarat record first
+        # One Turnover Record per state per period, and submitting a distribution invoice upserts
+        # turnover for its recipient's state, so clear both states this test asserts on.
         frappe.db.delete(
             "Turnover Record",
-            {"gst_state": "Gujarat", "from_date": ["<=", to_date], "to_date": [">=", from_date]},
+            {
+                "gst_state": ["in", ("Gujarat", "Karnataka")],
+                "from_date": ["<=", to_date],
+                "to_date": [">=", from_date],
+            },
         )
         record = frappe.get_doc(
             {

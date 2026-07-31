@@ -148,6 +148,7 @@
    "options": "Item"
   },
   {
+   "fetch_from": "item_code.item_name",
    "fieldname": "item_name",
    "fieldtype": "Data",
    "label": "Item Name"
@@ -171,6 +172,7 @@
    "options": "Project"
   },
   {
+   "depends_on": "eval: parent.doctype == 'ISD Distribution Invoice'",
    "fieldname": "purchase_invoice_item",
    "fieldtype": "Link",
    "label": "Purchase Invoice Item",
@@ -199,7 +201,8 @@
    "fetch_from": "item_code.gst_hsn_code",
    "fieldname": "gst_hsn_code",
    "fieldtype": "Data",
-   "label": "HSN/SAC"
+   "label": "HSN/SAC",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_whwr",

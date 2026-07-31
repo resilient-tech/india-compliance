@@ -13,35 +13,17 @@ frappe.ui.form.on("ISD Distribution Invoice", {
         }));
     },
 
-    on_submit(frm) {
-        if (frm.doc.is_against_party) return;
-
-        const create_recipient = (submit_on_creation) => {
-            frappe.call({
-                method: "india_compliance.gst_india.doctype.isd_distribution_invoice.isd_distribution_invoice.create_isd_recipient_invoice",
-                args: { source_name: frm.doc.name, submit_on_creation },
-                freeze: true,
-                freeze_message: __("Creating ISD Recipient Invoice..."),
-            });
-        };
-
-        frappe.confirm(
-            __("Do you wish to auto-submit the ISD Recipient Invoice?"),
-            () => create_recipient(1),
-            () => create_recipient(0),
-        );
-    },
-
     refresh(frm) {
         // source_items are populated from the linked purchase invoice, never edited by hand
         frm.set_df_property("source_items", "read_only", 1);
         frm.isd_controller.set_provisional_labels();
         frm.isd_controller.toggle_expense_fields();
         frm.isd_controller.set_common_buttons();
+        frm.isd_controller.set_grand_total();
 
         if (frm.doc.docstatus !== 1) return;
 
-        if (frm.doc.is_against_party && frappe.model.can_create("ISD Recipient Invoice")) {
+        if (frappe.model.can_create("ISD Recipient Invoice")) {
             frm.add_custom_button(
                 __("ISD Recipient Invoice"),
                 () => {
@@ -64,28 +46,6 @@ frappe.ui.form.on("ISD Distribution Invoice", {
                     });
                 },
                 __("Create"),
-            );
-        }
-
-        if (frappe.model.can_read("ISD Recipient Invoice")) {
-            frm.add_custom_button(
-                __("Recipient Invoice"),
-                async () => {
-                    // one active (non-cancelled) recipient invoice per distribution invoice
-                    const { message } = await frappe.db.get_value(
-                        "ISD Recipient Invoice",
-                        { isd_distribution_invoice_reference: frm.doc.name, docstatus: ["<", 2] },
-                        "name",
-                    );
-
-                    if (!message?.name) {
-                        frappe.msgprint(__("No ISD Recipient Invoice found for {0}.", [frm.doc.name]));
-                        return;
-                    }
-
-                    frappe.set_route("Form", "ISD Recipient Invoice", message.name);
-                },
-                __("View"),
             );
         }
     },
@@ -140,12 +100,12 @@ frappe.ui.form.on("ISD Distribution Invoice", {
     },
 
     branch_turnover(frm) {
-        calculate_distribution_ratio(frm);
+        frm.isd_controller.calculate_distribution_ratio();
         frm.isd_controller.recalculate();
     },
 
     total_turnover(frm) {
-        calculate_distribution_ratio(frm);
+        frm.isd_controller.calculate_distribution_ratio();
         frm.isd_controller.recalculate();
     },
 
@@ -163,14 +123,3 @@ frappe.ui.form.on("ISD Source Item", {
         frm.isd_controller.calculate_taxes_and_totals();
     },
 });
-
-function calculate_distribution_ratio(frm) {
-    const { branch_turnover, total_turnover } = frm.doc;
-
-    const distribution_ratio = total_turnover ? (flt(branch_turnover) / flt(total_turnover)) * 100 : 0;
-    if (distribution_ratio > 100) {
-        frappe.throw(__("Distribution Ratio cannot be greater than 100%"));
-    }
-
-    frm.set_value("distribution_ratio", distribution_ratio);
-}

@@ -67,7 +67,8 @@
   "recipient_address_display",
   "additional_info_section",
   "remarks",
-  "column_break_tngt"
+  "column_break_tngt",
+  "connections_tab"
  ],
  "fields": [
   {
@@ -389,7 +390,8 @@
    "fieldname": "grand_total",
    "fieldtype": "Data",
    "is_virtual": 1,
-   "label": "Grand Total"
+   "label": "Grand Total",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_nnkm",
@@ -406,14 +408,15 @@
   {
    "fieldname": "isd_provisional_account",
    "fieldtype": "Link",
-   "label": "ISD Provisional Account ",
+   "label": "ISD Provisional Account",
    "options": "Account"
   },
   {
    "fieldname": "isd_provisional_amount",
    "fieldtype": "Currency",
    "label": "ISD Provisional Amount",
-   "options": "Company:company:default_currency"
+   "options": "Company:company:default_currency",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_ritj",
@@ -422,11 +425,23 @@
   {
    "fieldname": "column_break_hiql",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "connections_tab",
+   "fieldtype": "Tab Break",
+   "label": "Connections",
+   "show_dashboard": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
- "links": [],
+ "links": [
+    {
+        "group": "Reference",
+        "link_doctype": "ISD Recipient Invoice",
+        "link_fieldname": "isd_distribution_invoice_reference"
+    }
+ ],
  "modified": "2026-07-03 16:14:59.481571",
  "modified_by": "Administrator",
  "module": "GST India",
@@ -482,5 +497,6 @@
  "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

@@ -235,6 +235,9 @@ class ISDController(Document):
             )
 
     def validate_expense_heads(self):
+        if not should_distribute_expense():
+            return
+
         invalid_rows = []
         for row in self.source_items:
             try:
@@ -430,7 +433,6 @@ class ISDController(Document):
             throw_row_table(_("Invalid Taxes"), [_("Component"), _("Issue")], invalid_rows)
 
     def set_provisional_values(self):
-
         if not self.isd_provisional_account:
             self.isd_provisional_account = (
                 self._party_account
@@ -447,6 +449,13 @@ class ISDController(Document):
     def on_cancel(self):
         self.ignore_linked_doctypes = ("GL Entry", "Payment Ledger Entry")
         make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
+
+    # Code adapted from AccountsController.on_trash
+    def on_trash(self):
+        if not frappe.db.get_single_value("Accounts Settings", "delete_linked_ledger_entries"):
+            return
+
+        frappe.db.delete("GL Entry", {"voucher_type": self.doctype, "voucher_no": self.name})
 
     def make_document_gl_entries(self):
         gl_entries = self.get_gl_entries()
@@ -560,7 +569,7 @@ class ISDController(Document):
         )
 
     def add_ineligible_itc_gl_entries(self, gl_entries):
-        """Reverse ineligible ITC"""
+        """Correct the over-credit of ineligible ITC"""
         if self.is_recipient_side_and_unregistered():
             # values are already in the gst expense account, no reversal needed
             return
@@ -597,7 +606,8 @@ class ISDController(Document):
                 # -> provisional account
                 self.add_provisional_gl_entry(gl_entries, row_reversal_total, self.cr_or_dr, row=row)
                 continue
-                # -> expense head
+
+            # -> expense head
             self.add_gl_entry(
                 gl_entries, self.get_gst_expense_account(), row_reversal_total, self.cr_or_dr, row=row
             )

@@ -15,6 +15,7 @@ from india_compliance.gst_india.utils import validate_invoice_number
 from india_compliance.gst_india.utils.isd import (
     ISD_GST_CATEGORY,
     calculate_distribution,
+    should_distribute_expense,
     sum_row_tax_by_type,
     throw_invalid_rows,
     throw_row_table,
@@ -26,7 +27,6 @@ class ISDDistributionInvoice(ISDController):
     _DOCTYPE_NAME = "ISD Distribution Invoice"
 
     def validate(self):
-        # TODO: verify that validation of not allowing distribution of ineligible due to POS rules
         self.setup_precision()
         self.setup_party_fields()
         validate_invoice_number(self)
@@ -58,6 +58,11 @@ class ISDDistributionInvoice(ISDController):
             data=turnover_record_data,
             enqueue_after_commit=True,
         )
+
+        if not self.is_against_party and frappe.db.get_single_value(
+            "GST Settings", "auto_create_isd_recipient_invoice"
+        ):
+            create_isd_recipient_invoice(self.name, submit_on_creation=1)
 
     # on_cancel (reversing the GL entries) is inherited from ISDController
     def on_cancel(self):
@@ -92,7 +97,7 @@ class ISDDistributionInvoice(ISDController):
                 )
             )
 
-        frappe.set_value(
+        frappe.db.set_value(
             "Purchase Invoice",
             self.purchase_invoice,
             "isd_credit_distributed_percent",
@@ -216,6 +221,8 @@ class ISDDistributionInvoice(ISDController):
 
     # ------------------------------------------------------------------ distribution limits
     def clamp_to_distribution_limits(self):
+        # TODO: should this at least be logged in the error log?
+        # otherwise we don't have any trace of clamping
         if not self.source_items:
             return
 
@@ -226,16 +233,17 @@ class ISDDistributionInvoice(ISDController):
             self.clamp_expense_surplus(expense_surplus)
 
         if itc_surplus or expense_surplus:
+            self.set_tax_totals()
             self.isd_provisional_amount = flt(
                 self.total_eligible + self.total_ineligible + self.total_expense, self._tax_precision
             )
-            self.set_tax_totals()
             self._notify_adjustment(itc_surplus + expense_surplus)
 
     def get_distribution_surplus(self):
 
         current_itc = sum(sum_row_tax_by_type(row, "distributed") for row in self.source_items)
         current_expense = sum(flt(row.distributed_expense) for row in self.source_items)
+        already = self.get_distributed_for_purchase_invoice()
 
         if self.is_credit_note and self.credit_note_against:
             against_values = frappe.get_value(
@@ -244,27 +252,26 @@ class ISDDistributionInvoice(ISDController):
                 ["total_eligible", "total_ineligible", "total_expense"],
                 as_dict=True,
             )
-            # a reversal may not exceed what the targeted invoice distributed
+            # credit allowed to reverse is minimum of credit_note_against's distributed and total available for distribution
+            allowed_itc = min(
+                flt(
+                    against_values.total_eligible + against_values.total_ineligible,
+                    self._source_item_precision,
+                ),
+                flt(already.itc, self._source_item_precision),
+            )
+            allowed_expense = min(
+                flt(against_values.total_expense, self._source_item_precision),
+                flt(already.expense, self._source_item_precision),
+            )
             return (
-                min(
-                    0.0,
-                    flt(
-                        against_values.total_eligible + against_values.total_ineligible + current_itc,
-                        self._source_item_precision,
-                    ),
-                ),
-                min(
-                    0.0,
-                    flt(against_values.total_expense + current_expense, self._source_item_precision),
-                ),
+                min(0.0, flt(allowed_itc + current_itc, self._source_item_precision)),
+                min(0.0, flt(allowed_expense + current_expense, self._source_item_precision)),
             )
 
         available_itc = sum(sum_row_tax_by_type(row, "total") for row in self.source_items)
         available_expense = sum(flt(row.total_expense) for row in self.source_items)
-        already = self.get_distributed_for_purchase_invoice()
 
-        # only a genuine over-distribution (distributed more than what remains available)
-        # is a surplus to clamp; a partial branch share is not (mirrors the credit-note min(0.0, ...))
         return (
             max(0.0, flt(already.itc + current_itc - available_itc, self._source_item_precision)),
             max(
@@ -289,9 +296,14 @@ class ISDDistributionInvoice(ISDController):
         if cgst_tax or sgst_tax:
             cgst_tax.tax_amount = flt(flt(cgst_tax.tax_amount) - surplus / 2, self._tax_precision)
             sgst_tax.tax_amount = flt(flt(sgst_tax.tax_amount) - surplus / 2, self._tax_precision)
+            # also clamp the cache set_tax_totals() re-reads tax_amount from, else the next
+            # set_tax_totals() call (below) discards this clamp and restores the unclamped amount
+            self._tax_amounts_by_head["cgst"] = cgst_tax.tax_amount
+            self._tax_amounts_by_head["sgst"] = sgst_tax.tax_amount
         else:
             igst_tax = next((t for t in self.taxes if t.gst_tax_type == "igst"), None)
             igst_tax.tax_amount = flt(flt(igst_tax.tax_amount) - surplus, self._tax_precision)
+            self._tax_amounts_by_head["igst"] = igst_tax.tax_amount
 
     def clamp_expense_surplus(self, surplus):
         row = self.source_items[0]
@@ -357,7 +369,7 @@ def _guess_address(gstin, extra_filters=None):
         "Address",
         filters=filters,
         pluck="name",
-        order_by="is_primary_address DESC",
+        order_by="is_primary_address DESC, name",
         limit=1,
     )
     return names[0] if names else None
@@ -426,7 +438,7 @@ def apply_against_party_overrides(source, recipient):
     for row in recipient.source_items:
         row.update(
             {
-                "expense_head": default_expense_account,
+                "expense_head": default_expense_account if should_distribute_expense() else None,
                 "cost_center": default_cost_center,
                 "project": None,
             }

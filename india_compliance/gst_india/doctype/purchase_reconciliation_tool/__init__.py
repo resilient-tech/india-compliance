@@ -893,7 +893,7 @@ class BaseReconciliation:
         if category in IMPORT_CATEGORY:
             return self.get_unmatched_bill_of_entry(category)
 
-        if category == "ISD":
+        if category in ("ISD", "ISDA"):
             return self.get_unmatched_isd_invoice()
 
         return self.get_unmatched_purchase(category)
@@ -1434,6 +1434,9 @@ class ReconciledData(BaseReconciliation):
 
         if not classification and doc.get("doctype") == "Bill of Entry":
             classification = "IMPG"
+
+        if not classification and doc.get("doctype") == "ISD Recipient Invoice":
+            classification = "ISD"
 
         return classification
 

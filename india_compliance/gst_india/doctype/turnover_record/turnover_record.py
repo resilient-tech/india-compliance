@@ -52,12 +52,10 @@ class TurnoverRecord(Document):
             )
 
 
-def get_turnover_amount(gstin, gst_state, posting_date=None):
+def get_turnover_amount(gst_state, posting_date=None):
     _, from_date, to_date = get_fiscal_year(posting_date or nowdate())
 
     filters = {"from_date": from_date, "to_date": to_date, "gst_state": gst_state}
-    if gstin:
-        filters["gstin"] = gstin
 
     return frappe.db.get_value("Turnover Record", filters, "amount")
 

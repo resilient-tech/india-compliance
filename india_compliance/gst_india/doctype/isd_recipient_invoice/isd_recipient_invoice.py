@@ -8,22 +8,61 @@ from frappe.utils import flt, get_link_to_form
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils.isd import throw_row_table
 from india_compliance.gst_india.utils.isd_controller import ISDController
+from india_compliance.gst_india.utils.itc_claim import (
+    _is_gstr3b_filed,
+    set_or_validate_itc_claim_period,
+    validate_itc_claim_period_on_update_after_submit,
+)
 
 
 class ISDRecipientInvoice(ISDController):
     """Branch / credit-recipient side of an ISD distribution."""
 
+    def onload(self):
+        if self.docstatus != 1:
+            return
+
+        if self.itc_claim_period:
+            self.set_onload(
+                "is_itc_period_filed",
+                _is_gstr3b_filed(self.recipient_gstin, self.itc_claim_period),
+            )
+
     def validate(self):
         self.setup_precision()
         self.setup_party_fields()
         self.validate_addresses()
-        self.validate_turnover_and_ratio()
         self.validate_reference_distribution_invoice()
         self.validate_accounts()
         self.set_taxes_and_totals()
 
+        # set_or_validate_itc_claim_period reads company_gstin
+        self.company_gstin = self.recipient_gstin
+        set_or_validate_itc_claim_period(self)
+        if self.docstatus == 0:
+            self.reconciliation_status = "Unreconciled"
+
+    def before_update_after_submit(self):
+        validate_itc_claim_period_on_update_after_submit(self)
+
     def on_submit(self):
         self.make_document_gl_entries()
+
+    # on_trash (deleting the GL entries) is inherited from ISDController
+    def on_cancel(self):
+        super().on_cancel()
+
+        # a cancelled invoice must not keep holding on to its 2A/2B match
+        frappe.db.set_value(
+            "GST Inward Supply",
+            {"link_doctype": self.doctype, "link_name": self.name},
+            {
+                "match_status": "",
+                "link_name": "",
+                "link_doctype": "",
+                "action": "No Action",
+            },
+        )
 
     def validate_reference_distribution_invoice(self):
         """When linked to an on-site ISD Distribution Invoice, reconcile against it. Skipped for pure
