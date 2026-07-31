@@ -1209,17 +1209,12 @@ class TestEWaybill(FrappeTestCase):
         rollout_date = get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE)
 
         # created outside the travel, as only the payload depends on the rollout date
-        si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")  # type 2
+        si = self.create_sales_invoice_for(
+            "overseas_customer_domestic_shipping"
+        )  # type 2
 
         # before rollout -> omitted from payload and offline JSON
         with time_machine.travel(day_before_rollout, tick=True):
-<<<<<<< HEAD
-            si = self.create_sales_invoice_for(
-                "overseas_customer_domestic_shipping"
-            )  # type 2
-
-=======
->>>>>>> 86e91891 (fix(test): refactor sales invoice creation for e-waybill tests to improve clarity)
             data = EWaybillData(si).get_data()
             self.assertEqual(data.get("transactionType"), 2)
             self.assertNotIn("shipToGSTIN", data)
