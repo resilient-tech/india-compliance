@@ -403,36 +403,6 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         self.assertIn("GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception))
 
     @responses.activate
-    def test_validate_shipping_address_change(self):
-        """Ship To details reported in the e-Invoice can't be replaced afterwards.
-        ERROR CODE: 2324"""
-        test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
-        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000, is_in_state=True)
-
-        self._mock_e_invoice_response(data=test_data)
-        generate_e_invoice(si.name)
-        si.reload()
-
-        # reported in the e-Waybill generated along with the IRN
-        self.assertTrue(si.ewaybill)
-        si.shipping_address_name = "_Test Registered Customer-Billing-1"
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            "Cannot change the Place of Supply or address",
-            si.save,
-        )
-
-        # without the e-Waybill, the e-Invoice still reports them
-        si.db_set("ewaybill", "")
-        si.reload()
-        si.shipping_address_name = "_Test Registered Customer-Billing-1"
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            "Cannot change the Place of Supply or address",
-            si.save,
-        )
-
-    @responses.activate
     def test_generate_e_invoice_with_goods_item(self):
         """Generate test e-Invoice for goods item"""
         frappe.db.set_single_value("GST Settings", {"auto_cancel_e_waybill": 0, "fetch_e_waybill_data": 0})

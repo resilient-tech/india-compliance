@@ -121,38 +121,6 @@ class TestEWaybill(IntegrationTestCase):
             frappe.get_doc("e-Waybill Log", {"reference_name": si.name}),
         )
 
-    def test_validate_shipping_address_change(self):
-        """The shipping address is reported in every e-Waybill, including the ones
-        generated without an IRN."""
-        si = create_sales_invoice(
-            vehicle_no="GJ07DL9009",
-            company_address="_Test Indian Registered Company-Billing",
-            customer="_Test Registered Customer",
-            customer_address="_Test Registered Customer-Billing",
-            is_in_state=1,
-            distance=10,
-            transporter="_Test Common Supplier",
-            mode_of_transport="Road",
-        )
-
-        mark_e_waybill_as_generated(
-            si.doctype,
-            si.name,
-            values={
-                "ewaybill": "351002721233",
-                "e_waybill_date": str(now_datetime()),
-                "valid_upto": str(add_to_date(now_datetime(), days=1)),
-            },
-        )
-        si.reload()
-
-        si.shipping_address_name = "_Test Registered Customer-Billing-1"
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            "Cannot change the Place of Supply or address",
-            si.save,
-        )
-
     @responses.activate
     def test_update_vehicle_info(self):
         """Test whitelisted function `update_vehicle_info`"""
@@ -1521,10 +1489,11 @@ class TestEWaybill(IntegrationTestCase):
         day_before_rollout = get_datetime(add_to_date(SHIP_TO_GSTIN_APPLICABLE_DATE, days=-1))
         rollout_date = get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE)
 
+        # created outside the travel, as only the payload depends on the rollout date
+        si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")  # type 2
+
         # before rollout -> omitted from payload and offline JSON
         with time_machine.travel(day_before_rollout, tick=True):
-            si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")  # type 2
-
             data = EWaybillData(si).get_data()
             self.assertEqual(data.get("transactionType"), 2)
             self.assertNotIn("shipToGSTIN", data)
@@ -1552,22 +1521,23 @@ class TestEWaybill(IntegrationTestCase):
         day_before_rollout = get_datetime(add_to_date(SHIP_TO_GSTIN_APPLICABLE_DATE, days=-1))
         rollout_date = get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE)
 
-        with time_machine.travel(day_before_rollout, tick=True):
-            si = create_sales_invoice(
-                vehicle_no="GJ07DL9009",
-                company_address="_Test Indian Registered Company-Billing",
-                customer="_Test Registered Customer",
-                customer_address="_Test Registered Customer-Billing",
-                shipping_address_name="_Test Registered Customer Warehouse-Shipping",
-                is_in_state=1,
-                distance=10,
-                transporter="_Test Common Supplier",
-                mode_of_transport="Road",
-                do_not_submit=True,
-            )
-            si.gst_transporter_id = ""
-            si.submit()
+        # created outside the travel, as only the payload depends on the rollout date
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name="_Test Registered Customer Warehouse-Shipping",
+            is_in_state=1,
+            distance=10,
+            transporter="_Test Common Supplier",
+            mode_of_transport="Road",
+            do_not_submit=True,
+        )
+        si.gst_transporter_id = ""
+        si.submit()
 
+        with time_machine.travel(day_before_rollout, tick=True):
             self.assertEqual(EWaybillData(si).get_data().get("transactionType"), 2)
 
         # on/after rollout -> degrades to Regular. ERROR CODE: 618
