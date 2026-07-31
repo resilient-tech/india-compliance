@@ -32,9 +32,15 @@ CUSTOM_FIELDS = {
     ],
     "Tax Withholding Category": [
         {
+            "label": "Income Tax Details",
+            "fieldname": "income_tax_details_section",
+            "insert_after": "disable_transaction_threshold",
+            "fieldtype": "Section Break",
+        },
+        {
             "label": "Section",
             "fieldname": "tds_section",
-            "insert_after": "round_off_tax_amount",
+            "insert_after": "income_tax_details_section",
             "fieldtype": "Autocomplete",
             "options": None,
             "translatable": 0,
@@ -51,9 +57,14 @@ CUSTOM_FIELDS = {
             "description": "Section under Income Tax Act-1961 (pre FY 2026-27)",
         },
         {
+            "fieldname": "income_tax_details_column_break",
+            "insert_after": "old_income_tax_section",
+            "fieldtype": "Column Break",
+        },
+        {
             "label": "Entity",
             "fieldname": "entity_type",
-            "insert_after": "tax_on_excess_amount",
+            "insert_after": "income_tax_details_column_break",
             "fieldtype": "Select",
             "options": tds_entity_type_options,
             "translatable": 0,
