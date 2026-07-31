@@ -1,27 +1,60 @@
-// styles js/components/view_group.js
-// frappe v16 ships no segmented control, so this is our own pill rail
+// js/components/view_group.js
+// frappe's segmented control, look rebuilt on v16 vars. scoped to .view-group,
+// so dropping this file is all it takes once v16 ships the component.
 
-.view-group .custom-tabs {
-    > .nav-item > .nav-link {
-        // 29px, to sit level with the filter and Actions buttons beside it
-        padding: 3px 8px;
+.view-group.es-tab-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    // frame, so the rail shows around the pill
+    padding: 1px;
+    background: var(--control-bg);
+    // rail radius = pill radius + the frame
+    border-radius: 8px;
+
+    .es-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        border: 0;
+        background: transparent;
+        border-radius: 7px;
+        // adds up to 29px, level with the buttons beside it
+        padding: 5px 8px;
+        font-size: var(--text-sm);
+        line-height: 17px;
+        color: var(--text-muted);
+        white-space: nowrap;
+        user-select: none;
+        cursor: pointer;
+        transition:
+            background-color 150ms ease-out,
+            color 150ms ease-out,
+            box-shadow 150ms ease-out;
+    }
+
+    // one step darker than the rail
+    .es-pill:hover:not([data-state="active"], [data-disabled]) {
+        background: var(--control-bg-on-gray);
         color: var(--text-color);
     }
 
-    > .nav-item:first-child > .nav-link {
-        border-radius: 0.4rem 0 0 0.4rem;
+    // the pressed pill rises out of the rail
+    .es-pill[data-state="active"] {
+        background: var(--card-bg);
+        box-shadow: var(--btn-shadow);
+        color: var(--text-color);
     }
 
-    > .nav-item:last-child > .nav-link {
-        border-radius: 0 0.4rem 0.4rem 0;
+    .es-pill:focus-visible {
+        outline: 1px solid var(--gray-500);
+        outline-offset: 0;
     }
 
-    > .nav-item:not(:has(.disabled)):hover > .nav-link:not(.active) {
-        background-color: var(--btn-default-hover-bg);
-    }
-
-    > .nav-item > .nav-link.active {
-        background-color: var(--control-bg);
-        color: var(--primary);
+    // no pointer-events: none, or the title never shows. handler blocks it.
+    .es-pill[data-disabled] {
+        opacity: 0.6;
+        cursor: default;
     }
 }
