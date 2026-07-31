@@ -5,8 +5,13 @@ import frappe
 from frappe import parse_json, read_file
 from frappe.tests.utils import FrappeTestCase
 
+<<<<<<< HEAD
 from india_compliance.gst_india.utils import get_data_file_path, get_party_for_gstin, merge_dicts
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, download_gstr_2b, save_gstr_2b
+=======
+from india_compliance.gst_india.utils import get_data_file_path, merge_dicts
+from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
+>>>>>>> ff13522 (fix: persist raw 2a and 2b token in gst return log)
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
 from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2bISD
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
@@ -596,6 +601,7 @@ class TestGetUniqueKey(FrappeTestCase):
 
     def test_normal_gstin(self):
         t = frappe._dict(supplier_gstin="01AABCE2207R1Z5", bill_no="INV-1")
+<<<<<<< HEAD
         self.assertEqual(get_unique_key(t), "01AABCE2207R1Z5-INV-1-")
 
 
@@ -604,9 +610,23 @@ class TestMultiFileRawMerge(FrappeTestCase):
         combined = {}
         file1 = {"itcsumm": {"itcavl": 100}, "docdata": {"b2b": [{"inum": "1"}]}}
         file2 = {"itcsumm": {"itcavl": 150}, "docdata": {"b2b": [{"inum": "2"}], "cdnr": [{"nt": "9"}]}}
+=======
+        self.assertEqual(get_unique_key(t), "01AABCE2207R1Z5-INV-1")
+
+
+class TestMultiFileRawMerge(IntegrationTestCase):
+    def test_docs_concat_summary_not_doubled(self):
+        combined = {}
+        file1 = {"itcsumm": {"itcavl": 100}, "docdata": {"b2b": [{"inum": "1"}]}}
+        file2 = {"itcsumm": {"itcavl": 100}, "docdata": {"b2b": [{"inum": "2"}], "cdnr": [{"nt": "9"}]}}
+>>>>>>> ff13522 (fix: persist raw 2a and 2b token in gst return log)
         merge_dicts(combined, file1)
         merge_dicts(combined, file2)
 
         self.assertEqual(combined["docdata"]["b2b"], [{"inum": "1"}, {"inum": "2"}])
         self.assertEqual(combined["docdata"]["cdnr"], [{"nt": "9"}])
+<<<<<<< HEAD
         self.assertEqual(combined["itcsumm"]["itcavl"], 150)
+=======
+        self.assertEqual(combined["itcsumm"]["itcavl"], 100)  # newer-wins, NOT 200
+>>>>>>> ff13522 (fix: persist raw 2a and 2b token in gst return log)

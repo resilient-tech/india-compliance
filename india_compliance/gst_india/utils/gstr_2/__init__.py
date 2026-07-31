@@ -13,6 +13,7 @@ from india_compliance.gst_india.api_classes.taxpayer_returns import (
 )
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     create_ims_return_log,
+    store_raw_return_data,
 )
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
@@ -226,6 +227,13 @@ def download_gstr_2b(gstin, return_periods):
             for file_num in range(1, file_count + 1):
                 r = api.get_data(return_period, file_num=file_num)
                 merge_dicts(combined, r.data or {})
+<<<<<<< HEAD
+=======
+                save_gstr_2b(gstin, return_period, r, store_raw=False)
+
+            if combined:
+                store_raw_return_data(gstin, ReturnType.GSTR2B.value, return_period, combined)
+>>>>>>> ff13522 (fix: persist raw 2a and 2b token in gst return log)
 
             response = frappe._dict(data=frappe._dict(combined))
 
@@ -314,10 +322,11 @@ def save_gstr_2a(gstin, return_period, json_data):
         # making consistent with GSTR2b
         json_data[category.value.lower()] = json_data.pop(action.lower())
 
+    store_raw_return_data(gstin, return_type.value, return_period, json_data)
     save_gstr(gstin, return_type, return_period, json_data)
 
 
-def save_gstr_2b(gstin, return_period, json_data):
+def save_gstr_2b(gstin, return_period, json_data, *, store_raw=True):
     json_data = json_data.data
     return_type = ReturnType.GSTR2B
     if not json_data or json_data.get("gstin") != gstin:
@@ -328,6 +337,9 @@ def save_gstr_2b(gstin, return_period, json_data):
             ),
             title=_("Invalid Response Received."),
         )
+
+    if store_raw:
+        store_raw_return_data(gstin, return_type.value, return_period, dict(json_data))
 
     create_import_log(gstin, return_type.value, return_period)
     save_gstr(
