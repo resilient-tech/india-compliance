@@ -169,17 +169,16 @@ class ISDController(Document):
                 )
             )
 
-    def set_pos_from_address(self):
-        def get_pos(address):
-            if not address:
-                return None
-            state_number, state = frappe.get_cached_value(
-                "Address", address, ["gst_state_number", "gst_state"]
-            )
-            return f"{state_number}-{state}" if state else None
+    def _get_pos(self, address):
+        if not address:
+            return None
 
-        self.distribution_pos = get_pos(self.distribution_address)
-        self.recipient_pos = get_pos(self.recipient_address)
+        state_number, state = frappe.get_cached_value("Address", address, ["gst_state_number", "gst_state"])
+        return f"{state_number}-{state}" if state else None
+
+    def set_pos_from_address(self):
+        self.distribution_pos = self._get_pos(self.distribution_address)
+        self.recipient_pos = self._get_pos(self.recipient_address)
 
     def set_address_display(self):
         self.distribution_address_display = get_address_display(self.distribution_address)

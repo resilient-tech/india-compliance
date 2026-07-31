@@ -142,7 +142,6 @@ class ITCAvailedData:
                 (doc.company_gstin != IfNull(doc.supplier_gstin, ""))
                 & (doc.is_opening == "No")
                 & (doc.is_boe_applicable == 0)
-                & (doc.is_isd_applicable == 0)
             )
         )
 

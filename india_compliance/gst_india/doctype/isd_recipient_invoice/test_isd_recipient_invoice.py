@@ -129,12 +129,16 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
 
     # ------------------------------------------------------------------ inter-state IGST-only
     def test_gst_account_type_validations(self):
+        def setup(doc):
+            doc.setup_precision()
+            doc.set_pos_from_address()
+
         # inter-state: CGST/SGST cannot be received; only IGST is valid
         doc = self._recipient(
             recipient_address=self.recipient_address_ka.name,
             source_items=[{"item_code": "_Test Service Item", "distributed_cgst": 100}],
         )
-        doc.setup_precision()
+        setup(doc)
         self.assertRaisesRegex(
             VALIDATION_ERROR, "must be distributed as IGST", doc.validate_gst_account_types
         )
@@ -144,7 +148,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
             recipient_address=self.recipient_address_ka.name,
             source_items=[{"item_code": "_Test Service Item", "distributed_igst": 200}],
         )
-        doc.setup_precision()
+        setup(doc)
         doc.validate_gst_account_types()
 
         # intra-state CGST/SGST is allowed
@@ -153,7 +157,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
                 {"item_code": "_Test Service Item", "distributed_cgst": 100, "distributed_sgst": 100}
             ],
         )
-        doc.setup_precision()
+        setup(doc)
         doc.validate_gst_account_types()
 
     # ------------------------------------------------------------------ reference reconciliation

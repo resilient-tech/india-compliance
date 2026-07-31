@@ -90,22 +90,10 @@ def is_inter_state_distribution(doc):
     if party_gst_category in IMPORT_GST_CATEGORIES:
         return True
 
-    # prefer the place of supply (state number) when both are known -> no extra state lookups
     if doc.distribution_pos and doc.recipient_pos:
         return doc.distribution_pos != doc.recipient_pos
 
-    # fall back to the addresses' states when a POS is missing
-    company_state = (
-        frappe.get_cached_value("Address", doc.distribution_address, "gst_state")
-        if doc.distribution_address
-        else None
-    )
-    party_state = (
-        frappe.get_cached_value("Address", doc.recipient_address, "gst_state")
-        if doc.recipient_address
-        else None
-    )
-    return company_state != party_state
+    return False
 
 
 def get_distribution_ratio(doc):

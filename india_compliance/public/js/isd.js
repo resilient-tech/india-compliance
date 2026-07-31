@@ -531,7 +531,8 @@ india_compliance.ISDController = class ISDController {
             return;
         }
         const { message } = await frappe.db.get_value("Address", address, ["gst_state_number", "gst_state"]);
-        if (message) this.frm.set_value(pos_field, `${message.gst_state_number}-${message.gst_state}`);
+        const pos = message?.gst_state ? `${message.gst_state_number}-${message.gst_state}` : "";
+        this.frm.set_value(pos_field, pos);
     }
 
     // ------------------------------------------------------------------ distribution preview

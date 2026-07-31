@@ -43,6 +43,7 @@ class ISDDistributionInvoice(ISDController):
         """used by bulk_create_isd_distribution_invoices"""
         self.setup_precision()
         self.setup_party_fields()
+        self.set_pos_from_address()
         calculate_distribution(self)
         self.set_taxes_and_totals()
 

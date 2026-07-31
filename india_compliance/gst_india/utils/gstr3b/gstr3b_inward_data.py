@@ -282,7 +282,6 @@ class GSTR3BInwardQuery:
             .where(self.PI.is_opening == "No")
             .where(self.PI.company_gstin != IfNull(self.PI.supplier_gstin, ""))
             .where(self.PI.is_boe_applicable == 0)
-            .where(self.PI.is_isd_applicable == 0)
         )
 
         return self.get_query_with_common_filters(query, self.PI)

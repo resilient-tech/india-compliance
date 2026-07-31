@@ -380,7 +380,7 @@
     "label": "Auto Create ISD Recipient Invoice for Intra-Company Distributions",
     "fieldtype": "Check",
     "default": "0",
-    "description": "Applicable when is_against_party is false"
+    "description": "Applicable when Is against Customer/Supplier is unchecked in the ISD Distribution Invoice"
   },
   {
    "default": "0",
