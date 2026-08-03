@@ -319,7 +319,7 @@
                 }
             }
         ],
-        "RESIDUAL_MATCH_AS_SUGGESTED": [
+        "RESIDUAL_MATCH_SAME_GSTIN": [
             {
                 "PURCHASE_INVOICE": {
                     "bill_no": "BILL-2324-1234",
@@ -334,12 +334,12 @@
                     "bill_date": "2023-12-11",
                     "bill_no": "BILL-2324-1234",
                     "classification": "B2B",
-                    "differences": "",
+                    "differences": "BILL_NO",
                     "inward_supply_company_gstin": "24AAQCA8719H1ZC",
                     "inward_supply_name": "",
                     "is_reverse_charge": 0,
                     "is_supplier_return_filed": 0,
-                    "match_status": "Suggested Match",
+                    "match_status": "Residual Match",
                     "purchase_company_gstin": "24AAQCA8719H1ZC",
                     "purchase_doctype": "Purchase Invoice",
                     "purchase_invoice_name": "",
@@ -361,7 +361,7 @@
                 }
             }
         ],
-        "RESIDUAL_MATCH_AS_MISMATCH": [
+        "RESIDUAL_MATCH_DIFFERENT_GSTIN": [
             {
                 "PURCHASE_INVOICE": {
                     "bill_no": "BILL-2324-00056",
@@ -377,12 +377,12 @@
                     "bill_date": "2023-12-11",
                     "bill_no": "BILL-2324-00056",
                     "classification": "B2B",
-                    "differences": "SUPPLIER_GSTIN",
+                    "differences": "BILL_NO, SUPPLIER_GSTIN",
                     "inward_supply_company_gstin": "24AAQCA8719H1ZC",
                     "inward_supply_name": "",
                     "is_reverse_charge": 0,
                     "is_supplier_return_filed": 0,
-                    "match_status": "Mismatch",
+                    "match_status": "Residual Match",
                     "purchase_company_gstin": "24AAQCA8719H1ZC",
                     "purchase_doctype": "Purchase Invoice",
                     "purchase_invoice_name": "",
