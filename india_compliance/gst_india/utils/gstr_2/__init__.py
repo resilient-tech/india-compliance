@@ -13,11 +13,16 @@ from india_compliance.gst_india.api_classes.taxpayer_returns import (
 )
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     create_ims_return_log,
+    store_raw_return_data,
 )
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
-from india_compliance.gst_india.utils import get_party_for_gstin, validate_gstin_permission
+from india_compliance.gst_india.utils import (
+    get_party_for_gstin,
+    merge_dicts,
+    validate_gstin_permission,
+)
 from india_compliance.gst_india.utils.gstr_2 import gstr_2a, gstr_2b, ims
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
@@ -216,9 +221,14 @@ def download_gstr_2b(gstin, return_periods):
 
         # Handle multiple files for GSTR2B
         if response.data and (file_count := response.data.get("fc")):
+            combined = {}
             for file_num in range(1, file_count + 1):
                 r = api.get_data(return_period, file_num=file_num)
-                save_gstr_2b(gstin, return_period, r)
+                merge_dicts(combined, r.data or {})
+                save_gstr_2b(gstin, return_period, r, store_raw=False)
+
+            if combined:
+                store_raw_return_data(gstin, ReturnType.GSTR2B.value, return_period, combined)
 
             continue  # skip first response if file_count is greater than 1
 
@@ -298,6 +308,8 @@ def save_gstr_2a(gstin, return_period, json_data):
             title=_("Invalid Response Received."),
         )
 
+    raw_data = dict(json_data)
+
     for action, category in GSTR_2A_ACTIONS.items():
         if action.lower() not in json_data:
             continue
@@ -307,10 +319,11 @@ def save_gstr_2a(gstin, return_period, json_data):
         # making consistent with GSTR2b
         json_data[category.value.lower()] = json_data.pop(action.lower())
 
+    store_raw_return_data(gstin, return_type.value, return_period, raw_data)
     save_gstr(gstin, return_type, return_period, json_data)
 
 
-def save_gstr_2b(gstin, return_period, json_data):
+def save_gstr_2b(gstin, return_period, json_data, *, store_raw=True):
     json_data = json_data.data
     return_type = ReturnType.GSTR2B
     if not json_data or json_data.get("gstin") != gstin:
@@ -321,6 +334,9 @@ def save_gstr_2b(gstin, return_period, json_data):
             ),
             title=_("Invalid Response Received."),
         )
+
+    if store_raw:
+        store_raw_return_data(gstin, return_type.value, return_period, dict(json_data))
 
     create_import_log(gstin, return_type.value, return_period)
     save_gstr(
