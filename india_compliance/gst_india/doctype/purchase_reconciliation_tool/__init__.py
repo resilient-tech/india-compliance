@@ -7,6 +7,7 @@ import frappe
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
+from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Max, Sum
@@ -226,7 +227,7 @@ PAN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             # Fields.SUPPLIER_GSTIN: Rule.MISMATCH,
-            Fields.COMPANY_GSTIN: Rule.MISMATCH,
+            # Fields.COMPANY_GSTIN: Rule.MISMATCH,
             Fields.BILL_NO: Rule.FUZZY_MATCH,
             # Fields.PLACE_OF_SUPPLY: Rule.MISMATCH,
             # Fields.IS_REVERSE_CHARGE: Rule.MISMATCH,
@@ -841,6 +842,8 @@ class Reconciler(BaseReconciliation):
         elif rule == Rule.ROUNDING_DIFFERENCE:
             return self.get_amount_difference(purchase, inward_supply, field) <= 1
 
+        frappe.throw(_("Invalid rule {0} for field {1}").format(rule, field))
+
     def fuzzy_match(self, purchase, inward_supply):
         """
         Returns true if the (cleaned) bill_no approximately match.
@@ -1209,13 +1212,20 @@ class ReconciledData(BaseReconciliation):
         )
 
     def update_differences(self, data, purchase, inward_supply):
-        differences = []
-        if self.is_exact_or_suggested_match(data):
-            if self.has_rounding_difference(data):
-                differences.append("Rounding Difference")
-
-        elif not self.is_mismatch_or_manual_match(data):
+        if not (
+            self.is_exact_or_suggested_match(data)
+            or self.is_mismatch_or_manual_match(data)
+            or self.is_residual_match(data)
+        ):
             return
+
+        differences = []
+
+        if self.is_residual_match(data):
+            differences.append(Fields.BILL_NO.name)
+
+        if not self.is_mismatch_or_manual_match(data) and self.has_rounding_difference(data):
+            differences.append("Rounding Difference")
 
         for field in Fields:
             if field == Fields.BILL_NO:
@@ -1262,6 +1272,10 @@ class ReconciledData(BaseReconciliation):
             MatchStatus.EXACT_MATCH.value,
             MatchStatus.SUGGESTED_MATCH.value,
         )
+
+    @staticmethod
+    def is_residual_match(data):
+        return data.match_status == MatchStatus.RESIDUAL_MATCH.value
 
     @staticmethod
     def is_mismatch_or_manual_match(data):
