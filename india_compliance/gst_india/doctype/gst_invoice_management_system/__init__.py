@@ -207,7 +207,7 @@ class PurchaseInvoice:
             .where(self.PI.gst_category.isin(gst_category))
             .where(self.PI.reconciliation_status == "Unreconciled")
             .where(self.PI.is_return == is_return)
-            .where(self.PI.ineligibility_reason != "ITC restricted due to PoS rules")
+            .where(IfNull(self.PI.ineligibility_reason, "") != "ITC restricted due to PoS rules")
             .run(as_dict=True)
         )
 
