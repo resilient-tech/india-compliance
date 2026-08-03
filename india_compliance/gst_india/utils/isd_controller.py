@@ -10,11 +10,10 @@ from frappe.contacts.doctype.address.address import get_address_display
 from frappe.model.document import Document
 from frappe.utils import flt, get_link_to_form
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES, ISD_GST_CATEGORY
 from india_compliance.gst_india.overrides.transaction import validate_gstin_status
 from india_compliance.gst_india.utils import get_gst_account_gst_tax_type_map
 from india_compliance.gst_india.utils.isd import (
-    ISD_GST_CATEGORY,
     get_distribution_ratio,
     get_input_gst_accounts,
     get_row_itc,

@@ -5,13 +5,12 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_months, flt, today
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES, ISD_GST_CATEGORY
 from india_compliance.gst_india.doctype.isd_distribution_invoice.isd_distribution_invoice import (
     create_isd_recipient_invoice,
 )
 from india_compliance.gst_india.overrides.company import create_company_fixtures
 from india_compliance.gst_india.utils.isd import (
-    ISD_GST_CATEGORY,
     get_input_gst_accounts,
     get_isd_autofill_values,
     sum_row_tax_by_type,

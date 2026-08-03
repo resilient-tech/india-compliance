@@ -3,8 +3,6 @@
 
 frappe.provide("india_compliance");
 
-india_compliance.ISD_GST_CATEGORY = "Input Service Distributor";
-
 india_compliance.get_address_query = function (link_doctype, link_name, extra_filters = []) {
     return {
         filters: [
@@ -453,7 +451,7 @@ india_compliance.ISDController = class ISDController {
         const frm = this.frm;
         // distribution_address is always the ISD registration; recipient_address is always non-ISD
         const category_op = field === "distribution_address" ? "=" : "!=";
-        const extra = [["gst_category", category_op, india_compliance.ISD_GST_CATEGORY]];
+        const extra = [["gst_category", category_op, "Input Service Distributor"]];
 
         if (!frm.doc.company) {
             frappe.show_alert({ message: __("Please set Company first"), indicator: "orange" });

@@ -1,5 +1,4 @@
 const DOCTYPE = "Purchase Invoice";
-const IMPORT_GST_CATEGORIES = ["Overseas", "SEZ"];
 
 setup_e_waybill_actions(DOCTYPE);
 
@@ -156,5 +155,5 @@ function has_goods_items(frm) {
 }
 
 function is_import_gst_category(gst_category) {
-    return IMPORT_GST_CATEGORIES.includes(gst_category);
+    return frappe.boot.import_gst_categories.includes(gst_category);
 }

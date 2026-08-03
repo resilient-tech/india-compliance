@@ -10,10 +10,9 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import Coalesce, Sum
 from frappe.utils import cint, flt, get_link_to_form, getdate
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES, ISD_GST_CATEGORY
 from india_compliance.gst_india.utils import validate_invoice_number
 from india_compliance.gst_india.utils.isd import (
-    ISD_GST_CATEGORY,
     calculate_distribution,
     should_distribute_expense,
     sum_row_tax_by_type,

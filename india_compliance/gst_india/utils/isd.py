@@ -20,6 +20,7 @@ from frappe.utils import cint, flt, getdate
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     IMPORT_GST_CATEGORIES,
+    ISD_GST_CATEGORY,
 )
 from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
     get_turnover_amount,
@@ -28,7 +29,6 @@ from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
-ISD_GST_CATEGORY = "Input Service Distributor"
 ISD_DOCTYPES = ("ISD Distribution Invoice", "ISD Recipient Invoice")
 
 
