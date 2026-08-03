@@ -323,11 +323,21 @@
             {
                 "PURCHASE_INVOICE": {
                     "bill_no": "BILL-2324-1234",
-                    "bill_date": "2023-12-11"
+                    "bill_date": "2023-12-11",
+                    "qty": 7
                 },
                 "INWARD_SUPPLY": {
                     "bill_no": "BILL-23-24-5678",
-                    "bill_date": "2023-12-18"
+                    "bill_date": "2023-12-18",
+                    "items": [
+                        {
+                            "taxable_value": 7000,
+                            "rate": 18,
+                            "sgst": 630,
+                            "cgst": 630
+                        }
+                    ],
+                    "document_value": 8260
                 },
                 "RECONCILED_DATA": {
                     "action": "No Action",
@@ -365,12 +375,22 @@
             {
                 "PURCHASE_INVOICE": {
                     "bill_no": "BILL-2324-00056",
-                    "bill_date": "2023-12-11"
+                    "bill_date": "2023-12-11",
+                    "qty": 8
                 },
                 "INWARD_SUPPLY": {
                     "bill_no": "BILL-23-24-61",
                     "bill_date": "2023-12-18",
-                    "supplier_gstin": "27AABCR6898M1ZN"
+                    "supplier_gstin": "27AABCR6898M1ZN",
+                    "items": [
+                        {
+                            "taxable_value": 8000,
+                            "rate": 18,
+                            "sgst": 720,
+                            "cgst": 720
+                        }
+                    ],
+                    "document_value": 9440
                 },
                 "RECONCILED_DATA": {
                     "action": "No Action",
