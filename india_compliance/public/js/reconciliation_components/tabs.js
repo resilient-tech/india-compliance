@@ -381,7 +381,12 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
             filters: this.filters,
         });
 
-        this.dialog.get_field("link_with").set_data(message);
+        const field = this.dialog.get_field("link_with");
+        field.set_data(message);
+
+        field.set_description(
+            message.length ? "" : __("Nothing to link. Widen the dates, clear the GSTIN, or show matched."),
+        );
     }
 
     _set_missing_doctype() {}
