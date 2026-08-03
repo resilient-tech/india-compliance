@@ -307,6 +307,8 @@ function is_e_invoice_generatable(frm, show_message = false) {
 }
 
 function is_e_invoice_applicable(frm, show_message = false) {
+    frm._einv_message_list = [];
+
     if (
         !india_compliance.is_e_invoice_enabled() ||
         (!show_message && frm.doc.docstatus != 1) ||
@@ -319,7 +321,7 @@ function is_e_invoice_applicable(frm, show_message = false) {
 
     if (!frm.doc.company_gstin) {
         is_einv_applicable = false;
-        message_list.push(__("Company GSTIN is not set. Ensure its set in Company Address."));
+        message_list.push(__("Company GSTIN is not set. Ensure it's set in Company Address."));
     }
 
     if (frm.doc.company_gstin == frm.doc.billing_address_gstin) {
@@ -344,7 +346,7 @@ function is_e_invoice_applicable(frm, show_message = false) {
         );
     }
 
-    frm._einv_message_list = show_message ? message_list : [];
+    if (show_message) frm._einv_message_list.push(...message_list);
 
     return is_einv_applicable;
 }
