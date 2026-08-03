@@ -4,7 +4,7 @@
 """Pure self-tests for helpers. Site-less. round2 expectations = frappe.flt(x, 2)."""
 
 import unittest
-from datetime import date
+from datetime import date, datetime
 
 from .helpers import format_date, parse_date, round2
 
@@ -39,6 +39,11 @@ class TestDateHelpers(unittest.TestCase):
 
     def test_parse_passthrough_date(self):
         self.assertEqual(parse_date(date(2024, 3, 15)), date(2024, 3, 15))
+
+    def test_parse_datetime_drops_time(self):
+        parsed = parse_date(datetime(2024, 3, 15, 13, 45, 6))
+        self.assertEqual(parsed, date(2024, 3, 15))
+        self.assertNotIsInstance(parsed, datetime)
 
     def test_format_iso_and_custom_fmt(self):
         self.assertEqual(format_date(date(2024, 3, 15)), "2024-03-15")
