@@ -60,21 +60,26 @@ class MatchStatus(Enum):
 
 
 # Summary of rules:
+# E = exact, F = fuzzy, N = not compared, number = difference allowed
+
 # GSTIN_RULES = [
-#     {"Exact Match": ["E", "E", "E", "E", "E", 0, 0, 0, 0, 0]},
-#     {"Suggested Match": ["E", "E", "F", "E", "E", 0, 0, 0, 0, 0]},
-#     {"Suggested Match": ["E", "E", "E", "E", "E", 1, 1, 1, 1, 2]},
-#     {"Suggested Match": ["E", "E", "F", "E", "E", 1, 1, 1, 1, 2]},
-#     {"Mismatch": ["E", "E", "E", "N", "N", "N", "N", "N", "N", "N"]},
-#     {"Mismatch": ["E", "E", "F", "N", "N", "N", "N", "N", "N", "N"]},
-#     {"Residual Match": ["E", "E", "N", "E", "E", 1, 1, 1, 1, 2]},
+#     {"Exact Match":     ["E", "E", "E", "E", "E", "E", 0, 0, 0, 0, 0]},
+#     {"Suggested Match": ["E", "E", "E", "F", "E", "E", 0, 0, 0, 0, 0]},
+#     {"Suggested Match": ["E", "E", "E", "E", "E", "E", 1, 1, 1, 1, 1]},
+#     {"Suggested Match": ["E", "E", "E", "F", "E", "E", 1, 1, 1, 1, 1]},
+#     {"Mismatch":        ["E", "E", "N", "E", "N", "N", "N", "N", "N", "N", "N"]},
+#     {"Mismatch":        ["E", "E", "N", "F", "N", "N", "N", "N", "N", "N", "N"]},
+#     {"Residual Match":  ["E", "E", "E", "N", "E", "E", 1, 1, 1, 1, 1]},
 # ]
 
+# PAN level runs on what is left, keyed by pan, so supplier gstin always differs.
+# It compares total gst in place of the cgst / sgst / igst split.
+
 # PAN_RULES = [
-#     {"Mismatch": ["E", "N", "E", "E", "E", 1, 1, 1, 1, 2]},
-#     {"Mismatch": ["E", "N", "F", "E", "E", 1, 1, 1, 1, 2]},
-#     {"Mismatch": ["E", "N", "F", "N", "N", "N", "N", "N", "N", "N"]},
-#     {"Residual Match": ["E", "N", "N", "E", "E", 1, 1, 1, 1, 2]},
+#     {"Mismatch":       ["E", "N", "E", "E", "E", "E", 1, 1, 1]},
+#     {"Mismatch":       ["E", "N", "E", "F", "E", "E", 1, 1, 1]},
+#     {"Mismatch":       ["E", "N", "N", "F", "N", "N", "N", "N", "N"]},
+#     {"Residual Match": ["E", "N", "E", "N", "E", "E", 1, 1, 1]},
 # ]
 
 GSTIN_RULES = (
