@@ -5,7 +5,7 @@ from frappe.query_builder.functions import IfNull, Sum
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, SERVICE_HSN_PREFIX
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
-from india_compliance.gst_india.utils import get_full_gst_uom
+from india_compliance.gst_india.utils import get_company_gstin_column, get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
 from india_compliance.gst_india.utils.itc_claim import (
     apply_period_filter as _apply_itc_period_filter,
@@ -284,7 +284,7 @@ class GSTR3BInwardQuery:
             .where(self.PI.is_boe_applicable == 0)
         )
 
-        return self.get_query_with_common_filters(query, self.PI)
+        return self.get_query_with_common_filters(query, self.PI, "Purchase Invoice")
 
     def get_base_boe_query(self):
         query = (
@@ -326,7 +326,7 @@ class GSTR3BInwardQuery:
             )
         )
 
-        return self.get_query_with_common_filters(query, self.BOE)
+        return self.get_query_with_common_filters(query, self.BOE, "Bill of Entry")
 
     def get_base_je_query(self):
         key_field_map = {
@@ -374,7 +374,7 @@ class GSTR3BInwardQuery:
             .groupby(self.JE.name)
         )
 
-        return self.get_query_with_common_filters(query, self.JE)
+        return self.get_query_with_common_filters(query, self.JE, "Journal Entry")
 
     def get_base_isd_query(self):
         query = (
@@ -414,10 +414,9 @@ class GSTR3BInwardQuery:
                 ).as_("total_amount"),
             )
         )
-        # gstin_field for isd recipient invoice is recipient_gstin
-        return self.get_query_with_common_filters(query, self.ISD, gstin_field="recipient_gstin")
+        return self.get_query_with_common_filters(query, self.ISD, "ISD Recipient Invoice")
 
-    def get_query_with_common_filters(self, query, doc, gstin_field="company_gstin"):
+    def get_query_with_common_filters(self, query, doc, doctype):
         """
         Apply common filters to the query.
         """
@@ -426,7 +425,7 @@ class GSTR3BInwardQuery:
         query = self.apply_itc_period_filter(query, doc)
 
         if self.filters.company_gstin:
-            query = query.where(getattr(doc, gstin_field) == self.filters.company_gstin)
+            query = query.where(get_company_gstin_column(doc, doctype) == self.filters.company_gstin)
 
         return query
 

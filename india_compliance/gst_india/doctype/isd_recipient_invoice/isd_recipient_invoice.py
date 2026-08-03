@@ -36,8 +36,6 @@ class ISDRecipientInvoice(ISDController):
         self.validate_accounts()
         self.set_taxes_and_totals()
 
-        # set_or_validate_itc_claim_period reads company_gstin
-        self.company_gstin = self.recipient_gstin
         set_or_validate_itc_claim_period(self)
         if self.docstatus == 0:
             self.reconciliation_status = "Unreconciled"

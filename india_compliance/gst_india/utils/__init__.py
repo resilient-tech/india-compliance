@@ -108,6 +108,21 @@ def send_updated_doc(doc, set_docinfo=False):
     frappe.response.docs.append(doc)
 
 
+COMPANY_GSTIN_FIELD = {"ISD Recipient Invoice": "recipient_gstin"}
+
+
+def get_company_gstin_field(doctype: str) -> str:
+    return COMPANY_GSTIN_FIELD.get(doctype, "company_gstin")
+
+
+def get_company_gstin(doc) -> str | None:
+    return doc.get(get_company_gstin_field(doc.doctype))
+
+
+def get_company_gstin_column(table, doctype: str):
+    return getattr(table, get_company_gstin_field(doctype))
+
+
 @frappe.whitelist()
 def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = False):
     """

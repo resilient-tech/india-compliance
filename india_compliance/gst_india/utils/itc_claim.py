@@ -22,6 +22,8 @@ from frappe.utils import (
 
 from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
 from india_compliance.gst_india.utils import (
+    get_company_gstin,
+    get_company_gstin_column,
     get_period,
     get_periods_between_dates,
     validate_gstin_permission,
@@ -347,7 +349,7 @@ def _calculate_itc_claim_period(
     if inward_supply and inward_supply.get("return_period_2b"):
         default_period = _max_period(posting_period, inward_supply.return_period_2b)
 
-    return _get_next_unfiled_period(doc.company_gstin, default_period, doc.posting_date, filed)
+    return _get_next_unfiled_period(get_company_gstin(doc), default_period, doc.posting_date, filed)
 
 
 def validate_itc_claim_period(doc) -> None:
@@ -368,10 +370,12 @@ def validate_itc_claim_period_on_update_after_submit(doc) -> None:
     if previous.itc_claim_period == doc.itc_claim_period:
         return
 
+    company_gstin = get_company_gstin(doc)
+
     filed_period = None
-    if _is_gstr3b_filed(doc.company_gstin, previous.itc_claim_period):
+    if _is_gstr3b_filed(company_gstin, previous.itc_claim_period):
         filed_period = previous.itc_claim_period
-    if _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
+    if _is_gstr3b_filed(company_gstin, doc.itc_claim_period):
         filed_period = doc.itc_claim_period
 
     if not filed_period:
@@ -385,7 +389,7 @@ def validate_itc_claim_period_on_update_after_submit(doc) -> None:
 
 
 def _validate_itc_claim_period_as_per_filing(doc) -> None:
-    if _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
+    if _is_gstr3b_filed(get_company_gstin(doc), doc.itc_claim_period):
         frappe.throw(
             _("Cannot set ITC Claim Period to {0}. GSTR-3B is already filed.").format(doc.itc_claim_period)
         )
@@ -440,13 +444,12 @@ def _bulk_update(updates: dict[str, set[str]], doctype: str, source: str) -> Non
 
 def _fetch_document_data(doctype: str, names: list[str], only_claim_period_set: bool = False) -> list[dict]:
     doc = frappe.qb.DocType(doctype)
-    company_gstin = doc.recipient_gstin if doctype == "ISD Recipient Invoice" else doc.company_gstin
     query = (
         frappe.qb.from_(doc)
         .select(
             doc.name,
             doc.posting_date,
-            company_gstin.as_("company_gstin"),
+            get_company_gstin_column(doc, doctype).as_("company_gstin"),
             doc.itc_claim_period,
         )
         .where(doc.name.isin(names))

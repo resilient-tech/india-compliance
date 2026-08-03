@@ -1,9 +1,11 @@
 # Copyright (c) 2026, Resilient Tech and Contributors
 # See license.txt
 
+import re
+
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import flt
+from frappe.utils import add_months, flt, getdate
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
@@ -25,9 +27,14 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
     submit_distribution,
     teardown_isd_fixtures,
 )
+from india_compliance.gst_india.overrides.test_purchase_invoice import _gstr3b_filed
 from india_compliance.gst_india.utils.isd import (
     get_input_gst_accounts,
     sum_row_tax_by_type,
+)
+from india_compliance.gst_india.utils.itc_claim import (
+    ITC_CLAIM_PERIOD_DEFERRED,
+    format_period,
 )
 
 # The recipient shares the distribution invoice's link chain (ISD Source Item -> Purchase Invoice
@@ -388,6 +395,96 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         prov = totals[doc.isd_provisional_account]
         self.assertAlmostEqual(prov["debit"], ineligible_tax, places=2)
         self.assertAlmostEqual(prov["credit"], doc.isd_provisional_amount, places=2)
+
+    # ------------------------------------------------------------------ ITC claim period
+    # The recipient invoice is an ITC-availing document, so it carries itc_claim_period like a
+    # Purchase Invoice / Bill of Entry. Mirrors TestPurchaseInvoice's claim-period suite.
+    def _submitted_recipient(self, **overrides):
+        doc = self._recipient(source_items=make_source_item(self.pi, ratio=0.25), **overrides)
+        doc.insert()
+        doc.submit()
+
+        # An update-after-submit always happens in a later request against a freshly loaded
+        # document. Return a new instance so the tests below see only what was persisted --
+        # reload() would keep submit-time attributes that are not docfields, and carrying that
+        # state over would skip the very branches under test.
+        return frappe.get_doc(doc.doctype, doc.name)
+
+    def test_itc_claim_period_auto_set_on_submit(self):
+        doc = self._submitted_recipient()
+        self.assertEqual(doc.itc_claim_period, format_period(doc.posting_date))
+
+    def test_itc_claim_period_invalid_format(self):
+        doc = self._recipient(source_items=make_source_item(self.pi, ratio=0.25))
+        doc.itc_claim_period = "132024"  # Invalid: Month > 12
+
+        self.assertRaisesRegex(
+            VALIDATION_ERROR,
+            re.compile(r"ITC Claim Period '.*' must be in MMYYYY format"),
+            doc.insert,
+        )
+
+    def test_itc_claim_period_deferred_is_retained(self):
+        doc = self._recipient(source_items=make_source_item(self.pi, ratio=0.25))
+        doc.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
+        doc.insert()
+        doc.submit()
+
+        self.assertEqual(doc.itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
+
+    def test_itc_claim_period_change_unfiled_to_unfiled(self):
+        doc = self._submitted_recipient()
+
+        next_period = format_period(add_months(doc.posting_date, 1))
+        doc.itc_claim_period = next_period
+        doc.save()
+        doc.reload()
+
+        self.assertEqual(doc.itc_claim_period, next_period)
+
+    def test_itc_claim_period_update_restriction_when_filed(self):
+        """Once GSTR-3B is filed for the claimed period, the period cannot be moved away from it."""
+        doc = self._submitted_recipient()
+        current_period = doc.itc_claim_period
+
+        with _gstr3b_filed(doc.recipient_gstin, doc.posting_date):
+            # move to another period -> blocked
+            doc.itc_claim_period = format_period(add_months(doc.posting_date, 1))
+            self.assertRaisesRegex(
+                VALIDATION_ERROR,
+                re.compile(r"Cannot change ITC Claim Period from .* to .*\. GSTR-3B already filed for .*\."),
+                doc.save,
+            )
+
+            # move to Deferred -> also blocked
+            doc.reload()
+            doc.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
+            self.assertRaisesRegex(
+                VALIDATION_ERROR,
+                re.compile(r"Cannot change ITC Claim Period from .* to .*\. GSTR-3B already filed for .*\."),
+                doc.save,
+            )
+
+        # period is unfiled again -> the same change is allowed
+        doc.reload()
+        self.assertEqual(doc.itc_claim_period, current_period)
+        doc.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
+        doc.save()
+
+        self.assertEqual(doc.itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
+
+    def test_itc_claim_period_change_to_filed_period_blocked(self):
+        """Cannot move the claim period INTO a period whose GSTR-3B is already filed."""
+        doc = self._submitted_recipient()
+        next_date = getdate(add_months(doc.posting_date, 1))
+
+        with _gstr3b_filed(doc.recipient_gstin, next_date):
+            doc.itc_claim_period = format_period(next_date)
+            self.assertRaisesRegex(
+                VALIDATION_ERROR,
+                re.compile(r"GSTR-3B already filed"),
+                doc.save,
+            )
 
     def test_recipient_cancel_reverses_gl_entries(self):
         doc = self._recipient(source_items=make_source_item(self.pi, ratio=0.25))
