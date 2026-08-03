@@ -14,17 +14,16 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
     VALIDATION_ERROR,
     account_totals,
     assert_balanced_gl,
-    build_distribution,
+    create_distribution_invoice,
+    create_recipient_invoice,
     get_auto_recipient_invoice,
     get_gl_rows,
     link,
     make_ineligible_isd_pi,
     make_isd_address,
     make_isd_pi,
-    make_recipient_invoice,
     make_source_item,
     setup_isd_fixtures,
-    submit_distribution,
     teardown_isd_fixtures,
 )
 from india_compliance.gst_india.overrides.test_purchase_invoice import _gstr3b_filed
@@ -78,10 +77,10 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
             recipient_address=self.recipient_address.name,
             branch_turnover=25,
             total_turnover=100,
+            do_not_save=True,
         )
-        source_items = overrides.pop("source_items", None)
         fields.update(overrides)
-        return make_recipient_invoice(source_items=source_items, **fields)
+        return create_recipient_invoice(**fields)
 
     def _submit_reference(self, branch=25, total=100):
         """A submitted ISD Distribution Invoice, on its own Purchase Invoice, to reconcile against.
@@ -90,8 +89,12 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         freshly built recipient invoice under test (the duplicate-link guard allows only one
         submitted recipient per reference)."""
         pi = make_isd_pi(self.isd_address.name)
-        ref = submit_distribution(
-            pi, self.isd_address.name, self.recipient_address.name, branch=branch, total=total
+        ref = create_distribution_invoice(
+            purchase_invoice=pi,
+            distribution_address=self.isd_address.name,
+            recipient_address=self.recipient_address.name,
+            branch_turnover=branch,
+            total_turnover=total,
         )
         get_auto_recipient_invoice(ref).cancel()
         return ref
@@ -168,13 +171,18 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         doc.validate_gst_account_types()
 
     # ------------------------------------------------------------------ reference reconciliation
+    @change_settings("GST Settings", {"auto_create_isd_recipient_invoice": 1})
     def test_reference_mismatch_rejected(self):
         ref = self._submit_reference()
 
         # the referenced distribution invoice must be submitted
         pi = make_isd_pi(self.isd_address.name)
-        draft = build_distribution(pi, self.isd_address.name, self.recipient_address.name)
-        draft.insert()
+        draft = create_distribution_invoice(
+            purchase_invoice=pi,
+            distribution_address=self.isd_address.name,
+            recipient_address=self.recipient_address.name,
+            do_not_submit=True,
+        )
         doc = self._recipient(isd_distribution_invoice_reference=draft.name)
         self.assertRaisesRegex(
             VALIDATION_ERROR, "is not submitted", doc.validate_reference_distribution_invoice
@@ -212,6 +220,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
             doc.validate_reference_distribution_invoice()
         self.assertIn("CGST", str(cm.exception))
 
+    @change_settings("GST Settings", {"auto_create_isd_recipient_invoice": 1})
     def test_reference_reconciliation_passes(self):
         # no reference -> the reconciliation is skipped
         doc = self._recipient(source_items=[{"item_code": "_Test Service Item", "distributed_igst": 100}])
@@ -397,12 +406,10 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         self.assertAlmostEqual(prov["credit"], doc.isd_provisional_amount, places=2)
 
     # ------------------------------------------------------------------ ITC claim period
-    # The recipient invoice is an ITC-availing document, so it carries itc_claim_period like a
-    # Purchase Invoice / Bill of Entry. Mirrors TestPurchaseInvoice's claim-period suite.
-    def _submitted_recipient(self, **overrides):
-        doc = self._recipient(source_items=make_source_item(self.pi, ratio=0.25), **overrides)
-        doc.insert()
-        doc.submit()
+    def create_receipent_doc(self, **overrides):
+        doc = self._recipient(
+            source_items=make_source_item(self.pi, ratio=0.25), do_not_save=False, **overrides
+        )
 
         # An update-after-submit always happens in a later request against a freshly loaded
         # document. Return a new instance so the tests below see only what was persisted --
@@ -411,7 +418,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         return frappe.get_doc(doc.doctype, doc.name)
 
     def test_itc_claim_period_auto_set_on_submit(self):
-        doc = self._submitted_recipient()
+        doc = self.create_receipent_doc()
         self.assertEqual(doc.itc_claim_period, format_period(doc.posting_date))
 
     def test_itc_claim_period_invalid_format(self):
@@ -425,15 +432,12 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         )
 
     def test_itc_claim_period_deferred_is_retained(self):
-        doc = self._recipient(source_items=make_source_item(self.pi, ratio=0.25))
-        doc.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
-        doc.insert()
-        doc.submit()
+        doc = self.create_receipent_doc(itc_claim_period=ITC_CLAIM_PERIOD_DEFERRED)
 
         self.assertEqual(doc.itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
 
     def test_itc_claim_period_change_unfiled_to_unfiled(self):
-        doc = self._submitted_recipient()
+        doc = self.create_receipent_doc()
 
         next_period = format_period(add_months(doc.posting_date, 1))
         doc.itc_claim_period = next_period
@@ -444,7 +448,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
 
     def test_itc_claim_period_update_restriction_when_filed(self):
         """Once GSTR-3B is filed for the claimed period, the period cannot be moved away from it."""
-        doc = self._submitted_recipient()
+        doc = self.create_receipent_doc()
         current_period = doc.itc_claim_period
 
         with _gstr3b_filed(doc.recipient_gstin, doc.posting_date):
@@ -475,7 +479,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
 
     def test_itc_claim_period_change_to_filed_period_blocked(self):
         """Cannot move the claim period INTO a period whose GSTR-3B is already filed."""
-        doc = self._submitted_recipient()
+        doc = self.create_receipent_doc()
         next_date = getdate(add_months(doc.posting_date, 1))
 
         with _gstr3b_filed(doc.recipient_gstin, next_date):

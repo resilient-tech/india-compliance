@@ -2,13 +2,10 @@
 # See license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_months, flt, today
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, ISD_GST_CATEGORY
-from india_compliance.gst_india.doctype.isd_distribution_invoice.isd_distribution_invoice import (
-    create_isd_recipient_invoice,
-)
 from india_compliance.gst_india.overrides.company import create_company_fixtures
 from india_compliance.gst_india.utils.isd import (
     get_input_gst_accounts,
@@ -185,32 +182,48 @@ def make_distribution_invoice(source_items=None, **fields):
     return make_isd_doc("ISD Distribution Invoice", source_items, **fields)
 
 
-def make_recipient_invoice(source_items=None, **fields):
-    return make_isd_doc("ISD Recipient Invoice", source_items, **fields)
+def _create_isd_doc(doctype, **data):
+    """Shared insert / submit flow for the ISD factories below (mirrors create_transaction)."""
+    data = frappe._dict(data)
+    do_not_save = data.pop("do_not_save", False)
+    do_not_submit = data.pop("do_not_submit", False)
 
+    doc = make_isd_doc(doctype, data.pop("source_items", None), **data)
 
-def build_distribution(pi, distribution_address, recipient_address, branch=25, total=100, **overrides):
-    """A ready-to-insert ISD Distribution Invoice whose source items mirror the Purchase Invoice."""
-    return make_distribution_invoice(
-        source_items=make_source_item(pi),
-        distribution_address=distribution_address,
-        recipient_address=recipient_address,
-        purchase_invoice=pi.name,
-        branch_turnover=branch,
-        total_turnover=total,
-        **overrides,
-    )
+    if do_not_save:
+        return doc
 
-
-def submit_distribution(pi, distribution_address, recipient_address, **kwargs):
-    doc = build_distribution(pi, distribution_address, recipient_address, **kwargs)
     doc.insert()
-    doc.submit()
-    # The recipient mirror is created client-side after submit in production (a confirm decides
-    # whether to auto-submit it); mirror that here so tests get the submitted intra-company recipient.
-    if not doc.is_against_party:
-        create_isd_recipient_invoice(doc.name, submit_on_creation=1)
+
+    if not do_not_submit:
+        doc.submit()
+
     return doc
+
+
+def create_distribution_invoice(**data):
+    """An ISD Distribution Invoice, built like create_sales_invoice / create_purchase_invoice.
+
+    Pass `purchase_invoice` as a Purchase Invoice document and its items are mirrored into
+    source_items. `do_not_save` / `do_not_submit` stop before insert / submit; every other key is
+    set on the document.
+    """
+    data = frappe._dict(data)
+
+    if (pi := data.purchase_invoice) and not isinstance(pi, str):
+        data.purchase_invoice = pi.name
+        data.setdefault("source_items", make_source_item(pi))
+
+    return _create_isd_doc("ISD Distribution Invoice", **data)
+
+
+def create_recipient_invoice(**data):
+    """An ISD Recipient Invoice, built like create_sales_invoice / create_purchase_invoice.
+
+    `do_not_save` / `do_not_submit` stop before insert / submit; every other key is set on the
+    document.
+    """
+    return _create_isd_doc("ISD Recipient Invoice", **data)
 
 
 def make_ineligible_isd_pi(billing_address, **kwargs):
@@ -406,10 +419,14 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         teardown_isd_fixtures()
         super().tearDownClass()
 
-    def _full_distribution(self, pi=None, **kwargs):
-        distribution_address = kwargs.pop("distribution_address", self.isd_address.name)
-        recipient_address = kwargs.pop("recipient_address", self.recipient_address.name)
-        return build_distribution(pi or self.pi, distribution_address, recipient_address, **kwargs)
+    def _full_distribution(self, pi=None, branch=25, total=100, **kwargs):
+        """An unsaved ISD Distribution Invoice mirroring the Purchase Invoice's items."""
+        kwargs.setdefault("distribution_address", self.isd_address.name)
+        kwargs.setdefault("recipient_address", self.recipient_address.name)
+        kwargs.setdefault("do_not_save", True)
+        return create_distribution_invoice(
+            purchase_invoice=pi or self.pi, branch_turnover=branch, total_turnover=total, **kwargs
+        )
 
     @staticmethod
     def _distributed_heads(doc):
@@ -776,8 +793,12 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
 
     def test_over_distribution_is_clamped_to_available(self):
         pi = make_isd_pi(self.isd_address.name)
-        first = submit_distribution(
-            pi, self.isd_address.name, self.recipient_address.name, branch=60, total=100
+        first = create_distribution_invoice(
+            purchase_invoice=pi,
+            distribution_address=self.isd_address.name,
+            recipient_address=self.recipient_address.name,
+            branch_turnover=60,
+            total_turnover=100,
         )
 
         available = sum(sum_row_tax_by_type(row, "total") for row in first.source_items)
@@ -792,8 +813,12 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
 
     def test_credit_note_over_reversal_is_clamped(self):
         pi = make_isd_pi(self.isd_address.name)
-        first = submit_distribution(
-            pi, self.isd_address.name, self.recipient_address.name, branch=50, total=100
+        first = create_distribution_invoice(
+            purchase_invoice=pi,
+            distribution_address=self.isd_address.name,
+            recipient_address=self.recipient_address.name,
+            branch_turnover=50,
+            total_turnover=100,
         )
         distributed = sum(sum_row_tax_by_type(row, "distributed") for row in first.source_items)
 
@@ -807,9 +832,14 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         self.assertAlmostEqual(reversed_itc, -distributed, places=2)
 
     # ------------------------------------------------------------------ GL entries
+    @change_settings("GST Settings", {"auto_create_isd_recipient_invoice": 1})
     def test_eligible_distribution_gl_entries(self):
         pi = make_isd_pi(self.isd_address.name)
-        doc = submit_distribution(pi, self.isd_address.name, self.recipient_address.name)
+        doc = create_distribution_invoice(
+            purchase_invoice=pi,
+            distribution_address=self.isd_address.name,
+            recipient_address=self.recipient_address.name,
+        )
 
         rows = get_gl_rows(doc)
         assert_balanced_gl(self, rows)
@@ -855,9 +885,14 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         )
         self.assertTrue(all(row.company_gstin == RECIPIENT_GSTIN for row in recipient_rows))
 
+    @change_settings("GST Settings", {"auto_create_isd_recipient_invoice": 1})
     def test_ineligible_distribution_gl_entries(self):
         pi = make_ineligible_isd_pi(self.isd_address.name)
-        doc = submit_distribution(pi, self.isd_address.name, self.recipient_address.name)
+        doc = create_distribution_invoice(
+            purchase_invoice=pi,
+            distribution_address=self.isd_address.name,
+            recipient_address=self.recipient_address.name,
+        )
 
         rows = get_gl_rows(doc)
         assert_balanced_gl(self, rows)
@@ -889,11 +924,16 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         expense_debit = sum(row.debit for row in recipient_rows if row.account == recipient_row.expense_head)
         self.assertAlmostEqual(expense_debit, recipient_row.distributed_expense + ineligible_tax, places=2)
 
+    @change_settings("GST Settings", {"auto_create_isd_recipient_invoice": 1})
     def test_inter_state_distribution_gl_entries(self):
         # CGST+SGST fuse into IGST for a different-state recipient: the distributor's GL still
         # credits the source CGST+SGST while the recipient's GL debits IGST only.
         pi = make_isd_pi(self.isd_address.name)
-        doc = submit_distribution(pi, self.isd_address.name, self.recipient_address_ka.name)
+        doc = create_distribution_invoice(
+            purchase_invoice=pi,
+            distribution_address=self.isd_address.name,
+            recipient_address=self.recipient_address_ka.name,
+        )
 
         accounts = get_input_gst_accounts(COMPANY)
         totals = account_totals(get_gl_rows(doc))
@@ -915,21 +955,23 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
 
     def test_credit_note_gl_entries(self):
         pi = make_isd_pi(self.isd_address.name)
-        first = submit_distribution(
-            pi, self.isd_address.name, self.recipient_address.name, branch=50, total=100
+        first = create_distribution_invoice(
+            purchase_invoice=pi,
+            distribution_address=self.isd_address.name,
+            recipient_address=self.recipient_address.name,
+            branch_turnover=50,
+            total_turnover=100,
         )
 
-        credit_note = build_distribution(
-            pi,
-            self.isd_address.name,
-            self.recipient_address.name,
-            branch=25,
-            total=100,
+        credit_note = create_distribution_invoice(
+            purchase_invoice=pi,
+            distribution_address=self.isd_address.name,
+            recipient_address=self.recipient_address.name,
+            branch_turnover=25,
+            total_turnover=100,
             is_credit_note=1,
             credit_note_against=first.name,
         )
-        credit_note.insert()
-        credit_note.submit()
 
         rows = get_gl_rows(credit_note)
         # assert_balanced_gl also proves no negative amounts were stored
@@ -974,9 +1016,14 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             frappe.db.exists("Payment Ledger Entry", {"voucher_type": doc.doctype, "voucher_no": doc.name})
         )
 
+    @change_settings("GST Settings", {"auto_create_isd_recipient_invoice": 1})
     def test_cancel_reverses_gl_entries(self):
         pi = make_isd_pi(self.isd_address.name)
-        doc = submit_distribution(pi, self.isd_address.name, self.recipient_address.name)
+        doc = create_distribution_invoice(
+            purchase_invoice=pi,
+            distribution_address=self.isd_address.name,
+            recipient_address=self.recipient_address.name,
+        )
         recipient = get_auto_recipient_invoice(doc)
 
         # The linked recipient invoice must be cancelled first. The back-link check runs after
