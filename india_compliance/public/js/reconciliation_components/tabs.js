@@ -480,17 +480,24 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                 inward_supply: this.data._inward_supply,
             }),
         );
-        detail_table.$wrapper.removeClass("not-matched");
-        this._set_value_color(detail_table.$wrapper);
+        this._mark_differences(detail_table.$wrapper);
     }
 
-    _set_value_color(wrapper) {
+    _mark_differences(wrapper) {
         if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
 
-        ["supplier_gstin", "company_gstin", "place_of_supply", "is_reverse_charge"].forEach((field) => {
-            if (this.data._purchase_invoice[field] == this.data._inward_supply[field]) return;
+        // template marks the rows worth comparing
+        wrapper.find("[data-compare]").each((_index, row) => {
+            const field = $(row).data("compare");
+            const purchase = this.data._purchase_invoice[field];
+            const inward_supply = this.data._inward_supply[field];
 
-            wrapper.find(`[data-label='${field}'], [data-label='${field}']`).addClass("not-matched");
+            const same =
+                typeof purchase === "number" || typeof inward_supply === "number"
+                    ? flt(purchase, 2) === flt(inward_supply, 2)
+                    : purchase == inward_supply;
+
+            if (!same) $(row).attr("title", __("Books and 2A/2B do not match")).addClass("not-matched");
         });
     }
 };
