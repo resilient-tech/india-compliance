@@ -71,6 +71,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     onload(frm) {
+        if (!frm.doc.period) frm.doc.period = "This Fiscal Year";
         frm.trigger("period");
     },
 
