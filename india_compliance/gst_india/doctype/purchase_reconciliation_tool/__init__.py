@@ -10,8 +10,13 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
+<<<<<<< HEAD
 from frappe.query_builder.functions import Abs, IfNull, Sum
 from frappe.utils import add_months, cint, format_date, getdate, rounded
+=======
+from frappe.query_builder.functions import Abs, IfNull, Max, Sum
+from frappe.utils import add_months, add_years, cint, format_date, getdate, rounded
+>>>>>>> e3f537a1 (fix: look for purchases only for current + previous year)
 from rapidfuzz import fuzz, process
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, TAXABLE_GST_TREATMENTS
@@ -23,6 +28,7 @@ from india_compliance.gst_india.utils.gstr_2 import (
 )
 from india_compliance.gst_india.utils.itc_claim import (
     SUPPORTED_DOCTYPES,
+    get_gst_fy_start,
     set_itc_claim_period_on_match,
 )
 
@@ -407,6 +413,7 @@ class PurchaseInvoice:
         query = (
             self.get_query(is_return=is_return)
             .where(IfNull(self.PI.reconciliation_status, "").notin(("Reconciled", "Match Found")))
+            .where(self.PI.posting_date >= self.from_date)
             .where(self.PI.gst_category.isin(gst_category))
             .where(self.PI.is_return == is_return)
         )
@@ -549,6 +556,7 @@ class BillOfEntry:
             self.get_query()
             .where(self.PI.gst_category == gst_category)
             .where(IfNull(self.BOE.reconciliation_status, "").notin(("Reconciled", "Match Found")))
+            .where(self.BOE.posting_date >= self.from_date)
         )
 
         data = query.run(as_dict=True)
@@ -687,10 +695,15 @@ class BaseReconciliation:
             include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
 
+    @property
+    def purchase_from_date(self):
+        return get_gst_fy_start(add_years(getdate(self.from_date), -1))
+
     def get_unmatched_purchase(self, category):
         return PurchaseInvoice(
             company=self.company,
             company_gstin=self.company_gstin,
+            from_date=self.purchase_from_date,
             include_ignored=self.include_ignored,
         ).get_unmatched(category)
 
@@ -714,6 +727,7 @@ class BaseReconciliation:
         return BillOfEntry(
             company=self.company,
             company_gstin=self.company_gstin,
+            from_date=self.purchase_from_date,
             include_ignored=self.include_ignored,
         ).get_unmatched(category)
 

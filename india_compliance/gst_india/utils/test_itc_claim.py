@@ -11,7 +11,6 @@ from india_compliance.gst_india.utils import get_periods_between_dates
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     _calculate_itc_claim_period,
-    _get_gst_fy_start,
     _get_next_unfiled_period,
     _get_section_16_4_deadline,
     _is_gstr3b_filed,
@@ -21,6 +20,7 @@ from india_compliance.gst_india.utils.itc_claim import (
     apply_period_filter,
     compare_periods,
     format_period,
+    get_gst_fy_start,
     get_itc_period_options,
     period_sort_key,
     period_to_date,
@@ -165,11 +165,11 @@ class TestITCClaim(FrappeTestCase):
 
     def test_get_gst_fy_start(self):
         # April onwards → same year
-        self.assertEqual(_get_gst_fy_start("2024-04-01"), getdate("2024-04-01"))
-        self.assertEqual(_get_gst_fy_start("2024-12-31"), getdate("2024-04-01"))
+        self.assertEqual(get_gst_fy_start("2024-04-01"), getdate("2024-04-01"))
+        self.assertEqual(get_gst_fy_start("2024-12-31"), getdate("2024-04-01"))
         # Jan-March → previous year
-        self.assertEqual(_get_gst_fy_start("2025-01-01"), getdate("2024-04-01"))
-        self.assertEqual(_get_gst_fy_start("2025-03-31"), getdate("2024-04-01"))
+        self.assertEqual(get_gst_fy_start("2025-01-01"), getdate("2024-04-01"))
+        self.assertEqual(get_gst_fy_start("2025-03-31"), getdate("2024-04-01"))
 
     def test_get_section_16_4_deadline(self):
         # Apr-Dec 2024 → November 2025
