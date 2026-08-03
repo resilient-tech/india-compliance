@@ -474,7 +474,7 @@ class TestGSTInvoiceManagementSystem(FrappeTestCase):
         )
 
         self.assertEqual(result.inward_supply_name, gst_is.name)
-        self.assertEqual(result.match_status, "Missing in PI")
+        self.assertEqual(result.match_status, "Only in 2A/2B")
         self.assertIsNone(result.purchase_invoice_name)
 
     def test_get_invoice_details_with_none_inward_supply_name(self):
@@ -513,7 +513,7 @@ class TestGSTInvoiceManagementSystem(FrappeTestCase):
         )
 
         self.assertEqual(result.purchase_invoice_name, pinv.name)
-        self.assertEqual(result.match_status, "Missing in 2A/2B")
+        self.assertEqual(result.match_status, "Only in Books")
         self.assertIsNone(result.inward_supply_name)
 
     def test_link_documents_with_none_purchase_invoice_name(self):

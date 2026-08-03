@@ -157,7 +157,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                     "Mismatch",
                     "Residual Match",
                     "Manual Match",
-                    "Missing in PI",
+                    "Only in 2A/2B",
                     "Suggested Mark as Pending",
                 ],
             },
@@ -248,7 +248,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 label: "Match Status",
                 fieldname: "match_status",
                 width: 200,
-                _value: (...args) => `<a href="#" class='match-status'>${args[0]}</a>`,
+                _value: (...args) => this.get_match_status_link(args[0]),
             },
             {
                 label: "Count <br>2A/2B Docs",
@@ -342,7 +342,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 fieldname: "match_status",
                 align: "center",
                 width: 120,
-                _value: (...args) => `<a href="#" class='match-status'>${args[0]}</a>`,
+                _value: (...args) => this.get_match_status_link(args[0]),
             },
             {
                 label: "Action",
@@ -838,12 +838,12 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         // setup actions
         let actions = ["No Action", "Reject"].filter((action) => ACTION_MAP[action] != this.row.ims_action);
 
-        if (this.row.match_status !== "Missing in PI" && this.row.ims_action != "Accepted")
+        if (this.row.match_status !== "Only in 2A/2B" && this.row.ims_action != "Accepted")
             actions.push("Accept");
 
         if (this.row.is_pending_action_allowed && this.row.ims_action != "Pending") actions.push("Pending");
 
-        if (this.row.match_status == "Missing in PI") actions.push("Create", "Link");
+        if (this.row.match_status == "Only in 2A/2B") actions.push("Create", "Link");
         else actions.push("Unlink");
 
         return actions;
@@ -882,7 +882,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
     }
 
     _set_missing_doctype() {
-        if (this.row.match_status == "Missing in PI") this.missing_doctype = "Purchase Invoice";
+        if (this.row.match_status == "Only in 2A/2B") this.missing_doctype = "Purchase Invoice";
         else return;
 
         this.doctype_options = ["Purchase Invoice"];
@@ -1009,7 +1009,7 @@ function is_pending_allowed(row, action) {
 
 function is_accept_allowed(row, action) {
     // "Accept" not allowed where Purchase is not linked
-    if (action === "Accepted" && row.match_status === "Missing in PI") return false;
+    if (action === "Accepted" && row.match_status === "Only in 2A/2B") return false;
     return true;
 }
 

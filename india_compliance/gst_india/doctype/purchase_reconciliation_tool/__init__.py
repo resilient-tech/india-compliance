@@ -54,8 +54,8 @@ class MatchStatus(Enum):
     MISMATCH = "Mismatch"
     RESIDUAL_MATCH = "Residual Match"
     MANUAL_MATCH = "Manual Match"
-    MISSING_IN_PI = "Missing in PI"
-    MISSING_IN_2A_2B = "Missing in 2A/2B"
+    ONLY_IN_2A_2B = "Only in 2A/2B"
+    ONLY_IN_BOOKS = "Only in Books"
 
 
 # Summary of rules:
@@ -1169,13 +1169,13 @@ class ReconciledData(BaseReconciliation):
             }
         )
 
-        # missing in purchase invoice
+        # supplier reported it, not in books
         if not purchase:
-            data.match_status = MatchStatus.MISSING_IN_PI.value
+            data.match_status = MatchStatus.ONLY_IN_2A_2B.value
 
-        # missing in inward supply
+        # booked, supplier has not reported it
         elif not inward_supply:
-            data.match_status = MatchStatus.MISSING_IN_2A_2B.value
+            data.match_status = MatchStatus.ONLY_IN_BOOKS.value
             data.action = "Ignore" if purchase.get("reconciliation_status") == "Ignored" else "No Action"
 
     def get_gstin_status_map(self, reconciliation_data):
