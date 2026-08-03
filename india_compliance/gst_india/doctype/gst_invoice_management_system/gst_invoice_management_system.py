@@ -126,7 +126,7 @@ class GSTInvoiceManagementSystem(Document):
                 )
             )
 
-        # Missing in 2A/2B is ignored for IMS
+        # Only in Books is ignored for IMS
 
         ReconciledData().process_data(invoice_data, retain_doc=True)
 

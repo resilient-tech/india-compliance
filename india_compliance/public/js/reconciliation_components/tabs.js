@@ -1,5 +1,19 @@
 frappe.provide("reconciliation");
 
+// what each match type covers, shown on hover
+const MATCH_STATUS_INFO = {
+    "Exact Match": __("Bill no, GSTIN, place of supply, reverse charge and every tax amount are the same."),
+    "Suggested Match": __(
+        "Same invoice with small gaps. Bill no is close, or tax amounts differ by up to 1 rupee.",
+    ),
+    Mismatch: __("Bill no matches, but GSTIN, place of supply, reverse charge or tax amounts do not."),
+    "Residual Match": __("Everything matches except the bill no. Bill dates within 10 days."),
+    "Manual Match": __("You linked these two documents yourself."),
+    "Only in 2A/2B": __("Supplier has reported it. Not in your books."),
+    "Only in Books": __("You have booked it. Supplier has not reported it in 2A/2B."),
+    "Suggested Mark as Pending": __("Belongs to a later period. Keep it pending and claim it then."),
+};
+
 function get_gstin_status_at_invoice_date(row) {
     if (
         row.gstin_status === "Cancelled" &&
@@ -156,6 +170,13 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
             });
         });
         this.set_listeners();
+    }
+
+    get_match_status_link(match_status) {
+        const info = MATCH_STATUS_INFO[match_status] || "";
+        return `<a href="#" class="match-status" title="${frappe.utils.escape_html(
+            info,
+        )}">${match_status}</a>`;
     }
 
     get_supplier_name_gstin(row) {

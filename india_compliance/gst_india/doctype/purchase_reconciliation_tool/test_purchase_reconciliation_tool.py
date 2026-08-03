@@ -194,7 +194,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertEqual(row.supplier_name, invoices[0].supplier_name)
         self.assertEqual(row.bill_no, boe.bill_of_entry_no)
         self.assertEqual(row.classification, "IMPG")
-        self.assertEqual(row.match_status, "Missing in 2A/2B")
+        self.assertEqual(row.match_status, "Only in Books")
 
         # nothing to reconcile against, so the differences are the BoE's own totals, summed
         # over every item of both invoices rather than taken from one of them
@@ -423,7 +423,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         )
 
         self.assertEqual(result.purchase_invoice_name, pinv.name)
-        self.assertEqual(result.match_status, "Missing in 2A/2B")
+        self.assertEqual(result.match_status, "Only in Books")
         self.assertIsNone(result.inward_supply_name)
 
     def test_get_invoice_details_with_none_purchase_name(self):
@@ -454,7 +454,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         )
 
         self.assertEqual(result.inward_supply_name, gst_is.name)
-        self.assertEqual(result.match_status, "Missing in PI")
+        self.assertEqual(result.match_status, "Only in 2A/2B")
         self.assertIsNone(result.purchase_invoice_name)
 
     def test_link_documents_with_none_inward_supply_name(self):

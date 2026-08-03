@@ -293,10 +293,13 @@ class PurchaseReconciliationTool(Document):
         boe = []
 
         for doc in data:
-            if action == "Ignore" and "Missing" not in doc.get("match_status"):
+            # a doc with both sides is matched, a doc with one side is not
+            is_linked = doc.get("inward_supply_name") and doc.get("purchase_invoice_name")
+
+            if action == "Ignore" and is_linked:
                 continue
 
-            elif "Accept" in action and "Missing" in doc.get("match_status"):
+            elif "Accept" in action and not is_linked:
                 continue
 
             if inward_supply_name := doc.get("inward_supply_name"):
@@ -817,7 +820,7 @@ class BuildExcel:
                 if field not in row:
                     row[field] = None
 
-                # pur data in row (for invoice_summary) is polluted for Missing in PI
+                # pur data in row (for invoice_summary) is polluted for Only in 2A/2B
                 if field in purchase_fields and not row.get("name"):
                     row[field] = None
 

@@ -125,7 +125,7 @@ Object.assign(reconciliation, {
     },
 
     async create_new_purchase_invoice(row, company, company_gstin, source_doc) {
-        if (row.match_status != "Missing in PI") return;
+        if (row.match_status != "Only in 2A/2B") return;
         const doc = row._inward_supply;
 
         const { message: supplier } = await frappe.call({
