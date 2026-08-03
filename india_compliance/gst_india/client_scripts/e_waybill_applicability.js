@@ -4,6 +4,8 @@ class EwaybillApplicability {
     }
 
     is_e_waybill_applicable(show_message = false) {
+        this.frm._ewb_message_list = [];
+
         if (!gst_settings.enable_e_waybill) return false;
 
         let is_ewb_applicable = true;
@@ -11,7 +13,7 @@ class EwaybillApplicability {
 
         if (!this.frm.doc.company_gstin) {
             is_ewb_applicable = false;
-            message_list.push(__("Company GSTIN is not set. Ensure its set in Company Address."));
+            message_list.push(__("Company GSTIN is not set. Ensure it's set in Company Address."));
         }
 
         if (this.frm.doc.is_opening === "Yes") {
@@ -24,7 +26,7 @@ class EwaybillApplicability {
         // at least one item is not a service
         is_ewb_applicable = this.has_goods_item(is_ewb_applicable, message_list);
 
-        this.frm._ewb_message_list = show_message ? message_list : [];
+        if (show_message) this.frm._ewb_message_list.push(...message_list);
 
         return is_ewb_applicable;
     }
@@ -202,6 +204,8 @@ class DeliveryNoteEwaybill extends EwaybillApplicability {
 
 class StockEntryEwaybill extends EwaybillApplicability {
     is_e_waybill_applicable(show_message = false) {
+        this.frm._ewb_message_list = [];
+
         if (
             !gst_settings.enable_e_waybill ||
             !gst_settings.enable_e_waybill_for_sc ||
@@ -215,12 +219,12 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
         if (is_return && !this.frm.doc.bill_to_gstin) {
             is_ewb_applicable = false;
-            message_list.push(__("Bill To GSTIN is not set. Ensure its set in Bill To Address."));
+            message_list.push(__("Bill To GSTIN is not set. Ensure it's set in Bill To Address."));
         }
 
         if (!is_return && !this.frm.doc.bill_from_gstin) {
             is_ewb_applicable = false;
-            message_list.push(__("Bill From GSTIN is not set. Ensure its set in Bill From Address."));
+            message_list.push(__("Bill From GSTIN is not set. Ensure it's set in Bill From Address."));
         }
 
         const same_gstin = this.frm.doc.bill_from_gstin === this.frm.doc.bill_to_gstin;
@@ -241,7 +245,7 @@ class StockEntryEwaybill extends EwaybillApplicability {
         // at least one item is not a service
         is_ewb_applicable = this.has_goods_item(is_ewb_applicable, message_list);
 
-        this.frm._ewb_message_list = show_message ? message_list : [];
+        if (show_message) this.frm._ewb_message_list.push(...message_list);
 
         return is_ewb_applicable;
     }
@@ -284,7 +288,7 @@ class SubcontractingReceiptEwaybill extends EwaybillApplicability {
 
         if (!this.frm.doc.supplier_address) {
             is_ewb_generatable = false;
-            message_list.push(__("Supplier addresss is mandatory for e-waybill generation."));
+            message_list.push(__("Supplier address is mandatory for e-waybill generation."));
         }
 
         if (show_message) {
