@@ -100,11 +100,15 @@ frappe.ui.form.on(DOCTYPE, {
 
     onload(frm) {
 <<<<<<< HEAD
+<<<<<<< HEAD
         add_gstr2b_alert(frm);
 
         frm.trigger("purchase_period");
         frm.trigger("inward_supply_period");
 =======
+=======
+        if (!frm.doc.period) frm.doc.period = "This Fiscal Year";
+>>>>>>> 827ae450 (fix: default period for purchase reco tool)
         frm.trigger("period");
 >>>>>>> 0832e0c8 (fix: only one date filter in purchase reco tool)
     },
