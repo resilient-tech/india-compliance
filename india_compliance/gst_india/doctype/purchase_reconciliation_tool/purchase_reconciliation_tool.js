@@ -2,9 +2,6 @@
 // For license information, please see license.txt
 
 const DOCTYPE = "Purchase Reconciliation Tool";
-const tooltip_info = {
-    period: "Documents from GSTR 2A/2B for this return period, and purchases of the same period with no match.",
-};
 
 const api_enabled = india_compliance.is_api_enabled();
 const ALERT_HTML = `
@@ -57,7 +54,6 @@ function add_gstr2b_alert(frm) {
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
         patch_set_active_tab(frm);
-        new india_compliance.quick_info_popover(frm, tooltip_info);
 
         await frappe.require(["purchase_reconciliation_tool.bundle.js", "india_compliance.bundle.css"]);
 
@@ -265,8 +261,8 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                     "Mismatch",
                     "Residual Match",
                     "Manual Match",
-                    "Missing in 2A/2B",
-                    "Missing in PI",
+                    "Only in 2A/2B",
+                    "Only in Books",
                 ],
             },
             {
@@ -403,7 +399,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 label: "Match Status",
                 fieldname: "match_status",
                 width: 200,
-                _value: (...args) => `<a href="#" class='match-status'>${args[0]}</a>`,
+                _value: (...args) => this.get_match_status_link(args[0]),
             },
             {
                 label: "Count <br>2A/2B Docs",
@@ -566,9 +562,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 label: "Match Status",
                 fieldname: "match_status",
                 width: 120,
-                _value: (...args) => {
-                    return `<a href="#" class='match-status'>${args[0]}</a>`;
-                },
+                _value: (...args) => this.get_match_status_link(args[0]),
             },
             {
                 label: "GST Inward <br>Supply",
@@ -754,8 +748,8 @@ class PurchaseReconciliationToolAction {
 class DetailViewDialog extends reconciliation.detail_view_dialog {
     _get_custom_actions() {
         const doctype = this.dialog.get_value("doctype");
-        if (this.row.match_status == "Missing in 2A/2B") return ["Link", "Ignore"];
-        else if (this.row.match_status == "Missing in PI")
+        if (this.row.match_status == "Only in Books") return ["Link", "Ignore"];
+        else if (this.row.match_status == "Only in 2A/2B")
             if (doctype == "Purchase Invoice") return ["Create", "Link", "Pending", "Ignore"];
             else return ["Link", "Pending", "Ignore"];
         else return ["Unlink", "Accept", "Pending"];
@@ -794,8 +788,8 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
     }
 
     _set_missing_doctype() {
-        if (this.row.match_status == "Missing in 2A/2B") this.missing_doctype = "GST Inward Supply";
-        else if (this.row.match_status == "Missing in PI")
+        if (this.row.match_status == "Only in Books") this.missing_doctype = "GST Inward Supply";
+        else if (this.row.match_status == "Only in 2A/2B")
             if (["IMPG", "IMPGSEZ"].includes(this.row.classification)) this.missing_doctype = "Bill of Entry";
             else this.missing_doctype = "Purchase Invoice";
         else return;
@@ -1266,7 +1260,7 @@ function apply_action(frm, action, selected_rows) {
     if (action.includes("Accept")) {
         let warn = false;
         affected_rows = affected_rows.filter((row) => {
-            if (row.match_status.includes("Missing")) {
+            if (!is_linked(row)) {
                 warn = true;
                 return false;
             }
@@ -1276,13 +1270,13 @@ function apply_action(frm, action, selected_rows) {
         if (warn)
             frappe.msgprint(
                 __(
-                    "You can only Accept values where a match is available. Rows where match is missing will be ignored.",
+                    "<strong>Accept</strong> applies only to matched rows. Rows with one side missing were skipped.",
                 ),
             );
     } else if (action == "Ignore") {
         let warn = false;
         affected_rows = affected_rows.filter((row) => {
-            if (!row.match_status.includes("Missing")) {
+            if (is_linked(row)) {
                 warn = true;
                 return false;
             }
@@ -1292,13 +1286,13 @@ function apply_action(frm, action, selected_rows) {
         if (warn)
             frappe.msgprint(
                 __(
-                    "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B or Missing in PI. These rows will be ignored.",
+                    "<strong>Ignore</strong> applies only to rows that are <strong>Only in 2A/2B</strong> or <strong>Only in Books</strong>. Matched rows were skipped.",
                 ),
             );
     } else if (action == "Pending") {
         let warn = false;
         affected_rows = affected_rows.filter((row) => {
-            if (row.match_status == "Missing in 2A/2B") {
+            if (row.match_status == "Only in Books") {
                 warn = true;
                 return false;
             }
@@ -1308,7 +1302,7 @@ function apply_action(frm, action, selected_rows) {
         if (warn)
             frappe.msgprint(
                 __(
-                    "You cannot apply <strong>Pending</strong> action on rows where data is Missing in 2A/2B. These rows will be ignored.",
+                    "<strong>Pending</strong> does not apply to <strong>Only in Books</strong> rows. They were skipped.",
                 ),
             );
     }
@@ -1325,6 +1319,10 @@ function apply_action(frm, action, selected_rows) {
 
     frm.reconciliation_tabs.refresh(new_data);
     reconciliation.after_successful_action(tab);
+}
+
+function is_linked(row) {
+    return row.purchase_invoice_name && row.inward_supply_name;
 }
 
 function has_matching_row(row, array) {
