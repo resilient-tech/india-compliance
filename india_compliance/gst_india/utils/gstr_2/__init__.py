@@ -308,6 +308,8 @@ def save_gstr_2a(gstin, return_period, json_data):
             title=_("Invalid Response Received."),
         )
 
+    raw_data = dict(json_data)
+
     for action, category in GSTR_2A_ACTIONS.items():
         if action.lower() not in json_data:
             continue
@@ -317,7 +319,7 @@ def save_gstr_2a(gstin, return_period, json_data):
         # making consistent with GSTR2b
         json_data[category.value.lower()] = json_data.pop(action.lower())
 
-    store_raw_return_data(gstin, return_type.value, return_period, json_data)
+    store_raw_return_data(gstin, return_type.value, return_period, raw_data)
     save_gstr(gstin, return_type, return_period, json_data)
 
 
