@@ -1,19 +1,13 @@
 # Copyright (c) 2024, Resilient Tech and Contributors
 # See license.txt
 
-<<<<<<< HEAD
-=======
 import copy
 from unittest.mock import Mock, patch
 
->>>>>>> ff13522e (fix: persist raw 2a and 2b token in gst return log)
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
-<<<<<<< HEAD
-from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import add_comment_to_gst_return_log
-=======
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     add_comment_to_gst_return_log,
     get_gst_return_log,
@@ -21,7 +15,6 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     store_raw_return_data,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import download_gstr1_json_data
->>>>>>> ff13522e (fix: persist raw 2a and 2b token in gst return log)
 
 
 class TestGSTReturnLog(IntegrationTestCase):
@@ -58,8 +51,6 @@ class TestGSTReturnLog(IntegrationTestCase):
         )
         self.assertTrue(comment)
         self.assertIn("has been submitted by", comment.content)
-<<<<<<< HEAD
-=======
 
     def test_portal_data_roundtrip(self):
         payload = {
@@ -94,4 +85,3 @@ class TestGSTReturnLog(IntegrationTestCase):
             stored = frappe.db.get_value("GST Return Log", self.log_name, "is_nil")
             self.assertEqual(stored, expected)
             self.assertNotIsInstance(stored, bool, "is_nil must be stored as 0/1, not a bool")
->>>>>>> ff13522e (fix: persist raw 2a and 2b token in gst return log)
