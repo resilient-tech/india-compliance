@@ -357,10 +357,10 @@ class TestMultiFileRawMerge(IntegrationTestCase):
     def test_docs_concat_summary_not_doubled(self):
         combined = {}
         file1 = {"itcsumm": {"itcavl": 100}, "docdata": {"b2b": [{"inum": "1"}]}}
-        file2 = {"itcsumm": {"itcavl": 100}, "docdata": {"b2b": [{"inum": "2"}], "cdnr": [{"nt": "9"}]}}
+        file2 = {"itcsumm": {"itcavl": 150}, "docdata": {"b2b": [{"inum": "2"}], "cdnr": [{"nt": "9"}]}}
         merge_dicts(combined, file1)
         merge_dicts(combined, file2)
 
         self.assertEqual(combined["docdata"]["b2b"], [{"inum": "1"}, {"inum": "2"}])
         self.assertEqual(combined["docdata"]["cdnr"], [{"nt": "9"}])
-        self.assertEqual(combined["itcsumm"]["itcavl"], 100)  # newer-wins, NOT 200
+        self.assertEqual(combined["itcsumm"]["itcavl"], 150)
