@@ -40,6 +40,16 @@ class TestAssertRoundtrip(unittest.TestCase):
     def test_int_float_equal(self):
         assert_roundtrip({"n": 5}, {"n": 5.0})
 
+    def test_big_int_not_flattened(self):
+        with self.assertRaises(AssertionError):
+            assert_roundtrip({"n": 9007199254740992}, {"n": 9007199254740993})
+
+    def test_nested_empty_dict_vs_absent(self):
+        assert_roundtrip({"a": {"b": ""}}, {})
+
+    def test_empty_list_record_vs_absent(self):
+        assert_roundtrip({"rows": [{"a": 1}, {"b": ""}]}, {"rows": [{"a": 1}]})
+
     def test_nested_mismatch_reports_path(self):
         a = {"b2b": [{"items": [{"txval": 10.0}]}]}
         b = {"b2b": [{"items": [{"txval": 11.0}]}]}

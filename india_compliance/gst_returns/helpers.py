@@ -17,6 +17,8 @@ def parse_date(value, fmt="%Y-%m-%d"):
     """str -> date"""
     if not value:
         return None
+    if isinstance(value, datetime):
+        return value.date()
     if isinstance(value, date):
         return value
     return datetime.strptime(value, fmt).date()

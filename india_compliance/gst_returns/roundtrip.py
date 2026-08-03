@@ -2,14 +2,14 @@ _MISSING = object()
 
 
 def _clean(value, precision):
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)):
-        return round(float(value), precision)
+    if isinstance(value, float):
+        return round(value, precision)
     if isinstance(value, dict):
-        return {k: _clean(v, precision) for k, v in value.items() if not _is_empty(v)}
+        cleaned = ((k, _clean(v, precision)) for k, v in value.items())
+        return {k: v for k, v in cleaned if not _is_empty(v)}
     if isinstance(value, (list, tuple)):
-        return [_clean(v, precision) for v in value]
+        cleaned = (_clean(v, precision) for v in value)
+        return [v for v in cleaned if not _is_empty(v)]
     return value
 
 
