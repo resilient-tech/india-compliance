@@ -40,12 +40,12 @@ class ISDController(Document):
         if self.is_distribution_side():
             return False
 
-        if not self.recipient_gstin:
+        if not self.company_gstin:
             return True
 
         return (
-            frappe.get_cached_value("Address", self.recipient_address, "gst_category") == "Unregistered"
-            if self.recipient_address
+            frappe.get_cached_value("Address", self.company_address, "gst_category") == "Unregistered"
+            if self.company_address
             else False
         )
 
@@ -86,85 +86,89 @@ class ISDController(Document):
         self.set_address_display()
 
     def validate_address_links(self):
-        # Each address must be enabled and linked to the entity that owns it. self.company owns the
-        # distribution address on the Distribution Invoice and the recipient address on the Recipient
-        # Invoice; Similar logic for recipient side.
-        if self.is_distribution_side():
-            company_address, company_label = self.distribution_address, _("Distribution Address")
-            counterparty_address, counterparty_label = self.recipient_address, _("Recipient Address")
-        else:
-            company_address, company_label = self.recipient_address, _("Recipient Address")
-            counterparty_address, counterparty_label = self.distribution_address, _("Distribution Address")
-
+        # Each address must be enabled and linked to the entity that owns it
         counterparty_type = self.party_type if self.is_against_party else "Company"
         counterparty_name = self.party if self.is_against_party else self.company
 
-        if company_address and not self.is_linked(company_address, "Company", self.company):
+        if self.company_address and not self.is_linked(self.company_address, "Company", self.company):
             frappe.throw(
                 _(
                     "{0} {1} is not valid for this ISD distribution. Address should be enabled and linked to Company {2}."
-                ).format(company_label, get_link_to_form("Address", company_address), self.company),
+                ).format(
+                    _("Company Address"),
+                    get_link_to_form("Address", self.company_address),
+                    self.company,
+                ),
                 title=_("Invalid Address"),
             )
 
-        if counterparty_address and not self.is_linked(
-            counterparty_address, counterparty_type, counterparty_name
+        if self.party_address and not self.is_linked(
+            self.party_address, counterparty_type, counterparty_name
         ):
             frappe.throw(
                 _(
                     "{0} {1} is not valid for this ISD distribution. Address should be enabled and linked to the {2} {3}."
                 ).format(
-                    counterparty_label,
-                    get_link_to_form("Address", counterparty_address),
+                    _("Party Address"),
+                    get_link_to_form("Address", self.party_address),
                     counterparty_type,
                     counterparty_name,
                 ),
                 title=_("Invalid Address"),
             )
 
+    def get_distribution_and_recipient_address(self):
+        """(distribution address, recipient address) — the company is the distributor when
+        distributing, the recipient when receiving."""
+        if self.is_distribution_side():
+            return self.company_address, self.party_address
+
+        return self.party_address, self.company_address
+
     def validate_isd_party(self):
-        # The distribution address is always the Input Service Distributor; the recipient address is
-        # always a non-ISD recipient.
+        # Credit always flows from an Input Service Distributor to a non-ISD recipient.
+        distribution_address, recipient_address = self.get_distribution_and_recipient_address()
+
         if (
-            self.distribution_address
-            and frappe.get_cached_value("Address", self.distribution_address, "gst_category")
-            != ISD_GST_CATEGORY
+            distribution_address
+            and frappe.get_cached_value("Address", distribution_address, "gst_category") != ISD_GST_CATEGORY
         ):
             frappe.throw(
                 _("Distribution address {0} is not registered as an Input Service Distributor (ISD).").format(
-                    get_link_to_form("Address", self.distribution_address)
+                    get_link_to_form("Address", distribution_address)
                 )
             )
 
         if (
-            self.recipient_address
-            and frappe.get_cached_value("Address", self.recipient_address, "gst_category") == ISD_GST_CATEGORY
+            recipient_address
+            and frappe.get_cached_value("Address", recipient_address, "gst_category") == ISD_GST_CATEGORY
         ):
             frappe.throw(
                 _("Recipient address {0} must not be an Input Service Distributor (ISD).").format(
-                    get_link_to_form("Address", self.recipient_address)
+                    get_link_to_form("Address", recipient_address)
                 )
             )
 
     def validate_gstins(self):
-        for gstin in (self.distribution_gstin, self.recipient_gstin):
+        # the checks below are symmetric, so they hold whichever side the company is on
+        for gstin in (self.company_gstin, self.party_gstin):
             if gstin:
                 validate_gstin_status(gstin, self)
 
-        if not (self.distribution_gstin and self.recipient_gstin):
+        if not (self.company_gstin and self.party_gstin):
             return
 
-        if self.distribution_gstin == self.recipient_gstin:
+        if self.company_gstin == self.party_gstin:
             frappe.throw(
                 _("Credit cannot be distributed to the same GSTIN {0}.").format(
-                    frappe.bold(self.distribution_gstin)
+                    frappe.bold(self.company_gstin)
                 )
             )
 
-        if self.distribution_gstin[2:12] != self.recipient_gstin[2:12]:
+        if self.company_gstin[2:12] != self.party_gstin[2:12]:
             frappe.throw(
                 _("PAN of Distribution GSTIN {0} and Recipient GSTIN {1} must be the same.").format(
-                    frappe.bold(self.distribution_gstin), frappe.bold(self.recipient_gstin)
+                    frappe.bold(self.company_gstin), frappe.bold(self.party_gstin)
                 )
             )
 
@@ -176,12 +180,12 @@ class ISDController(Document):
         return f"{state_number}-{state}" if state else None
 
     def set_pos_from_address(self):
-        self.distribution_pos = self._get_pos(self.distribution_address)
-        self.recipient_pos = self._get_pos(self.recipient_address)
+        self.company_pos = self._get_pos(self.company_address)
+        self.party_pos = self._get_pos(self.party_address)
 
     def set_address_display(self):
-        self.distribution_address_display = get_address_display(self.distribution_address)
-        self.recipient_address_display = get_address_display(self.recipient_address)
+        self.company_address_display = get_address_display(self.company_address)
+        self.party_address_display = get_address_display(self.party_address)
 
     # ------------------------------------------------------------------ turnover ratio
 
@@ -468,8 +472,6 @@ class ISDController(Document):
         # GST Expense / expense-head postings are Profit & Loss accounts that require a cost center;
         if not self.cost_center:
             self.cost_center = frappe.get_cached_value("Company", self.company, "cost_center")
-
-        self.company_gstin = self.distribution_gstin if self.is_distribution_side() else self.recipient_gstin
 
         self._book_expenses = should_distribute_expense()
 

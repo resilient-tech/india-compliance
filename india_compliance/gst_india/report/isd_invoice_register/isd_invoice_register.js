@@ -51,8 +51,7 @@ frappe.query_reports["ISD Invoice Register"] = {
             on_change: function () {
                 frappe.query_report.set_filter_value({
                     company_gstin: "",
-                    distributor_gstin: "",
-                    recipient_gstin: "",
+                    party_gstin: "",
                     purchase_invoice: "",
                 });
             },
@@ -73,34 +72,22 @@ frappe.query_reports["ISD Invoice Register"] = {
             label: __("Company GSTIN"),
             fieldtype: "Autocomplete",
             allow_custom: true,
-            depends_on: 'eval:doc.report_view === "Purchase Invoice"',
             get_query() {
                 const company = frappe.query_report.get_filter_value("company");
                 return india_compliance.get_gstin_query(company);
             },
         },
         {
-            fieldname: "distributor_gstin",
-            label: __("Distributor GSTIN"),
+            // the counterparty: the branch on the distribution view, the ISD on the recipient view
+            fieldname: "party_gstin",
+            label: __("Party GSTIN"),
             fieldtype: "Autocomplete",
             depends_on:
                 'eval:["ISD Distribution Invoice", "ISD Recipient Invoice"].includes(doc.report_view)',
             allow_custom: true,
             get_query() {
                 const company = frappe.query_report.get_filter_value("company");
-                return india_compliance.get_gstin_query(company, "Company", false);
-            },
-        },
-        {
-            fieldname: "recipient_gstin",
-            label: __("Recipient GSTIN"),
-            fieldtype: "Autocomplete",
-            depends_on:
-                'eval:["ISD Distribution Invoice", "ISD Recipient Invoice"].includes(doc.report_view)',
-            allow_custom: true,
-            get_query() {
-                const company = frappe.query_report.get_filter_value("company");
-                return india_compliance.get_gstin_query(company, "Company", true);
+                return india_compliance.get_gstin_query(company);
             },
         },
         {

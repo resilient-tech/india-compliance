@@ -25,7 +25,7 @@ class ISDRecipientInvoice(ISDController):
         if self.itc_claim_period:
             self.set_onload(
                 "is_itc_period_filed",
-                _is_gstr3b_filed(self.recipient_gstin, self.itc_claim_period),
+                _is_gstr3b_filed(self.company_gstin, self.itc_claim_period),
             )
 
     def validate(self):
@@ -90,26 +90,27 @@ class ISDRecipientInvoice(ISDController):
         source = frappe.db.get_value(
             "ISD Distribution Invoice",
             reference,
-            ["docstatus", "distribution_gstin", "recipient_gstin", "is_credit_note"],
+            ["docstatus", "company_gstin", "party_gstin", "is_credit_note"],
             as_dict=True,
         )
 
         if not source or source.docstatus != 1:
             frappe.throw(_("ISD Distribution Invoice {0} is not submitted.").format(ref_link))
 
-        # the distribution GSTIN is the ISD and the recipient GSTIN the branch on both documents,
-        # so the GSTINs match directly
-        if source.distribution_gstin != self.distribution_gstin:
+        # NOTE: the reference is the other side of the same distribution, so company/party INVERT:
+        # its company_gstin is the ISD (our party_gstin) and its party_gstin is the branch
+        # (our company_gstin). Do not "simplify" these to same-named comparisons.
+        if source.company_gstin != self.party_gstin:
             frappe.throw(
                 _("Distribution GSTIN {0} does not match ISD Distribution Invoice {1}.").format(
-                    frappe.bold(self.distribution_gstin), ref_link
+                    frappe.bold(self.party_gstin), ref_link
                 )
             )
 
-        if source.recipient_gstin != self.recipient_gstin:
+        if source.party_gstin != self.company_gstin:
             frappe.throw(
                 _("Recipient GSTIN {0} does not match ISD Distribution Invoice {1}.").format(
-                    frappe.bold(self.recipient_gstin), ref_link
+                    frappe.bold(self.company_gstin), ref_link
                 )
             )
 

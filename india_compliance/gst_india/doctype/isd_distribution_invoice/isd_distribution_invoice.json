@@ -56,15 +56,15 @@
   "address_tab",
   "address_section",
   "column_break_upnr",
-  "distribution_address",
-  "distribution_gstin",
-  "distribution_pos",
-  "distribution_address_display",
+  "company_address",
+  "company_gstin",
+  "company_pos",
+  "company_address_display",
   "column_break_sram",
-  "recipient_address",
-  "recipient_gstin",
-  "recipient_pos",
-  "recipient_address_display",
+  "party_address",
+  "party_gstin",
+  "party_pos",
+  "party_address_display",
   "additional_info_section",
   "remarks",
   "column_break_tngt",
@@ -184,16 +184,16 @@
    "options": "Project"
   },
   {
-   "fieldname": "distribution_address",
+   "fieldname": "company_address",
    "fieldtype": "Link",
-   "label": "Select Distribution Address",
+   "label": "Select Company Address (Distributor)",
    "options": "Address",
    "reqd": 1
   },
   {
-   "fieldname": "recipient_address",
+   "fieldname": "party_address",
    "fieldtype": "Link",
-   "label": "Select Recipient Address",
+   "label": "Select Party Address (Recipient)",
    "options": "Address",
    "reqd": 1
   },
@@ -206,9 +206,9 @@
    "options": "DocType"
   },
   {
-   "fieldname": "recipient_address_display",
+   "fieldname": "party_address_display",
    "fieldtype": "Text Editor",
-   "label": "Recipient Address",
+   "label": "Party Address",
    "read_only": 1
   },
   {
@@ -224,9 +224,9 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "distribution_address_display",
+   "fieldname": "company_address_display",
    "fieldtype": "Text Editor",
-   "label": "Distribution Address",
+   "label": "Company Address",
    "read_only": 1
   },
   {
@@ -235,30 +235,30 @@
    "label": "Address"
   },
   {
-   "fetch_from": "distribution_address.gstin",
-   "fieldname": "distribution_gstin",
+   "fetch_from": "company_address.gstin",
+   "fieldname": "company_gstin",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Distribution GSTIN",
+   "label": "Company GSTIN",
    "read_only": 1
   },
   {
-   "fieldname": "distribution_pos",
+   "fieldname": "company_pos",
    "fieldtype": "Data",
-   "label": "Distribution Place of Supply",
+   "label": "Company Place of Supply",
    "read_only": 1
   },
   {
-   "fetch_from": "recipient_address.gstin",
-   "fieldname": "recipient_gstin",
+   "fetch_from": "party_address.gstin",
+   "fieldname": "party_gstin",
    "fieldtype": "Data",
-   "label": "Recipient GSTIN",
+   "label": "Party GSTIN",
    "read_only": 1
   },
   {
-   "fieldname": "recipient_pos",
+   "fieldname": "party_pos",
    "fieldtype": "Data",
-   "label": "Recipient Place of Supply",
+   "label": "Party Place of Supply",
    "read_only": 1
   },
   {
@@ -436,13 +436,13 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [
-    {
-        "group": "Reference",
-        "link_doctype": "ISD Recipient Invoice",
-        "link_fieldname": "isd_distribution_invoice_reference"
-    }
+  {
+   "group": "Reference",
+   "link_doctype": "ISD Recipient Invoice",
+   "link_fieldname": "isd_distribution_invoice_reference"
+  }
  ],
- "modified": "2026-07-03 16:14:59.481571",
+ "modified": "2026-08-03 18:12:05.298255",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Distribution Invoice",

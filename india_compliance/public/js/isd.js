@@ -400,8 +400,8 @@ india_compliance.ISDController = class ISDController {
     set_queries() {
         const frm = this.frm;
 
-        frm.set_query("distribution_address", () => this._address_query("distribution_address"));
-        frm.set_query("recipient_address", () => this._address_query("recipient_address"));
+        frm.set_query("company_address", () => this._address_query("company_address"));
+        frm.set_query("party_address", () => this._address_query("party_address"));
 
         frm.set_query("party_type", () => {
             return { filters: { name: ["in", ["Customer", "Supplier"]] } };
@@ -429,7 +429,7 @@ india_compliance.ISDController = class ISDController {
                     docstatus: 1,
                     is_isd_applicable: 1,
                     company: frm.doc.company,
-                    company_gstin: frm.doc.distribution_gstin,
+                    company_gstin: frm.doc.company_gstin,
                 },
             }));
             frm.set_query("credit_note_against", () => ({
@@ -439,8 +439,9 @@ india_compliance.ISDController = class ISDController {
             frm.set_query("isd_distribution_invoice_reference", () => ({
                 filters: {
                     docstatus: 1,
-                    distribution_gstin: frm.doc.distribution_gstin,
-                    recipient_gstin: frm.doc.recipient_gstin,
+                    // company/party invert on the distribution invoice
+                    company_gstin: frm.doc.party_gstin,
+                    party_gstin: frm.doc.company_gstin,
                 },
             }));
             frm.set_query("credit_note_against", () => ({ filters: { docstatus: 1 } }));
@@ -449,8 +450,9 @@ india_compliance.ISDController = class ISDController {
 
     _address_query(field) {
         const frm = this.frm;
-        // distribution_address is always the ISD registration; recipient_address is always non-ISD
-        const category_op = field === "distribution_address" ? "=" : "!=";
+        // the ISD registration is the company's own address when distributing, the party's when receiving
+        const isd_field = this.is_distribution_side ? "company_address" : "party_address";
+        const category_op = field === isd_field ? "=" : "!=";
         const extra = [["gst_category", category_op, "Input Service Distributor"]];
 
         if (!frm.doc.company) {
@@ -458,12 +460,8 @@ india_compliance.ISDController = class ISDController {
             return india_compliance.get_address_query("", "", extra);
         }
 
-        // invoice owner address is linked by frm.doc.company
-        const invoice_owner_address = this.is_distribution_side
-            ? "distribution_address"
-            : "recipient_address";
-
-        if (!frm.doc.is_against_party || invoice_owner_address == field) {
+        // company_address is always linked to frm.doc.company
+        if (!frm.doc.is_against_party || field === "company_address") {
             return india_compliance.get_address_query("Company", frm.doc.company, extra);
         }
 
@@ -492,7 +490,7 @@ india_compliance.ISDController = class ISDController {
                     is_against_party: frm.doc.is_against_party || 0,
                     party_type: frm.doc.party_type || null,
                     party: frm.doc.party || null,
-                    recipient_address: frm.doc.recipient_address || null,
+                    party_address: frm.doc.party_address || null,
                     posting_date: frm.doc.posting_date || null,
                     branch_turnover: frm.doc.branch_turnover || null,
                 },
@@ -538,17 +536,15 @@ india_compliance.ISDController = class ISDController {
         const frm = this.frm;
 
         // SEZ / overseas recipient is always inter-state (IGST), regardless of place of supply
-        if (frm.doc.recipient_address) {
-            const { message } = await frappe.db.get_value(
-                "Address",
-                frm.doc.recipient_address,
-                "gst_category",
-            );
+        const recipient_address = this.is_distribution_side ? frm.doc.party_address : frm.doc.company_address;
+
+        if (recipient_address) {
+            const { message } = await frappe.db.get_value("Address", recipient_address, "gst_category");
             if (frappe.boot.import_gst_categories.includes(message?.gst_category)) return true;
         }
 
-        if (frm.doc.distribution_pos && frm.doc.recipient_pos)
-            return frm.doc.distribution_pos !== frm.doc.recipient_pos;
+        // the comparison is symmetric, so it holds whichever side the company is on
+        if (frm.doc.company_pos && frm.doc.party_pos) return frm.doc.company_pos !== frm.doc.party_pos;
 
         return false;
     }

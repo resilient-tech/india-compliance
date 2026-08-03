@@ -141,9 +141,9 @@ def get_distribution_invoice_data(filters):
         .select(
             dist.name.as_("isd_distribution_invoice"),
             dist.posting_date,
-            dist.distribution_gstin.as_("distributor_gstin"),
-            dist.recipient_gstin,
-            dist.recipient_pos,
+            dist.company_gstin,
+            dist.party_gstin,
+            dist.party_pos,
             dist.is_credit_note,
             src.is_ineligible_for_itc,
             Case().when(src.is_ineligible_for_itc == 0, "Eligible").else_("Ineligible").as_("eligibility"),
@@ -172,14 +172,14 @@ def get_distribution_invoice_data(filters):
         if permitted:
             query = query.where(dist.company.isin(permitted))
 
-    if filters.get("distributor_gstin"):
-        query = query.where(dist.distribution_gstin == filters.distributor_gstin)
+    if filters.get("company_gstin"):
+        query = query.where(dist.company_gstin == filters.company_gstin)
 
-    if filters.get("recipient_gstin"):
-        query = query.where(dist.recipient_gstin == filters.recipient_gstin)
+    if filters.get("party_gstin"):
+        query = query.where(dist.party_gstin == filters.party_gstin)
 
     if filters.get("recipient_state"):
-        query = query.where(dist.recipient_pos == get_pos_for_state(filters.recipient_state))
+        query = query.where(dist.party_pos == get_pos_for_state(filters.recipient_state))
 
     if filters.get("is_credit_note"):
         query = query.where(dist.is_credit_note == 1)
@@ -204,9 +204,9 @@ def get_recipient_invoice_data(filters):
         .select(
             rec.name.as_("isd_recipient_invoice"),
             rec.posting_date,
-            rec.distribution_gstin,
-            rec.recipient_gstin,
-            rec.recipient_pos,
+            rec.party_gstin,
+            rec.company_gstin,
+            rec.company_pos,
             rec.isd_distribution_invoice_reference,
             rec.external_isd_invoice_number,
             rec.is_credit_note,
@@ -232,14 +232,14 @@ def get_recipient_invoice_data(filters):
         if permitted:
             query = query.where(rec.company.isin(permitted))
 
-    if filters.get("distributor_gstin"):
-        query = query.where(rec.distribution_gstin == filters.distributor_gstin)
+    if filters.get("company_gstin"):
+        query = query.where(rec.company_gstin == filters.company_gstin)
 
-    if filters.get("recipient_gstin"):
-        query = query.where(rec.recipient_gstin == filters.recipient_gstin)
+    if filters.get("party_gstin"):
+        query = query.where(rec.party_gstin == filters.party_gstin)
 
     if filters.get("recipient_state"):
-        query = query.where(rec.recipient_pos == get_pos_for_state(filters.recipient_state))
+        query = query.where(rec.company_pos == get_pos_for_state(filters.recipient_state))
 
     if filters.get("is_credit_note"):
         query = query.where(rec.is_credit_note == 1)
@@ -309,13 +309,13 @@ def _get_purchase_invoice_columns(company_currency):
 def _get_distribution_invoice_columns(company_currency):
     return [
         {
-            "fieldname": "distributor_gstin",
+            "fieldname": "company_gstin",
             "label": _("Distributor GSTIN"),
             "fieldtype": "Data",
             "width": 180,
         },
-        {"fieldname": "recipient_gstin", "label": _("Recipient GSTIN"), "fieldtype": "Data", "width": 180},
-        {"fieldname": "recipient_pos", "label": _("Recipient POS"), "fieldtype": "Data", "width": 130},
+        {"fieldname": "party_gstin", "label": _("Recipient GSTIN"), "fieldtype": "Data", "width": 180},
+        {"fieldname": "party_pos", "label": _("Recipient POS"), "fieldtype": "Data", "width": 130},
         {
             "fieldname": "isd_distribution_invoice",
             "label": _("ISD Distribution Invoice"),
@@ -345,13 +345,13 @@ def _get_distribution_invoice_columns(company_currency):
 def _get_recipient_invoice_columns(company_currency):
     return [
         {
-            "fieldname": "distribution_gstin",
+            "fieldname": "party_gstin",
             "label": _("Distribution GSTIN"),
             "fieldtype": "Data",
             "width": 180,
         },
-        {"fieldname": "recipient_gstin", "label": _("Recipient GSTIN"), "fieldtype": "Data", "width": 180},
-        {"fieldname": "recipient_pos", "label": _("Recipient POS"), "fieldtype": "Data", "width": 130},
+        {"fieldname": "company_gstin", "label": _("Recipient GSTIN"), "fieldtype": "Data", "width": 180},
+        {"fieldname": "company_pos", "label": _("Recipient POS"), "fieldtype": "Data", "width": 130},
         {
             "fieldname": "isd_recipient_invoice",
             "label": _("ISD Recipient Invoice"),

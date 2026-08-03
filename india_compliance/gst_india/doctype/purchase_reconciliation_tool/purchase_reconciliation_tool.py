@@ -393,7 +393,7 @@ class PurchaseReconciliationTool(Document):
         ISD = frappe.qb.DocType("ISD Recipient Invoice")
         query = (
             self.ReconciledData.query_isd_invoice()
-            .where(IfNull(ISD.distribution_gstin, "").like(f"%{filters.supplier_gstin}%"))
+            .where(IfNull(ISD.party_gstin, "").like(f"%{filters.supplier_gstin}%"))
             .where(ISD.posting_date[filters.bill_from_date : filters.bill_to_date])
         )
 

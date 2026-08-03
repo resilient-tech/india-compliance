@@ -73,8 +73,8 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
 
     def _recipient(self, **overrides):
         fields = dict(
-            distribution_address=self.isd_address.name,
-            recipient_address=self.recipient_address.name,
+            party_address=self.isd_address.name,
+            company_address=self.recipient_address.name,
             branch_turnover=25,
             total_turnover=100,
             do_not_save=True,
@@ -91,8 +91,8 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         pi = make_isd_pi(self.isd_address.name)
         ref = create_distribution_invoice(
             purchase_invoice=pi,
-            distribution_address=self.isd_address.name,
-            recipient_address=self.recipient_address.name,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
             branch_turnover=branch,
             total_turnover=total,
         )
@@ -103,15 +103,15 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
     def test_address_validations(self):
         # On the recipient side the company owns the recipient address; one linked to a Customer
         # (not the company) is invalid.
-        doc = self._recipient(recipient_address="_Test Registered Customer-Billing")
+        doc = self._recipient(company_address="_Test Registered Customer-Billing")
         self.assertRaisesRegex(
             VALIDATION_ERROR, "is not valid for this ISD distribution", doc.validate_address_links
         )
 
         # Against a party, the counterparty (distribution) address must be linked to the party.
         doc = self._recipient(
-            recipient_address=self.recipient_address.name,
-            distribution_address=self.isd_address.name,
+            company_address=self.recipient_address.name,
+            party_address=self.isd_address.name,
             is_against_party=1,
             party_type="Customer",
             party=self.branch_customer.name,
@@ -121,12 +121,12 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         )
 
         # The distribution address must be of ISD category; the recipient address must not be.
-        doc = self._recipient(distribution_address=self.recipient_address.name)
+        doc = self._recipient(party_address=self.recipient_address.name)
         self.assertRaisesRegex(
             VALIDATION_ERROR, "not registered as an Input Service Distributor", doc.validate_isd_party
         )
 
-        doc = self._recipient(recipient_address=self.isd_address.name)
+        doc = self._recipient(company_address=self.isd_address.name)
         self.assertRaisesRegex(
             VALIDATION_ERROR, "must not be an Input Service Distributor", doc.validate_isd_party
         )
@@ -134,8 +134,8 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         # A fully valid pair passes and the place of supply is derived from each address.
         doc = self._recipient()
         doc.validate_addresses()
-        self.assertEqual(doc.distribution_pos, "24-Gujarat")
-        self.assertEqual(doc.recipient_pos, "24-Gujarat")
+        self.assertEqual(doc.party_pos, "24-Gujarat")
+        self.assertEqual(doc.company_pos, "24-Gujarat")
 
     # ------------------------------------------------------------------ inter-state IGST-only
     def test_gst_account_type_validations(self):
@@ -145,7 +145,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
 
         # inter-state: CGST/SGST cannot be received; only IGST is valid
         doc = self._recipient(
-            recipient_address=self.recipient_address_ka.name,
+            company_address=self.recipient_address_ka.name,
             source_items=[{"item_code": "_Test Service Item", "distributed_cgst": 100}],
         )
         setup(doc)
@@ -155,7 +155,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
 
         # inter-state with only IGST passes
         doc = self._recipient(
-            recipient_address=self.recipient_address_ka.name,
+            company_address=self.recipient_address_ka.name,
             source_items=[{"item_code": "_Test Service Item", "distributed_igst": 200}],
         )
         setup(doc)
@@ -179,8 +179,8 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         pi = make_isd_pi(self.isd_address.name)
         draft = create_distribution_invoice(
             purchase_invoice=pi,
-            distribution_address=self.isd_address.name,
-            recipient_address=self.recipient_address.name,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
             do_not_submit=True,
         )
         doc = self._recipient(isd_distribution_invoice_reference=draft.name)
@@ -190,7 +190,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
 
         # the distribution GSTIN must match the reference
         doc = self._recipient(isd_distribution_invoice_reference=ref.name)
-        doc.distribution_gstin = RECIPIENT_KA_GSTIN
+        doc.party_gstin = RECIPIENT_KA_GSTIN
         self.assertRaisesRegex(
             VALIDATION_ERROR,
             "Distribution GSTIN .* does not match",
@@ -199,7 +199,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
 
         # the recipient GSTIN must match the reference
         doc = self._recipient(isd_distribution_invoice_reference=ref.name)
-        doc.recipient_gstin = RECIPIENT_KA_GSTIN
+        doc.company_gstin = RECIPIENT_KA_GSTIN
         self.assertRaisesRegex(
             VALIDATION_ERROR, "Recipient GSTIN .* does not match", doc.validate_reference_distribution_invoice
         )
@@ -282,7 +282,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         )
 
         doc = self._recipient(
-            recipient_address=unregistered_address.name,
+            company_address=unregistered_address.name,
             source_items=make_source_item(self.pi, ratio=0.25),
         )
         doc.insert()
@@ -451,7 +451,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         doc = self.create_receipent_doc()
         current_period = doc.itc_claim_period
 
-        with _gstr3b_filed(doc.recipient_gstin, doc.posting_date):
+        with _gstr3b_filed(doc.company_gstin, doc.posting_date):
             # move to another period -> blocked
             doc.itc_claim_period = format_period(add_months(doc.posting_date, 1))
             self.assertRaisesRegex(
@@ -482,7 +482,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         doc = self.create_receipent_doc()
         next_date = getdate(add_months(doc.posting_date, 1))
 
-        with _gstr3b_filed(doc.recipient_gstin, next_date):
+        with _gstr3b_filed(doc.company_gstin, next_date):
             doc.itc_claim_period = format_period(next_date)
             self.assertRaisesRegex(
                 VALIDATION_ERROR,

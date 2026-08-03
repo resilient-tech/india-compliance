@@ -713,9 +713,9 @@ class ISDInvoice:
             query = query.where(self.company == self.ISD.company)
 
         if self.company_gstin == "All":
-            query = query.where(self.ISD.recipient_gstin.notnull())
+            query = query.where(self.ISD.company_gstin.notnull())
         else:
-            query = query.where(self.company_gstin == self.ISD.recipient_gstin)
+            query = query.where(self.company_gstin == self.ISD.company_gstin)
 
         if self.include_ignored == 0:
             query = query.where(IfNull(self.ISD.reconciliation_status, "") != "Ignored")
@@ -733,8 +733,8 @@ class ISDInvoice:
             )
             .else_(self.ISD.external_isd_invoice_number)
             .as_("bill_no"),
-            self.ISD.distribution_gstin.as_("supplier_gstin"),
-            self.ISD.recipient_gstin.as_("company_gstin"),
+            self.ISD.party_gstin.as_("supplier_gstin"),
+            self.ISD.company_gstin,
             self.ISD.posting_date.as_("bill_date"),
             self.ISD.posting_date,
             LiteralValue("NULL").as_("place_of_supply"),

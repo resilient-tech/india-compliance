@@ -160,11 +160,11 @@ def make_isd_doc(doctype, source_items=None, **fields):
     fields.setdefault("branch_turnover", 25)
     fields.setdefault("total_turnover", 100)
 
-    # distribution_gstin / recipient_gstin are fetch_from fields that are not populated on a bare
+    # company_gstin / party_gstin are fetch_from fields that are not populated on a bare
     # new_doc, so derive them from the addresses when a caller has not set them explicitly.
     for address_field, gstin_field in (
-        ("distribution_address", "distribution_gstin"),
-        ("recipient_address", "recipient_gstin"),
+        ("company_address", "company_gstin"),
+        ("party_address", "party_gstin"),
     ):
         if fields.get(address_field) and gstin_field not in fields:
             fields[gstin_field] = frappe.db.get_value("Address", fields[address_field], "gstin")
@@ -421,8 +421,8 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
 
     def _full_distribution(self, pi=None, branch=25, total=100, **kwargs):
         """An unsaved ISD Distribution Invoice mirroring the Purchase Invoice's items."""
-        kwargs.setdefault("distribution_address", self.isd_address.name)
-        kwargs.setdefault("recipient_address", self.recipient_address.name)
+        kwargs.setdefault("company_address", self.isd_address.name)
+        kwargs.setdefault("party_address", self.recipient_address.name)
         kwargs.setdefault("do_not_save", True)
         return create_distribution_invoice(
             purchase_invoice=pi or self.pi, branch_turnover=branch, total_turnover=total, **kwargs
@@ -493,11 +493,11 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         ).insert(ignore_permissions=True)
         self.addCleanup(frappe.delete_doc, "Turnover Record", record.name, force=True)
 
-        def branch_turnover(recipient_address):
+        def branch_turnover(party_address):
             return get_isd_autofill_values(
                 "ISD Distribution Invoice",
-                "recipient_address",
-                {"company": COMPANY, "recipient_address": recipient_address, "posting_date": today()},
+                "party_address",
+                {"company": COMPANY, "party_address": party_address, "posting_date": today()},
             ).branch_turnover
 
         # recipient in Gujarat -> its turnover is filled from the record
@@ -510,10 +510,10 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         self.assertEqual(
             get_isd_autofill_values(
                 "ISD Distribution Invoice",
-                "recipient_address",
+                "party_address",
                 {
                     "company": COMPANY,
-                    "recipient_address": self.recipient_address_ka.name,
+                    "party_address": self.recipient_address_ka.name,
                     "posting_date": today(),
                     "branch_turnover": 1234,
                 },
@@ -522,13 +522,14 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         )
 
         # the recipient side never autofills a branch turnover
+        # (on that doctype the recipient registration is the company's own address)
         self.assertIsNone(
             get_isd_autofill_values(
                 "ISD Recipient Invoice",
-                "recipient_address",
+                "company_address",
                 {
                     "company": COMPANY,
-                    "recipient_address": self.recipient_address.name,
+                    "company_address": self.recipient_address.name,
                     "posting_date": today(),
                 },
             ).get("branch_turnover")
@@ -538,15 +539,15 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
     def test_address_validations(self):
         # On the distribution side, the company owns the distribution address; one linked to a Customer
         # (not the company) is invalid.
-        doc = make_distribution_invoice(distribution_address="_Test Registered Customer-Billing")
+        doc = make_distribution_invoice(company_address="_Test Registered Customer-Billing")
         self.assertRaisesRegex(
             VALIDATION_ERROR, "is not valid for this ISD distribution", doc.validate_address_links
         )
 
         # Against a party, the recipient address must be linked to the party, not the company.
         doc = make_distribution_invoice(
-            distribution_address=self.isd_address.name,
-            recipient_address=self.recipient_address.name,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
             is_against_party=1,
             party_type="Customer",
             party=self.branch_customer.name,
@@ -556,33 +557,33 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         )
 
         # The distribution address must be of ISD category; the recipient address must not be.
-        doc = make_distribution_invoice(distribution_address=self.recipient_address.name)
+        doc = make_distribution_invoice(company_address=self.recipient_address.name)
         self.assertRaisesRegex(
             VALIDATION_ERROR, "not registered as an Input Service Distributor", doc.validate_isd_party
         )
 
-        doc = make_distribution_invoice(recipient_address=self.isd_address.name)
+        doc = make_distribution_invoice(party_address=self.isd_address.name)
         self.assertRaisesRegex(
             VALIDATION_ERROR, "must not be an Input Service Distributor", doc.validate_isd_party
         )
 
         # A fully valid pair passes and the place of supply is derived from each address.
         doc = make_distribution_invoice(
-            distribution_address=self.isd_address.name, recipient_address=self.recipient_address.name
+            company_address=self.isd_address.name, party_address=self.recipient_address.name
         )
         doc.validate_addresses()
-        self.assertEqual(doc.distribution_pos, "24-Gujarat")
-        self.assertEqual(doc.recipient_pos, "24-Gujarat")
+        self.assertEqual(doc.company_pos, "24-Gujarat")
+        self.assertEqual(doc.party_pos, "24-Gujarat")
 
     def test_gstin_validations(self):
         # credit cannot be distributed to the same GSTIN
-        doc = make_distribution_invoice(distribution_gstin=ISD_GSTIN, recipient_gstin=ISD_GSTIN)
+        doc = make_distribution_invoice(company_gstin=ISD_GSTIN, party_gstin=ISD_GSTIN)
         self.assertRaisesRegex(
             VALIDATION_ERROR, "cannot be distributed to the same GSTIN", doc.validate_gstins
         )
 
         # the PAN of both GSTINs must be the same
-        doc = make_distribution_invoice(distribution_gstin=ISD_GSTIN, recipient_gstin=MISMATCH_PAN_GSTIN)
+        doc = make_distribution_invoice(company_gstin=ISD_GSTIN, party_gstin=MISMATCH_PAN_GSTIN)
         self.assertRaisesRegex(VALIDATION_ERROR, "must be the same", doc.validate_gstins)
 
     # ------------------------------------------------------------------ party account / expense heads
@@ -652,17 +653,17 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
 
         # must be submitted
         draft = make_isd_pi(self.isd_address.name, do_not_submit=True)
-        doc = make_distribution_invoice(purchase_invoice=draft.name, distribution_gstin=ISD_GSTIN)
+        doc = make_distribution_invoice(purchase_invoice=draft.name, company_gstin=ISD_GSTIN)
         self.assertRaisesRegex(VALIDATION_ERROR, "is not submitted", doc.validate_purchase_invoice)
 
         # must be ISD applicable (billed to a non-ISD address here)
         non_isd_pi = make_isd_pi("_Test Indian Registered Company-Billing")
-        doc = make_distribution_invoice(purchase_invoice=non_isd_pi.name, distribution_gstin=ISD_GSTIN)
+        doc = make_distribution_invoice(purchase_invoice=non_isd_pi.name, company_gstin=ISD_GSTIN)
         self.assertRaisesRegex(VALIDATION_ERROR, "is not ISD applicable", doc.validate_purchase_invoice)
 
         # posting date must be on or after the Purchase Invoice
         doc = make_distribution_invoice(
-            purchase_invoice=self.pi.name, distribution_gstin=ISD_GSTIN, posting_date=add_months(today(), -1)
+            purchase_invoice=self.pi.name, company_gstin=ISD_GSTIN, posting_date=add_months(today(), -1)
         )
         self.assertRaisesRegex(
             VALIDATION_ERROR, "is after this ISD Distribution Invoice", doc.validate_purchase_invoice
@@ -670,14 +671,14 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
 
         # must belong to the same company
         doc = make_distribution_invoice(
-            purchase_invoice=self.pi.name, company=BRANCH_COMPANY, distribution_gstin=ISD_GSTIN
+            purchase_invoice=self.pi.name, company=BRANCH_COMPANY, company_gstin=ISD_GSTIN
         )
         self.assertRaisesRegex(
             VALIDATION_ERROR, "belongs to a different company", doc.validate_purchase_invoice
         )
 
         # the PI's company GSTIN must be the distribution GSTIN
-        doc = make_distribution_invoice(purchase_invoice=self.pi.name, distribution_gstin=RECIPIENT_GSTIN)
+        doc = make_distribution_invoice(purchase_invoice=self.pi.name, company_gstin=RECIPIENT_GSTIN)
         self.assertRaisesRegex(
             VALIDATION_ERROR, "booked under a different Distribution GSTIN", doc.validate_purchase_invoice
         )
@@ -747,7 +748,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         # Inter-state Purchase Invoice (IGST) distributed within the same state -> IGST stays IGST on
         # both the distributor (taxes) and the recipient (distributed_*). Rule 39(1)(e).
         pi = make_isd_pi(self.isd_address.name, inter_state=True)
-        doc = self._full_distribution(pi=pi, recipient_address=self.recipient_address.name)
+        doc = self._full_distribution(pi=pi, party_address=self.recipient_address.name)
         doc.insert()
         self.assertEqual({tax.gst_tax_type for tax in doc.taxes}, {"igst"})
         self.assertEqual(self._distributed_heads(doc), {"igst"})
@@ -756,7 +757,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         # Intra-state Purchase Invoice (CGST+SGST) distributed within the same state -> both distributor
         # and recipient keep CGST+SGST.
         pi = make_isd_pi(self.isd_address.name)
-        doc = self._full_distribution(pi=pi, recipient_address=self.recipient_address.name)
+        doc = self._full_distribution(pi=pi, party_address=self.recipient_address.name)
         doc.insert()
         self.assertEqual({tax.gst_tax_type for tax in doc.taxes}, {"cgst", "sgst"})
         self.assertEqual(self._distributed_heads(doc), {"cgst", "sgst"})
@@ -765,7 +766,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         # Intra-state Purchase Invoice (CGST+SGST) distributed to a different state -> the recipient
         # receives IGST only (CGST+SGST fused), while the distributor still reduces the source CGST+SGST.
         pi = make_isd_pi(self.isd_address.name)
-        doc = self._full_distribution(pi=pi, recipient_address=self.recipient_address_ka.name)
+        doc = self._full_distribution(pi=pi, party_address=self.recipient_address_ka.name)
         doc.insert()
         self.assertEqual(self._distributed_heads(doc), {"igst"})
         self.assertEqual({tax.gst_tax_type for tax in doc.taxes}, {"cgst", "sgst"})
@@ -775,7 +776,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         pi = make_isd_pi(self.isd_address.name)
         doc = self._full_distribution(
             pi=pi,
-            recipient_address=self.branch_address.name,
+            party_address=self.branch_address.name,
             is_against_party=1,
             party_type="Customer",
             party=self.branch_customer.name,
@@ -795,8 +796,8 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         pi = make_isd_pi(self.isd_address.name)
         first = create_distribution_invoice(
             purchase_invoice=pi,
-            distribution_address=self.isd_address.name,
-            recipient_address=self.recipient_address.name,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
             branch_turnover=60,
             total_turnover=100,
         )
@@ -815,8 +816,8 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         pi = make_isd_pi(self.isd_address.name)
         first = create_distribution_invoice(
             purchase_invoice=pi,
-            distribution_address=self.isd_address.name,
-            recipient_address=self.recipient_address.name,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
             branch_turnover=50,
             total_turnover=100,
         )
@@ -837,8 +838,8 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         pi = make_isd_pi(self.isd_address.name)
         doc = create_distribution_invoice(
             purchase_invoice=pi,
-            distribution_address=self.isd_address.name,
-            recipient_address=self.recipient_address.name,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
         )
 
         rows = get_gl_rows(doc)
@@ -890,8 +891,8 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         pi = make_ineligible_isd_pi(self.isd_address.name)
         doc = create_distribution_invoice(
             purchase_invoice=pi,
-            distribution_address=self.isd_address.name,
-            recipient_address=self.recipient_address.name,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
         )
 
         rows = get_gl_rows(doc)
@@ -931,8 +932,8 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         pi = make_isd_pi(self.isd_address.name)
         doc = create_distribution_invoice(
             purchase_invoice=pi,
-            distribution_address=self.isd_address.name,
-            recipient_address=self.recipient_address_ka.name,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address_ka.name,
         )
 
         accounts = get_input_gst_accounts(COMPANY)
@@ -957,16 +958,16 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         pi = make_isd_pi(self.isd_address.name)
         first = create_distribution_invoice(
             purchase_invoice=pi,
-            distribution_address=self.isd_address.name,
-            recipient_address=self.recipient_address.name,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
             branch_turnover=50,
             total_turnover=100,
         )
 
         credit_note = create_distribution_invoice(
             purchase_invoice=pi,
-            distribution_address=self.isd_address.name,
-            recipient_address=self.recipient_address.name,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
             branch_turnover=25,
             total_turnover=100,
             is_credit_note=1,
@@ -993,7 +994,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         pi = make_isd_pi(self.isd_address.name)
         doc = self._full_distribution(
             pi=pi,
-            recipient_address=self.branch_address.name,
+            party_address=self.branch_address.name,
             is_against_party=1,
             party_type="Customer",
             party=self.branch_customer.name,
@@ -1021,8 +1022,8 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         pi = make_isd_pi(self.isd_address.name)
         doc = create_distribution_invoice(
             purchase_invoice=pi,
-            distribution_address=self.isd_address.name,
-            recipient_address=self.recipient_address.name,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
         )
         recipient = get_auto_recipient_invoice(doc)
 

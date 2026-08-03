@@ -82,16 +82,16 @@ def throw_invalid_rows(message, rows):
 
 def is_inter_state_distribution(doc):
     # SEZ / overseas recipients are always inter-state (IGST), regardless of place of supply
+    _, recipient_address = doc.get_distribution_and_recipient_address()
     party_gst_category = (
-        frappe.get_cached_value("Address", doc.recipient_address, "gst_category")
-        if doc.recipient_address
-        else None
+        frappe.get_cached_value("Address", recipient_address, "gst_category") if recipient_address else None
     )
     if party_gst_category in IMPORT_GST_CATEGORIES:
         return True
 
-    if doc.distribution_pos and doc.recipient_pos:
-        return doc.distribution_pos != doc.recipient_pos
+    # the comparison is symmetric, so it holds whichever side the company is on
+    if doc.company_pos and doc.party_pos:
+        return doc.company_pos != doc.party_pos
 
     return False
 
@@ -279,36 +279,31 @@ def _resolve_isd_provisional_account(doc):
 
 
 def _resolve_isd_addresses(doc, is_distribution_side):
-    """Return (distribution_address, recipient_address)."""
+    """Return (company_address, party_address)."""
     if not doc.company:
         return None, None
 
-    # single-company setup: both addresses belong to the company
-    if not doc.is_against_party:
-        return (
-            _fetch_isd_address("Company", doc.company, isd=True),
-            _fetch_isd_address("Company", doc.company, isd=False),
-        )
+    # the company holds the ISD registration when distributing, the recipient one when receiving
+    company_address = _fetch_isd_address("Company", doc.company, isd=is_distribution_side)
 
-    company_isd_address = _fetch_isd_address("Company", doc.company, isd=is_distribution_side)
+    if not doc.is_against_party:
+        # single-company setup: the counterparty registration belongs to the company too
+        return company_address, _fetch_isd_address("Company", doc.company, isd=not is_distribution_side)
 
     # counterparty side needs a party; still fill the company-owned side meanwhile
     party_address = None
     if doc.party_type and doc.party:
         party_address = _fetch_isd_address(doc.party_type, doc.party, isd=not is_distribution_side)
 
-    if is_distribution_side:
-        # company -> distribution (ISD); party -> recipient (non-ISD)
-        return company_isd_address, party_address
-    # recipient invoice: company -> recipient (non-ISD); party -> distribution (ISD)
-    return party_address, company_isd_address
+    return company_address, party_address
 
 
 def _resolve_recipient_branch_turnover(doc):
-    if not doc.recipient_address:
+    # only called on the distribution side, where the recipient is the party
+    if not doc.party_address:
         return doc.branch_turnover
 
-    gst_state = frappe.get_cached_value("Address", doc.recipient_address, "gst_state")
+    gst_state = frappe.get_cached_value("Address", doc.party_address, "gst_state")
 
     return get_turnover_amount(gst_state, doc.posting_date)
 
@@ -336,12 +331,12 @@ def get_isd_autofill_values(doctype: str, changed_field: str, doc: str | dict):
             doc.party = _resolve_isd_party(doc)
 
         doc.isd_provisional_account = _resolve_isd_provisional_account(doc)
-        distribution_address, recipient_address = _resolve_isd_addresses(doc, is_distribution_side)
-        # company owned address is only changed when company is changing
-        if changed_field == "company" or not is_distribution_side:
-            doc.distribution_address = distribution_address
-        if changed_field == "company" or is_distribution_side:
-            doc.recipient_address = recipient_address
+        company_address, party_address = _resolve_isd_addresses(doc, is_distribution_side)
+
+        doc.party_address = party_address
+        # the company-owned address only changes when the company itself changes
+        if changed_field == "company":
+            doc.company_address = company_address
 
     if is_distribution_side:
         doc.branch_turnover = (
@@ -476,7 +471,7 @@ def bulk_create_isd_distribution_invoices(
     company, pi_posting_date = frappe.db.get_value(
         "Purchase Invoice", purchase_invoice, ["company", "posting_date"]
     )
-    distribution_address = frappe.get_value("Purchase Invoice", purchase_invoice, "billing_address")
+    company_address = frappe.get_value("Purchase Invoice", purchase_invoice, "billing_address")
     source_items = get_source_items_from_purchase_invoice(purchase_invoice)
 
     invoices, invalid = [], []
@@ -492,8 +487,8 @@ def bulk_create_isd_distribution_invoices(
                 "company": company,
                 "posting_date": posting_date,
                 "purchase_invoice": purchase_invoice,
-                "distribution_address": distribution_address,
-                "recipient_address": row.get("address"),
+                "company_address": company_address,
+                "party_address": row.get("address"),
                 "is_against_party": is_against_party,
                 "party_type": party_type if is_against_party else None,
                 "party": row.get("party") if is_against_party else None,

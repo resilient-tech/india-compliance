@@ -191,7 +191,7 @@ class ITCAvailedData:
         query = self.apply_itc_period_filter(query, doc)
 
         if self.filters.get("company_gstin"):
-            query = query.where(doc.recipient_gstin == self.filters.get("company_gstin"))
+            query = query.where(doc.company_gstin == self.filters.get("company_gstin"))
 
         return query.run(as_dict=True)
 

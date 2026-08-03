@@ -50,7 +50,7 @@ class ISDDistributionInvoice(ISDController):
         self.make_document_gl_entries()
         self.sync_distribution_percentage()
 
-        gstin, gst_state = frappe.get_cached_value("Address", self.recipient_address, ["gstin", "gst_state"])
+        gstin, gst_state = frappe.get_cached_value("Address", self.party_address, ["gstin", "gst_state"])
         turnover_record_data = [(gstin, gst_state, self.branch_turnover, self.posting_date)]
 
         frappe.enqueue(
@@ -134,7 +134,7 @@ class ISDDistributionInvoice(ISDController):
         if pi.company != self.company:
             frappe.throw(_("Purchase Invoice {0} belongs to a different company.").format(pi_link))
 
-        if pi.company_gstin != frappe.get_cached_value("Address", self.distribution_address, "gstin"):
+        if pi.company_gstin != frappe.get_cached_value("Address", self.company_address, "gstin"):
             frappe.throw(
                 _("Purchase Invoice {0} is booked under a different Distribution GSTIN.").format(pi_link)
             )
@@ -391,7 +391,7 @@ def apply_against_party_overrides(source, recipient):
         ["Dynamic Link", "link_doctype", "!=", "Company"],
     ]
 
-    distribution_address = _guess_address(source.get("distribution_gstin"), extra_filters=filters)
+    distribution_address = _guess_address(source.get("company_gstin"), extra_filters=filters)
     if distribution_address:
         link = frappe.db.get_value(
             "Dynamic Link",
@@ -411,7 +411,7 @@ def apply_against_party_overrides(source, recipient):
         ["Dynamic Link", "link_doctype", "=", "Company"],
         ["Dynamic Link", "link_name", "=", recipient_company],
     ]
-    recipient_address = _guess_address(source.get("recipient_gstin"), extra_filters=filters)
+    recipient_address = _guess_address(source.get("party_gstin"), extra_filters=filters)
 
     # Accounts and accounting dimensions belong to the source company; re-default them for the new
     # (recipient) company instead.
@@ -427,8 +427,8 @@ def apply_against_party_overrides(source, recipient):
             "is_against_party": 1,
             "party_type": party_type,
             "party": party,
-            "distribution_address": distribution_address,
-            "recipient_address": recipient_address,
+            "party_address": distribution_address,
+            "company_address": recipient_address,
             "cost_center": default_cost_center,
             "project": None,
             "isd_provisional_account": default_isd_provisional_account,
@@ -450,6 +450,8 @@ def set_missing_values(source, target):
     target.isd_distribution_invoice_reference = source.name
     target.posting_date = source.posting_date
     target.set("taxes", [])
+    target.company_address = source.party_address
+    target.party_address = source.company_address
 
     if source.is_credit_note and source.credit_note_against:
         target.credit_note_against = frappe.db.get_value(

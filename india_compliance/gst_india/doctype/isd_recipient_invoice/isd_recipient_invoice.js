@@ -7,7 +7,7 @@ frappe.ui.form.on("ISD Recipient Invoice", {
         frm.set_query("itc_claim_period", () => ({
             query: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
             params: {
-                company_gstin: frm.doc.recipient_gstin,
+                company_gstin: frm.doc.company_gstin,
                 posting_date: frm.doc.posting_date,
             },
         }));
@@ -44,14 +44,14 @@ frappe.ui.form.on("ISD Recipient Invoice", {
         frm.isd_controller.fetch_autofill("party");
     },
 
-    distribution_address(frm) {
-        frm.isd_controller.set_address_display("distribution_address", "distribution_address_display");
-        frm.isd_controller.set_pos("distribution_address", "distribution_pos");
+    party_address(frm) {
+        frm.isd_controller.set_address_display("party_address", "party_address_display");
+        frm.isd_controller.set_pos("party_address", "party_pos");
     },
 
-    recipient_address(frm) {
-        frm.isd_controller.set_address_display("recipient_address", "recipient_address_display");
-        frm.isd_controller.set_pos("recipient_address", "recipient_pos");
+    company_address(frm) {
+        frm.isd_controller.set_address_display("company_address", "company_address_display");
+        frm.isd_controller.set_pos("company_address", "company_pos");
     },
 
     // the credit received is driven by distributed_*, so the ratio is informational here
