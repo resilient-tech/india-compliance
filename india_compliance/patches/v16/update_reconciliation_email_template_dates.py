@@ -1,18 +1,28 @@
+import re
+
 import frappe
 
-# purchase and inward supply date filters became one, {{ from_date }} / {{ to_date }}
-OLD_DATES = "{{ inward_supply_from_date }} to {{ inward_supply_to_date }}"
-NEW_DATES = "{{ from_date }} to {{ to_date }}"
+# purchase and inward supply filters became one: period, from_date, to_date
+OLD_FIELDS = re.compile(r"\b(?:purchase|inward_supply)_(period|from_date|to_date)\b")
+TEMPLATE_FIELDS = ("subject", "response", "response_html")
 
 
 def execute():
-    response = frappe.db.get_value("Email Template", "Purchase Reconciliation", "response")
-    if not response or OLD_DATES not in response:
-        return
-
-    frappe.db.set_value(
+    templates = frappe.get_all(
         "Email Template",
-        "Purchase Reconciliation",
-        "response",
-        response.replace(OLD_DATES, NEW_DATES),
+        or_filters={
+            "name": "Purchase Reconciliation",
+            "reference_doctype": "Purchase Reconciliation Tool",
+        },
+        fields=("name", *TEMPLATE_FIELDS),
     )
+
+    for template in templates:
+        updates = {
+            field: OLD_FIELDS.sub(r"\1", value)
+            for field in TEMPLATE_FIELDS
+            if (value := template[field]) and OLD_FIELDS.search(value)
+        }
+
+        if updates:
+            frappe.db.set_value("Email Template", template.name, updates)
