@@ -13,6 +13,7 @@ from india_compliance.gst_india.api_classes.taxpayer_returns import (
 )
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     create_ims_return_log,
+    store_raw_return_data,
 )
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
@@ -20,6 +21,7 @@ from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
 from india_compliance.gst_india.utils import get_party_for_gstin, validate_gstin_permission
 from india_compliance.gst_india.utils.gstr_2 import gstr_2a, gstr_2b, ims
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
+from india_compliance.gst_india.utils.returns_export import merge_raw
 
 
 class GSTRCategory(Enum):
@@ -38,7 +40,6 @@ class GSTRCategory(Enum):
     B2BDN = "B2BDN"
     B2BDNA = "B2BDNA"
 
-    # GSTR 2A only
     ECOM = "ECOM"
     ECOMA = "ECOMA"
     TDS = "TDS"
@@ -92,6 +93,7 @@ def download_gstr_2a(gstin, return_periods):
 
         json_data = frappe._dict({"gstin": gstin, "fp": return_period})
         has_data = False
+        empty_categories = []
         for action, category in GSTR_2A_ACTIONS.items():
             requests_made += 1
 
@@ -115,6 +117,7 @@ def download_gstr_2a(gstin, return_periods):
                     classification=category.value,
                     data_not_found=True,
                 )
+                empty_categories.append(category.value.lower())
                 continue
 
             # Queued
@@ -146,7 +149,7 @@ def download_gstr_2a(gstin, return_periods):
             json_data[action.lower()] = data
             has_data = True
 
-        save_gstr_2a(gstin, return_period, json_data)
+        save_gstr_2a(gstin, return_period, json_data, merge=True, empty_categories=empty_categories)
 
     if queued_message:
         publish_2a_2b_queued_message()
@@ -216,9 +219,24 @@ def download_gstr_2b(gstin, return_periods):
 
         # Handle multiple files for GSTR2B
         if response.data and (file_count := response.data.get("fc")):
+            full_payload = {}
+            merged_docdata = {}
+            merged_rejdata = {}
             for file_num in range(1, file_count + 1):
                 r = api.get_data(return_period, file_num=file_num)
-                save_gstr_2b(gstin, return_period, r)
+                data = r.data or {}
+
+                merged_docdata = merge_raw(merged_docdata, data.get("docdata") or {})
+                merged_rejdata = merge_raw(merged_rejdata, data.get("docRejdata") or {})
+                if data and not full_payload:
+                    full_payload = dict(data)
+
+                save_gstr_2b(gstin, return_period, r, store_raw=False)
+
+            if full_payload:
+                full_payload["docdata"] = merged_docdata
+                full_payload["docRejdata"] = merged_rejdata
+                store_raw_return_data(gstin, ReturnType.GSTR2B.value, return_period, full_payload)
 
             continue  # skip first response if file_count is greater than 1
 
@@ -287,7 +305,7 @@ def download_ims_invoices(gstin, for_upload=False):
     return has_queued_invoices
 
 
-def save_gstr_2a(gstin, return_period, json_data):
+def save_gstr_2a(gstin, return_period, json_data, *, merge=False, empty_categories=None):
     return_type = ReturnType.GSTR2A
     if not json_data or json_data.get("gstin") != gstin or json_data.get("fp") != return_period:
         frappe.throw(
@@ -307,10 +325,15 @@ def save_gstr_2a(gstin, return_period, json_data):
         # making consistent with GSTR2b
         json_data[category.value.lower()] = json_data.pop(action.lower())
 
+    raw_payload = dict(json_data)
+    for category in empty_categories or []:
+        raw_payload[category] = []
+    store_raw_return_data(gstin, return_type.value, return_period, raw_payload, merge=merge)
+
     save_gstr(gstin, return_type, return_period, json_data)
 
 
-def save_gstr_2b(gstin, return_period, json_data):
+def save_gstr_2b(gstin, return_period, json_data, *, store_raw=True):
     json_data = json_data.data
     return_type = ReturnType.GSTR2B
     if not json_data or json_data.get("gstin") != gstin:
@@ -323,6 +346,10 @@ def save_gstr_2b(gstin, return_period, json_data):
         )
 
     create_import_log(gstin, return_type.value, return_period)
+
+    if store_raw:
+        store_raw_return_data(gstin, return_type.value, return_period, dict(json_data))
+
     save_gstr(
         gstin,
         return_type,
@@ -403,7 +430,7 @@ def update_import_history(return_periods):
 def _download_gstr_2a(gstin, return_period, json_data):
     json_data.gstin = gstin
     json_data.fp = return_period
-    save_gstr_2a(gstin, return_period, json_data)
+    save_gstr_2a(gstin, return_period, json_data, merge=True)
 
 
 def publish_2a_2b_queued_message():

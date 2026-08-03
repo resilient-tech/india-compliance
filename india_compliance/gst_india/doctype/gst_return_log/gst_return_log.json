@@ -38,7 +38,8 @@
   "column_break_ndup",
   "reconcile_summary",
   "pending_request_info_section",
-  "actions"
+  "actions",
+  "summary"
  ],
  "fields": [
   {
@@ -111,6 +112,7 @@
    "read_only": 1
   },
   {
+   "description": "Data as on the government portal (gzipped): the filed return for GSTR-1/3B, or the downloaded payload for GSTR-2A/2B (used by the GST Return Export tool).",
    "fieldname": "filed",
    "fieldtype": "Attach",
    "label": "Filed Data",
@@ -228,6 +230,15 @@
    "fieldname": "is_nil",
    "fieldtype": "Check",
    "label": "Is Nil Return",
+   "read_only": 1
+  },
+  {
+   "description": "Prepared section-wise summary (JSON) for the GST Return Export tool",
+   "fieldname": "summary",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Return Summary",
+   "no_copy": 1,
    "read_only": 1
   }
  ],

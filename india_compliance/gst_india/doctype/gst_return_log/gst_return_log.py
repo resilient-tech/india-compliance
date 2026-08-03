@@ -15,6 +15,7 @@ from frappe.utils import (
     getdate,
 )
 from frappe.utils.response import json_handler
+from frappe.utils.synchronization import filelock
 
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     FileGSTR1,
@@ -323,6 +324,27 @@ def get_compressed_data(json_data):
 
 def get_decompressed_data(content):
     return frappe.parse_json(frappe.safe_decode(gzip.decompress(content)))
+
+
+def store_raw_return_data(gstin, return_type, return_period, json_data, *, merge=False):
+    """Persist the GSTN payload (gzipped) in the period's return log `filed` field
+    (what's on the government portal), for the GST Return Export tool.
+
+    merge=True updates section keys into the existing payload; merge=False overwrites.
+    """
+    name = f"{return_type}-{return_period}-{gstin}"
+
+    with filelock(frappe.scrub(f"raw_return_{name}")):
+        get_gst_return_log(name).update_json_for("filed", json_data, overwrite=not merge)
+
+
+def get_raw_return_data(gstin, return_type, return_period):
+    """Return the stored GSTN payload (parsed) from the `filed` field, or None."""
+    name = f"{return_type}-{return_period}-{gstin}"
+    if not frappe.db.exists(DOCTYPE, name):
+        return None
+
+    return get_gst_return_log(name).get_json_for("filed")
 
 
 def create_ims_return_log(company_gstin):

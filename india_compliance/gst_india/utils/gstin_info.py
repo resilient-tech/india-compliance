@@ -92,6 +92,8 @@ def _get_gstin_info(gstin, *, doc=None, throw_error=True):
     gstin_info = frappe._dict(
         gstin=response.gstin,
         business_name=titlecase(business_name or ""),
+        legal_name=response.lgnm or "",
+        trade_name=response.tradeNam or "",
         gst_category=GST_CATEGORIES.get(response.dty, ""),
         status=response.sts,
     )
@@ -241,10 +243,16 @@ def fetch_gstin_status(*, gstin=None, doc=None, throw=True):
 def get_formatted_response_for_status(response):
     """
     Format response from Public API
+
+    Names are carried through so the GSTIN registry doubles as a name cache — otherwise
+    every consumer that needs a legal/trade name has to re-hit the API for a GSTIN we have
+    already looked up (a GSTR-2A export does this once per supplier).
     """
     return frappe._dict(
         {
             "gstin": response.gstin,
+            "legal_name": response.lgnm or "",
+            "trade_name": response.tradeNam or "",
             "registration_date": parse_datetime(response.rgdt, day_first=True, throw=False),
             "cancelled_date": parse_datetime(response.cxdt, day_first=True, throw=False),
             "status": response.sts,

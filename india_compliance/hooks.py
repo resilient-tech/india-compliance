@@ -486,6 +486,9 @@ scheduler_events = {
             "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_reconcile",
         ],
         "0 1 * * *": ["india_compliance.gst_india.utils.e_waybill.extend_scheduled_e_waybills"],
+        "0 3 * * *": [
+            "india_compliance.gst_india.doctype.gst_return_export.gstr_2_export.delete_stale_export_files",
+        ],
     }
 }
 
