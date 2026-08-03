@@ -360,9 +360,13 @@ def get_period_options(company: str, company_gstin: str):
     if latest_3b_filed_period <= six_months_ago and can_fetch_gstin_info():
         update_gstr_returns_info(company, company_gstin)
 
+    # last month's 3B filed means current month is the one to work on
+    last_month = format_period(add_to_date(None, months=-1).strftime("%m%Y"))
+    start_month = 0 if latest_3b_filed_period >= last_month else -1
+
     # Generate last six months of valid periods
     periods = []
-    date = add_to_date(None, months=-1)
+    date = add_to_date(None, months=start_month)
 
     while True:
         period = date.strftime("%m%Y")
