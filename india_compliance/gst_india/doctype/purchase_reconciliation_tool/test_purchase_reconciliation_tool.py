@@ -598,6 +598,39 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertIn(pinv.name, names)
         self.assertIn(gst_is.name, names)
 
+    def test_cdnr_debit_note_matches_regular_purchase_invoice(self):
+        """
+        A supplier's debit note is booked as a regular purchase invoice (not a
+        return), so CDNR must not be limited to purchase returns.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="DN-23-00001",
+            bill_date="2023-07-15",
+            posting_date="2023-07-15",
+        )
+
+        gst_is = create_gst_inward_supply(
+            bill_no="DN-23-00001",
+            bill_date="2023-07-15",
+            classification="CDNR",
+            doc_type="Debit Note",
+            return_period_2b="072023",
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2023-07-01",
+                "to_date": "2023-07-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        prt.reconcile_and_generate_data()
+
+        self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+
 
 def create_purchase_invoice(**kwargs):
     args = PURCHASE_INVOICE_DEFAULT_ARGS.copy()

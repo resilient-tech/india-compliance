@@ -83,6 +83,9 @@ class MatchStatus(Enum):
 #     {"Residual Match": ["E", "N", "E", "N", "E", "E", 1, 1, 1]},
 # ]
 
+# CDNR covers both note types: (inward supply doc_type, purchase is_return)
+CDNR_DOC_TYPES = (("Debit Note", 0), ("Credit Note", 1))
+
 GSTIN_RULES = (
     {
         "match_status": MatchStatus.EXACT_MATCH,
@@ -277,14 +280,17 @@ class InwardSupply:
 
         return query.run(as_dict=True)
 
-    def get_unmatched(self, category, amended_category):
+    def get_unmatched(self, category, amended_category, doc_type=None):
         categories = [category, amended_category or None]
         query = self.with_period_filter()
-        data = (
-            query.where(IfNull(self.GSTR2.match_status, "") == "")
-            .where(self.GSTR2.classification.isin(categories))
-            .run(as_dict=True)
+        query = query.where(IfNull(self.GSTR2.match_status, "") == "").where(
+            self.GSTR2.classification.isin(categories)
         )
+
+        if doc_type:
+            query = query.where(self.GSTR2.doc_type == doc_type)
+
+        data = query.run(as_dict=True)
 
         for doc in data:
             doc.fy = BaseUtil.get_fy(doc.bill_date)
@@ -392,7 +398,7 @@ class PurchaseInvoice:
 
         return query.run(as_dict=True)
 
-    def get_unmatched(self, category):
+    def get_unmatched(self, category, is_return=0):
         gst_category = (
             (
                 "Registered Regular",
@@ -403,7 +409,6 @@ class PurchaseInvoice:
             if category in ("B2B", "CDNR", "ISD", "ECOM")
             else ("SEZ", "Overseas", "UIN Holders")
         )
-        is_return = 1 if category == "CDNR" else 0
 
         query = (
             self.get_query(is_return=is_return)
@@ -661,7 +666,7 @@ class BaseReconciliation:
             include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
 
-    def get_unmatched_inward_supply(self, category, amended_category):
+    def get_unmatched_inward_supply(self, category, amended_category, doc_type=None):
         return InwardSupply(
             company=self.company,
             company_gstin=self.company_gstin,
@@ -669,19 +674,14 @@ class BaseReconciliation:
             to_date=self.to_date,
             gst_return=self.gst_return,
             include_ignored=self.include_ignored,
-        ).get_unmatched(category, amended_category)
+        ).get_unmatched(category, amended_category, doc_type)
 
     def query_inward_supply(self, additional_fields=None):
-        query = InwardSupply(
+        return InwardSupply(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.from_date,
-            to_date=self.to_date,
-            gst_return=self.gst_return,
             include_ignored=self.include_ignored,
-        )
-
-        return query.with_period_filter(additional_fields)
+        ).get_query(additional_fields)
 
     def get_all_purchase_invoice(self, additional_fields=None, names=None, only_names=False):
         return PurchaseInvoice(
@@ -696,13 +696,13 @@ class BaseReconciliation:
     def purchase_from_date(self):
         return get_gst_fy_start(add_years(getdate(self.from_date), -1))
 
-    def get_unmatched_purchase(self, category):
+    def get_unmatched_purchase(self, category, is_return=0):
         return PurchaseInvoice(
             company=self.company,
             company_gstin=self.company_gstin,
             from_date=self.purchase_from_date,
             include_ignored=self.include_ignored,
-        ).get_unmatched(category)
+        ).get_unmatched(category, is_return)
 
     def query_purchase_invoice(self, additional_fields=None):
         return PurchaseInvoice(
@@ -735,14 +735,14 @@ class BaseReconciliation:
             include_ignored=self.include_ignored,
         ).get_query(additional_fields)
 
-    def get_unmatched_purchase_or_bill_of_entry(self, category):
+    def get_unmatched_purchase_or_bill_of_entry(self, category, is_return=0):
         """
         Returns dict of unmatched purchase and bill of entry data.
         """
         if category in IMPORT_CATEGORY:
             return self.get_unmatched_bill_of_entry(category)
 
-        return self.get_unmatched_purchase(category)
+        return self.get_unmatched_purchase(category, is_return)
 
 
 class Reconciler(BaseReconciliation):
@@ -752,19 +752,20 @@ class Reconciler(BaseReconciliation):
         """
         self.category = category
 
-        # GSTIN Level matching
-        purchases = self.get_unmatched_purchase_or_bill_of_entry(category)
-        inward_supplies = self.get_unmatched_inward_supply(category, amended_category)
-        self.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies)
+        for doc_type, is_return in CDNR_DOC_TYPES if category == "CDNR" else ((None, 0),):
+            # GSTIN Level matching
+            purchases = self.get_unmatched_purchase_or_bill_of_entry(category, is_return)
+            inward_supplies = self.get_unmatched_inward_supply(category, amended_category, doc_type)
+            self.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies)
 
-        # In case of IMPG GST in not available in 2A. So skip PAN level matching.
-        if category == "IMPG":
-            return
+            # In case of IMPG GST in not available in 2A. So skip PAN level matching.
+            if category == "IMPG":
+                return
 
-        # PAN Level matching
-        purchases = self.get_pan_level_data(purchases)
-        inward_supplies = self.get_pan_level_data(inward_supplies)
-        self.reconcile_for_rules(PAN_RULES, purchases, inward_supplies)
+            # PAN Level matching
+            purchases = self.get_pan_level_data(purchases)
+            inward_supplies = self.get_pan_level_data(inward_supplies)
+            self.reconcile_for_rules(PAN_RULES, purchases, inward_supplies)
 
     def reconcile_for_rules(self, rules, purchases, inward_supplies):
         if not (purchases and inward_supplies):
