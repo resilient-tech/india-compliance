@@ -25,6 +25,8 @@ from india_compliance.gst_india.utils import get_party_for_gstin
 
 DOCTYPE = "GST Return Log"
 
+RAW_FIELD = "raw_gov_data"
+
 
 class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
     @property
@@ -327,10 +329,10 @@ def get_decompressed_data(content):
 
 
 def store_raw_return_data(gstin, return_type, return_period, json_data):
-    """Keep the portal payload (gzipped) in the period's log `filed` field."""
+    """Keep the portal payload (gzipped) in the period's log `raw_gov_data` field."""
     name = f"{return_type}-{return_period}-{gstin}"
     with filelock(frappe.scrub(f"raw_return_{name}")):
-        get_gst_return_log(name).update_json_for("filed", json_data)
+        get_gst_return_log(name).update_json_for(RAW_FIELD, json_data)
 
 
 def get_raw_return_data(gstin, return_type, return_period):
@@ -339,7 +341,8 @@ def get_raw_return_data(gstin, return_type, return_period):
     if not frappe.db.exists(DOCTYPE, name):
         return None
 
-    return get_gst_return_log(name).get_json_for("filed")
+    with filelock(frappe.scrub(f"raw_return_{name}")):
+        return get_gst_return_log(name).get_json_for(RAW_FIELD)
 
 
 def create_ims_return_log(company_gstin):

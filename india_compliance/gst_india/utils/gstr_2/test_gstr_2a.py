@@ -6,6 +6,9 @@ from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 from frappe.utils import get_datetime
 
+from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+    get_raw_return_data,
+)
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import (
     GSTRCategory,
@@ -81,6 +84,12 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
         mock_gstr_2a_api.return_value.get_data.side_effect = mock_get_data
         mock_save_gstr.side_effect = mock_save_gstr_func
         download_gstr_2a(self.gstin, (self.return_period,))
+
+    def test_raw_stored_before_rename(self):
+        raw = get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, self.return_period)
+        self.assertIn("cdn", raw)
+        self.assertNotIn("cdnr", raw)
+        self.assertListEqual(raw["cdn"], self.test_data.cdn)
 
     def test_gstr2a_b2b(self):
         doc = self.get_doc(GSTRCategory.B2B)
