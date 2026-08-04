@@ -76,11 +76,7 @@ frappe.ui.form.on(DOCTYPE, {
             frm.add_custom_button(
                 __("ISD Distribution Invoices"),
                 () => {
-                    india_compliance.show_isd_invoice_distribution_dialog({
-                        name: frm.doc.name,
-                        posting_date: frm.doc.posting_date,
-                        company: frm.doc.company,
-                    });
+                    india_compliance.show_isd_invoice_distribution_dialog(frm.doc);
                 },
                 __("Create"),
             );

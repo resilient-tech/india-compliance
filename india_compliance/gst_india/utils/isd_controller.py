@@ -215,6 +215,9 @@ class ISDController(Document):
     # ------------------------------------------------------------------ accounts
     def validate_accounts(self):
         """Validate that the party account and expense heads are valid for this company."""
+        if not self.cost_center:
+            self.cost_center = frappe.get_cached_value("Company", self.company, "cost_center")
+
         if self.is_against_party:
             self.validate_party_account()
 
@@ -473,10 +476,6 @@ class ISDController(Document):
 
     def get_gl_entries(self):
         self.setup_precision()
-
-        # GST Expense / expense-head postings are Profit & Loss accounts that require a cost center;
-        if not self.cost_center:
-            self.cost_center = frappe.get_cached_value("Company", self.company, "cost_center")
 
         self._book_expenses = should_distribute_expense()
 
