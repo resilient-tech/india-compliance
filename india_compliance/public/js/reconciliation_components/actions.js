@@ -67,7 +67,7 @@ Object.assign(reconciliation, {
         // gives back the exclude flag, or null if cancelled
         return new Promise((resolve) => {
             const dialog = new frappe.ui.Dialog({
-                title: __("Unlink {0} Documents", [count]),
+                title: __("Unlink {0} Document(s)", [count]),
                 fields: [
                     ...(skipped
                         ? [
@@ -151,7 +151,8 @@ Object.assign(reconciliation, {
                 }
             }
 
-            const is_return = row.classification.includes("CDNR") ? 1 : 0;
+            // only for cn, not for dn
+            const is_return = doc.doc_type == "Credit Note" ? 1 : 0;
             const multiplier = is_return ? -1 : 1;
 
             const values = {
