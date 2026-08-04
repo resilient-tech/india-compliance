@@ -58,13 +58,35 @@ def clear_company_from_single_doctypes(company):
 def remove_gst_settings_for_company(company):
     gst_settings = frappe.get_doc("GST Settings")
 
+    e_invoice_companies_count = len(gst_settings.e_invoice_applicable_companies)
+
     for fieldname in GST_SETTINGS_CHILD_TABLES_WITH_COMPANY:
         gst_settings.set(
             fieldname, [row for row in gst_settings.get(fieldname, []) if row.company != company]
         )
 
+    if len(gst_settings.e_invoice_applicable_companies) != e_invoice_companies_count:
+        disable_e_invoice_if_not_applicable(gst_settings, company)
+
     gst_settings.flags.ignore_mandatory = True
     gst_settings.save()
+
+
+def disable_e_invoice_if_not_applicable(gst_settings, company):
+    if not (
+        gst_settings.enable_api
+        and gst_settings.enable_e_invoice
+        and not gst_settings.e_invoice_applicable_companies
+        and gst_settings.apply_e_invoice_only_for_selected_companies
+    ):
+        return
+
+    gst_settings.enable_e_invoice = 0
+    frappe.msgprint(
+        _("e-Invoice disabled: {0} was the only applicable company").format(frappe.bold(company)),
+        alert=True,
+        indicator="orange",
+    )
 
 
 def make_company_fixtures(doc, method=None):
