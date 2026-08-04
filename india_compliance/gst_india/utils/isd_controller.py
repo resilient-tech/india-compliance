@@ -33,6 +33,11 @@ class ISDController(Document):
     get_voucher_subtype = AccountsController.get_voucher_subtype
     company_currency = AccountsController.company_currency
 
+    @property
+    def grand_total(self):
+        """Provider for the grand_total virtual field. Mirrored client-side in set_grand_total."""
+        return flt(self.total_eligible) + flt(self.total_ineligible) + flt(self.total_expense)
+
     def is_distribution_side(self):
         return self.doctype == "ISD Distribution Invoice"
 

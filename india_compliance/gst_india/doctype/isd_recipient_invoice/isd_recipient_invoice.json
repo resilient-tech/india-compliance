@@ -275,9 +275,10 @@
   },
   {
    "fieldname": "grand_total",
-   "fieldtype": "Data",
+   "fieldtype": "Currency",
    "is_virtual": 1,
    "label": "Grand Total",
+   "options": "Company:company:default_currency",
    "read_only": 1
   },
   {
