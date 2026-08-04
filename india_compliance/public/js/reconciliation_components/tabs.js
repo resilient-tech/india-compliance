@@ -7,7 +7,6 @@ const MATCH_STATUS_INFO = {
         "Same invoice with small gaps. Bill no is close, or tax amounts differ by up to 1 rupee.",
     ),
     Mismatch: __("Bill no matches, but GSTIN, place of supply, reverse charge or tax amounts do not."),
-    "Residual Match": __("Everything matches except the bill no. Bill dates within 10 days."),
     "Manual Match": __("You linked these two documents yourself."),
     "Only in 2A/2B": __("Supplier has reported it. Not in your books."),
     "Only in Books": __("You have booked it. Supplier has not reported it in 2A/2B."),
