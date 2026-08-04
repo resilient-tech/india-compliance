@@ -74,7 +74,7 @@ Object.assign(reconciliation, {
                               {
                                   fieldtype: "HTML",
                                   options: `<p class="text-muted">${__(
-                                      "{0} selected rows have nothing to unlink. They will be left as is.",
+                                      "Skipping {0} with nothing to unlink.",
                                       [skipped],
                                   )}</p>`,
                               },
