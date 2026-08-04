@@ -51,7 +51,6 @@ class Fields(Enum):
 class Rule(Enum):
     EXACT_MATCH = "Exact Match"
     FUZZY_MATCH = "Fuzzy Match"
-    MISMATCH = "Mismatch"
     ROUNDING_DIFFERENCE = "Rounding Difference"  # <= 1 hardcoded
 
 
@@ -1038,6 +1037,7 @@ class ReconciledData(BaseReconciliation):
             "supplier_name",
             "company_gstin",
             "classification",
+            "doc_type",
             "match_status",
             "action",
             "link_doctype",

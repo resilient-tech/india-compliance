@@ -1329,7 +1329,7 @@ function is_linked(row) {
 }
 
 function has_matching_row(row, array) {
-    return array.filter((item) => JSON.stringify(item) === JSON.stringify(row)).length;
+    return array.some((item) => JSON.stringify(item) === JSON.stringify(row));
 }
 
 function render_empty_state(frm) {
