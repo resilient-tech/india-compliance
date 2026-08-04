@@ -35,27 +35,21 @@ function remove_gstr2b_alert(alert) {
 async function add_gstr2b_alert(frm) {
     let existing_alert = frm.layout.wrapper.find(".gstr2b-alert");
 
-<<<<<<< HEAD
-    if (!frm.doc.inward_supply_period || !frm.doc.__onload?.has_missing_2b_documents) {
-        remove_gstr2b_alert(existing_alert);
-=======
     if (!frm.doc.period || !frm.doc.__onload?.has_missing_2b_documents) {
-        alert.remove();
->>>>>>> 0832e0c8 (fix: only one date filter in purchase reco tool)
+        remove_gstr2b_alert(existing_alert);
         return;
     }
 
     // Add alert only if there is no existing alert
     if (existing_alert.length !== 0) return;
 
-<<<<<<< HEAD
     existing_alert = $(ALERT_HTML).prependTo(frm.layout.wrapper);
     $(existing_alert)
         .find("#download-gstr2b-button")
         .on("click", async function () {
             await download_gstr(
                 frm,
-                [frm.doc.inward_supply_from_date, frm.doc.inward_supply_to_date],
+                [frm.doc.from_date, frm.doc.to_date],
                 ReturnType.GSTR2B,
                 frm.doc.company_gstin,
                 null,
@@ -63,20 +57,6 @@ async function add_gstr2b_alert(frm) {
             );
             remove_gstr2b_alert(existing_alert);
         });
-=======
-    alert = india_compliance.show_doc_alert(frm, ALERT_HTML, "blue").addClass("gstr2b-alert");
-    alert.find(".download-gstr2b").on("click", async function () {
-        await download_gstr(
-            frm,
-            [frm.doc.from_date, frm.doc.to_date],
-            ReturnType.GSTR2B,
-            frm.doc.company_gstin,
-            null,
-            true,
-        );
-        alert.remove();
-    });
->>>>>>> 0832e0c8 (fix: only one date filter in purchase reco tool)
 }
 
 frappe.ui.form.on(DOCTYPE, {
@@ -99,18 +79,10 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     onload(frm) {
-<<<<<<< HEAD
-<<<<<<< HEAD
         add_gstr2b_alert(frm);
 
-        frm.trigger("purchase_period");
-        frm.trigger("inward_supply_period");
-=======
-=======
         if (!frm.doc.period) frm.doc.period = "This Fiscal Year";
->>>>>>> 827ae450 (fix: default period for purchase reco tool)
         frm.trigger("period");
->>>>>>> 0832e0c8 (fix: only one date filter in purchase reco tool)
     },
 
     refresh(frm) {
