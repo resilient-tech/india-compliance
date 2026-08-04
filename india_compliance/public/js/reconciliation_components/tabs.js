@@ -1,5 +1,20 @@
 frappe.provide("reconciliation");
 
+// what each match type covers, shown on hover. key order is the order they are listed in
+const MATCH_STATUS_INFO = {
+    "Exact Match": __("Bill no, GSTIN, place of supply, reverse charge and every tax amount are the same."),
+    "Suggested Match": __(
+        "Same invoice with small gaps. Bill no is close, or tax amounts differ by up to 1 rupee.",
+    ),
+    Mismatch: __(
+        "Same supplier and fiscal year, but the two disagree on bill no, GSTIN, place of supply, reverse charge or tax amounts.",
+    ),
+    "Manual Match": __("You linked these two documents yourself."),
+    "Only in 2A/2B": __("Supplier has reported it. Not in your books."),
+    "Only in Books": __("You have booked it. Supplier has not reported it in 2A/2B."),
+    "Suggested Mark as Pending": __("Belongs to a later period. Keep it pending and claim it then."),
+};
+
 function get_gstin_status_at_invoice_date(row) {
     if (
         row.gstin_status === "Cancelled" &&
@@ -20,6 +35,9 @@ function get_gstin_indicator_color(status) {
 }
 
 reconciliation.reconciliation_tabs = class ReconciliationTabs {
+    // summary tab -> how its rows pick invoices. set by each tool
+    summary_matchers = {};
+
     constructor(frm, tabs, data_field) {
         this.frm = frm;
         this.data = [];
@@ -155,6 +173,40 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
         this.set_listeners();
     }
 
+    // holds a column in a fixed order, anything unlisted goes last
+    sort_by_order(rows, field, order) {
+        const rank = (value) => {
+            const index = order.indexOf(value);
+            return index === -1 ? order.length : index;
+        };
+
+        return rows.sort((a, b) => rank(a[field]) - rank(b[field]));
+    }
+
+    // every tab lists match statuses in the same order
+    sort_by_match_status(rows) {
+        return this.sort_by_order(rows, "match_status", Object.keys(MATCH_STATUS_INFO));
+    }
+
+    // supplier and document tabs go by gstin, then oldest bill first
+    sort_by_supplier_gstin(rows) {
+        const text = (row, field) => String(row[field] || "");
+
+        return rows.sort(
+            (a, b) =>
+                text(a, "supplier_gstin").localeCompare(text(b, "supplier_gstin")) ||
+                text(a, "bill_date").localeCompare(text(b, "bill_date")) ||
+                text(a, "bill_no").localeCompare(text(b, "bill_no")),
+        );
+    }
+
+    get_match_status_link(match_status) {
+        const info = MATCH_STATUS_INFO[match_status] || "";
+        return `<a href="#" class="match-status" title="${frappe.utils.escape_html(
+            info,
+        )}">${match_status}</a>`;
+    }
+
     get_supplier_name_gstin(row) {
         const status = get_gstin_status_at_invoice_date(row);
         const gstin_link = $(
@@ -284,6 +336,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                 },
             ],
         });
+
         this.set_link_options();
     }
 
@@ -303,7 +356,6 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                 label: "Date Range",
                 fieldtype: "DateRange",
                 fieldname: "date_range",
-                default: this._get_default_date_range(),
                 onchange: () => this.set_link_options(),
             },
             {
@@ -345,10 +397,13 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     async set_link_options(method) {
         if (!this.dialog.get_value("doctype")) return;
 
+        // left blank on purpose, the server falls back to its own window
+        const date_range = this.dialog.get_value("date_range") || [];
+
         this.filters = {
             supplier_gstin: this.dialog.get_value("supplier_gstin"),
-            bill_from_date: this.dialog.get_value("date_range")[0],
-            bill_to_date: this.dialog.get_value("date_range")[1],
+            from_date: date_range[0],
+            to_date: date_range[1],
             show_matched: this.dialog.get_value("show_matched"),
             purchase_doctype: this.data.purchase_doctype,
         };
@@ -358,15 +413,22 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
             filters: this.filters,
         });
 
-        this.dialog.get_field("link_with").set_data(message);
+        const { options, filters } = message;
+        const field = this.dialog.get_field("link_with");
+        field.set_data(options);
+        field.set_description(this._get_filter_note(filters, options.length));
+    }
+
+    // says what the server filtered on, including dates it filled in for a blank range
+    _get_filter_note({ from_date, to_date, show_matched }, count) {
+        const scope = show_matched ? __("All") : __("Unmatched");
+        const dates = [from_date, to_date].filter(Boolean).map((d) => frappe.datetime.str_to_user(d));
+        const note = dates.length == 2 ? __("{0} between {1} to {2}", [scope, ...dates]) : scope;
+
+        return count ? note : `${__("No documents found.")} ${note}`;
     }
 
     _set_missing_doctype() {}
-
-    _get_default_date_range() {
-        const now = frappe.datetime.now_date();
-        return [frappe.datetime.add_months(now, -12), now];
-    }
 
     setup_actions() {
         const actions = this._get_custom_actions();
@@ -457,17 +519,24 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                 inward_supply: this.data._inward_supply,
             }),
         );
-        detail_table.$wrapper.removeClass("not-matched");
-        this._set_value_color(detail_table.$wrapper);
+        this._mark_differences(detail_table.$wrapper);
     }
 
-    _set_value_color(wrapper) {
+    _mark_differences(wrapper) {
         if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
 
-        ["supplier_gstin", "company_gstin", "place_of_supply", "is_reverse_charge"].forEach((field) => {
-            if (this.data._purchase_invoice[field] == this.data._inward_supply[field]) return;
+        // template marks the rows worth comparing
+        wrapper.find("[data-compare]").each((_index, row) => {
+            const field = $(row).data("compare");
+            const purchase = this.data._purchase_invoice[field];
+            const inward_supply = this.data._inward_supply[field];
 
-            wrapper.find(`[data-label='${field}'], [data-label='${field}']`).addClass("not-matched");
+            const same =
+                typeof purchase === "number" || typeof inward_supply === "number"
+                    ? flt(purchase, 2) === flt(inward_supply, 2)
+                    : purchase == inward_supply;
+
+            if (!same) $(row).attr("title", __("Books and 2A/2B do not match")).addClass("not-matched");
         });
     }
 };
