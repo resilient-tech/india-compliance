@@ -955,15 +955,6 @@ class TestGSTR3BReport(IntegrationTestCase):
 
 
 class TestGSTR3BReportISD(IntegrationTestCase):
-    """ISD Recipient Invoice contribution to GSTR-3B table 4(A)(4) (ISD) and 4(B) (ITC Reversed).
-
-    Separate from TestGSTR3BReport because setup_isd_fixtures inserts company addresses with
-    is_primary_address = 1, which frappe clears on every other address of that company -- the
-    outward/inward transactions of the other tests would then resolve to an ISD GSTIN.
-    """
-
-    # the company address carrying the GSTIN the report is generated for, so the recipient invoice
-    # lands in it; the counterparty is the ISD registration on the same PAN
     COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
 
     @classmethod
@@ -980,8 +971,6 @@ class TestGSTR3BReportISD(IntegrationTestCase):
         frappe.set_user("Administrator")
         self.maxDiff = None
 
-        # the class rolls back only at the end, so drop the previous test's invoices to keep the
-        # reported amounts attributable to the document under test
         recipients = frappe.get_all(
             "ISD Recipient Invoice", filters={"company": "_Test Indian Registered Company"}, pluck="name"
         )
