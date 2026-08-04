@@ -20,6 +20,7 @@ from frappe.utils import add_to_date, flt, getdate, now_datetime
 from india_compliance.gst_india.overrides.subcontracting_transaction import (
     is_e_waybill_applicable,
 )
+from india_compliance.gst_india.utils import get_items_fieldname
 from india_compliance.gst_india.utils.e_waybill import mark_e_waybill_as_generated
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -632,11 +633,13 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertEqual(target_se.ship_to_address, source_se.ship_to_address)
 
 
-def _make_taxes_controller_doc(items=None, taxes=None):
+def _make_taxes_controller_doc(items=None, taxes=None, doctype="Subcontracting Order", assets=None):
     """Build a client-style _dict doc as produced by json.loads(..., object_hook=_dict)."""
-    data = {"doctype": "Subcontracting Order"}
+    data = {"doctype": doctype}
     if items is not None:
         data["items"] = items
+    if assets is not None:
+        data["assets"] = assets
     if taxes is not None:
         data["taxes"] = taxes
     return json.loads(json.dumps(data), object_hook=frappe._dict)
@@ -697,6 +700,24 @@ class TestCustomTaxController(UnitTestCase):
         echoed = frappe.response.docs[0]
         edited_row = next(tax for tax in echoed.taxes if tax.name == edited_tax)
         self.assertEqual(edited_row.get("item_wise_tax_rates"), "{}")
+
+    def test_get_items_fieldname_defaults_to_items(self):
+        self.assertEqual(get_items_fieldname("Sales Invoice"), "items")
+        self.assertEqual(get_items_fieldname("Subcontracting Order"), "items")
+
+    def test_get_items_fieldname_for_asset_movement(self):
+        self.assertEqual(get_items_fieldname("Asset Movement"), "assets")
+
+    def test_get_rows_to_update_reads_assets_for_asset_movement(self):
+        doc = _make_taxes_controller_doc(
+            doctype="Asset Movement",
+            assets=[{"name": "asset_row_1"}],
+            taxes=[{"name": "tax1"}],
+        )
+
+        items, taxes = CustomTaxController(doc).get_rows_to_update()
+        self.assertEqual([item.name for item in items], ["asset_row_1"])
+        self.assertEqual(len(taxes), 1)
 
 
 class TestSubcontractingInwardOrder(IntegrationTestCase):
