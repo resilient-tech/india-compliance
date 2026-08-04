@@ -45,7 +45,7 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     validate_gstin_permission,
 )
-from india_compliance.gst_india.utils.exporter import ExcelExporter
+from india_compliance.gst_india.utils.exporter import COLOR_PALLATE, ExcelExporter
 from india_compliance.gst_india.utils.gstin_info import (
     get_fy,
     get_latest_3b_filed_period,
@@ -724,18 +724,7 @@ def auto_reconcile():
 
 
 class BuildExcel:
-    COLOR_PALLATE = frappe._dict(
-        {
-            "dark_gray": "d9d9d9",
-            "light_gray": "f2f2f2",
-            "dark_pink": "e6b9b8",
-            "light_pink": "f2dcdb",
-            "sky_blue": "c6d9f1",
-            "light_blue": "dce6f2",
-            "green": "d7e4bd",
-            "light_green": "ebf1de",
-        }
-    )
+    COLOR_PALLATE = COLOR_PALLATE
 
     @parse_params
     def __init__(self, doc, data, is_supplier_specific=False, email=False):

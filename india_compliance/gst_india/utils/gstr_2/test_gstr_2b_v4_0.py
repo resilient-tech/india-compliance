@@ -4,7 +4,7 @@ import frappe
 from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 
-from india_compliance.gst_india.utils import get_data_file_path
+from india_compliance.gst_india.utils import get_data_file_path, merge_dicts
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
@@ -370,3 +370,16 @@ class TestGetUniqueKey(IntegrationTestCase):
     def test_normal_gstin(self):
         t = frappe._dict(supplier_gstin="01AABCE2207R1Z5", bill_no="INV-1")
         self.assertEqual(get_unique_key(t), "01AABCE2207R1Z5-INV-1")
+
+
+class TestMultiFileRawMerge(IntegrationTestCase):
+    def test_docs_concat_summary_not_doubled(self):
+        combined = {}
+        file1 = {"itcsumm": {"itcavl": 100}, "docdata": {"b2b": [{"inum": "1"}]}}
+        file2 = {"itcsumm": {"itcavl": 150}, "docdata": {"b2b": [{"inum": "2"}], "cdnr": [{"nt": "9"}]}}
+        merge_dicts(combined, file1)
+        merge_dicts(combined, file2)
+
+        self.assertEqual(combined["docdata"]["b2b"], [{"inum": "1"}, {"inum": "2"}])
+        self.assertEqual(combined["docdata"]["cdnr"], [{"nt": "9"}])
+        self.assertEqual(combined["itcsumm"]["itcavl"], 150)

@@ -461,12 +461,14 @@ Object.assign(india_compliance, {
         // returns a list of error messages if invoice number is invalid
         let message_list = [];
         if (invoice_number.length > 16) {
-            message_list.push("Transaction Name must be 16 characters or fewer to meet GST requirements");
+            message_list.push(__("Transaction Name must be 16 characters or fewer to meet GST requirements"));
         }
 
         if (!GST_INVOICE_NUMBER_FORMAT.test(invoice_number)) {
             message_list.push(
-                "Transaction Name should start with an alphanumeric character and can only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements.",
+                __(
+                    "Transaction Name should start with an alphanumeric character and can only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements.",
+                ),
             );
         }
 
@@ -587,31 +589,10 @@ Object.assign(india_compliance, {
             .addClass("text-danger");
     },
 
-    show_dismissable_alert(wrapper, message, alert_type = "primary", on_close = null) {
-        const alert = $(`
-            <div class="container">
-            <div
-                class="alert alert-${alert_type} alert-dismissable fade show d-flex justify-content-between border-0"
-                role="alert"
-            >
-                <div>${message}</div>
-                <button
-                    type="button"
-                    class="close"
-                    data-dismiss="alert"
-                    aria-label="Close"
-                    style="outline: 0px solid black !important"
-                >
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            </div>
-        `).prependTo(wrapper);
-
-        alert.on("closed.bs.alert", () => {
-            if (on_close) on_close();
-        });
-
+    // same banner every other form uses. returns it, to wire links inside
+    show_doc_alert(frm, message, color = "blue", on_close = null) {
+        const alert = frm.dashboard.set_headline(`<div>${message}</div>`, color, !on_close);
+        if (on_close) alert.find(".close-message").on("click", on_close);
         return alert;
     },
 
