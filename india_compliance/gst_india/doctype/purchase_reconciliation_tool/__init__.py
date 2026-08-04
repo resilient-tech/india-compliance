@@ -10,13 +10,8 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
-<<<<<<< HEAD
 from frappe.query_builder.functions import Abs, IfNull, Sum
-from frappe.utils import add_months, cint, format_date, getdate, rounded
-=======
-from frappe.query_builder.functions import Abs, IfNull, Max, Sum
 from frappe.utils import add_months, add_years, cint, format_date, getdate, rounded
->>>>>>> e3f537a1 (fix: look for purchases only for current + previous year)
 from rapidfuzz import fuzz, process
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, TAXABLE_GST_TREATMENTS
