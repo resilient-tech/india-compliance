@@ -2,11 +2,11 @@
 # See license.txt
 
 import frappe
+from erpnext.accounts.utils import get_fiscal_year
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_months, flt, today
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES, ISD_GST_CATEGORY
-from india_compliance.gst_india.overrides.company import create_company_fixtures
+from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils.isd import (
     get_input_gst_accounts,
     get_isd_autofill_values,
@@ -284,126 +284,26 @@ def get_auto_recipient_invoice(distribution):
     return frappe.get_doc("ISD Recipient Invoice", name)
 
 
-def make_branch_company(name=BRANCH_COMPANY, abbr=BRANCH_ABBR, gstin=BRANCH_GSTIN):
-    if frappe.db.exists("Company", name):
-        frappe.delete_doc("Company", name, force=True)
-
-    existing_with_abbr = frappe.db.get_value("Company", {"abbr": abbr}, "name")
-    if existing_with_abbr:
-        frappe.delete_doc("Company", existing_with_abbr, force=True)
-
-    company = frappe.get_doc(
-        {
-            "doctype": "Company",
-            "company_name": name,
-            "abbr": abbr,
-            "country": "India",
-            "default_currency": "INR",
-            "chart_of_accounts": "Standard",
-            "gstin": gstin,
-            "gst_category": "Registered Regular",
-        }
-    ).insert(ignore_permissions=True)
-    create_company_fixtures(name)
-
-    if not company.round_off_cost_center:
-        company.db_set("round_off_cost_center", f"Main - {abbr}")
-
-    return company
-
-
-def make_internal_customer(
-    name=BRANCH_CUSTOMER, represents_company=BRANCH_COMPANY, allowed_company=COMPANY, gstin=BRANCH_GSTIN
-):
-    if frappe.db.exists("Customer", name):
-        frappe.delete_doc("Customer", name, force=True)
-
-    customer = frappe.get_doc(
-        {
-            "doctype": "Customer",
-            "customer_name": name,
-            "customer_type": "Company",
-            "is_internal_customer": 1,
-            "represents_company": represents_company,
-            "companies": [{"company": allowed_company}],
-        }
-    ).insert(ignore_permissions=True)
-
-    address = make_isd_address(
-        f"{name} Address", gstin, "Registered Regular", "Karnataka", link("Customer", customer.name), "560001"
-    )
-    customer.reload()
-    customer.customer_primary_address = address.name
-    customer.save(ignore_permissions=True)
-    return customer, address
+ISD_ADDRESS = "_Test ISD Distribution-Billing"
+RECIPIENT_ADDRESS = "_Test ISD Recipient-Billing"
+RECIPIENT_ADDRESS_KA = "_Test ISD Recipient KA-Billing"
+BRANCH_CUSTOMER_ADDRESS = "_Test ISD Branch Customer-Billing"
 
 
 def setup_isd_fixtures(cls):
-    """Shared fixtures: addresses linked to _TIRC, a submitted ISD-applicable Purchase Invoice, and a
-    branch company represented as an internal Customer (for the against-party workflow)."""
-    from india_compliance.gst_india.overrides.company import (
-        make_default_gst_expense_accounts,
-        make_default_isd_provisional_account,
-    )
-
-    # the test company may predate these company fixtures (idempotent)
-    make_default_isd_provisional_account(COMPANY)
-    make_default_gst_expense_accounts(COMPANY)
-
+    """Bind the shared ISD masters (india_compliance/tests/test_records.json) onto the test class
+    and raise the one ISD-applicable Purchase Invoice the source items are built from."""
     # tests assume the default behaviour (expense distributed with the ITC); the flag defaults to 1
     # on a fresh install but an existing single may have it unset, so pin it explicitly
     frappe.db.set_single_value("GST Settings", "distribute_expense_with_isd_credit", 1)
 
     cls.company = COMPANY
-    cls.isd_address = make_isd_address(
-        "_Test ISD Distribution Address", ISD_GSTIN, ISD_GST_CATEGORY, "Gujarat", link("Company", COMPANY)
-    )
-    cls.recipient_address = make_isd_address(
-        "_Test ISD Recipient Address",
-        RECIPIENT_GSTIN,
-        "Registered Regular",
-        "Gujarat",
-        link("Company", COMPANY),
-    )
-    cls.recipient_address_ka = make_isd_address(
-        "_Test ISD Recipient Address KA",
-        RECIPIENT_KA_GSTIN,
-        "Registered Regular",
-        "Karnataka",
-        link("Company", COMPANY),
-        "560001",
-    )
+    cls.isd_address = frappe.get_doc("Address", ISD_ADDRESS)
+    cls.recipient_address = frappe.get_doc("Address", RECIPIENT_ADDRESS)
+    cls.recipient_address_ka = frappe.get_doc("Address", RECIPIENT_ADDRESS_KA)
+    cls.branch_customer = frappe.get_doc("Customer", BRANCH_CUSTOMER)
+    cls.branch_address = frappe.get_doc("Address", BRANCH_CUSTOMER_ADDRESS)
     cls.pi = make_isd_pi(cls.isd_address.name)
-    cls.branch_company = make_branch_company()
-    cls.branch_customer, cls.branch_address = make_internal_customer()
-
-
-def _delete_isd_docs_for_party(party_type, party):
-    """Cancel and delete any ISD documents raised against a party so it can be deleted."""
-    for distribution in frappe.get_all(
-        "ISD Distribution Invoice", filters={"party_type": party_type, "party": party}, pluck="name"
-    ):
-        for recipient in frappe.get_all(
-            "ISD Recipient Invoice",
-            filters={"isd_distribution_invoice_reference": distribution},
-            pluck="name",
-        ):
-            _cancel_and_delete("ISD Recipient Invoice", recipient)
-        _cancel_and_delete("ISD Distribution Invoice", distribution)
-
-
-def _cancel_and_delete(doctype, name):
-    doc = frappe.get_doc(doctype, name)
-    if doc.docstatus == 1:
-        doc.cancel()
-    frappe.delete_doc(doctype, name, force=True)
-
-
-def teardown_isd_fixtures():
-    _delete_isd_docs_for_party("Customer", BRANCH_CUSTOMER)
-    for doctype, name in (("Customer", BRANCH_CUSTOMER), ("Company", BRANCH_COMPANY)):
-        if frappe.db.exists(doctype, name):
-            frappe.delete_doc(doctype, name, force=True)
 
 
 class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
@@ -413,11 +313,6 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
     def setUpClass(cls):
         super().setUpClass()
         setup_isd_fixtures(cls)
-
-    @classmethod
-    def tearDownClass(cls):
-        teardown_isd_fixtures()
-        super().tearDownClass()
 
     def _full_distribution(self, pi=None, branch=25, total=100, **kwargs):
         """An unsaved ISD Distribution Invoice mirroring the Purchase Invoice's items."""
@@ -791,6 +686,55 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         doc.submit()
         self.assertEqual(doc.docstatus, 1)
         self.assertTrue(doc.get("taxes"))
+
+    def test_cost_center_defaults_on_the_document(self):
+        """The GL entries need a cost center; defaulting it at GL time would leave the document
+        blank and desync it from its row, so a later save would raise UpdateAfterSubmitError."""
+        company_cost_center = frappe.get_cached_value("Company", COMPANY, "cost_center")
+
+        pi = make_isd_pi(self.isd_address.name)
+        doc = self._full_distribution(pi=pi, cost_center=None)
+        doc.insert()
+        self.assertEqual(doc.cost_center, company_cost_center)
+
+        doc.submit()
+        self.assertEqual(frappe.db.get_value(doc.doctype, doc.name, "cost_center"), company_cost_center)
+
+        # the same in-memory instance must still be saveable after submit
+        doc.save()
+
+    def test_grand_total_is_served_by_the_controller(self):
+        pi = make_isd_pi(self.isd_address.name)
+        doc = create_distribution_invoice(
+            purchase_invoice=pi,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
+        )
+
+        expected = flt(doc.total_eligible) + flt(doc.total_ineligible) + flt(doc.total_expense)
+        self.assertTrue(expected)
+
+        # virtual: resolved through the class property, so it must survive a fresh load
+        reloaded = frappe.get_doc(doc.doctype, doc.name)
+        self.assertAlmostEqual(reloaded.as_dict()["grand_total"], expected, places=2)
+
+    def test_turnover_record_is_upserted_on_submit(self):
+        gstin = self.recipient_address.gstin
+        _, from_date, to_date = get_fiscal_year(today())
+        frappe.db.delete(
+            "Turnover Record",
+            {"gstin": gstin, "from_date": from_date, "to_date": to_date},
+        )
+
+        pi = make_isd_pi(self.isd_address.name)
+        doc = self._full_distribution(pi=pi, branch=25, total=100)
+        doc.insert()
+        doc.submit()
+
+        # enqueued with now=frappe.flags.in_test, so it has already run
+        self.assertTrue(
+            frappe.db.exists("Turnover Record", {"gstin": gstin, "from_date": from_date, "to_date": to_date})
+        )
 
     def test_over_distribution_is_clamped_to_available(self):
         pi = make_isd_pi(self.isd_address.name)

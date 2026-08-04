@@ -25,7 +25,6 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
     make_isd_pi,
     make_source_item,
     setup_isd_fixtures,
-    teardown_isd_fixtures,
 )
 from india_compliance.gst_india.overrides.test_transaction import create_cess_accounts
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -41,10 +40,13 @@ from india_compliance.gst_india.utils.tests import (
 
 
 class TestGSTR3BReport(IntegrationTestCase):
+    COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
+        setup_isd_fixtures(cls)
 
     def setUp(self):
         frappe.set_user("Administrator")
@@ -58,12 +60,9 @@ class TestGSTR3BReport(IntegrationTestCase):
             "Bill of Entry",
             "GSTR 3B Report",
             "Journal Entry",
+            "ISD Recipient Invoice",
         ):
             frappe.db.delete(doctype, filters=filters)
-
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.rollback()
 
     def get_report_output(self):
         return generate_gstr_3b_report()
@@ -75,7 +74,7 @@ class TestGSTR3BReport(IntegrationTestCase):
 
         create_sales_invoices()
         create_purchase_invoices()
-        create_itc_reclaim_journal_entry(tax_amount=9)
+        create_itc_reclaim_journal_entry(tax_amount=9, company_gstin="24AAQCA8719H1ZC")
 
         today = getdate()
         ret_period = f"{today.month:02}{today.year}"
@@ -392,7 +391,7 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(oth_avl["iamt"], 0.0)
 
     def test_itc_reversal_journal_entry_is_included_in_gstr_3b(self):
-        journal_entry = create_itc_reversal_journal_entry(tax_amount=9)
+        journal_entry = create_itc_reversal_journal_entry(tax_amount=9, company_gstin="24AAQCA8719H1ZC")
 
         self.assertEqual(journal_entry.accounts[1].gst_tax_type, "cgst")
         self.assertEqual(journal_entry.accounts[2].gst_tax_type, "sgst")
@@ -418,7 +417,9 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(output["itc_elg"]["itc_net"]["samt"], -9.0)
 
     def test_itc_reversal_journal_entry_with_others_is_included_in_gstr_3b(self):
-        journal_entry = create_itc_reversal_journal_entry(ineligibility_reason="Others", tax_amount=9)
+        journal_entry = create_itc_reversal_journal_entry(
+            ineligibility_reason="Others", tax_amount=9, company_gstin="24AAQCA8719H1ZC"
+        )
 
         self.assertEqual(journal_entry.accounts[1].gst_tax_type, "cgst")
         self.assertEqual(journal_entry.accounts[2].gst_tax_type, "sgst")
@@ -953,31 +954,7 @@ class TestGSTR3BReport(IntegrationTestCase):
             f"GSTR-3B-24AAQCA8719H1ZC-Apr-Jun-{getdate().year}",
         )
 
-
-class TestGSTR3BReportISD(IntegrationTestCase):
-    COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        setup_isd_fixtures(cls)
-
-    @classmethod
-    def tearDownClass(cls):
-        teardown_isd_fixtures()
-        frappe.db.rollback()
-
-    def setUp(self):
-        frappe.set_user("Administrator")
-        self.maxDiff = None
-
-        recipients = frappe.get_all(
-            "ISD Recipient Invoice", filters={"company": "_Test Indian Registered Company"}, pluck="name"
-        )
-        if recipients:
-            frappe.db.delete("ISD Source Item", {"parent": ("in", recipients)})
-            frappe.db.delete("ISD Recipient Invoice", {"name": ("in", recipients)})
-
+    # ------------------------------------------------------------------ ISD Recipient Invoice
     def create_isd_recipient_invoice(self, ineligible=False, ratio=1.0):
         """An ISD Recipient Invoice booked against an external ISD, on the reporting GSTIN."""
         pi = (make_ineligible_isd_pi if ineligible else make_isd_pi)(self.isd_address.name)

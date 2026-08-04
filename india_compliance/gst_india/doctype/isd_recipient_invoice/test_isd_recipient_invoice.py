@@ -24,7 +24,6 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
     make_isd_pi,
     make_source_item,
     setup_isd_fixtures,
-    teardown_isd_fixtures,
 )
 from india_compliance.gst_india.overrides.test_purchase_invoice import _gstr3b_filed
 from india_compliance.gst_india.utils.isd import (
@@ -65,11 +64,6 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
     def setUpClass(cls):
         super().setUpClass()
         setup_isd_fixtures(cls)
-
-    @classmethod
-    def tearDownClass(cls):
-        teardown_isd_fixtures()
-        super().tearDownClass()
 
     def _recipient(self, **overrides):
         fields = dict(

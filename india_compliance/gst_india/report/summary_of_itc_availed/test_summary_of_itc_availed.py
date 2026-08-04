@@ -10,7 +10,6 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
     make_isd_pi,
     make_source_item,
     setup_isd_fixtures,
-    teardown_isd_fixtures,
 )
 from india_compliance.gst_india.report.summary_of_itc_availed.summary_of_itc_availed import (
     execute,
@@ -35,14 +34,15 @@ def _filters(posting_date):
 
 
 class TestSummaryOfITCAvailed(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_isd_fixtures(cls)
+
     def setUp(self):
         filters = {"company": COMPANY}
-        for doctype in ("Purchase Invoice", "Bill of Entry"):
+        for doctype in ("Purchase Invoice", "Bill of Entry", "ISD Recipient Invoice"):
             frappe.db.delete(doctype, filters=filters)
-
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.rollback()
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_boe_classified_as_import_of_goods(self):
@@ -106,24 +106,7 @@ class TestSummaryOfITCAvailed(IntegrationTestCase):
         self.assertEqual(input_services_row["cgst_amount"], 9.0)
         self.assertEqual(input_services_row["sgst_amount"], 9.0)
 
-
-class TestSummaryOfITCAvailedISD(IntegrationTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        setup_isd_fixtures(cls)
-
-    @classmethod
-    def tearDownClass(cls):
-        teardown_isd_fixtures()
-        frappe.db.rollback()
-
-    def setUp(self):
-        recipients = frappe.get_all("ISD Recipient Invoice", filters={"company": COMPANY}, pluck="name")
-        if recipients:
-            frappe.db.delete("ISD Source Item", {"parent": ("in", recipients)})
-            frappe.db.delete("ISD Recipient Invoice", {"name": ("in", recipients)})
-
+    # ------------------------------------------------------------------ ISD Recipient Invoice
     def create_recipient_invoice(self):
         pi = make_isd_pi(self.isd_address.name)
 

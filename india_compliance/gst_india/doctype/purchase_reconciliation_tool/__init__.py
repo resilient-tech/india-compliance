@@ -1010,7 +1010,7 @@ class Reconciler(BaseReconciliation):
         """
 
         if rule == Rule.EXACT_MATCH:
-            return purchase[field] == inward_supply[field]
+            return (purchase.get(field) or "") == (inward_supply.get(field) or "")
         elif rule == Rule.FUZZY_MATCH:
             return self.fuzzy_match(purchase, inward_supply)
         elif rule == Rule.ROUNDING_DIFFERENCE:

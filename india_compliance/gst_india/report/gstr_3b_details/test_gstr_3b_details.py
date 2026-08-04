@@ -76,7 +76,9 @@ class TestGSTR3BDetails(IntegrationTestCase):
         self.assertNotIn(pi.name, [row["voucher_no"] for row in rows])
 
     def test_itc_details_report_includes_itc_reclaim_entries(self):
-        journal_entry = create_itc_reclaim_journal_entry(posting_date=getdate(), tax_amount=9)
+        journal_entry = create_itc_reclaim_journal_entry(
+            posting_date=getdate(), tax_amount=9, company_gstin="24AAQCA8719H1ZC"
+        )
 
         _, data = self.get_details("4")
         row = next((item for item in data if item["voucher_no"] == journal_entry.name), None)
@@ -113,7 +115,9 @@ class TestGSTR3BDetails(IntegrationTestCase):
             supplier_address="_Test Registered Supplier-Billing",
         )
         # ITC Reclaim Journal Entry ("Reclaim of ITC Reversal")
-        create_itc_reclaim_journal_entry(posting_date=getdate(), tax_amount=9)
+        create_itc_reclaim_journal_entry(
+            posting_date=getdate(), tax_amount=9, company_gstin="24AAQCA8719H1ZC"
+        )
 
     def test_invoice_sub_category_filter_narrows_rows(self):
         self.create_section_4_documents()

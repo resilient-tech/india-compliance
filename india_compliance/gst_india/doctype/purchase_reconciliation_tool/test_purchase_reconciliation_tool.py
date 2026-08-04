@@ -10,6 +10,12 @@ from frappe.tests.utils import make_test_objects
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
 )
+from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
+    create_recipient_invoice,
+    make_isd_pi,
+    make_source_item,
+    setup_isd_fixtures,
+)
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     format_period,
@@ -82,6 +88,15 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         )
 
         cls.create_test_data()
+        setup_isd_fixtures(cls)
+
+    def setUp(self):
+        recipients = frappe.get_all(
+            "ISD Recipient Invoice", filters={"company": "_Test Indian Registered Company"}, pluck="name"
+        )
+        if recipients:
+            frappe.db.delete("ISD Source Item", {"parent": ("in", recipients)})
+            frappe.db.delete("ISD Recipient Invoice", {"name": ("in", recipients)})
 
     def test_purchase_reconciliation_tool(self):
         purchase_reconciliation_tool = frappe.get_doc("Purchase Reconciliation Tool")
@@ -578,6 +593,163 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             link_doctype=None,
         )
         self.assertIsInstance(result, list)
+
+    # ------------------------------------------------------------------ ISD Recipient Invoice
+    COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
+
+    POSTING_DATE = "2023-08-11"
+
+    def create_recipient_invoice(self, external_isd_invoice_number):
+        pi = make_isd_pi(self.isd_address.name, posting_date=self.POSTING_DATE, set_posting_time=1)
+
+        return create_recipient_invoice(
+            company_address=self.COMPANY_ADDRESS,
+            party_address=self.isd_address.name,
+            posting_date=self.POSTING_DATE,
+            external_isd_invoice_number=external_isd_invoice_number,
+            source_items=make_source_item(pi),
+        )
+
+    def reconcile(self):
+        tool = frappe.get_doc("Purchase Reconciliation Tool")
+        tool.update(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "purchase_period": "Custom",
+                "purchase_from_date": "2023-08-01",
+                "purchase_to_date": "2023-08-31",
+                "inward_supply_period": "Custom",
+                "inward_supply_from_date": "2023-08-01",
+                "inward_supply_to_date": "2023-08-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        return tool, tool.reconcile_and_generate_data()
+
+    def isd_row(self, rows, doc):
+        return next(row for row in rows if row.purchase_invoice_name == doc.name)
+
+    def test_unmatched_isd_invoice_is_reported_as_missing_in_2b(self):
+        doc = self.create_recipient_invoice("ISD-REC-001")
+        source_row = doc.source_items[0]
+
+        _, rows = self.reconcile()
+        row = self.isd_row(rows, doc)
+
+        self.assertEqual(row.purchase_doctype, "ISD Recipient Invoice")
+        self.assertEqual(row.classification, "ISD")
+        self.assertEqual(row.match_status, "Missing in 2A/2B")
+
+        # the counterparty is the ISD registration, not a supplier
+        self.assertEqual(row.supplier_gstin, self.isd_address.gstin)
+        self.assertEqual(row.bill_no, "ISD-REC-001")
+
+        # nothing to reconcile against, so the difference is the credit received
+        self.assertEqual(row.tax_difference, -(source_row.distributed_cgst + source_row.distributed_sgst))
+
+    def test_isd_invoice_matched_against_2b_isd_row(self):
+        doc = self.create_recipient_invoice("ISD-REC-002")
+        source_row = doc.source_items[0]
+
+        # 2A/2B reports neither a place of supply nor a taxable value for ISD invoices (see
+        # GSTR2bISD and ISDInvoice.get_fields), so only the tax heads carry values
+        create_gst_inward_supply(
+            classification="ISD",
+            doc_type="ISD Invoice",
+            bill_no="ISD-REC-002",
+            bill_date=self.POSTING_DATE,
+            supplier_gstin=self.isd_address.gstin,
+            supplier_name="_Test ISD Distribution Address",
+            place_of_supply="",
+            itc_availability="",
+            items=[
+                {
+                    "taxable_value": 0,
+                    "cgst": source_row.distributed_cgst,
+                    "sgst": source_row.distributed_sgst,
+                }
+            ],
+            document_value=source_row.distributed_cgst + source_row.distributed_sgst,
+            return_period_2b="082023",
+            gen_date_2b=self.POSTING_DATE,
+        )
+
+        _, rows = self.reconcile()
+        row = self.isd_row(rows, doc)
+
+        self.assertEqual(row.classification, "ISD")
+        self.assertEqual(row.match_status, "Exact Match")
+        self.assertEqual(row.tax_difference, 0)
+
+        self.assertEqual(
+            frappe.db.get_value("ISD Recipient Invoice", doc.name, "reconciliation_status"),
+            "Match Found",
+        )
+
+    def test_isd_invoice_manual_link_and_unlink(self):
+        """Manually linking an ISD Recipient Invoice writes the status back onto the document, and
+        unlinking reverts it -- the ISD branches of link_documents / unlink_documents."""
+        doc = self.create_recipient_invoice("ISD-REC-003")
+
+        # a different bill number, so it stays unmatched and has to be linked by hand
+        gst_is = create_gst_inward_supply(
+            classification="ISD",
+            doc_type="ISD Invoice",
+            bill_no="ISD-2B-ONLY",
+            bill_date=self.POSTING_DATE,
+            supplier_gstin=self.isd_address.gstin,
+            supplier_name="_Test ISD Distribution Address",
+            place_of_supply="",
+            itc_availability="",
+            items=[{"taxable_value": 0, "cgst": 100, "sgst": 100}],
+            document_value=200,
+            return_period_2b="082023",
+            gen_date_2b=self.POSTING_DATE,
+        )
+
+        tool, _rows = self.reconcile()
+        self.assertEqual(
+            frappe.db.get_value("ISD Recipient Invoice", doc.name, "reconciliation_status"),
+            "Unreconciled",
+        )
+
+        tool.link_documents(
+            purchase_invoice_name=doc.name,
+            inward_supply_name=gst_is.name,
+            link_doctype="ISD Recipient Invoice",
+        )
+
+        linked = frappe.db.get_value(
+            "GST Inward Supply", gst_is.name, ["link_doctype", "link_name", "match_status"], as_dict=True
+        )
+        self.assertEqual(linked.link_doctype, "ISD Recipient Invoice")
+        self.assertEqual(linked.link_name, doc.name)
+        self.assertEqual(linked.match_status, "Manual Match")
+        self.assertEqual(
+            frappe.db.get_value("ISD Recipient Invoice", doc.name, "reconciliation_status"),
+            "Match Found",
+        )
+
+        tool.unlink_documents(
+            [
+                {
+                    "inward_supply_name": gst_is.name,
+                    "purchase_doctype": "ISD Recipient Invoice",
+                    "purchase_invoice_name": doc.name,
+                }
+            ]
+        )
+
+        unlinked = frappe.db.get_value(
+            "GST Inward Supply", gst_is.name, ["link_name", "match_status"], as_dict=True
+        )
+        self.assertEqual(unlinked.link_name, "")
+        self.assertEqual(unlinked.match_status, "Unlinked")
+        self.assertEqual(
+            frappe.db.get_value("ISD Recipient Invoice", doc.name, "reconciliation_status"),
+            "Unreconciled",
+        )
 
 
 def create_purchase_invoice(**kwargs):
