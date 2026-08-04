@@ -329,14 +329,18 @@ class PurchaseReconciliationTool(Document):
         filters.from_date = filters.get("from_date") or self.ReconciledData.purchase_from_date
         filters.to_date = filters.get("to_date") or self.to_date
 
+        options = []
         if doctype == "Purchase Invoice":
-            return self.get_purchase_invoice_options(filters)
+            options = self.get_purchase_invoice_options(filters)
 
         elif doctype == "GST Inward Supply":
-            return self.get_inward_supply_options(filters)
+            options = self.get_inward_supply_options(filters)
 
         elif doctype == "Bill of Entry":
-            return self.get_bill_of_entry_options(filters)
+            options = self.get_bill_of_entry_options(filters)
+
+        # filters go back so the dialog can show the window actually applied
+        return {"options": options, "filters": filters}
 
     def get_purchase_invoice_options(self, filters):
         PI = frappe.qb.DocType("Purchase Invoice")
