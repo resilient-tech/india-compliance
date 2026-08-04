@@ -179,6 +179,23 @@ def validate_company_access(company, doctype="GST Inward Supply"):
         )
 
 
+def validate_common_report_filters(filters):
+    """Validate the company and date range a report is scoped by.
+
+    Company is checked here too, not just via `reqd`, which is enforced client-side only.
+    """
+    filters = frappe._dict(filters or {})
+
+    if not filters.company:
+        frappe.throw(_("Company is mandatory"), title=_("Invalid Filter"))
+
+    if not filters.from_date or not filters.to_date:
+        frappe.throw(_("From Date & To Date is mandatory"), title=_("Invalid Filter"))
+
+    if filters.from_date > filters.to_date:
+        frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
+
+
 def validate_company_gstin_access(company_gstin, doctype="GST Inward Supply"):
     """Throw unless the user may read doctype data for company_gstin's Company."""
     if not company_gstin or company_gstin == "All":

@@ -2,17 +2,14 @@
 # For license information, please see license.txt
 
 import frappe
+from erpnext import get_company_currency
 from frappe import _
-from frappe.core.doctype.user_permission.user_permission import get_permitted_documents
 from frappe.query_builder import Order
 from frappe.query_builder.functions import Sum
 from pypika.terms import Case
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
-from india_compliance.gst_india.utils.isd import (
-    get_report_company_currency,
-    validate_common_report_filters,
-)
+from india_compliance.gst_india.utils import validate_common_report_filters
 
 DISTRIBUTION_DOCTYPE = "ISD Distribution Invoice"
 RECIPIENT_DOCTYPE = "ISD Recipient Invoice"
@@ -20,7 +17,11 @@ SOURCE_ITEM_DOCTYPE = "ISD Source Item"
 
 
 def get_pos_for_state(state):
-    return f"{STATE_NUMBERS.get(state)}-{state}"
+    state_number = STATE_NUMBERS.get(state)
+    if not state_number:
+        frappe.throw(_("{0} is not a valid State").format(frappe.bold(state)), title=_("Invalid Filter"))
+
+    return f"{state_number}-{state}"
 
 
 def execute(filters=None):
@@ -102,12 +103,7 @@ def get_purchase_invoice_data(filters):
         .orderby(pi.name, order=Order.asc)
     )
 
-    if filters.get("company"):
-        query = query.where(pi.company == filters.company)
-    else:
-        permitted = get_permitted_documents("Company")
-        if permitted:
-            query = query.where(pi.company.isin(permitted))
+    query = query.where(pi.company == filters.company)
 
     if filters.get("company_gstin"):
         query = query.where(pi.company_gstin == filters.company_gstin)
@@ -165,12 +161,7 @@ def get_distribution_invoice_data(filters):
         .orderby(dist.name, order=Order.asc)
     )
 
-    if filters.get("company"):
-        query = query.where(dist.company == filters.company)
-    else:
-        permitted = get_permitted_documents("Company")
-        if permitted:
-            query = query.where(dist.company.isin(permitted))
+    query = query.where(dist.company == filters.company)
 
     if filters.get("company_gstin"):
         query = query.where(dist.company_gstin == filters.company_gstin)
@@ -225,12 +216,7 @@ def get_recipient_invoice_data(filters):
         .orderby(rec.name, order=Order.asc)
     )
 
-    if filters.get("company"):
-        query = query.where(rec.company == filters.company)
-    else:
-        permitted = get_permitted_documents("Company")
-        if permitted:
-            query = query.where(rec.company.isin(permitted))
+    query = query.where(rec.company == filters.company)
 
     if filters.get("company_gstin"):
         query = query.where(rec.company_gstin == filters.company_gstin)
@@ -252,7 +238,7 @@ def get_recipient_invoice_data(filters):
 
 def get_columns(filters):
     report_view = filters.get("report_view", "Purchase Invoice")
-    company_currency = get_report_company_currency(filters)
+    company_currency = get_company_currency(filters.company)
 
     if report_view == "ISD Distribution Invoice":
         return _get_distribution_invoice_columns(company_currency)

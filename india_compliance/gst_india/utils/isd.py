@@ -37,31 +37,6 @@ def sum_row_tax_by_type(row, prefix):
     return sum(flt(row.get(f"{prefix}_{tax_type}")) for tax_type in GST_TAX_TYPES)
 
 
-def validate_common_report_filters(filters):
-    """Shared filter validation for ISD reports"""
-    filters = frappe._dict(filters or {})
-
-    if filters.company:
-        frappe.has_permission("Company", doc=filters.company, throw=True)
-
-    if not filters.from_date or not filters.to_date:
-        frappe.throw(
-            _("From Date & To Date is mandatory"),
-            title=_("Invalid Filter"),
-        )
-
-    if filters.from_date > filters.to_date:
-        frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
-
-
-def get_report_company_currency(filters):
-    """Company currency for a report, falling back to the system default currency."""
-    if filters.get("company"):
-        return frappe.get_cached_value("Company", filters.company, "default_currency")
-
-    return frappe.db.get_default("currency") or "INR"
-
-
 def throw_row_table(title, header, rows):
     """Raise a ValidationError rendering all offending rows as a table under one title."""
     if not rows:
