@@ -57,7 +57,7 @@ class TestCompanyFixtures(FrappeTestCase):
                     self.assertEqual(row["account_head"]["tax_rate"], expected_rate)
 
 
-class TestCompanyOnTrash(IntegrationTestCase):
+class TestCompanyOnTrash(FrappeTestCase):
     def test_company_is_cleared_from_singles(self):
         company = self.create_company("_Test Trash Company", "_TTC")
         other_company = frappe.get_cached_doc("Company", "_Test Indian Registered Company")
