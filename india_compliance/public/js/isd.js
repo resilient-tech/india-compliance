@@ -659,10 +659,9 @@ india_compliance.ISDController = class ISDController {
     }
 
     set_grand_total() {
-        const { total_eligible, total_ineligible, total_expense, company } = this.frm.doc;
-        const grand_total = flt(total_eligible) + flt(total_ineligible) + flt(total_expense);
+        const { total_eligible, total_ineligible, total_expense } = this.frm.doc;
 
-        this.frm.doc.grand_total = format_currency(grand_total, erpnext.get_currency(company));
+        this.frm.doc.grand_total = flt(total_eligible) + flt(total_ineligible) + flt(total_expense);
         this.frm.refresh_field("grand_total");
     }
 
