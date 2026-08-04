@@ -59,7 +59,6 @@ class MatchStatus(Enum):
     EXACT_MATCH = "Exact Match"
     SUGGESTED_MATCH = "Suggested Match"
     MISMATCH = "Mismatch"
-    RESIDUAL_MATCH = "Residual Match"
     MANUAL_MATCH = "Manual Match"
     ONLY_IN_2A_2B = "Only in 2A/2B"
     ONLY_IN_BOOKS = "Only in Books"
@@ -75,7 +74,7 @@ class MatchStatus(Enum):
 #     {"Suggested Match": ["E", "E", "E", "F", "E", "E", 1, 1, 1, 1, 1]},
 #     {"Mismatch":        ["E", "E", "N", "E", "N", "N", "N", "N", "N", "N", "N"]},
 #     {"Mismatch":        ["E", "E", "N", "F", "N", "N", "N", "N", "N", "N", "N"]},
-#     {"Residual Match":  ["E", "E", "E", "N", "E", "E", 1, 1, 1, 1, 1]},
+#     {"Mismatch":        ["E", "E", "E", "N", "E", "E", 1, 1, 1, 1, 1]},
 # ]
 
 # PAN level runs on what is left, keyed by pan, so supplier gstin always differs.
@@ -85,7 +84,7 @@ class MatchStatus(Enum):
 #     {"Mismatch":       ["E", "N", "E", "E", "E", "E", 1, 1, 1]},
 #     {"Mismatch":       ["E", "N", "E", "F", "E", "E", 1, 1, 1]},
 #     {"Mismatch":       ["E", "N", "N", "F", "N", "N", "N", "N", "N"]},
-#     {"Residual Match": ["E", "N", "E", "N", "E", "E", 1, 1, 1]},
+#     {"Mismatch":       ["E", "N", "E", "N", "E", "E", 1, 1, 1]},
 # ]
 
 # CDNR covers both note types: (inward supply doc_type, purchase is_return)
@@ -189,7 +188,7 @@ GSTIN_RULES = (
         },
     },
     {
-        "match_status": MatchStatus.RESIDUAL_MATCH,
+        "match_status": MatchStatus.MISMATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             Fields.SUPPLIER_GSTIN: Rule.EXACT_MATCH,
@@ -253,7 +252,7 @@ PAN_RULES = (
         },
     },
     {
-        "match_status": MatchStatus.RESIDUAL_MATCH,
+        "match_status": MatchStatus.MISMATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             # Fields.SUPPLIER_GSTIN: Rule.MISMATCH,
@@ -800,8 +799,9 @@ class Reconciler(BaseReconciliation):
 
             for purchase_invoice_name, purchase in purchases[supplier_gstin].copy().items():
                 for inward_supply_name, inward_supply in inward_supplies[supplier_gstin].copy().items():
+                    # no bill no in this rule, so lean on the dates instead
                     if (
-                        match_status == MatchStatus.RESIDUAL_MATCH.value
+                        Fields.BILL_NO not in rules
                         and self.category != "CDNR"
                         and abs((purchase.bill_date - inward_supply.bill_date).days) > 10
                     ):
@@ -1232,17 +1232,10 @@ class ReconciledData(BaseReconciliation):
         )
 
     def update_differences(self, data, purchase, inward_supply):
-        if not (
-            self.is_exact_or_suggested_match(data)
-            or self.is_mismatch_or_manual_match(data)
-            or self.is_residual_match(data)
-        ):
+        if not (self.is_exact_or_suggested_match(data) or self.is_mismatch_or_manual_match(data)):
             return
 
         differences = []
-
-        if self.is_residual_match(data):
-            differences.append(Fields.BILL_NO.name)
 
         if not self.is_mismatch_or_manual_match(data) and self.has_rounding_difference(data):
             differences.append("Rounding Difference")
@@ -1292,10 +1285,6 @@ class ReconciledData(BaseReconciliation):
             MatchStatus.EXACT_MATCH.value,
             MatchStatus.SUGGESTED_MATCH.value,
         )
-
-    @staticmethod
-    def is_residual_match(data):
-        return data.match_status == MatchStatus.RESIDUAL_MATCH.value
 
     @staticmethod
     def is_mismatch_or_manual_match(data):
