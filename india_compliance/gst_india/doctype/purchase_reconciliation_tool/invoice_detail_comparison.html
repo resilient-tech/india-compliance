@@ -119,23 +119,11 @@
 			</tr>
 			{% endif %}
 
-			{% if inward_supply.irn_source || inward_supply.irn_number || inward_supply.irn_gen_date %}
+			{% if inward_supply.name %}
 			<tr>
-				<th>IRN Source</th>
-				<td data-label="irn_source">{{ inward_supply.irn_source || '-' }}</td>
-				<td data-label="irn_source">-</td>
-			</tr>
-			<tr>
-				<th>IRN Number</th>
-				<td data-label="irn_number" style="word-break: break-all;">{{ inward_supply.irn_number || '-' }}</td>
-				<td data-label="irn_number">-</td>
-			</tr>
-			<tr>
-				<th>IRN Generation Date</th>
-				<td data-label="irn_gen_date">
-					{{ frappe.format(inward_supply.irn_gen_date, {'fieldtype': 'Date'}) || '-' }}
-				</td>
-				<td data-label="irn_gen_date">-</td>
+				<th>IRN</th>
+				<td data-label="irn">{{ inward_supply.irn_number ? 'Yes' : 'No' }}</td>
+				<td data-label="irn">-</td>
 			</tr>
 			{% endif %}
 		</tbody>
