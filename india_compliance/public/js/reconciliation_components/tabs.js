@@ -420,15 +420,11 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
 
     // says what the server filtered on, including dates it filled in for a blank range
     _get_filter_note({ from_date, to_date, show_matched }, count) {
-        const dates = [from_date, to_date].filter(Boolean).map(frappe.datetime.str_to_user);
+        const scope = show_matched ? __("All") : __("Unmatched");
+        const dates = [from_date, to_date].filter(Boolean).map((d) => frappe.datetime.str_to_user(d));
+        const note = dates.length == 2 ? __("{0} between {1} to {2}", [scope, ...dates]) : scope;
 
-        return [
-            count ? "" : __("No documents found."),
-            show_matched ? __("Showing all documents") : __("Showing unmatched documents"),
-            dates.length == 2 ? __("from {0} to {1}", dates) : "",
-        ]
-            .filter(Boolean)
-            .join(" ");
+        return count ? note : `${__("No documents found.")} ${note}`;
     }
 
     _set_missing_doctype() {}
