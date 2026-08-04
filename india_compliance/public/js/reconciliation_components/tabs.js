@@ -287,6 +287,9 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         }
         const supplier_details = `<h5>${this.row.supplier_name}${gstin_text}</h5>`;
 
+        const Autocomplete = frappe.ui.form.ControlAutocomplete;
+        frappe.ui.form.ControlAutocomplete = india_compliance.Autocomplete;
+
         this.dialog = new frappe.ui.Dialog({
             title: `Detail View (${this.row.classification})`,
             fields: [
@@ -306,6 +309,8 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                 },
             ],
         });
+        frappe.ui.form.ControlAutocomplete = Autocomplete;
+
         this.set_link_options();
     }
 
@@ -383,11 +388,38 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         });
 
         const field = this.dialog.get_field("link_with");
+        field.set_filters(this._get_link_filters());
         field.set_data(message);
+    }
 
-        field.set_description(
-            message.length ? "" : __("Nothing to link. Widen the dates, clear the GSTIN, or show matched."),
-        );
+    _get_link_filters() {
+        const doctype = this.dialog.get_value("doctype");
+        const { supplier_gstin, from_date, to_date, show_matched } = this.filters;
+        const is_inward_supply = doctype === "GST Inward Supply";
+
+        const filters = [];
+
+        // bill of entry options are not narrowed by gstin on the server
+        if (doctype !== "Bill of Entry") {
+            filters.push([doctype, "supplier_gstin", "like", supplier_gstin]);
+        }
+
+        filters.push([
+            doctype,
+            is_inward_supply ? "bill_date" : "posting_date",
+            "between",
+            [from_date, to_date],
+        ]);
+
+        if (!show_matched) {
+            filters.push(
+                is_inward_supply
+                    ? [doctype, "link_name", "is", "not set"]
+                    : [doctype, "reconciliation_status", "!=", "Match Found"],
+            );
+        }
+
+        return filters;
     }
 
     _set_missing_doctype() {}
