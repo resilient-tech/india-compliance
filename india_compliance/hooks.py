@@ -141,7 +141,9 @@ doc_events = {
         "on_update": ["india_compliance.gst_india.overrides.address.update_party_gstin_and_gst_category"],
     },
     "Asset Movement": {
+        "onload": "india_compliance.gst_india.overrides.asset_movement.onload",
         "validate": "india_compliance.gst_india.overrides.asset_movement.validate",
+        "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
     },
     "Company": {
         "on_trash": "india_compliance.gst_india.overrides.company.on_trash",
@@ -462,6 +464,7 @@ audit_trail_doctypes = [
     "Sales Invoice",
     "Asset",
     "Asset Capitalization",
+    "Asset Movement",
     "Asset Repair",
     "Delivery Note",
     "Landed Cost Voucher",

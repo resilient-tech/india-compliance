@@ -34,6 +34,49 @@
             "enable_perpetual_inventory": 0
         }
     ],
+    "Account": [
+        {
+            "account_name": "_Test Asset Movement Fixed Asset Account",
+            "account_type": "Fixed Asset",
+            "company": "_Test Indian Registered Company",
+            "doctype": "Account",
+            "parent_account": "Fixed Assets - _TIRC"
+        },
+        {
+            "account_name": "_Test Asset Movement Fixed Asset Account",
+            "account_type": "Fixed Asset",
+            "company": "_Test Indian Unregistered Company",
+            "doctype": "Account",
+            "parent_account": "Fixed Assets - _TIUC"
+        }
+    ],
+    "Location": [
+        {
+            "doctype": "Location",
+            "location_name": "_Test Asset Movement Location"
+        },
+        {
+            "doctype": "Location",
+            "location_name": "_Test Asset Movement Target Location"
+        }
+    ],
+    "Asset Category": [
+        {
+            "accounts": [
+                {
+                    "company_name": "_Test Indian Registered Company",
+                    "fixed_asset_account": "_Test Asset Movement Fixed Asset Account - _TIRC"
+                },
+                {
+                    "company_name": "_Test Indian Unregistered Company",
+                    "fixed_asset_account": "_Test Asset Movement Fixed Asset Account - _TIUC"
+                }
+            ],
+            "asset_category_name": "_Test Asset Movement Category",
+            "doctype": "Asset Category",
+            "enable_cwip_accounting": 0
+        }
+    ],
     "Item": [
         {
             "description": "_Test Trading Goods 1",
@@ -150,6 +193,80 @@
                     "income_account": "Service - _TIRC"
                 }
             ]
+        },
+        {
+            "asset_category": "_Test Asset Movement Category",
+            "description": "_Test Asset Movement Fixed Asset",
+            "doctype": "Item",
+            "gst_hsn_code": "847130",
+            "is_fixed_asset": 1,
+            "is_stock_item": 0,
+            "item_code": "_Test Asset Movement Fixed Asset",
+            "item_group": "All Item Groups",
+            "item_name": "_Test Asset Movement Fixed Asset",
+            "stock_uom": "Nos",
+            "taxes": [
+                {
+                    "item_tax_template": "GST 18% - _TIRC",
+                    "tax_category": ""
+                }
+            ]
+        }
+    ],
+    "Asset": [
+        {
+            "asset_category": "_Test Asset Movement Category",
+            "asset_name": "_Test Asset Movement Asset",
+            "asset_owner": "Company",
+            "asset_quantity": 1,
+            "asset_type": "Existing Asset",
+            "available_for_use_date": "2024-01-01",
+            "calculate_depreciation": 0,
+            "company": "_Test Indian Registered Company",
+            "docstatus": 1,
+            "doctype": "Asset",
+            "item_code": "_Test Asset Movement Fixed Asset",
+            "location": "_Test Asset Movement Location",
+            "maintenance_required": 0,
+            "net_purchase_amount": 100000,
+            "purchase_amount": 100000,
+            "purchase_date": "2024-01-01"
+        },
+        {
+            "asset_category": "_Test Asset Movement Category",
+            "asset_name": "_Test Asset Movement Asset Qty 4",
+            "asset_owner": "Company",
+            "asset_quantity": 4,
+            "asset_type": "Existing Asset",
+            "available_for_use_date": "2024-01-01",
+            "calculate_depreciation": 0,
+            "company": "_Test Indian Registered Company",
+            "docstatus": 1,
+            "doctype": "Asset",
+            "item_code": "_Test Asset Movement Fixed Asset",
+            "location": "_Test Asset Movement Location",
+            "maintenance_required": 0,
+            "net_purchase_amount": 100000,
+            "purchase_amount": 100000,
+            "purchase_date": "2024-01-01"
+        },
+        {
+            "asset_category": "_Test Asset Movement Category",
+            "asset_name": "_Test Asset Movement Asset Unregistered",
+            "asset_owner": "Company",
+            "asset_quantity": 1,
+            "asset_type": "Existing Asset",
+            "available_for_use_date": "2024-01-01",
+            "calculate_depreciation": 0,
+            "company": "_Test Indian Unregistered Company",
+            "docstatus": 1,
+            "doctype": "Asset",
+            "item_code": "_Test Asset Movement Fixed Asset",
+            "location": "_Test Asset Movement Location",
+            "maintenance_required": 0,
+            "net_purchase_amount": 100000,
+            "purchase_amount": 100000,
+            "purchase_date": "2024-01-01"
         }
     ],
     "Customer": [

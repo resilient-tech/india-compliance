@@ -6,7 +6,7 @@ execute:from frappe.installer import add_module_defs; add_module_defs("india_com
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
 execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #76
-execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #14
+execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #15
 execute:from india_compliance.income_tax_india.setup import create_custom_fields; create_custom_fields() #8
 india_compliance.patches.post_install.remove_old_fields #2
 india_compliance.patches.post_install.set_gst_tax_type

@@ -40,6 +40,8 @@ for (const doctype of SUBCONTRACTING_DOCTYPES) {
     fetch_gst_details(doctype);
 }
 
+fetch_gst_details("Asset Movement");
+
 for (const doctype of ["Sales Invoice", "Delivery Note"]) {
     ignore_port_code_validation(doctype);
 }
@@ -56,6 +58,8 @@ function fetch_gst_details(doctype) {
         event_fields.push("customer_address", "shipping_address_name", "is_export_with_gst");
     } else if (doctype === "Stock Entry") {
         event_fields.push("bill_from_address", "bill_to_address");
+    } else if (doctype === "Asset Movement") {
+        event_fields.push("bill_to_address", "ship_to_address");
     } else if (["Subcontracting Order", "Subcontracting Receipt"].includes(doctype)) {
         event_fields.push("supplier_gstin");
     } else {
@@ -73,7 +77,8 @@ async function update_gst_details(frm, event) {
     if (
         frm.updating_party_details ||
         !frm.doc.company ||
-        (["place_of_supply", "bill_to_address"].includes(event) && frm.__updating_gst_details)
+        (["place_of_supply", "bill_to_address", "ship_to_address"].includes(event) &&
+            frm.__updating_gst_details)
     )
         return;
 
@@ -86,13 +91,16 @@ async function update_gst_details(frm, event) {
         ["Material Transfer", "Material Issue"].includes(frm.doc.purpose) &&
         !frm.doc.is_return;
 
-    if (!(party || same_gstin_stock_entry)) return;
+    const is_asset_movement = frm.doc.doctype === "Asset Movement";
+
+    if (!(party || same_gstin_stock_entry || is_asset_movement)) return;
 
     if (
         [
             "company_gstin",
             "bill_from_gstin",
             "bill_to_address",
+            "ship_to_address",
             "customer_address",
             "shipping_address_name",
             "supplier_address",
@@ -147,6 +155,8 @@ async function update_gst_details(frm, event) {
 
         party_details["is_outward_stock_entry"] = same_gstin_stock_entry;
         party_details["is_inward_stock_entry"] = frm.doc.purpose === "Material Transfer" && frm.doc.is_return;
+    } else if (is_asset_movement) {
+        fieldnames_to_set.push("bill_from_gstin", "bill_to_gstin", "bill_to_address", "ship_to_address");
     } else {
         fieldnames_to_set.push("supplier_address", "supplier_gstin");
     }
@@ -172,6 +182,8 @@ india_compliance.fetch_and_update_gst_details = function (frm, args, method) {
                 gst_details = Object.fromEntries(
                     Object.entries(gst_details).filter(([field]) => POST_SUBMIT_GST_FIELDS.includes(field)),
                 );
+            } else if (frm.doc.doctype === "Asset Movement") {
+                gst_details = { place_of_supply: gst_details.place_of_supply };
             }
 
             frm.__updating_gst_details = true;
