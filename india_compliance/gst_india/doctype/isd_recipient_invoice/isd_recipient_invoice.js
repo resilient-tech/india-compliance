@@ -2,22 +2,27 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("ISD Recipient Invoice", {
+    setup(frm) {
+        india_compliance.setup_itc_claim_period_query(frm);
+    },
+
     onload(frm) {
         frm.isd_controller = new india_compliance.ISDController(frm);
-        frm.set_query("itc_claim_period", () => ({
-            query: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
-            params: {
-                company_gstin: frm.doc.company_gstin,
-                posting_date: frm.doc.posting_date,
-            },
-        }));
         if (frm.is_new() && !frm.doc.company) {
             frm.set_value("company", frappe.defaults.get_user_default("Company"));
         }
-        india_compliance.set_itc_claim_period_status(frm);
     },
 
     refresh(frm) {
+        india_compliance.set_itc_claim_period_status(frm);
+
+        india_compliance.set_reconciliation_status(
+            frm,
+            frm.doc.isd_distribution_invoice_reference
+                ? "isd_distribution_invoice_reference"
+                : "external_isd_invoice_number",
+        );
+
         frm.isd_controller.set_provisional_labels();
         frm.isd_controller.toggle_expense_fields();
         frm.isd_controller.set_common_buttons();
