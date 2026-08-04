@@ -7,15 +7,13 @@ from frappe.utils import flt
 
 from india_compliance.gst_india.utils import get_data_file_path
 
-# Single DocTypes where the company is stored as a filter in `tabSingles`
-SINGLES_WITH_COMPANY = (
+SINGLE_DOCTYPES_WITH_COMPANY_FIELD = (
     "GST Invoice Management System",
     "GSTR-1",
     "Purchase Reconciliation Tool",
 )
 
-# Child tables of GST Settings with a company
-GST_SETTINGS_COMPANY_TABLES = (
+GST_SETTINGS_CHILD_TABLES_WITH_COMPANY = (
     "gst_accounts",
     "credentials",
     "e_invoice_applicable_companies",
@@ -26,11 +24,11 @@ def on_trash(doc, method=None):
     if doc.country != "India":
         return
 
-    reset_company_in_singles(doc.name)
-    delete_gst_settings_for_company(doc.name)
+    clear_company_from_single_doctypes(doc.name)
+    remove_gst_settings_for_company(doc.name)
 
 
-def reset_company_in_singles(company):
+def clear_company_from_single_doctypes(company):
     """Clear the deleted company from Single DocTypes, since these aren't cleared on delete."""
     singles = frappe.qb.DocType("Singles")
 
@@ -38,7 +36,7 @@ def reset_company_in_singles(company):
         frappe.qb.from_(singles)
         .select(singles["doctype"])
         .where(
-            singles["doctype"].isin(SINGLES_WITH_COMPANY)
+            singles["doctype"].isin(SINGLE_DOCTYPES_WITH_COMPANY_FIELD)
             & (singles.field == "company")
             & (singles.value == company)
         )
@@ -57,10 +55,10 @@ def reset_company_in_singles(company):
         frappe.clear_document_cache(doctype, doctype)
 
 
-def delete_gst_settings_for_company(company):
+def remove_gst_settings_for_company(company):
     gst_settings = frappe.get_doc("GST Settings")
 
-    for fieldname in GST_SETTINGS_COMPANY_TABLES:
+    for fieldname in GST_SETTINGS_CHILD_TABLES_WITH_COMPANY:
         gst_settings.set(
             fieldname, [row for row in gst_settings.get(fieldname, []) if row.company != company]
         )
