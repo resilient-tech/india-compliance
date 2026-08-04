@@ -2,8 +2,8 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.overrides.company import (
-    GST_SETTINGS_COMPANY_TABLES,
-    SINGLES_WITH_COMPANY,
+    GST_SETTINGS_CHILD_TABLES_WITH_COMPANY,
+    SINGLE_DOCTYPES_WITH_COMPANY_FIELD,
     get_tax_defaults,
 )
 
@@ -73,23 +73,23 @@ class TestCompanyOnTrash(IntegrationTestCase):
         ).insert()
 
         # company is set as a filter on each tool
-        for doctype in SINGLES_WITH_COMPANY:
+        for doctype in SINGLE_DOCTYPES_WITH_COMPANY_FIELD:
             frappe.db.set_single_value(doctype, {"company": company.name, "company_gstin": company.gstin})
 
         gst_settings = self.setup_gst_settings(company)
 
-        for fieldname in GST_SETTINGS_COMPANY_TABLES:
+        for fieldname in GST_SETTINGS_CHILD_TABLES_WITH_COMPANY:
             self.assertTrue(self.get_gst_settings_rows(gst_settings, fieldname, company.name))
 
         company.delete()
 
-        for doctype in SINGLES_WITH_COMPANY:
+        for doctype in SINGLE_DOCTYPES_WITH_COMPANY_FIELD:
             self.assertFalse(frappe.db.get_single_value(doctype, "company"))
             self.assertFalse(frappe.db.get_single_value(doctype, "company_gstin"))
 
         gst_settings = frappe.get_doc("GST Settings")
 
-        for fieldname in GST_SETTINGS_COMPANY_TABLES:
+        for fieldname in GST_SETTINGS_CHILD_TABLES_WITH_COMPANY:
             self.assertFalse(self.get_gst_settings_rows(gst_settings, fieldname, company.name))
 
     def setup_gst_settings(self, company):
