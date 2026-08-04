@@ -634,6 +634,50 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
         self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
 
+    def test_purchase_posted_after_period_is_not_matched(self):
+        """
+        A purchase booked after the period ends must stay out of that period's run.
+        It matches once the period covers its posting date.
+        """
+        # own amounts, so no other invoice can claim these by a residual match
+        pinv = create_purchase_invoice(
+            bill_no="LATE-ENTRY-001",
+            bill_date="2024-01-15",
+            posting_date="2024-02-05",
+            qty=3,
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="LATE-ENTRY-001",
+            bill_date="2024-01-15",
+            return_period_2b="012024",
+            items=[{"taxable_value": 3000, "rate": 18, "sgst": 270, "cgst": 270}],
+            document_value=3540,
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        prt.reconcile_and_generate_data()
+
+        self.assertFalse(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv.name, "reconciliation_status"),
+            "Unreconciled",
+        )
+
+        # stretch the period past the posting date, now it is in scope
+        prt.to_date = "2024-02-29"
+        prt.reconcile_and_generate_data()
+
+        self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+
 
 def create_purchase_invoice(**kwargs):
     args = PURCHASE_INVOICE_DEFAULT_ARGS.copy()

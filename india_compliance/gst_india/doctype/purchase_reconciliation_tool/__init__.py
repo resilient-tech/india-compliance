@@ -418,7 +418,7 @@ class PurchaseInvoice:
         query = (
             self.get_query(is_return=is_return)
             .where(IfNull(self.PI.reconciliation_status, "").notin(("Reconciled", "Match Found")))
-            .where(self.PI.posting_date >= self.from_date)
+            .where(self.PI.posting_date[self.from_date : self.to_date])
             .where(self.PI.gst_category.isin(gst_category))
             .where(self.PI.is_return == is_return)
         )
@@ -561,7 +561,7 @@ class BillOfEntry:
             self.get_query()
             .where(self.PI.gst_category == gst_category)
             .where(IfNull(self.BOE.reconciliation_status, "").notin(("Reconciled", "Match Found")))
-            .where(self.BOE.posting_date >= self.from_date)
+            .where(self.BOE.posting_date[self.from_date : self.to_date])
         )
 
         data = query.run(as_dict=True)
@@ -704,6 +704,7 @@ class BaseReconciliation:
             company=self.company,
             company_gstin=self.company_gstin,
             from_date=self.purchase_from_date,
+            to_date=self.to_date,
             include_ignored=self.include_ignored,
         ).get_unmatched(category, is_return)
 
@@ -728,6 +729,7 @@ class BaseReconciliation:
             company=self.company,
             company_gstin=self.company_gstin,
             from_date=self.purchase_from_date,
+            to_date=self.to_date,
             include_ignored=self.include_ignored,
         ).get_unmatched(category)
 
