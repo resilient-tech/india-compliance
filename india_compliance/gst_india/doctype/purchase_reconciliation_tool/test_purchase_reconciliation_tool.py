@@ -453,6 +453,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertEqual(result.inward_supply_name, gst_is.name)
         self.assertEqual(result.match_status, "Only in 2A/2B")
         self.assertIsNone(result.purchase_invoice_name)
+        self.assertEqual(result._inward_supply.doc_type, "Invoice")
 
     def test_link_documents_with_none_inward_supply_name(self):
         """

@@ -56,6 +56,7 @@ from india_compliance.gst_india.utils.gstr_utils import (
     publish_action_status_notification,
 )
 from india_compliance.gst_india.utils.itc_claim import (
+    period_sort_key,
     set_itc_claim_period_on_ims_action,
 )
 from india_compliance.setup_wizard import can_fetch_gstin_info
@@ -261,7 +262,7 @@ class GSTInvoiceManagementSystem(Document):
         if not filters.show_matched:
             query = query.where(PI.reconciliation_status == "Unreconciled")
 
-        return get_formatted_options(query.run(as_dict=True))
+        return {"options": get_formatted_options(query.run(as_dict=True)), "filters": filters}
 
 
 @frappe.whitelist()
@@ -349,22 +350,19 @@ def download_excel_report(data: str | list, doc: str | dict | frappe._dict):
 @frappe.whitelist()
 @validate_gstin_permission
 def get_period_options(company: str, company_gstin: str):
-    def format_period(period):
-        return period[2:] + period[:2]
-
     # Calculate six months ago as fallback
     six_months_ago = add_to_date(None, months=-7).strftime("%m%Y")
     latest_3b_filed_period = get_latest_3b_filed_period(company, company_gstin) or (six_months_ago,)
 
     # Fetch latest GSTR3B filing or default to six months ago
-    latest_3b_filed_period = format_period(latest_3b_filed_period[0])
-    six_months_ago = format_period(six_months_ago)
+    latest_3b_filed_period = period_sort_key(latest_3b_filed_period[0])
+    six_months_ago = period_sort_key(six_months_ago)
 
     if latest_3b_filed_period <= six_months_ago and can_fetch_gstin_info():
         update_gstr_returns_info(company, company_gstin)
 
     # last month's 3B filed means current month is the one to work on
-    last_month = format_period(add_to_date(None, months=-1).strftime("%m%Y"))
+    last_month = period_sort_key(add_to_date(None, months=-1).strftime("%m%Y"))
     start_month = 0 if latest_3b_filed_period >= last_month else -1
 
     # Generate last six months of valid periods
@@ -373,7 +371,7 @@ def get_period_options(company: str, company_gstin: str):
 
     while True:
         period = date.strftime("%m%Y")
-        formatted_period = format_period(period)
+        formatted_period = period_sort_key(period)
 
         if formatted_period <= latest_3b_filed_period or formatted_period < "201707":
             break
