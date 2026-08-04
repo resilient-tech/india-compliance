@@ -634,6 +634,38 @@ Object.assign(india_compliance, {
         return frappe.boot.indian_registered_companies?.includes(company);
     },
 
+    is_e_waybill_applicable_for_asset_movement(doc) {
+        return !!(
+            india_compliance.is_api_enabled() &&
+            gst_settings.enable_e_waybill &&
+            gst_settings.enable_e_waybill_from_asset_movement
+        );
+    },
+
+    set_address_display_events(doctype) {
+        // Used by Stock Entry and Asset Movement
+        const event_fields = ["bill_from_address", "bill_to_address", "ship_from_address", "ship_to_address"];
+
+        const events = Object.fromEntries(
+            event_fields.map((field) => [
+                field,
+                (frm) => {
+                    erpnext.utils.get_address_display(frm, field, `${field}_display`, false);
+                },
+            ]),
+        );
+
+        frappe.ui.form.on(doctype, events);
+    },
+
+    get_items_fieldname(doctype) {
+        if (doctype == "Asset Movement") {
+            return "assets";
+        }
+
+        return "items";
+    },
+
     get_inward_subcategory_options(sub_section) {
         return Object.values(INWARD_SECTION_MAPPING[sub_section] || {}).flat();
     },

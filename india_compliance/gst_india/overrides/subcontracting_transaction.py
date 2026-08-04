@@ -3,10 +3,11 @@ from erpnext.accounts.party import get_address_tax_category
 from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_address_display, get_default_address
-from frappe.utils import flt
+from frappe.utils import flt, getdate
 from pypika import Order
 
 from india_compliance.gst_india.constants import (
+    BILL_FROM_TO_DOCTYPES,
     E_WAYBILL_STOCK_ENTRY_PURPOSES,
 )
 from india_compliance.gst_india.constants.e_waybill import (
@@ -32,6 +33,7 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
+    get_items_fieldname,
     is_api_enabled,
     is_outward_stock_entry,
 )
@@ -47,6 +49,11 @@ from india_compliance.gst_india.utils.taxes_controller import (
 
 STOCK_ENTRY_FIELD_MAP = {"total_taxable_value": "total_taxable_value"}
 SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
+ASSET_MOVEMENT_FIELD_MAP = {"amount": "taxable_value"}
+TAXES_FIELD_MAP = {
+    "Stock Entry": STOCK_ENTRY_FIELD_MAP,
+    "Asset Movement": ASSET_MOVEMENT_FIELD_MAP,
+}
 
 
 # Functions to perform operations before and after mapping of transactions
@@ -61,34 +68,7 @@ def after_mapping_subcontracting_order(doc, method, source_doc):
         return
 
     set_taxes(doc)
-    update_item_tax_template(doc, source_doc)
-
-
-def update_item_tax_template(doc, source_doc):
-    if not doc.items:
-        return
-
-    tax_category = source_doc.tax_category
-
-    if not tax_category:
-        tax_category = get_address_tax_category(
-            frappe.db.get_value("Supplier", source_doc.supplier, "tax_category"),
-            source_doc.supplier_address,
-        )
-
-    args = ItemDetailsCtx({"company": doc.company, "tax_category": tax_category})
-
-    for item in doc.items:
-        if not item.item_code:
-            continue
-
-        if item.item_tax_template:
-            continue
-
-        out = frappe._dict()
-        item_doc = frappe.get_cached_doc("Item", item.item_code)
-        get_item_tax_template(args, item_doc, out)
-        item.item_tax_template = out.get("item_tax_template")
+    set_item_tax_template(doc, source_doc)
 
 
 def after_mapping_stock_entry(doc, method, source_doc):
@@ -188,7 +168,34 @@ def set_item_tax_template(doc, source_doc):
     if source_doc.doctype not in ("Subcontracting Order", "Purchase Order"):
         return
 
-    update_item_tax_template(doc, source_doc)
+    tax_category = source_doc.tax_category or get_address_tax_category(
+        frappe.db.get_value("Supplier", source_doc.supplier, "tax_category"),
+        source_doc.supplier_address,
+    )
+
+    set_default_item_tax_template(doc, tax_category)
+
+
+def set_default_item_tax_template(doc, tax_category=None, force=False):
+    items = doc.get(get_items_fieldname(doc.doctype))
+    if not items:
+        return
+
+    args = ItemDetailsCtx(
+        {
+            "company": doc.company,
+            "tax_category": tax_category or doc.get("tax_category"),
+            "transaction_date": getdate(doc.get("transaction_date") or doc.get("posting_date")),
+        }
+    )
+
+    for item in items:
+        if not item.item_code or (item.item_tax_template and not force):
+            continue
+
+        out = frappe._dict()
+        get_item_tax_template(args, frappe.get_cached_doc("Item", item.item_code), out)
+        item.item_tax_template = out.get("item_tax_template")
 
 
 def before_mapping_subcontracting_receipt(doc, method, source_doc, table_maps):
@@ -275,9 +282,7 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    field_map = (
-        STOCK_ENTRY_FIELD_MAP if doc.doctype == "Stock Entry" else SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
-    )
+    field_map = TAXES_FIELD_MAP.get(doc.doctype, SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP)
     CustomTaxController(doc, field_map).set_taxes_and_totals()
 
     if ignore_gst_validations_for_subcontracting(doc):
@@ -286,7 +291,7 @@ def validate(doc, method=None):
     if not is_e_waybill_applicable(doc):
         return
 
-    if doc.doctype in ("Stock Entry", "Subcontracting Receipt"):
+    if doc.doctype in ("Stock Entry", "Subcontracting Receipt", "Asset Movement"):
         validate_transaction_name(doc)
 
     set_gst_tax_type(doc)
@@ -302,6 +307,10 @@ def before_save(doc, method=None):
     if not is_e_waybill_applicable(doc):
         doc.taxes_and_charges = ""
         doc.taxes = []
+
+        # Totals were computed in validate, before the taxes were dropped here
+        field_map = TAXES_FIELD_MAP.get(doc.doctype, SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP)
+        CustomTaxController(doc, field_map).set_taxes_and_totals()
         return
 
     for row in doc.taxes:
@@ -348,25 +357,28 @@ def get_doctype_field_map(doc):
         }
     )
 
-    if doc.doctype == "Stock Entry":
-        if not doc.is_return:
-            doctype_field_map.update(
-                {
-                    "company_gstin_field": "bill_from_gstin",
-                    "party_gstin_field": "bill_to_gstin",
-                    "company_address_field": "bill_from_address",
-                    "gst_category_field": "bill_to_gst_category",
-                }
-            )
-        else:
-            doctype_field_map.update(
-                {
-                    "company_gstin_field": "bill_to_gstin",
-                    "party_gstin_field": "bill_from_gstin",
-                    "company_address_field": "bill_to_address",
-                    "gst_category_field": "bill_from_gst_category",
-                }
-            )
+    if doc.doctype not in BILL_FROM_TO_DOCTYPES:
+        return doctype_field_map
+
+    # Bill From is the company, except on returns where the flow is reversed
+    if doc.get("is_return"):
+        doctype_field_map.update(
+            {
+                "company_gstin_field": "bill_to_gstin",
+                "party_gstin_field": "bill_from_gstin",
+                "company_address_field": "bill_to_address",
+                "gst_category_field": "bill_from_gst_category",
+            }
+        )
+    else:
+        doctype_field_map.update(
+            {
+                "company_gstin_field": "bill_from_gstin",
+                "party_gstin_field": "bill_to_gstin",
+                "company_address_field": "bill_from_address",
+                "gst_category_field": "bill_to_gst_category",
+            }
+        )
 
     return doctype_field_map
 
@@ -450,7 +462,9 @@ class SubcontractingGSTAccounts(GSTAccounts):
         self.validate_for_charge_type()
 
     def validate_for_same_party_gstin(self):
-        if is_outward_stock_entry(self.doc):
+        # A company moving its own asset between locations legitimately shares a
+        # GSTIN between Bill From and Bill To.
+        if is_outward_stock_entry(self.doc) or self.doc.doctype == "Asset Movement":
             return
 
         doctype_field_map = get_doctype_field_map(self.doc)
@@ -610,9 +624,13 @@ def remove_duplicates(doc):
 def is_e_waybill_applicable(doc):
     gst_settings = frappe.get_cached_doc("GST Settings")
 
-    if not (
-        gst_settings.enable_api and gst_settings.enable_e_waybill and gst_settings.enable_e_waybill_for_sc
-    ):
+    if not (is_api_enabled(gst_settings) and gst_settings.enable_e_waybill):
+        return False
+
+    if doc.doctype == "Asset Movement":
+        return bool(gst_settings.enable_e_waybill_from_asset_movement)
+
+    if not gst_settings.enable_e_waybill_for_sc:
         return False
 
     if doc.doctype != "Stock Entry":
@@ -629,6 +647,9 @@ def is_e_waybill_applicable(doc):
 def ignore_gst_validations_for_subcontracting(doc):
     if ignore_gst_validations(doc):
         return True
+
+    if doc.doctype == "Asset Movement":
+        return not (doc.taxes or doc.bill_from_address or doc.bill_to_address)
 
     if doc.doctype != "Stock Entry":
         return False
