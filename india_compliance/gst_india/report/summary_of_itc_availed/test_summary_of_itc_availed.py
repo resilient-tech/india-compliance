@@ -5,6 +5,13 @@ from frappe.utils import getdate
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
 )
+from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
+    create_recipient_invoice,
+    make_isd_pi,
+    make_source_item,
+    setup_isd_fixtures,
+    teardown_isd_fixtures,
+)
 from india_compliance.gst_india.report.summary_of_itc_availed.summary_of_itc_availed import (
     execute,
 )
@@ -12,6 +19,8 @@ from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
 COMPANY = "_Test Indian Registered Company"
 COMPANY_GSTIN = "24AAQCA8719H1ZC"
+COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
+ITC_FROM_ISD = "Input Tax credit received from ISD"
 
 
 def _filters(posting_date):
@@ -96,3 +105,62 @@ class TestSummaryOfITCAvailed(IntegrationTestCase):
         self.assertIsNotNone(input_services_row)
         self.assertEqual(input_services_row["cgst_amount"], 9.0)
         self.assertEqual(input_services_row["sgst_amount"], 9.0)
+
+
+class TestSummaryOfITCAvailedISD(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_isd_fixtures(cls)
+
+    @classmethod
+    def tearDownClass(cls):
+        teardown_isd_fixtures()
+        frappe.db.rollback()
+
+    def setUp(self):
+        recipients = frappe.get_all("ISD Recipient Invoice", filters={"company": COMPANY}, pluck="name")
+        if recipients:
+            frappe.db.delete("ISD Source Item", {"parent": ("in", recipients)})
+            frappe.db.delete("ISD Recipient Invoice", {"name": ("in", recipients)})
+
+    def create_recipient_invoice(self):
+        pi = make_isd_pi(self.isd_address.name)
+
+        return create_recipient_invoice(
+            company_address=COMPANY_ADDRESS,
+            party_address=self.isd_address.name,
+            external_isd_invoice_number=frappe.generate_hash(length=8),
+            source_items=make_source_item(pi),
+        )
+
+    def test_isd_recipient_invoice_reported_under_itc_from_isd(self):
+        source_row = self.create_recipient_invoice().source_items[0]
+
+        _, data = execute(_filters(getdate()))
+
+        # the category has no Inputs / Capital Goods / Input Services breakup, so it is a single
+        # row repeated at both indents (get_subcategory returns the category itself)
+        isd_row = next(
+            row for row in data if row.get("indent") == 0 and ITC_FROM_ISD in row.get("details", "")
+        )
+
+        self.assertEqual(isd_row["cgst_amount"], source_row.distributed_cgst)
+        self.assertEqual(isd_row["sgst_amount"], source_row.distributed_sgst)
+        self.assertEqual(isd_row["igst_amount"], 0.0)
+
+    def test_isd_recipient_invoice_excluded_from_inward_domestic(self):
+        """The credit is ISD-classified, so it must not also land in the default domestic bucket."""
+        before = self.domestic_total()
+        self.create_recipient_invoice()
+
+        self.assertEqual(self.domestic_total(), before)
+
+    def domestic_total(self):
+        _, data = execute(_filters(getdate()))
+
+        return sum(
+            row.get("cgst_amount") or 0
+            for row in data
+            if row.get("indent") == 1 and row.get("details") in ("Inputs", "Input Services")
+        )
