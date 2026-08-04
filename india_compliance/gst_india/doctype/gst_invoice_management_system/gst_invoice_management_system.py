@@ -252,8 +252,11 @@ class GSTInvoiceManagementSystem(Document):
             PurchaseInvoice()
             .get_query(additional_fields=["gst_category", "is_return"])
             .where(PI.supplier_gstin.like(f"%{filters.supplier_gstin}%"))
-            .where(PI.bill_date[filters.bill_from_date : filters.bill_to_date])
         )
+
+        # no fallback: unlike PRT
+        if filters.from_date and filters.to_date:
+            query = query.where(PI.posting_date[filters.from_date : filters.to_date])
 
         if not filters.show_matched:
             query = query.where(PI.reconciliation_status == "Unreconciled")

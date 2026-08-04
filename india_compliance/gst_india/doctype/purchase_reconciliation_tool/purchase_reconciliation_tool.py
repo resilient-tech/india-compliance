@@ -325,6 +325,10 @@ class PurchaseReconciliationTool(Document):
         if isinstance(filters, dict):
             filters = frappe._dict(filters)
 
+        # no dates picked, so fall back to the window the unmatched lookup uses
+        filters.from_date = filters.get("from_date") or self.ReconciledData.purchase_from_date
+        filters.to_date = filters.get("to_date") or self.to_date
+
         if doctype == "Purchase Invoice":
             return self.get_purchase_invoice_options(filters)
 
@@ -339,7 +343,7 @@ class PurchaseReconciliationTool(Document):
         query = (
             self.ReconciledData.query_purchase_invoice(["gst_category", "is_return"])
             .where(PI.supplier_gstin.like(f"%{filters.supplier_gstin}%"))
-            .where(PI.bill_date[filters.bill_from_date : filters.bill_to_date])
+            .where(PI.posting_date[filters.from_date : filters.to_date])
         )
 
         if not filters.show_matched:
@@ -352,7 +356,7 @@ class PurchaseReconciliationTool(Document):
         query = (
             self.ReconciledData.query_inward_supply(["classification"])
             .where(IfNull(GSTR2.supplier_gstin, "").like(f"%{filters.supplier_gstin}%"))
-            .where(GSTR2.bill_date[filters.bill_from_date : filters.bill_to_date])
+            .where(GSTR2.bill_date[filters.from_date : filters.to_date])
         )
 
         if filters.get("purchase_doctype") == "Purchase Invoice":
@@ -368,7 +372,7 @@ class PurchaseReconciliationTool(Document):
     def get_bill_of_entry_options(self, filters):
         BOE = frappe.qb.DocType("Bill of Entry")
         query = self.ReconciledData.query_bill_of_entry().where(
-            BOE.bill_of_entry_date[filters.bill_from_date : filters.bill_to_date]
+            BOE.posting_date[filters.from_date : filters.to_date]
         )
 
         if not filters.show_matched:
