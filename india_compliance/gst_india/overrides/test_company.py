@@ -59,27 +59,16 @@ class TestCompanyFixtures(IntegrationTestCase):
 
 class TestCompanyOnTrash(IntegrationTestCase):
     def test_company_is_cleared_from_singles(self):
-        company = frappe.get_doc(
-            {
-                "doctype": "Company",
-                "abbr": "_TTC",
-                "company_name": "_Test Trash Company",
-                "country": "India",
-                "default_currency": "INR",
-                "chart_of_accounts": "Standard",
-                "gstin": "24AAQCA8719H1ZC",
-                "gst_category": "Registered Regular",
-            }
-        ).insert()
+        company = self.create_company("_Test Trash Company", "_TTC")
+        other_company = frappe.get_cached_doc("Company", "_Test Indian Registered Company")
 
-        # company is set as a filter on each tool
+        gst_settings = self.setup_gst_settings(company, other_company)
         for doctype in SINGLE_DOCTYPES_WITH_COMPANY_FIELD:
             frappe.db.set_single_value(doctype, {"company": company.name, "company_gstin": company.gstin})
 
-        gst_settings = self.setup_gst_settings(company)
-
         for fieldname in GST_SETTINGS_CHILD_TABLES_WITH_COMPANY:
             self.assertTrue(self.get_gst_settings_rows(gst_settings, fieldname, company.name))
+            self.assertTrue(self.get_gst_settings_rows(gst_settings, fieldname, other_company.name))
 
         company.delete()
 
@@ -91,24 +80,45 @@ class TestCompanyOnTrash(IntegrationTestCase):
 
         for fieldname in GST_SETTINGS_CHILD_TABLES_WITH_COMPANY:
             self.assertFalse(self.get_gst_settings_rows(gst_settings, fieldname, company.name))
+            self.assertTrue(self.get_gst_settings_rows(gst_settings, fieldname, other_company.name))
 
-    def setup_gst_settings(self, company):
+    def create_company(self, company_name, abbr):
+        return frappe.get_doc(
+            {
+                "doctype": "Company",
+                "abbr": abbr,
+                "company_name": company_name,
+                "country": "India",
+                "default_currency": "INR",
+                "chart_of_accounts": "Standard",
+                "gstin": "24AAQCA8719H1ZC",
+                "gst_category": "Registered Regular",
+            }
+        ).insert()
+
+    def setup_gst_settings(self, *companies):
         """gst_accounts are added by company fixtures, add the remaining tables"""
         gst_settings = frappe.get_doc("GST Settings")
-        gst_settings.append(
-            "credentials",
-            {
-                "company": company.name,
-                "service": "e-Waybill / e-Invoice",
-                "gstin": company.gstin,
-                "username": "test_username",
-                "password": "test_password",
-            },
-        )
-        gst_settings.append(
-            "e_invoice_applicable_companies",
-            {"company": company.name, "applicable_from": "2021-04-01"},
-        )
+
+        for company in companies:
+            for service in ("e-Waybill / e-Invoice", "Returns"):
+                gst_settings.append(
+                    "credentials",
+                    {
+                        "company": company.name,
+                        "service": service,
+                        "gstin": company.gstin,
+                        "username": "test_username",
+                        "password": "test_password",
+                    },
+                )
+
+            if not self.get_gst_settings_rows(gst_settings, "e_invoice_applicable_companies", company.name):
+                gst_settings.append(
+                    "e_invoice_applicable_companies",
+                    {"company": company.name, "applicable_from": "2021-04-01"},
+                )
+
         gst_settings.save()
 
         return gst_settings
