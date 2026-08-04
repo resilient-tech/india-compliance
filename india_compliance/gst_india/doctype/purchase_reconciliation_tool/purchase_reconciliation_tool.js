@@ -358,6 +358,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 ".match-status": "match_status",
                 ".action-performed": "action",
                 ".supplier-gstin": "supplier_gstin",
+                ".classification": "classification",
             },
         };
 
@@ -580,7 +581,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             {
                 label: "Supplier Name",
                 fieldname: "supplier_name_gstin",
-                width: 150,
+                width: 200,
             },
             {
                 label: "Bill No.",
@@ -590,6 +591,12 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 label: "Date",
                 fieldname: "bill_date",
                 _value: (...args) => frappe.datetime.str_to_user(args[0]),
+            },
+            {
+                label: "Classification",
+                fieldname: "classification",
+                width: 100,
+                _value: (...args) => `<a href="#" class='classification'>${args[0] || ""}</a>`,
             },
             {
                 label: "Match Status",
@@ -829,10 +836,6 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
 
         if (this.missing_doctype == "GST Inward Supply") this.doctype_options = ["GST Inward Supply"];
         else this.doctype_options = ["Purchase Invoice", "Bill of Entry"];
-    }
-
-    _get_default_date_range() {
-        return [this.frm.doc.from_date, this.frm.doc.to_date];
     }
 }
 
