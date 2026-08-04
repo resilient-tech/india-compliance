@@ -8,11 +8,7 @@ from india_compliance.gst_india.overrides.company import (
 )
 
 
-<<<<<<< HEAD
-class TestCompanyFixtures(FrappeTestCase):
-=======
-class TestCompany(IntegrationTestCase):
->>>>>>> ab80353f (fix: disable e-Invoice if applicable for only that company)
+class TestCompany(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_company")
@@ -63,13 +59,7 @@ class TestCompany(IntegrationTestCase):
                     )
                     self.assertEqual(row["account_head"]["tax_rate"], expected_rate)
 
-<<<<<<< HEAD
-
-class TestCompanyOnTrash(FrappeTestCase):
-    def test_company_is_cleared_from_singles(self):
-=======
     def test_company_is_cleared_from_gst_settings(self):
->>>>>>> ab80353f (fix: disable e-Invoice if applicable for only that company)
         company = self.create_company("_Test Trash Company", "_TTC")
         other_company = self.create_company("_Test Other Trash Company", "_TOTC")
         gst_settings = self.setup_gst_settings(company, other_company)
