@@ -313,7 +313,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             new_row.taxable_value_difference += row.taxable_value_difference || 0;
         });
 
-        return Object.values(data);
+        return this.sort_by_match_status(Object.values(data));
     }
 
     get_invoice_columns() {
@@ -403,6 +403,7 @@ class IMS extends reconciliation.reconciliation_tabs {
 
         const data = [];
         this.mapped_invoice_data = {};
+        this.sort_by_supplier_gstin(this.filtered_data);
 
         this.filtered_data.forEach((row) => {
             this.mapped_invoice_data[row.inward_supply_name] = row;
@@ -482,7 +483,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             summary_data[category][action] += 1;
         });
 
-        return Object.values(summary_data);
+        return this.sort_by_order(Object.values(summary_data), "category", Object.values(category_map));
     }
 
     async set_actions_summary() {
