@@ -426,7 +426,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             new_row.tax_difference += row.tax_difference || 0;
             new_row.taxable_value_difference += row.taxable_value_difference || 0;
         });
-        return Object.values(data);
+        return this.sort_by_match_status(Object.values(data));
     }
 
     get_summary_columns() {
@@ -499,7 +499,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             new_row.tax_difference += row.tax_difference || 0;
             new_row.taxable_value_difference += row.taxable_value_difference || 0;
         });
-        return Object.values(data);
+        return this.sort_by_supplier_gstin(Object.values(data));
     }
 
     get_supplier_columns() {
@@ -562,6 +562,8 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
 
     get_invoice_data() {
         this.mapped_invoice_data = {};
+        this.sort_by_supplier_gstin(this.filtered_data);
+
         this.filtered_data.forEach((row) => {
             this.mapped_invoice_data[get_hash(row)] = row;
             row.supplier_name_gstin = this.get_supplier_name_gstin(row);

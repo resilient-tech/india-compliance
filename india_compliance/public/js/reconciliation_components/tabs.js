@@ -1,6 +1,6 @@
 frappe.provide("reconciliation");
 
-// what each match type covers, shown on hover
+// what each match type covers, shown on hover. key order is the order they are listed in
 const MATCH_STATUS_INFO = {
     "Exact Match": __("Bill no, GSTIN, place of supply, reverse charge and every tax amount are the same."),
     "Suggested Match": __(
@@ -168,6 +168,33 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
             });
         });
         this.set_listeners();
+    }
+
+    // holds a column in a fixed order, anything unlisted goes last
+    sort_by_order(rows, field, order) {
+        const rank = (value) => {
+            const index = order.indexOf(value);
+            return index === -1 ? order.length : index;
+        };
+
+        return rows.sort((a, b) => rank(a[field]) - rank(b[field]));
+    }
+
+    // every tab lists match statuses in the same order
+    sort_by_match_status(rows) {
+        return this.sort_by_order(rows, "match_status", Object.keys(MATCH_STATUS_INFO));
+    }
+
+    // supplier and document tabs go by gstin, then oldest bill first
+    sort_by_supplier_gstin(rows) {
+        const text = (row, field) => String(row[field] || "");
+
+        return rows.sort(
+            (a, b) =>
+                text(a, "supplier_gstin").localeCompare(text(b, "supplier_gstin")) ||
+                text(a, "bill_date").localeCompare(text(b, "bill_date")) ||
+                text(a, "bill_no").localeCompare(text(b, "bill_no")),
+        );
     }
 
     get_match_status_link(match_status) {
