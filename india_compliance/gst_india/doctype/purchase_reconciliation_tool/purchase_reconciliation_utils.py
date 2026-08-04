@@ -46,14 +46,19 @@ def link_documents(purchase_invoice_name, inward_supply_name, link_doctype):
     return purchases, inward_supplies
 
 
-def unlink_documents(data):
+def unlink_documents(data, exclude_from_reconciliation=False):
     data = frappe.parse_json(data)
+    exclude_from_reconciliation = frappe.parse_json(exclude_from_reconciliation)
     inward_supplies = set()
     purchases = set()
     boe = set()
     isd = set()
 
     for row in data:
+        # nothing to unlink where a side is missing
+        if not (row.get("inward_supply_name") and row.get("purchase_invoice_name")):
+            continue
+
         inward_supplies.add(row.get("inward_supply_name"))
 
         purchase_doctype = row.get("purchase_doctype")
@@ -69,24 +74,26 @@ def unlink_documents(data):
     set_reconciliation_status("Purchase Invoice", purchases, "Unreconciled")
     set_reconciliation_status("Bill of Entry", boe, "Unreconciled")
     set_reconciliation_status("ISD Recipient Invoice", isd, "Unreconciled")
-    _unlink_documents(inward_supplies)
+    _unlink_documents(inward_supplies, exclude_from_reconciliation)
 
-    # Note: We do NOT clear itc_claim_period on unlink
-    # User can manually change it if needed
+    # keep itc_claim_period, user can change it
 
     return purchases.union(boe).union(isd), inward_supplies
 
 
-def _unlink_documents(inward_supplies):
+def _unlink_documents(inward_supplies, exclude_from_reconciliation=False):
     if not inward_supplies:
         return
+
+    # blank status = match again next run. "Unlinked" = leave it alone
+    match_status = "Unlinked" if exclude_from_reconciliation else ""
 
     GSTR2 = frappe.qb.DocType("GST Inward Supply")
     (
         frappe.qb.update(GSTR2)
         .set("link_doctype", "")
         .set("link_name", "")
-        .set("match_status", "Unlinked")
+        .set("match_status", match_status)
         .where(GSTR2.name.isin(inward_supplies))
         .run()
     )
