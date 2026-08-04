@@ -326,7 +326,6 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                 label: "Date Range",
                 fieldtype: "DateRange",
                 fieldname: "date_range",
-                default: this._get_default_date_range(),
                 onchange: () => this.set_link_options(),
             },
             {
@@ -368,10 +367,13 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     async set_link_options(method) {
         if (!this.dialog.get_value("doctype")) return;
 
+        // left blank on purpose, the server falls back to its own window
+        const date_range = this.dialog.get_value("date_range") || [];
+
         this.filters = {
             supplier_gstin: this.dialog.get_value("supplier_gstin"),
-            bill_from_date: this.dialog.get_value("date_range")[0],
-            bill_to_date: this.dialog.get_value("date_range")[1],
+            from_date: date_range[0],
+            to_date: date_range[1],
             show_matched: this.dialog.get_value("show_matched"),
             purchase_doctype: this.data.purchase_doctype,
         };
@@ -390,11 +392,6 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     }
 
     _set_missing_doctype() {}
-
-    _get_default_date_range() {
-        const now = frappe.datetime.now_date();
-        return [frappe.datetime.add_months(now, -12), now];
-    }
 
     setup_actions() {
         const actions = this._get_custom_actions();
