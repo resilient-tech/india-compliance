@@ -1238,9 +1238,6 @@ class ReconciledData(BaseReconciliation):
             differences.append("Rounding Difference")
 
         for field in Fields:
-            if field == Fields.BILL_NO:
-                continue
-
             if purchase.get(field.value) != inward_supply.get(field.value):
                 differences.append(field.name)
 
