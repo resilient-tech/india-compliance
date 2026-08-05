@@ -140,7 +140,12 @@ def set_boe_applicability(doc):
 def set_is_isd_applicable(doc):
     doc.is_isd_applicable = 0
 
-    if doc.ineligibility_reason == "ITC restricted due to PoS rules":
+    if (
+        doc.is_reverse_charge
+        or doc.is_return
+        or doc.is_opening == "Yes"
+        or doc.ineligibility_reason == "ITC restricted due to PoS rules"
+    ):
         return
 
     gst_category = frappe.db.get_value("Address", doc.billing_address, "gst_category")

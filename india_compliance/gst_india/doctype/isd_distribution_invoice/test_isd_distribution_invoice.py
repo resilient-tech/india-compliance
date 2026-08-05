@@ -2,7 +2,6 @@
 # See license.txt
 
 import frappe
-from erpnext.accounts.utils import get_fiscal_year
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_months, flt, today
 
@@ -675,6 +674,40 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         )
         doc.insert()
         self.assertEqual(doc.docstatus, 0)
+
+    def test_invoices_excluded_from_the_isd_pool(self):
+        """Reverse charge credit reaches an ISD only through a same-PAN regular registration
+        (Sec 20(1) with Rule 39(1A)), and a return carries negative tax, which would distribute as
+        negative source totals and a meaningless distributed percentage."""
+        rcm_pi = make_isd_pi(
+            self.isd_address.name,
+            is_in_state=False,
+            is_in_state_rcm=True,
+            is_reverse_charge=1,
+            supplier="_Test Unregistered Supplier",
+        )
+        self.assertEqual(rcm_pi.is_isd_applicable, 0)
+
+        # and the server refuses it even if the flag is bypassed on the client
+        doc = self._full_distribution(pi=rcm_pi)
+        self.assertRaisesRegex(VALIDATION_ERROR, "not ISD applicable", doc.insert)
+
+        # the shared fixture is the control: an ordinary ISD invoice is distributable, and it
+        # doubles as the invoice the return is raised against
+        self.assertEqual(self.pi.is_isd_applicable, 1)
+
+        pi_return = make_isd_pi(
+            self.isd_address.name,
+            is_return=1,
+            return_against=self.pi.name,
+            qty=-1,
+            do_not_submit=True,
+        )
+        self.assertEqual(pi_return.is_isd_applicable, 0)
+
+        # an opening entry carries no credit to distribute
+        opening_pi = make_isd_pi(self.isd_address.name, is_opening="Yes", do_not_submit=True)
+        self.assertEqual(opening_pi.is_isd_applicable, 0)
 
     def test_valid_distribution_submits(self):
         pi = make_isd_pi(self.isd_address.name)
