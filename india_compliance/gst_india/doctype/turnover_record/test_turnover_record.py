@@ -76,9 +76,7 @@ class TestTurnoverRecord(IntegrationTestCase):
         )
 
     def test_non_overlapping_period_for_same_state_is_allowed(self):
-        record = make_turnover_record(
-            "Gujarat", 100000, from_date="2023-04-01", to_date="2024-03-31"
-        )
+        record = make_turnover_record("Gujarat", 100000, from_date="2023-04-01", to_date="2024-03-31")
         self.assertEqual(record.gst_state, "Gujarat")
 
     def test_gstin_state_mismatch_is_rejected(self):
@@ -101,9 +99,7 @@ class TestTurnoverRecord(IntegrationTestCase):
         self.assertEqual(to_date, add_years(getdate(fy_end), -1))
 
         # the lookup resolves the record filed for that preceding period ...
-        record = make_turnover_record(
-            "Maharashtra", 750000, from_date=from_date, to_date=to_date
-        )
+        record = make_turnover_record("Maharashtra", 750000, from_date=from_date, to_date=to_date)
         self.addCleanup(frappe.delete_doc, "Turnover Record", record.name, force=True)
         self.assertEqual(get_turnover_amount("Maharashtra", today()), 750000)
 
