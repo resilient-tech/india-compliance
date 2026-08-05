@@ -142,6 +142,7 @@ class ITCAvailedData:
                 (doc.company_gstin != IfNull(doc.supplier_gstin, ""))
                 & (doc.is_opening == "No")
                 & (doc.is_boe_applicable == 0)
+                & (IfNull(doc.is_isd_applicable, 0) == 0)
             )
         )
 
@@ -177,7 +178,7 @@ class ITCAvailedData:
         query = (
             frappe.qb.from_(doc)
             .inner_join(doc_item)
-            .on(doc.name == doc_item.parent)
+            .on((doc.name == doc_item.parent) & (doc_item.parenttype == "ISD Recipient Invoice"))
             .select(
                 ConstantColumn("Input Service Distributor").as_("itc_classification"),
                 doc_item.distributed_cgst.as_("cgst_amount"),

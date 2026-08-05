@@ -380,7 +380,10 @@ class GSTR3BInwardQuery:
         query = (
             frappe.qb.from_(self.ISD)
             .inner_join(self.ISD_ITEM)
-            .on(self.ISD_ITEM.parent == self.ISD.name)
+            .on(
+                (self.ISD_ITEM.parent == self.ISD.name)
+                & (self.ISD_ITEM.parenttype == "ISD Recipient Invoice")
+            )
             .select(
                 ConstantColumn("ISD Recipient Invoice").as_("voucher_type"),
                 self.ISD.name.as_("voucher_no"),
