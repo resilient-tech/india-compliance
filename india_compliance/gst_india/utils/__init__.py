@@ -568,6 +568,17 @@ def get_place_of_supply(party_details, doctype):
         pos_gstin = customer_gstin or party_details.company_gstin
 
     elif doctype in BILL_FROM_TO_DOCTYPES:
+        # for unregistered Bill To, since it has no GSTIN to derive the state from.
+        # Bill To is the company itself for inward transactions, hence always registered.
+        if not party_details.bill_to_gstin and (bill_to_address := party_details.get("bill_to_address")):
+            gst_state_number, gst_state = frappe.db.get_value(
+                "Address",
+                bill_to_address,
+                ("gst_state_number", "gst_state"),
+            )
+            if gst_state_number and gst_state:
+                return f"{gst_state_number}-{gst_state}"
+
         pos_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
     else:
         # for purchase, subcontracting order and receipt
@@ -1179,6 +1190,18 @@ def is_outward_stock_entry(doc):
         and not doc.is_return
     ):
         return True
+
+
+## Asset Movement Utils
+def is_inward_transaction(doc):
+    if doc.get("doctype") == "Asset Movement":
+        return doc.get("purpose") == "Receipt"
+
+    return bool(doc.get("is_return"))
+
+
+def is_same_gstin_allowed(doc):
+    return bool(is_outward_stock_entry(doc)) or doc.doctype == "Asset Movement"
 
 
 def create_notification(message_content, document_type, document_name=None, request_id=None):

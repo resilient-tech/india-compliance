@@ -55,6 +55,9 @@ class GSTTransactionData:
                 # for with reverse charge in purchase, do not compute taxes
                 self.is_purchase_rcm = True
 
+        if self.doc.doctype == "Asset Movement":
+            self.party_name_field = "company_name"
+
         self.party_name = self.doc.get(self.party_name_field)
 
         if (
