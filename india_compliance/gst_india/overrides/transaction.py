@@ -41,6 +41,7 @@ from india_compliance.gst_india.utils import (
     has_changed,
     has_gst_taxes,
     is_import_transaction,
+    is_inward_transaction,
     is_overseas_doc,
     join_list_with_custom_separators,
     validate_gst_category,
@@ -401,7 +402,7 @@ class GSTAccounts:
             return "company_address"
 
         if self.doc.doctype in BILL_FROM_TO_DOCTYPES:
-            return "bill_to_address" if self.doc.get("is_return") else "bill_from_address"
+            return "bill_to_address" if is_inward_transaction(self.doc) else "bill_from_address"
 
         return "billing_address"
 
@@ -581,7 +582,9 @@ def validate_place_of_supply(doc):
 
 def is_inter_state_supply(doc):
     if doc.doctype in BILL_FROM_TO_DOCTYPES:
-        party_gst_category = doc.bill_from_gst_category if doc.get("is_return") else doc.bill_to_gst_category
+        party_gst_category = (
+            doc.bill_from_gst_category if is_inward_transaction(doc) else doc.bill_to_gst_category
+        )
 
     else:
         party_gst_category = doc.gst_category

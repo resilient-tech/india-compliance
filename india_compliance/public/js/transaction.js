@@ -59,7 +59,7 @@ function fetch_gst_details(doctype) {
     } else if (doctype === "Stock Entry") {
         event_fields.push("bill_from_address", "bill_to_address");
     } else if (doctype === "Asset Movement") {
-        event_fields.push("bill_to_address", "ship_to_address");
+        event_fields.push("bill_from_address", "bill_to_address", "ship_to_address", "purpose");
     } else if (["Subcontracting Order", "Subcontracting Receipt"].includes(doctype)) {
         event_fields.push("supplier_gstin");
     } else {
@@ -77,7 +77,7 @@ async function update_gst_details(frm, event) {
     if (
         frm.updating_party_details ||
         !frm.doc.company ||
-        (["place_of_supply", "bill_to_address", "ship_to_address"].includes(event) &&
+        (["place_of_supply", "bill_from_address", "bill_to_address", "ship_to_address"].includes(event) &&
             frm.__updating_gst_details)
     )
         return;
@@ -156,7 +156,15 @@ async function update_gst_details(frm, event) {
         party_details["is_outward_stock_entry"] = same_gstin_stock_entry;
         party_details["is_inward_stock_entry"] = frm.doc.purpose === "Material Transfer" && frm.doc.is_return;
     } else if (is_asset_movement) {
-        fieldnames_to_set.push("bill_from_gstin", "bill_to_gstin", "bill_to_address", "ship_to_address");
+        fieldnames_to_set.push(
+            "bill_from_gstin",
+            "bill_to_gstin",
+            "bill_from_address",
+            "bill_to_address",
+            "ship_to_address",
+        );
+
+        party_details["is_inward_stock_entry"] = frm.doc.purpose === "Receipt";
     } else {
         fieldnames_to_set.push("supplier_address", "supplier_gstin");
     }

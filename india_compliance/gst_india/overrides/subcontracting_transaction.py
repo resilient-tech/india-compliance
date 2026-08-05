@@ -35,7 +35,9 @@ from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_items_fieldname,
     is_api_enabled,
+    is_inward_transaction,
     is_outward_stock_entry,
+    is_same_gstin_allowed,
 )
 from india_compliance.gst_india.utils import (
     validate_invoice_number as validate_transaction_name,
@@ -360,8 +362,7 @@ def get_doctype_field_map(doc):
     if doc.doctype not in BILL_FROM_TO_DOCTYPES:
         return doctype_field_map
 
-    # Bill From is the company, except on returns where the flow is reversed
-    if doc.get("is_return"):
+    if is_inward_transaction(doc):
         doctype_field_map.update(
             {
                 "company_gstin_field": "bill_to_gstin",
@@ -462,9 +463,7 @@ class SubcontractingGSTAccounts(GSTAccounts):
         self.validate_for_charge_type()
 
     def validate_for_same_party_gstin(self):
-        # A company moving its own asset between locations legitimately shares a
-        # GSTIN between Bill From and Bill To.
-        if is_outward_stock_entry(self.doc) or self.doc.doctype == "Asset Movement":
+        if is_same_gstin_allowed(self.doc):
             return
 
         doctype_field_map = get_doctype_field_map(self.doc)

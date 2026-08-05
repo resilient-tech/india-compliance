@@ -1,6 +1,8 @@
 frappe.provide("india_compliance");
 const DOCTYPE = "Asset Movement";
 
+setup_e_waybill_actions(DOCTYPE);
+
 frappe.ui.form.on(DOCTYPE, {
     setup(frm) {
         frm.set_query("taxes_and_charges", () => ({
@@ -32,18 +34,31 @@ frappe.ui.form.on(DOCTYPE, {
         ["bill_from_address_display", "bill_to_address_display"].forEach((field) => {
             frm.get_field(field)?.$wrapper.find(".ql-editor").css("white-space", "normal");
         });
+
+        if (!india_compliance.is_e_waybill_applicable_for_asset_movement(frm.doc)) return;
+
+        show_sandbox_mode_indicator();
+    },
+
+    after_save(frm) {
+        if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm, true))
+            frappe.show_alert(
+                {
+                    message: frm._ewb_message
+                        ? `<ul class="mb-0 pl-3">${frm._ewb_message}</ul>`
+                        : __("Party Address is required to create e-Waybill"),
+                    indicator: "yellow",
+                },
+                10,
+            );
     },
 
     company(frm) {
-        if (!frm.doc.company || !india_compliance.is_e_waybill_applicable_for_asset_movement(frm.doc)) return;
+        set_company_address(frm);
+    },
 
-        frappe.call({
-            method: "frappe.contacts.doctype.address.address.get_default_address",
-            args: { doctype: "Company", name: frm.doc.company },
-            callback(r) {
-                if (r.message) frm.set_value("bill_from_address", r.message);
-            },
-        });
+    purpose(frm) {
+        set_company_address(frm);
     },
 
     taxes_and_charges(frm) {
@@ -62,6 +77,25 @@ frappe.ui.form.on(DOCTYPE, {
         frm.taxes_controller.update_tax_amount();
     },
 });
+
+function set_company_address(frm) {
+    if (!frm.doc.company || !india_compliance.is_e_waybill_applicable_for_asset_movement(frm.doc)) return;
+
+    frm.set_value("bill_from_address", null);
+    frm.set_value("bill_to_address", null);
+    frm.refresh_fields(["bill_from_address", "bill_to_address"]);
+
+    const company_field = frm.doc.purpose === "Receipt" ? "bill_to_address" : "bill_from_address";
+    if (frm.doc[company_field]) return;
+
+    frappe.call({
+        method: "frappe.contacts.doctype.address.address.get_default_address",
+        args: { doctype: "Company", name: frm.doc.company },
+        callback(r) {
+            if (r.message) frm.set_value(company_field, r.message);
+        },
+    });
+}
 
 frappe.ui.form.on("Asset Movement Item", {
     item_tax_template: india_compliance.taxes_controller_events.item_tax_template,

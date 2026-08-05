@@ -31,9 +31,13 @@ class EwaybillApplicability {
         return is_ewb_applicable;
     }
 
+    get_items() {
+        return this.frm.doc[india_compliance.get_items_fieldname(this.frm.doctype)] || [];
+    }
+
     has_goods_item(is_ewb_applicable, message_list) {
         let has_goods_item = false;
-        for (const item of this.frm.doc.items) {
+        for (const item of this.get_items()) {
             if (item.gst_hsn_code && !item.gst_hsn_code.startsWith("99") && item.qty !== 0) {
                 has_goods_item = true;
                 break;
@@ -275,6 +279,48 @@ class StockEntryEwaybill extends EwaybillApplicability {
             super.is_e_waybill_api_enabled() &&
             gst_settings.enable_e_waybill_for_sc
         );
+    }
+}
+
+class AssetMovementEwaybill extends EwaybillApplicability {
+    is_inward() {
+        return this.frm.doc.purpose === "Receipt";
+    }
+
+    is_e_waybill_applicable(show_message = false) {
+        // company_gstin is referred to as the generator of the e-Waybill, same as `onload`
+        this.frm.doc.company_gstin = this.is_inward()
+            ? this.frm.doc.bill_to_gstin
+            : this.frm.doc.bill_from_gstin;
+
+        return (
+            super.is_e_waybill_applicable(show_message) && gst_settings.enable_e_waybill_from_asset_movement
+        );
+    }
+
+    is_e_waybill_generatable(show_message = false) {
+        // Do we have everything needed to generate e-Waybill for asset movement
+        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+
+        let message_list = [];
+        const [party_field, party_label] = this.is_inward()
+            ? ["bill_from_address", "Bill From"]
+            : ["bill_to_address", "Bill To"];
+
+        if (!this.frm.doc[party_field]) {
+            is_ewb_generatable = false;
+            message_list.push(`${party_label} address is mandatory to generate e-Waybill.`);
+        }
+
+        if (show_message) {
+            this.frm._ewb_message += message_list.map((message) => `<li>${message}</li>`).join("");
+        }
+
+        return is_ewb_generatable;
+    }
+
+    is_e_waybill_api_enabled() {
+        return super.is_e_waybill_api_enabled() && gst_settings.enable_e_waybill_from_asset_movement;
     }
 }
 

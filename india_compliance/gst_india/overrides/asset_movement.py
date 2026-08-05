@@ -17,6 +17,7 @@ from india_compliance.gst_india.overrides.subcontracting_transaction import (
 from india_compliance.gst_india.overrides.subcontracting_transaction import (
     validate as subcontracting_validate,
 )
+from india_compliance.gst_india.utils import is_inward_transaction
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.taxes_controller import CustomTaxController
 
@@ -24,10 +25,16 @@ from india_compliance.gst_india.utils.taxes_controller import CustomTaxControlle
 def onload(doc, method=None):
     set_address_display(doc)
 
-    # For e-Waybill data mapping
-    doc.company_gstin = doc.bill_from_gstin
-    doc.supplier_gstin = doc.bill_to_gstin
-    doc.gst_category = doc.bill_to_gst_category
+    # company_gstin is refered as generator of e-waybill
+    if is_inward_transaction(doc):
+        doc.company_gstin, doc.supplier_gstin = doc.bill_to_gstin, doc.bill_from_gstin
+        doc.gst_category = doc.bill_from_gst_category
+    else:
+        doc.company_gstin, doc.supplier_gstin = doc.bill_from_gstin, doc.bill_to_gstin
+        doc.gst_category = doc.bill_to_gst_category
+
+    doc.posting_date = doc.transaction_date
+    doc.items = doc.assets
 
     if not doc.get("ewaybill"):
         return

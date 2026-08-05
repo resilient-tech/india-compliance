@@ -61,7 +61,11 @@ doctype_js = {
         "gst_india/client_scripts/party.js",
         "gst_india/client_scripts/address.js",
     ],
-    "Asset Movement": "gst_india/client_scripts/asset_movement.js",
+    "Asset Movement": [
+        "gst_india/client_scripts/asset_movement.js",
+        "gst_india/client_scripts/e_waybill_applicability.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
+    ],
     "Company": [
         "gst_india/client_scripts/party.js",
         "gst_india/client_scripts/company.js",
@@ -144,6 +148,8 @@ doc_events = {
         "onload": "india_compliance.gst_india.overrides.asset_movement.onload",
         "validate": "india_compliance.gst_india.overrides.asset_movement.validate",
         "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.validate_transporter_fields_after_submit",
+        "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
     },
     "Company": {
         "on_trash": "india_compliance.gst_india.overrides.company.on_trash",
