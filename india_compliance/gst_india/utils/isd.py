@@ -184,6 +184,21 @@ def get_source_items_from_purchase_invoice(purchase_invoice: str):
     return source_items
 
 
+def get_place_of_supply_for_address(address):
+    """Place of Supply in the `<state number>-<state>` form both ISD doctypes store."""
+    if not address:
+        return None
+
+    state_number, state = frappe.db.get_value("Address", address, ["gst_state_number", "gst_state"])
+    return f"{state_number}-{state}" if state else None
+
+
+@frappe.whitelist()
+def get_isd_place_of_supply(address: str):
+    frappe.has_permission("Address", "read", doc=address, throw=True)
+    return get_place_of_supply_for_address(address)
+
+
 @frappe.whitelist()
 def get_input_gst_accounts(company: str):
     frappe.has_permission("Company", doc=company, throw=True)

@@ -16,6 +16,7 @@ from india_compliance.gst_india.utils import get_gst_account_gst_tax_type_map
 from india_compliance.gst_india.utils.isd import (
     get_distribution_ratio,
     get_input_gst_accounts,
+    get_place_of_supply_for_address,
     get_row_itc,
     is_inter_state_distribution,
     should_distribute_expense,
@@ -177,16 +178,9 @@ class ISDController(Document):
                 )
             )
 
-    def _get_pos(self, address):
-        if not address:
-            return None
-
-        state_number, state = frappe.get_cached_value("Address", address, ["gst_state_number", "gst_state"])
-        return f"{state_number}-{state}" if state else None
-
     def set_pos_from_address(self):
-        self.company_pos = self._get_pos(self.company_address)
-        self.party_pos = self._get_pos(self.party_address)
+        self.company_pos = get_place_of_supply_for_address(self.company_address)
+        self.party_pos = get_place_of_supply_for_address(self.party_address)
 
     def set_address_display(self):
         self.company_address_display = get_address_display(self.company_address)

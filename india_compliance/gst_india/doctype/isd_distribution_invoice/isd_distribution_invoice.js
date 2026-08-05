@@ -73,13 +73,13 @@ frappe.ui.form.on("ISD Distribution Invoice", {
 
     async company_address(frm) {
         frm.isd_controller.set_address_display("company_address", "company_address_display");
-        await frm.isd_controller.set_pos("company_address", "company_pos");
+        await frm.isd_controller.set_place_of_supply("company_address", "company_pos");
         await frm.isd_controller.recalculate();
     },
 
     async party_address(frm) {
         frm.isd_controller.set_address_display("party_address", "party_address_display");
-        await frm.isd_controller.set_pos("party_address", "party_pos");
+        await frm.isd_controller.set_place_of_supply("party_address", "party_pos");
         if (!frm.__updating_isd_autofill) {
             await frm.isd_controller.fetch_autofill("party_address");
         }
