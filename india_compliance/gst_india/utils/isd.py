@@ -23,6 +23,7 @@ from india_compliance.gst_india.constants import (
     ISD_GST_CATEGORY,
 )
 from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
+    get_relevant_period,
     get_turnover_amount,
     get_turnover_from_sales_invoices,
     upsert_turnover_record,
@@ -347,7 +348,7 @@ def get_distribution_addresses(party_type: str, party: str, pi_posting_date: str
     frappe.has_permission(party_type, doc=party, ptype="read", throw=True)
     frappe.has_permission("Address", ptype="read", throw=True)
 
-    _fy_name, fy_from, fy_to = get_fiscal_year(pi_posting_date)
+    fy_from, fy_to = get_relevant_period(pi_posting_date)
 
     addr = frappe.qb.DocType("Address")
     dynamic_link = frappe.qb.DocType("Dynamic Link")

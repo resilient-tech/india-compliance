@@ -8,7 +8,7 @@ from frappe.model.document import Document
 from frappe.model.meta import get_field_precision
 from frappe.model.naming import make_autoname
 from frappe.query_builder.functions import Sum
-from frappe.utils import flt, nowdate
+from frappe.utils import add_years, flt, getdate, nowdate
 
 from india_compliance.gst_india.utils import get_state, validate_gstin
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Query
@@ -52,8 +52,17 @@ class TurnoverRecord(Document):
             )
 
 
-def get_turnover_amount(gst_state, posting_date=None):
+def get_relevant_period(posting_date=None):
+    """
+    The "relevant period" is the financial year *preceding* the year in which the credit is
+    distributed.
+    """
     _, from_date, to_date = get_fiscal_year(posting_date or nowdate())
+    return add_years(getdate(from_date), -1), add_years(getdate(to_date), -1)
+
+
+def get_turnover_amount(gst_state, posting_date=None):
+    from_date, to_date = get_relevant_period(posting_date)
 
     filters = {"from_date": from_date, "to_date": to_date, "gst_state": gst_state}
 
@@ -61,7 +70,7 @@ def get_turnover_amount(gst_state, posting_date=None):
 
 
 def upsert_turnover_record(gstin, gst_state, amount, posting_date=None):
-    _, from_date, to_date = get_fiscal_year(posting_date or nowdate())
+    from_date, to_date = get_relevant_period(posting_date)
 
     if gstin:
         gst_state = get_state(gstin[:2])

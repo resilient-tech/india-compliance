@@ -7,6 +7,7 @@ from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_months, flt, today
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.doctype.turnover_record.turnover_record import get_relevant_period
 from india_compliance.gst_india.utils.isd import (
     get_input_gst_accounts,
     get_isd_autofill_values,
@@ -360,11 +361,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         self.assertEqual(doc.distribution_ratio, 25.0)
 
     def test_recipient_address_autofills_branch_turnover(self):
-        # The distribution side pulls the Recipient Branch Turnover from the Turnover Record matching
-        # the recipient's state for the invoice's fiscal year.
-        from erpnext.accounts.utils import get_fiscal_year
-
-        _, from_date, to_date = get_fiscal_year(today())
+        from_date, to_date = get_relevant_period(today())
 
         # One Turnover Record per state per period, and submitting a distribution invoice upserts
         # turnover for its recipient's state, so clear both states this test asserts on.
@@ -720,7 +717,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
 
     def test_turnover_record_is_upserted_on_submit(self):
         gstin = self.recipient_address.gstin
-        _, from_date, to_date = get_fiscal_year(today())
+        from_date, to_date = get_relevant_period(today())
         frappe.db.delete(
             "Turnover Record",
             {"gstin": gstin, "from_date": from_date, "to_date": to_date},
@@ -731,10 +728,15 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         doc.insert()
         doc.submit()
 
-        # enqueued with now=frappe.flags.in_test, so it has already run
-        self.assertTrue(
-            frappe.db.exists("Turnover Record", {"gstin": gstin, "from_date": from_date, "to_date": to_date})
+        record = frappe.db.get_value(
+            "Turnover Record",
+            {"gstin": gstin, "from_date": from_date, "to_date": to_date},
+            ["amount", "gst_state"],
+            as_dict=True,
         )
+        self.assertIsNotNone(record)
+        self.assertEqual(record.amount, 25)
+        self.assertEqual(record.gst_state, self.recipient_address.gst_state)
 
     def test_over_distribution_is_clamped_to_available(self):
         pi = make_isd_pi(self.isd_address.name)
