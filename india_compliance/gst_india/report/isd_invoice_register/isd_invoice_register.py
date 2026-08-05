@@ -5,10 +5,10 @@ import frappe
 from erpnext import get_company_currency
 from frappe import _
 from frappe.query_builder import Order
-from frappe.query_builder.functions import Sum
+from frappe.query_builder.functions import Substring, Sum
 from pypika.terms import Case
 
-from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.constants import IMPORT_GST_CATEGORIES, STATE_NUMBERS
 from india_compliance.gst_india.utils import validate_common_report_filters
 
 DISTRIBUTION_DOCTYPE = "ISD Distribution Invoice"
@@ -62,7 +62,8 @@ def get_purchase_invoice_data(filters):
 
     supply_type = (
         Case()
-        .when(pi.company_gstin[0:2] == pi.place_of_supply[0:2], "Intra-State")
+        .when(pi.gst_category.isin(IMPORT_GST_CATEGORIES), "Inter-State")
+        .when(Substring(pi.supplier_gstin, 1, 2) == Substring(pi.place_of_supply, 1, 2), "Intra-State")
         .else_("Inter-State")
         .as_("supply_type")
     )

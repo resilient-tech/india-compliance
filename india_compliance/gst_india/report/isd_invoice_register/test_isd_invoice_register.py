@@ -79,6 +79,18 @@ class TestISDInvoiceRegister(IntegrationTestCase):
         self.assertEqual(row.igst_amount, 0)
         self.assertEqual(row.total_invoice_value, pi.base_grand_total)
 
+    def test_purchase_invoice_view_classifies_supply_type(self):
+        """supply_type compares the GSTIN and place-of-supply state codes. A python-style slice on a
+        query field is BETWEEN, not a substring, which made both sides false and every invoice look
+        intra-state on MariaDB (and errored on postgres)."""
+        intra = make_isd_pi(self.isd_address.name)
+        inter = make_isd_pi(self.isd_address.name, inter_state=True)
+
+        rows = {row.invoice_name: row for row in self.run_report("Purchase Invoice")}
+
+        self.assertEqual(rows[intra.name].supply_type, "Intra-State")
+        self.assertEqual(rows[inter.name].supply_type, "Inter-State")
+
     def test_distribution_view_reports_available_and_distributed_itc(self):
         pi = make_isd_pi(self.isd_address.name)
         doc = create_distribution_invoice(
