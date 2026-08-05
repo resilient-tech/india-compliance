@@ -51,12 +51,12 @@ frappe.ui.form.on("ISD Recipient Invoice", {
 
     party_address(frm) {
         frm.isd_controller.set_address_display("party_address", "party_address_display");
-        frm.isd_controller.set_pos("party_address", "party_pos");
+        frm.isd_controller.set_place_of_supply("party_address", "party_pos");
     },
 
     company_address(frm) {
         frm.isd_controller.set_address_display("company_address", "company_address_display");
-        frm.isd_controller.set_pos("company_address", "company_pos");
+        frm.isd_controller.set_place_of_supply("company_address", "company_pos");
     },
 
     // the credit received is driven by distributed_*, so the ratio is informational here
