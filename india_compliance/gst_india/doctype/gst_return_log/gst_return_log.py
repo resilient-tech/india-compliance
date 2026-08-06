@@ -328,11 +328,11 @@ def get_decompressed_data(content):
     return frappe.parse_json(frappe.safe_decode(gzip.decompress(content)))
 
 
-def store_raw_return_data(gstin, return_type, return_period, json_data):
+def store_raw_return_data(gstin, return_type, return_period, json_data, overwrite=True):
     """Keep the portal payload (gzipped) in the period's log `raw_gov_data` field."""
     name = f"{return_type}-{return_period}-{gstin}"
     with filelock(frappe.scrub(f"raw_return_{name}")):
-        get_gst_return_log(name).update_json_for(RAW_FIELD, json_data)
+        get_gst_return_log(name).update_json_for(RAW_FIELD, json_data, overwrite=overwrite)
 
 
 def get_raw_return_data(gstin, return_type, return_period):

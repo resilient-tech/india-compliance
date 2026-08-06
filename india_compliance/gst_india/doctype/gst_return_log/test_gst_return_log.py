@@ -87,3 +87,24 @@ class TestGSTReturnLog(IntegrationTestCase):
             stored = frappe.db.get_value("GST Return Log", self.log_name, "is_nil")
             self.assertEqual(stored, expected)
             self.assertNotIsInstance(stored, bool, "is_nil must be stored as 0/1, not a bool")
+
+    @patch("india_compliance.gst_india.utils.gstr_1.gstr_1_download.GSTR1API")
+    def test_filed_gstr1_stores_raw(self, mock_api):
+        """Filed GSTR-1 keeps the portal payload as received; unfiled does not."""
+        period = "052099"
+        log_name = f"GSTR1-{period}-{self.GSTIN}"
+        raw = frappe._dict(isnil="N", error_type=None, token=None, chksum="abc123")
+
+        mock_api.return_value = Mock()
+        mock_api.return_value.get_gstr_1_data.return_value = raw
+
+        log = get_gst_return_log(log_name, filing_preference="Monthly")
+        download_gstr1_json_data(log)
+        self.assertIsNone(get_raw_return_data(self.GSTIN, "GSTR1", period))
+
+        log.db_set("filing_status", "Filed")
+        download_gstr1_json_data(frappe.get_doc("GST Return Log", log_name))
+
+        stored = get_raw_return_data(self.GSTIN, "GSTR1", period)
+        self.assertEqual(stored["chksum"], "abc123")
+        self.assertNotIn("creation", raw)

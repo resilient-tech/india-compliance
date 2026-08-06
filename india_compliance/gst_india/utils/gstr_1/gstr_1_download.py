@@ -31,6 +31,10 @@ def download_gstr1_json_data(gstr1_log):
     """
     Download GSTR-1 and Unfiled GSTR1 data from GST Portal
     """
+    from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+        store_raw_return_data,
+    )
+
     gstin = gstr1_log.gstin
     return_period = gstr1_log.return_period
 
@@ -78,6 +82,9 @@ def download_gstr1_json_data(gstr1_log):
 
     gstr1_log.db_set("is_nil", cint(json_data.isnil == "Y"))
 
+    if return_type == "GSTR1":
+        store_raw_return_data(gstin, return_type, return_period, dict(json_data))
+
     mapped_data = convert_to_internal_data_format(json_data)
     gstr1_log.update_json_for(data_field, mapped_data, reset_reconcile=True)
 
@@ -94,6 +101,10 @@ def download_gstr1_json_data(gstr1_log):
 
 
 def save_gstr_1(gstin, return_period, json_data, return_type):
+    from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+        store_raw_return_data,
+    )
+
     if return_type == "GSTR1":
         data_field = "filed"
 
@@ -108,6 +119,9 @@ def save_gstr_1(gstin, return_period, json_data, return_type):
             ),
             title=_("Invalid Response Received."),
         )
+
+    if return_type == "GSTR1":
+        store_raw_return_data(gstin, return_type, return_period, dict(json_data), overwrite=False)
 
     mapped_data = convert_to_internal_data_format(json_data)
 
