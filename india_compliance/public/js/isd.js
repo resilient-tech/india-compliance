@@ -144,7 +144,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     {
                         fieldtype: "Currency",
                         fieldname: "turnover_amount",
-                        label: __("Turnover Amount"),
+                        label: __("Turnover Amount (Prev. Yr.)"),
                         in_list_view: 1,
                         default: 0,
                         columns: 2,

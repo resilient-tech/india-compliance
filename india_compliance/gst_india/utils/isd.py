@@ -11,7 +11,6 @@ from functools import reduce
 from operator import add
 
 import frappe
-from erpnext.accounts.utils import get_fiscal_year
 from frappe import _
 from frappe.model.meta import get_field_precision
 from frappe.query_builder.functions import Coalesce, IfNull, Sum
@@ -25,7 +24,6 @@ from india_compliance.gst_india.constants import (
 from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
     get_relevant_period,
     get_turnover_amount,
-    get_turnover_from_sales_invoices,
     upsert_turnover_record,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -382,11 +380,6 @@ def get_distribution_addresses(party_type: str, party: str, pi_posting_date: str
         query = query.where(addr.name == address)
 
     data = query.run(as_dict=True)
-    company = party if party_type == "Company" else None
-    for row in data:
-        # no Turnover Record for this state/period -> fall back to the sales invoices
-        if not flt(row.turnover_amount):
-            row.turnover_amount = get_turnover_from_sales_invoices(row.gstin, fy_from, fy_to, company)
 
     return data
 
