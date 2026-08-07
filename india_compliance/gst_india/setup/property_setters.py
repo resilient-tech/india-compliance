@@ -78,7 +78,7 @@ def get_property_setters(*, include_defaults=False):
             "doctype_or_field": "DocType",
             "property": "autoname",
             "property_type": "Data",
-            "value": "ASM-.YY.-.#####",
+            "value": "naming_series:",
         },
         *PURCHASE_RECEIPT_PROPERTIES,
         *SUBCONTRACTING_RECEIPT_PROPERTIES,

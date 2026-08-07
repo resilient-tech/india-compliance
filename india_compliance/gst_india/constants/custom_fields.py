@@ -235,6 +235,18 @@ CUSTOM_FIELDS = {
     ],
     "Asset Movement": [
         {
+            "fieldname": "naming_series",
+            "label": "Series",
+            "fieldtype": "Select",
+            "insert_after": "company",
+            "options": "ASM-.YY.-\nACC-ASM-.YYYY.-",
+            "default": "ASM-.YY.-",
+            "reqd": 1,
+            "no_copy": 1,
+            "print_hide": 1,
+            "set_only_once": 1,
+        },
+        {
             "fieldname": "section_break_taxes",
             "label": "Taxes",
             "fieldtype": "Section Break",
@@ -297,14 +309,15 @@ CUSTOM_FIELDS = {
             "label": "E-Waybill Info",
             "fieldname": "tab_break_ewaybill",
             "fieldtype": "Tab Break",
-            "insert_after": "base_grand_total",
+            "insert_after": "amended_from",
             "depends_on": "eval: india_compliance.is_e_waybill_applicable_for_asset_movement(doc)",
         },
         {
             "label": "Connections",
             "fieldname": "connections_tab",
             "fieldtype": "Tab Break",
-            "insert_after": "amended_from",
+            # gst_vehicle_type is the last e-Waybill field, so Connections stays the final tab
+            "insert_after": "gst_vehicle_type",
             "show_dashboard": 1,
         },
     ],
@@ -2169,6 +2182,7 @@ stock_entry_e_waybill_field = {**e_waybill_no_field, "insert_after": "asset_repa
 asset_movement_e_waybill_field = {
     **e_waybill_no_field,
     "insert_after": "transaction_date",
+    "depends_on": ("eval: doc.ewaybill"),
 }
 
 E_WAYBILL_FIELDS = {

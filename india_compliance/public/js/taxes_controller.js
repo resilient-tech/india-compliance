@@ -144,8 +144,7 @@ india_compliance.taxes_controller = class TaxesController {
         };
 
         if (this.frm.doc.doctype === "Asset Movement") {
-            // No qty x rate: the user enters the taxable value directly
-            amount = flt(row.taxable_value, precision("taxable_value", row));
+            amount = calculateAmount(1, row.taxable_value, "taxable_value");
         } else if (this.frm.doc.doctype === "Stock Entry") {
             amount = calculateAmount(row.transfer_qty, row.basic_rate, "basic_amount");
         } else {

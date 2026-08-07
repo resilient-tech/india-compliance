@@ -400,13 +400,10 @@ class GSTAccounts:
             )
 
     def get_company_address_field(self):
-        if self.is_sales_transaction:
-            return "company_address"
-
         if self.doc.doctype in BILL_FROM_TO_DOCTYPES:
             return "bill_to_address" if is_inward_transaction(self.doc) else "bill_from_address"
 
-        return "billing_address"
+        return "company_address" if self.is_sales_transaction else "billing_address"
 
     def validate_for_invalid_account_type(self):
         """
@@ -522,6 +519,7 @@ def validate_items(doc):
     """Validate Items for a GST Compliant Invoice"""
 
     items = doc.get(get_items_fieldname(doc.doctype))
+    # can't use item_list property here because this is not a class
     if not items:
         return
 
@@ -807,9 +805,7 @@ def get_gst_details(
     is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
     gst_details = frappe._dict()
 
-    allow_same_gstin = False
-    if party_details.get("is_outward_stock_entry"):
-        allow_same_gstin = True
+    allow_same_gstin = bool(party_details.get("is_outward_stock_entry")) or doctype == "Asset Movement"
 
     address_fields = _get_address_fields(doctype, party_details)
     company_gstin_field = address_fields.get("company_gstin_field")
@@ -874,10 +870,9 @@ def get_gst_details(
         gst_details.taxes_and_charges = ""
         gst_details.taxes = []
         return gst_details
-
     master_doctype = (
         "Sales Taxes and Charges Template"
-        if is_sales_transaction or doctype in SUBCONTRACTING_DOCTYPES
+        if is_sales_transaction or doctype in SUBCONTRACTING_DOCTYPES or doctype in BILL_FROM_TO_DOCTYPES
         else "Purchase Taxes and Charges Template"
     )
 
