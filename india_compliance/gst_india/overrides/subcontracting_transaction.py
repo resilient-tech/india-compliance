@@ -178,7 +178,7 @@ def set_item_tax_template(doc, source_doc):
     set_default_item_tax_template(doc, tax_category)
 
 
-def set_default_item_tax_template(doc, tax_category=None, force=False):
+def set_default_item_tax_template(doc, tax_category=None):
     items = doc.get(get_items_fieldname(doc.doctype))
     if not items:
         return
@@ -192,7 +192,7 @@ def set_default_item_tax_template(doc, tax_category=None, force=False):
     )
 
     for item in items:
-        if not item.item_code or (item.item_tax_template and not force):
+        if not item.item_code or item.item_tax_template:
             continue
 
         out = frappe._dict()

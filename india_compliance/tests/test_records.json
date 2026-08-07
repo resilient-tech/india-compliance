@@ -41,13 +41,6 @@
             "company": "_Test Indian Registered Company",
             "doctype": "Account",
             "parent_account": "Fixed Assets - _TIRC"
-        },
-        {
-            "account_name": "_Test Asset Movement Fixed Asset Account",
-            "account_type": "Fixed Asset",
-            "company": "_Test Indian Unregistered Company",
-            "doctype": "Account",
-            "parent_account": "Fixed Assets - _TIUC"
         }
     ],
     "Location": [
@@ -66,10 +59,6 @@
                 {
                     "company_name": "_Test Indian Registered Company",
                     "fixed_asset_account": "_Test Asset Movement Fixed Asset Account - _TIRC"
-                },
-                {
-                    "company_name": "_Test Indian Unregistered Company",
-                    "fixed_asset_account": "_Test Asset Movement Fixed Asset Account - _TIUC"
                 }
             ],
             "asset_category_name": "_Test Asset Movement Category",
@@ -223,42 +212,6 @@
             "available_for_use_date": "2024-01-01",
             "calculate_depreciation": 0,
             "company": "_Test Indian Registered Company",
-            "docstatus": 1,
-            "doctype": "Asset",
-            "item_code": "_Test Asset Movement Fixed Asset",
-            "location": "_Test Asset Movement Location",
-            "maintenance_required": 0,
-            "net_purchase_amount": 100000,
-            "purchase_amount": 100000,
-            "purchase_date": "2024-01-01"
-        },
-        {
-            "asset_category": "_Test Asset Movement Category",
-            "asset_name": "_Test Asset Movement Asset Qty 4",
-            "asset_owner": "Company",
-            "asset_quantity": 4,
-            "asset_type": "Existing Asset",
-            "available_for_use_date": "2024-01-01",
-            "calculate_depreciation": 0,
-            "company": "_Test Indian Registered Company",
-            "docstatus": 1,
-            "doctype": "Asset",
-            "item_code": "_Test Asset Movement Fixed Asset",
-            "location": "_Test Asset Movement Location",
-            "maintenance_required": 0,
-            "net_purchase_amount": 100000,
-            "purchase_amount": 100000,
-            "purchase_date": "2024-01-01"
-        },
-        {
-            "asset_category": "_Test Asset Movement Category",
-            "asset_name": "_Test Asset Movement Asset Unregistered",
-            "asset_owner": "Company",
-            "asset_quantity": 1,
-            "asset_type": "Existing Asset",
-            "available_for_use_date": "2024-01-01",
-            "calculate_depreciation": 0,
-            "company": "_Test Indian Unregistered Company",
             "docstatus": 1,
             "doctype": "Asset",
             "item_code": "_Test Asset Movement Fixed Asset",
