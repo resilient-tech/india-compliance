@@ -8,7 +8,7 @@ from erpnext.selling.doctype.sales_order.sales_order import (
 )
 from frappe.utils import add_days, getdate, today
 
-from india_compliance.gst_india.constants import SALES_DOCTYPES
+from india_compliance.gst_india.constants import BILL_FROM_TO_DOCTYPES, SALES_DOCTYPES
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.tests.erpnext_test_utils import create_subcontracting_order, make_bom
 
@@ -473,7 +473,12 @@ def _append_taxes(
     if isinstance(accounts, str):
         accounts = [accounts]
 
-    if transaction.doctype in SALES_DOCTYPES or transaction.doctype == "Payment Entry":
+    # bill from / bill to doctypes charge Output GST irrespective of the direction
+    if (
+        transaction.doctype in SALES_DOCTYPES
+        or transaction.doctype in BILL_FROM_TO_DOCTYPES
+        or transaction.doctype == "Payment Entry"
+    ):
         account_type = "Output Tax"
     else:
         account_type = "Input Tax"

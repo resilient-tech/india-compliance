@@ -3,6 +3,10 @@ class EwaybillApplicability {
         this.frm = frm;
     }
 
+    get_company_gstin() {
+        return this.frm.doc.company_gstin;
+    }
+
     is_e_waybill_applicable(show_message = false) {
         this.frm._ewb_message_list = [];
 
@@ -11,7 +15,7 @@ class EwaybillApplicability {
         let is_ewb_applicable = true;
         let message_list = [];
 
-        if (!this.frm.doc.company_gstin) {
+        if (!this.get_company_gstin()) {
             is_ewb_applicable = false;
             message_list.push(__("Company GSTIN is not set. Ensure it's set in Company Address."));
         }
@@ -287,12 +291,11 @@ class AssetMovementEwaybill extends EwaybillApplicability {
         return this.frm.doc.purpose === "Receipt";
     }
 
-    is_e_waybill_applicable(show_message = false) {
-        // company_gstin is referred to as the generator of the e-Waybill, same as `onload`
-        this.frm.doc.company_gstin = this.is_inward()
-            ? this.frm.doc.bill_to_gstin
-            : this.frm.doc.bill_from_gstin;
+    get_company_gstin() {
+        return this.is_inward() ? this.frm.doc.bill_to_gstin : this.frm.doc.bill_from_gstin;
+    }
 
+    is_e_waybill_applicable(show_message = false) {
         return (
             super.is_e_waybill_applicable(show_message) && gst_settings.enable_e_waybill_from_asset_movement
         );

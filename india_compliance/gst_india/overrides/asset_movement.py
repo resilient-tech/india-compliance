@@ -1,3 +1,4 @@
+import frappe
 from erpnext.assets.doctype.asset.asset import get_asset_value_after_depreciation
 from frappe.utils import flt
 
@@ -19,7 +20,7 @@ from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 def onload(doc, method=None):
     set_address_display(doc)
 
-    # company_gstin is refered as generator of e-waybill
+    # company_gstin is referred as generator of e-waybill
     if is_inward_transaction(doc):
         doc.company_gstin, doc.supplier_gstin = doc.bill_to_gstin, doc.bill_from_gstin
         doc.gst_category = doc.bill_from_gst_category
@@ -27,13 +28,20 @@ def onload(doc, method=None):
         doc.company_gstin, doc.supplier_gstin = doc.bill_from_gstin, doc.bill_to_gstin
         doc.gst_category = doc.bill_to_gst_category
 
+    # phantom fields for e-waybill generation flow
+    # note that save() does not work on phantom fields
     doc.posting_date = doc.transaction_date
     doc.items = doc.assets
+    # what is the one place where this phantom field can't work/ only place where it works
 
     if not doc.get("ewaybill"):
         return
 
-    if is_e_waybill_applicable(doc) and (e_waybill_info := get_e_waybill_info(doc)):
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if (is_e_waybill_applicable(doc) or gst_settings.auto_cancel_e_waybill) and (
+        e_waybill_info := get_e_waybill_info(doc)
+    ):
         doc.set_onload("e_waybill_info", e_waybill_info)
 
 
@@ -46,7 +54,6 @@ def validate(doc, method=None):
 
 
 def set_taxable_value(doc):
-
     for row in doc.assets:
         if row.taxable_value or not row.asset:
             continue

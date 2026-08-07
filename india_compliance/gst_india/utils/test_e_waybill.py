@@ -24,10 +24,6 @@ from india_compliance.gst_india.overrides.sales_invoice import (
     is_e_waybill_applicable,
 )
 from india_compliance.gst_india.overrides.test_asset_movement import (
-    TEST_LOCATION,
-    TEST_TARGET_LOCATION,
-    TRANSPORTER_DETAILS,
-    _append_output_taxes,
     create_asset_movement,
     get_test_asset,
 )
@@ -675,6 +671,33 @@ class TestEWaybill(IntegrationTestCase):
         se.reload()
         self.assertEqual(se.ewaybill, "")
 
+    @change_settings("GST Settings", {"enable_e_waybill_from_asset_movement": 1})
+    @responses.activate
+    def test_e_waybill_for_asset_movement(self):
+        """Test to generate e-waybill for Asset Movement"""
+        am_data = self.e_waybill_test_data.get("asset_movement")
+
+        asset_movement = self._create_asset_movement("asset_movement")
+
+        self._generate_e_waybill(asset_movement.name, "Asset Movement", am_data)
+
+        self.assertDocumentEqual(
+            {"name": am_data.get("response_data").get("result").get("ewayBillNo")},
+            frappe.get_doc("e-Waybill Log", {"reference_name": asset_movement.name}),
+        )
+
+        asset_movement = load_doc("Asset Movement", asset_movement.name, "submit")
+
+        e_waybill_info = asset_movement.get("__onload").e_waybill_info
+
+        self.assertEqual(
+            e_waybill_info.valid_upto,
+            parse_datetime(
+                am_data.get("response_data").get("result").get("validUpto"),
+                day_first=True,
+            ),
+        )
+
     @change_settings(
         "GST Settings",
         {
@@ -684,43 +707,22 @@ class TestEWaybill(IntegrationTestCase):
         },
     )
     @responses.activate
-    def test_e_waybill_for_asset_movement(self):
-        """Generate and then auto-cancel an e-Waybill for an Asset Movement.
-
-        The payload itself is asserted in test_asset_movement.py; this covers the
-        generate / log / before_cancel wiring, so the request body is not matched.
-        """
+    def test_auto_cancel_e_waybill_on_asset_movement_cancel(self):
+        """Test that e-waybill is automatically cancelled when asset movement is cancelled and auto_cancel_e_waybill is enabled"""
+        asset_movement = self._create_asset_movement("asset_movement")
         am_test_data = self.e_waybill_test_data.get("asset_movement")
-        asset_movement = self._create_asset_movement()
 
-        self._mock_e_waybill_response(
-            data=am_test_data.get("response_data"),
-            match_list=[matchers.query_string_matcher(am_test_data.get("params"))],
-        )
-
-        generate_e_waybill(
-            doctype="Asset Movement",
-            docname=asset_movement.name,
-            values=am_test_data.get("values"),
-            force=True,
-        )
+        self._generate_e_waybill(asset_movement.name, "Asset Movement", am_test_data)
 
         ewaybill_log = frappe.get_doc("e-Waybill Log", {"reference_name": asset_movement.name})
         self.assertFalse(ewaybill_log.is_cancelled)
 
-        asset_movement.reload()
-        self.assertEqual(
-            asset_movement.ewaybill,
-            str(am_test_data.get("response_data").get("result").get("ewayBillNo")),
-        )
-
-        # onload must expose e_waybill_info for the form actions to work
-        loaded = load_doc("Asset Movement", asset_movement.name, "submit")
-        self.assertIsNotNone(loaded.get("__onload").e_waybill_info)
-
         e_waybill_cancel_data = self.e_waybill_test_data.get("cancel_e_waybill")
+
+        actual_ewaybill_no = ewaybill_log.name
+
         cancel_response_data = copy.deepcopy(e_waybill_cancel_data.get("response_data"))
-        cancel_response_data["result"]["ewayBillNo"] = ewaybill_log.name
+        cancel_response_data["result"]["ewayBillNo"] = actual_ewaybill_no
 
         self._mock_e_waybill_response(
             data=cancel_response_data,
@@ -728,7 +730,7 @@ class TestEWaybill(IntegrationTestCase):
                 matchers.query_string_matcher(e_waybill_cancel_data.get("params")),
                 matchers.json_params_matcher(
                     {
-                        "ewbNo": ewaybill_log.name,
+                        "ewbNo": actual_ewaybill_no,
                         "cancelRsnCode": "3",  # Data Entry Mistake
                         "cancelRmrk": "Data Entry Mistake",
                     }
@@ -741,35 +743,11 @@ class TestEWaybill(IntegrationTestCase):
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
+        self.assertEqual(ewaybill_log.cancel_reason_code, "3")  # Data Entry Mistake
+        self.assertEqual(ewaybill_log.cancel_remark, "Data Entry Mistake")
 
         asset_movement.reload()
         self.assertEqual(asset_movement.ewaybill, "")
-
-    def _create_asset_movement(self):
-        """Submitted Asset Movement with GST taxes, ready for e-Waybill generation."""
-        asset = get_test_asset()
-        current_location = frappe.db.get_value("Asset", asset, "location")
-
-        doc = create_asset_movement(
-            assets=[
-                {
-                    "asset": asset,
-                    "taxable_value": 100,
-                    # ERPNext rejects a Source and Target Location that are the same
-                    "target_location": (
-                        TEST_LOCATION if current_location == TEST_TARGET_LOCATION else TEST_TARGET_LOCATION
-                    ),
-                }
-            ],
-            extra_fields=TRANSPORTER_DETAILS,
-            do_not_save=True,
-        )
-        # an Asset Movement is validated as an outward supply, so it needs Output accounts
-        _append_output_taxes(doc, ["CGST", "SGST"], rate=9)
-        doc.insert()
-        doc.submit()
-
-        return doc
 
     def test_get_source_destination_address_for_stock_entry(self):
         """Test get_source_destination_address function with Stock Entry doctype"""
@@ -1894,6 +1872,18 @@ class TestEWaybill(IntegrationTestCase):
 
         doc_args["doctype"] = "Stock Entry"
         return create_transaction(**doc_args)
+
+    def _create_asset_movement(self, test_case):
+        """Generate Asset Movement to test e-Waybill functionalities"""
+        doc_args = self.e_waybill_test_data.get(test_case).get("kwargs")
+
+        # Assets are auto-named, so the fixture can only be resolved at runtime
+        doc = create_asset_movement(asset=get_test_asset(), do_not_save=True, **doc_args)
+        _append_taxes(doc, ["CGST", "SGST"], rate=9)
+        doc.insert()
+        doc.submit()
+
+        return doc
 
     def _create_purchase_receipt(self, test_case):
         """Generate Purchase Receipt to test e-Waybill functionalities"""
