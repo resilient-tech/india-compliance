@@ -72,7 +72,6 @@ function set_company_address(frm) {
 
     frm.set_value("bill_from_address", null);
     frm.set_value("bill_to_address", null);
-    frm.refresh_fields(["bill_from_address", "bill_to_address"]);
 
     const company_field = frm.doc.purpose === "Receipt" ? "bill_to_address" : "bill_from_address";
     if (frm.doc[company_field]) return;
