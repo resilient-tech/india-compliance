@@ -1486,7 +1486,7 @@ class TestTransaction(IntegrationTestCase):
         for item in doc.items:
             item.taxable_value = None
 
-        ItemGSTDetails().update(doc)
+        ItemGSTDetails(doc).update()
 
     def test_none_tax_amount_after_discount_amount(self):
         """
@@ -1505,7 +1505,7 @@ class TestTransaction(IntegrationTestCase):
             tax.tax_amount_after_discount_amount = None
             tax.base_tax_amount_after_discount_amount = None
 
-        ItemGSTDetails().update(doc)
+        ItemGSTDetails(doc).update()
 
 
 def create_refund_transaction():
