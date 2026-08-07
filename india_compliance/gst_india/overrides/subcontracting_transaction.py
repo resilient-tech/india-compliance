@@ -427,7 +427,7 @@ def validate_transaction(doc, method=None):
     validate_gst_transporter_id(doc)
     validate_gst_category(doc.get(gst_category_field), gstin)
 
-    SubcontractingGSTAccounts().validate(doc, True)
+    SubcontractingGSTAccounts(doc).validate(True)
 
 
 def validate_company_address_field(doc, company_address_field):
@@ -445,8 +445,7 @@ def validate_company_address_field(doc, company_address_field):
 
 
 class SubcontractingGSTAccounts(GSTAccounts):
-    def validate(self, doc, is_sales_transaction=False):
-        self.doc = doc
+    def validate(self, is_sales_transaction=False):
         self.is_sales_transaction = is_sales_transaction
 
         if not self.doc.taxes:

@@ -284,8 +284,10 @@ def set_gst_tax_type(doc, method=None):
 
 
 class GSTAccounts:
-    def validate(self, doc, is_sales_transaction=False):
+    def __init__(self, doc):
         self.doc = doc
+
+    def validate(self, is_sales_transaction=False):
         self.is_sales_transaction = is_sales_transaction
 
         if not self.doc.taxes:
@@ -1112,9 +1114,12 @@ def is_export_without_payment_of_gst(doc):
 class ItemGSTDetails:
     FIELDMAP: ClassVar[dict] = {}
 
-    def get_items(self, doc=None):
-        doc = doc or self.doc
-        return doc.get(get_items_fieldname(doc.doctype)) or []
+    def __init__(self, doc=None):
+        self.doc = doc
+
+    @property
+    def item_list(self):
+        return self.doc.get(get_items_fieldname(self.doc.doctype)) or []
 
     def get(self, docs, doctype, company):
         """
@@ -1127,32 +1132,31 @@ class ItemGSTDetails:
 
         for doc in docs:
             self.doc = doc
-            if not self.get_items(doc) or not doc.get("taxes"):
+            if not self.item_list or not doc.get("taxes"):
                 continue
 
             self.build_item_wise_tax_detail_from_data()
             self.get_item_name_wise_tax_details()
 
-            for item in self.get_items(doc):
+            for item in self.item_list:
                 response[item.name] = self.get_tax_detail_by_item_name(item)
 
         return response
 
-    def update(self, doc):
+    def update(self):
         """
         Update Item GST Details for a single document
         """
-        self.doc = doc
-        if not self.get_items():
+        if not self.item_list:
             return
 
         self.get_item_defaults()
         self.set_item_defaults()
 
-        if ignore_gst_validations(doc):
+        if ignore_gst_validations(self.doc):
             return
 
-        self.set_tax_amount_precisions(doc.doctype)
+        self.set_tax_amount_precisions(self.doc.doctype)
         self.set_temp_item_wise_tax_detail_object()
 
         self.set_item_name_wise_tax_details()
@@ -1220,7 +1224,7 @@ class ItemGSTDetails:
                 last_item_with_tax.set(f"{tax_type}_amount", amount)
 
     def set_item_defaults(self):
-        for item in self.get_items():
+        for item in self.item_list:
             item.update(self.item_defaults.copy())
 
     def get_item_name_wise_tax_details(self):
@@ -1256,7 +1260,7 @@ class ItemGSTDetails:
             tax_differences[tax_type] += flt(row.get(self.tax_amount_field()))
             tax_map[row.name] = row
 
-        for row in self.get_items():
+        for row in self.item_list:
             key = row.name
             item_map[key] = row
 
@@ -1314,7 +1318,7 @@ class ItemGSTDetails:
     def validate_item_gst_details(self):
         invalid_rows = defaultdict(list)
 
-        for item in self.get_items():
+        for item in self.item_list:
             for tax in GST_TAX_TYPES:
                 expected_amt = self.get_item_tax_amount(item, item.get(f"{tax}_rate"), tax)
 
@@ -1402,14 +1406,17 @@ class ItemGSTDetails:
 
 
 class ItemGSTTreatment:
-    def get_items(self):
+    def __init__(self, doc):
+        self.doc = doc
+
+    @property
+    def item_list(self):
         return self.doc.get(get_items_fieldname(self.doc.doctype)) or []
 
-    def set(self, doc):
-        self.doc = doc
-        is_sales_transaction = doc.doctype in SALES_DOCTYPES
+    def set(self):
+        is_sales_transaction = self.doc.doctype in SALES_DOCTYPES
 
-        if is_sales_transaction and is_overseas_doc(doc):
+        if is_sales_transaction and is_overseas_doc(self.doc):
             self.set_for_overseas()
             return
 
@@ -1431,22 +1438,22 @@ class ItemGSTTreatment:
         self.set_default_treatment()
 
     def set_for_overseas(self):
-        for item in self.get_items():
+        for item in self.item_list:
             item.gst_treatment = "Zero-Rated"
 
     def set_for_import_transactions(self):
-        for item in self.get_items():
+        for item in self.item_list:
             item.gst_treatment = "Taxable"
 
     def set_for_no_taxes(self):
-        for item in self.get_items():
+        for item in self.item_list:
             if item.gst_treatment not in ("Exempted", "Non-GST"):
                 item.gst_treatment = "Nil-Rated"
 
     def update_gst_treatment_map(self):
         item_templates = set()
 
-        for item in self.get_items():
+        for item in self.item_list:
             item_templates.add(item.item_tax_template)
 
         self.gst_treatment_map = frappe._dict(
@@ -1461,7 +1468,7 @@ class ItemGSTTreatment:
     def set_default_treatment(self):
         default_treatment = self.get_default_treatment()
 
-        for item in self.get_items():
+        for item in self.item_list:
             item.gst_treatment = self.gst_treatment_map.get(item.item_tax_template)
 
             if not item.gst_treatment or not item.item_tax_template:
@@ -1689,7 +1696,7 @@ def validate_transaction(doc, method=None):
 
     validate_gst_category(doc.gst_category, gstin)
 
-    GSTAccounts().validate(doc, is_sales_transaction)
+    GSTAccounts(doc).validate(is_sales_transaction)
     if doc.get("is_reverse_charge"):
         validate_reverse_charge_transaction(doc)
     else:
@@ -1704,14 +1711,14 @@ def update_item_gst_details(doc, method=None):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
 
-    ItemGSTDetails().update(doc)
+    ItemGSTDetails(doc).update()
 
 
 def update_item_gst_treatment(doc, method=None):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
 
-    ItemGSTTreatment().set(doc)
+    ItemGSTTreatment(doc).set()
 
 
 def before_print(doc, method=None, print_settings=None):
@@ -1887,7 +1894,7 @@ def before_update_after_submit(doc, method=None):
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
 
-    GSTAccounts().validate(doc, is_sales_transaction)
+    GSTAccounts(doc).validate(is_sales_transaction)
     validate_item_wise_tax_detail(doc)
     update_taxable_values(doc)
     update_item_gst_details(doc)
@@ -1959,7 +1966,7 @@ def sync_address_dependent_fields_after_submit(doc, method=None):
         validate_gstin_status(gstin, doc)
 
     validate_gst_category(doc.gst_category, gstin)
-    GSTAccounts().validate(doc, is_sales_transaction)
+    GSTAccounts(doc).validate(is_sales_transaction)
 
 
 def sync_gst_details_from_address(doc, changed_address_fields):
