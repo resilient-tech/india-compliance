@@ -1,7 +1,3 @@
-import json
-
-import frappe
-from erpnext.accounts.party import get_address_tax_category
 from erpnext.assets.doctype.asset.asset import get_asset_value_after_depreciation
 from frappe.utils import flt
 
@@ -12,14 +8,12 @@ from india_compliance.gst_india.overrides.subcontracting_transaction import (
     ignore_gst_validations_for_subcontracting,
     is_e_waybill_applicable,
     set_address_display,
-    set_default_item_tax_template,
 )
 from india_compliance.gst_india.overrides.subcontracting_transaction import (
     validate as subcontracting_validate,
 )
 from india_compliance.gst_india.utils import is_inward_transaction
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
-from india_compliance.gst_india.utils.taxes_controller import CustomTaxController
 
 
 def onload(doc, method=None):
@@ -44,28 +38,11 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    # Item Tax Templates and taxable values feed the tax calculation in subcontracting_validate
+    # Taxable values feed the tax calculation in subcontracting_validate
     if is_e_waybill_applicable(doc) and not ignore_gst_validations_for_subcontracting(doc):
-        set_default_item_tax_template(doc, _get_tax_category(doc))
         set_taxable_value(doc)
 
     subcontracting_validate(doc)
-
-
-def _get_tax_category(doc):
-    return doc.get("tax_category") or get_address_tax_category(
-        None, doc.get("bill_to_address"), doc.get("ship_to_address")
-    )
-
-
-@frappe.whitelist()
-def update_item_tax_template(doc: str):
-
-    doc = json.loads(doc, object_hook=frappe._dict)
-    set_default_item_tax_template(doc, _get_tax_category(doc), force=True)
-    CustomTaxController(doc).set_item_wise_tax_rates()
-
-    frappe.response.docs.append(doc)
 
 
 def set_taxable_value(doc):

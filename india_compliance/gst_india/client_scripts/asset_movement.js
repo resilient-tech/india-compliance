@@ -64,18 +64,6 @@ frappe.ui.form.on(DOCTYPE, {
     taxes_and_charges(frm) {
         frm.taxes_controller.update_taxes(frm);
     },
-
-    async tax_category(frm) {
-        if (!frm.doc.assets?.length) return;
-
-        await frappe.call({
-            method: "india_compliance.gst_india.overrides.asset_movement.update_item_tax_template",
-            args: { doc: frm.doc },
-        });
-
-        frm.refresh_field("assets");
-        frm.taxes_controller.update_tax_amount();
-    },
 });
 
 function set_company_address(frm) {
