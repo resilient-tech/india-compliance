@@ -54,7 +54,6 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     async company(frm) {
-        await frm.set_value({ bill_from_address: null, bill_to_address: null });
         set_company_address(frm);
     },
 
@@ -101,7 +100,7 @@ frappe.ui.form.on("Asset Movement Item", {
             { asset_name: row.asset },
         );
 
-        await frappe.model.set_value(cdt, cdn, "taxable_value", value_after_depreciation);
+        await frappe.model.set_value(cdt, cdn, "taxable_value", flt(value_after_depreciation));
     },
 
     taxable_value(frm) {

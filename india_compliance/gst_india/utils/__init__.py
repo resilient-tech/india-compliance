@@ -34,14 +34,14 @@ from titlecase import titlecase as _titlecase
 from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
-    BILL_FROM_TO_DOCTYPES,
+    DOCTYPES_WITH_BILL_FROM_TO,
     E_INVOICE_MASTER_CODES_URL,
     GST_ACCOUNT_FIELDS,
     GST_INVOICE_NUMBER_FORMAT,
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
-    ITEMS_FIELDNAME,
+    ITEMS_FIELDNAME_OVERRIDES,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
@@ -567,7 +567,7 @@ def get_place_of_supply(party_details, doctype):
         # for registered
         pos_gstin = customer_gstin or party_details.company_gstin
 
-    elif doctype in BILL_FROM_TO_DOCTYPES:
+    elif doctype in DOCTYPES_WITH_BILL_FROM_TO:
         # for unregistered Bill To, since it has no GSTIN to derive the state from.
         # Bill To is the company itself for inward transactions, hence always registered.
         if not party_details.bill_to_gstin and (bill_to_address := party_details.get("bill_to_address")):
@@ -1179,7 +1179,7 @@ def get_periods_between_dates(
 
 
 def get_items_fieldname(doctype):
-    return ITEMS_FIELDNAME.get(doctype, "items")
+    return ITEMS_FIELDNAME_OVERRIDES.get(doctype, "items")
 
 
 def is_outward_stock_entry(doc):
