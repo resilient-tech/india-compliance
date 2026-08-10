@@ -3,11 +3,11 @@ from erpnext.accounts.party import get_address_tax_category
 from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_address_display, get_default_address
-from frappe.utils import flt, getdate
+from frappe.utils import flt
 from pypika import Order
 
 from india_compliance.gst_india.constants import (
-    BILL_FROM_TO_DOCTYPES,
+    DOCTYPES_WITH_BILL_FROM_TO,
     E_WAYBILL_STOCK_ENTRY_PURPOSES,
 )
 from india_compliance.gst_india.constants.e_waybill import (
@@ -70,7 +70,35 @@ def after_mapping_subcontracting_order(doc, method, source_doc):
         return
 
     set_taxes(doc)
-    set_item_tax_template(doc, source_doc)
+    update_item_tax_template(doc, source_doc)
+
+
+def update_item_tax_template(doc, source_doc):
+    items = doc.get(get_items_fieldname(doc.doctype))
+    if not items:
+        return
+
+    tax_category = source_doc.tax_category
+
+    if not tax_category:
+        tax_category = get_address_tax_category(
+            frappe.db.get_value("Supplier", source_doc.supplier, "tax_category"),
+            source_doc.supplier_address,
+        )
+
+    args = ItemDetailsCtx({"company": doc.company, "tax_category": tax_category})
+
+    for item in items:
+        if not item.item_code:
+            continue
+
+        if item.item_tax_template:
+            continue
+
+        out = frappe._dict()
+        item_doc = frappe.get_cached_doc("Item", item.item_code)
+        get_item_tax_template(args, item_doc, out)
+        item.item_tax_template = out.get("item_tax_template")
 
 
 def after_mapping_stock_entry(doc, method, source_doc):
@@ -170,34 +198,7 @@ def set_item_tax_template(doc, source_doc):
     if source_doc.doctype not in ("Subcontracting Order", "Purchase Order"):
         return
 
-    tax_category = source_doc.tax_category or get_address_tax_category(
-        frappe.db.get_value("Supplier", source_doc.supplier, "tax_category"),
-        source_doc.supplier_address,
-    )
-
-    set_default_item_tax_template(doc, tax_category)
-
-
-def set_default_item_tax_template(doc, tax_category=None):
-    items = doc.get(get_items_fieldname(doc.doctype))
-    if not items:
-        return
-
-    args = ItemDetailsCtx(
-        {
-            "company": doc.company,
-            "tax_category": tax_category or doc.get("tax_category"),
-            "transaction_date": getdate(doc.get("transaction_date") or doc.get("posting_date")),
-        }
-    )
-
-    for item in items:
-        if not item.item_code or item.item_tax_template:
-            continue
-
-        out = frappe._dict()
-        get_item_tax_template(args, frappe.get_cached_doc("Item", item.item_code), out)
-        item.item_tax_template = out.get("item_tax_template")
+    update_item_tax_template(doc, source_doc)
 
 
 def before_mapping_subcontracting_receipt(doc, method, source_doc, table_maps):
@@ -309,10 +310,6 @@ def before_save(doc, method=None):
     if not is_e_waybill_applicable(doc):
         doc.taxes_and_charges = ""
         doc.taxes = []
-
-        # Totals were computed in validate, before the taxes were dropped here
-        field_map = TAXES_FIELD_MAP.get(doc.doctype, SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP)
-        CustomTaxController(doc, field_map).set_taxes_and_totals()
         return
 
     for row in doc.taxes:
@@ -359,7 +356,7 @@ def get_doctype_field_map(doc):
         }
     )
 
-    if doc.doctype not in BILL_FROM_TO_DOCTYPES:
+    if doc.doctype not in DOCTYPES_WITH_BILL_FROM_TO:
         return doctype_field_map
 
     if is_inward_transaction(doc):
@@ -622,13 +619,18 @@ def remove_duplicates(doc):
 def is_e_waybill_applicable(doc):
     gst_settings = frappe.get_cached_doc("GST Settings")
 
-    if not (is_api_enabled(gst_settings) and gst_settings.enable_e_waybill):
+    if doc.doctype == "Asset Movement" and not (
+        is_api_enabled(gst_settings)
+        and gst_settings.enable_e_waybill
+        and gst_settings.enable_e_waybill_from_asset_movement
+    ):
         return False
 
-    if doc.doctype == "Asset Movement":
-        return bool(gst_settings.enable_e_waybill_from_asset_movement)
-
-    if not gst_settings.enable_e_waybill_for_sc:
+    if doc.doctype == "Stock Entry" and not (
+        is_api_enabled(gst_settings)
+        and gst_settings.enable_e_waybill
+        and gst_settings.enable_e_waybill_for_sc
+    ):
         return False
 
     if doc.doctype != "Stock Entry":
