@@ -43,6 +43,7 @@ from india_compliance.gst_india.utils import (
     is_import_transaction,
     is_inward_transaction,
     is_overseas_doc,
+    is_same_gstin_allowed,
     join_list_with_custom_separators,
     validate_gst_category,
     validate_gstin,
@@ -764,7 +765,9 @@ def get_party_details_for_subcontracting(
 
     if doctype == "Stock Entry":
         party_address_field = (
-            "bill_from_address" if party_details.get("is_inward_stock_entry") else "bill_to_address"
+            "bill_from_address"
+            if is_inward_transaction(frappe._dict(party_details, doctype=doctype))
+            else "bill_to_address"
         )
     else:
         party_address_field = "supplier_address"
@@ -805,7 +808,7 @@ def get_gst_details(
     is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
     gst_details = frappe._dict()
 
-    allow_same_gstin = bool(party_details.get("is_outward_stock_entry")) or doctype == "Asset Movement"
+    allow_same_gstin = is_same_gstin_allowed(frappe._dict(party_details, doctype=doctype))
 
     address_fields = _get_address_fields(doctype, party_details)
     company_gstin_field = address_fields.get("company_gstin_field")
@@ -919,7 +922,7 @@ def _get_address_fields(doctype, party_details=None):
         )
 
     elif doctype in DOCTYPES_WITH_BILL_FROM_TO:
-        if party_details and party_details.get("is_inward_stock_entry"):
+        if party_details and is_inward_transaction(frappe._dict(party_details, doctype=doctype)):
             address_fields.update(
                 company_gstin_field="bill_to_gstin",
                 party_gstin_field="bill_from_gstin",
