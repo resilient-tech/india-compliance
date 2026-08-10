@@ -10,7 +10,7 @@ from frappe.model.utils import get_fetch_values
 from frappe.utils import cint, flt, format_date
 
 from india_compliance.gst_india.constants import (
-    BILL_FROM_TO_DOCTYPES,
+    DOCTYPES_WITH_BILL_FROM_TO,
     GST_RCM_TAX_TYPES,
     GST_REFUND_TAX_TYPES,
     GST_TAX_TYPES,
@@ -400,7 +400,7 @@ class GSTAccounts:
             )
 
     def get_company_address_field(self):
-        if self.doc.doctype in BILL_FROM_TO_DOCTYPES:
+        if self.doc.doctype in DOCTYPES_WITH_BILL_FROM_TO:
             return "bill_to_address" if is_inward_transaction(self.doc) else "bill_from_address"
 
         return "company_address" if self.is_sales_transaction else "billing_address"
@@ -581,7 +581,7 @@ def validate_place_of_supply(doc):
 
 
 def is_inter_state_supply(doc):
-    if doc.doctype in BILL_FROM_TO_DOCTYPES:
+    if doc.doctype in DOCTYPES_WITH_BILL_FROM_TO:
         party_gst_category = (
             doc.bill_from_gst_category if is_inward_transaction(doc) else doc.bill_to_gst_category
         )
@@ -607,7 +607,7 @@ def get_source_state_code(doc):
     if doc.doctype in SALES_DOCTYPES or doc.doctype == "Payment Entry":
         return doc.company_gstin[:2]
 
-    if doc.doctype in BILL_FROM_TO_DOCTYPES:
+    if doc.doctype in DOCTYPES_WITH_BILL_FROM_TO:
         if doc.bill_from_gst_category == "Unregistered" and doc.bill_from_address:
             return frappe.db.get_value(
                 "Address",
@@ -872,7 +872,7 @@ def get_gst_details(
         return gst_details
     master_doctype = (
         "Sales Taxes and Charges Template"
-        if is_sales_transaction or doctype in SUBCONTRACTING_DOCTYPES or doctype in BILL_FROM_TO_DOCTYPES
+        if is_sales_transaction or doctype in SUBCONTRACTING_DOCTYPES or doctype in DOCTYPES_WITH_BILL_FROM_TO
         else "Purchase Taxes and Charges Template"
     )
 
@@ -918,7 +918,7 @@ def _get_address_fields(doctype, party_details=None):
             gst_category_field="gst_category",
         )
 
-    elif doctype in BILL_FROM_TO_DOCTYPES:
+    elif doctype in DOCTYPES_WITH_BILL_FROM_TO:
         if party_details and party_details.get("is_inward_stock_entry"):
             address_fields.update(
                 company_gstin_field="bill_to_gstin",
@@ -1373,7 +1373,7 @@ class ItemGSTDetails:
 
     def get_item_tax_amount(self, item, tax_rate, tax):
         precision = self.precision.get(f"{tax}_amount")
-        multiplier = flt(item.get("qty")) if tax == "cess_non_advol" else item.taxable_value / 100
+        multiplier = item.qty if tax == "cess_non_advol" else item.taxable_value / 100
 
         return flt(tax_rate * multiplier, precision)
 

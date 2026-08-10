@@ -29,10 +29,8 @@ def onload(doc, method=None):
         doc.gst_category = doc.bill_to_gst_category
 
     # phantom fields for e-waybill generation flow
-    # note that save() does not work on phantom fields
     doc.posting_date = doc.transaction_date
     doc.items = doc.assets
-    # what is the one place where this phantom field can't work/ only place where it works
 
     if not doc.get("ewaybill"):
         return

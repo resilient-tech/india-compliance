@@ -145,7 +145,7 @@ CUSTOM_FIELDS = {
             "fetch_from": "",
         },
     ],
-    ("Subcontracting Order", "Subcontracting Receipt", "Stock Entry"): [
+    ("Subcontracting Order", "Subcontracting Receipt", "Stock Entry", "Asset Movement"): [
         {
             "fieldname": "tax_category",
             "label": "Tax Category",
@@ -196,7 +196,6 @@ CUSTOM_FIELDS = {
             "options": "Company:company:default_currency",
         },
     ],
-    # Stock Entry: Address and Tax Fields
     "Stock Entry": [
         {
             "fieldname": "section_break_taxes",
@@ -252,58 +251,6 @@ CUSTOM_FIELDS = {
             "fieldtype": "Section Break",
             "insert_after": "assets",
             "depends_on": "eval: india_compliance.is_e_waybill_applicable_for_asset_movement(doc)",
-        },
-        {
-            "fieldname": "tax_category",
-            "label": "Tax Category",
-            "fieldtype": "Link",
-            "insert_after": "section_break_taxes",
-            "options": "Tax Category",
-            "print_hide": 1,
-        },
-        {
-            "fieldname": "taxes_and_charges",
-            "label": "Taxes and Charges Template",
-            "fieldtype": "Link",
-            "insert_after": "tax_category",
-            "options": "Sales Taxes and Charges Template",
-            "print_hide": 1,
-        },
-        {
-            "fieldname": "taxes",
-            "label": "Estimated Taxes",
-            "fieldtype": "Table",
-            "insert_after": "taxes_and_charges",
-            "options": "India Compliance Taxes and Charges",
-            "no_copy": 1,
-        },
-        {
-            "fieldname": "section_break_total",
-            "fieldtype": "Section Break",
-            "insert_after": "taxes",
-        },
-        {
-            "fieldname": "total_taxes",
-            "label": "Total Estimated Taxes",
-            "fieldtype": "Currency",
-            "insert_after": "section_break_total",
-            "options": "Company:company:default_currency",
-            "read_only": 1,
-            "print_hide": 1,
-        },
-        {
-            "fieldname": "cb_grand_total",
-            "fieldtype": "Column Break",
-            "insert_after": "total_taxes",
-        },
-        {
-            "fieldname": "base_grand_total",
-            "label": "Grand Total",
-            "fieldtype": "Currency",
-            "insert_after": "cb_grand_total",
-            "options": "Company:company:default_currency",
-            "read_only": 1,
-            "print_hide": 1,
         },
         {
             "label": "E-Waybill Info",
@@ -1841,7 +1788,7 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
     *E_WAYBILL_DN_FIELDS,
 ]
 
-E_WAYBILL_SE_FIELDS = [
+E_WAYBILL_TRANSPORTER_FIELDS = [
     {
         "fieldname": "transporter_info",
         "label": "Transporter Info",
@@ -1997,7 +1944,7 @@ E_WAYBILL_SCR_FIELDS = [
 ]
 
 
-EWAYBILL_BILLING_ADDRESS_FIELDS = [
+E_WAYBILL_ADDRESS_FIELDS = [
     {
         "label": "e-Waybill Address",
         "fieldname": "section_break_addresses_contact",
@@ -2099,9 +2046,6 @@ EWAYBILL_BILLING_ADDRESS_FIELDS = [
         "translatable": 0,
         "fetch_from": "",
     },
-]
-
-EWAYBILL_SHIPPING_ADDRESS_FIELDS = [
     {
         "fieldname": "section_break_shipping_address",
         "fieldtype": "Section Break",
@@ -2182,7 +2126,6 @@ stock_entry_e_waybill_field = {**e_waybill_no_field, "insert_after": "asset_repa
 asset_movement_e_waybill_field = {
     **e_waybill_no_field,
     "insert_after": "transaction_date",
-    "depends_on": ("eval: doc.ewaybill"),
 }
 
 E_WAYBILL_FIELDS = {
@@ -2191,16 +2134,14 @@ E_WAYBILL_FIELDS = {
     "Purchase Invoice": [*E_WAYBILL_INV_FIELDS, purchase_e_waybill_field],
     "Purchase Receipt": [*E_WAYBILL_PURCHASE_RECEIPT_FIELDS, purchase_e_waybill_field],
     "Stock Entry": [
-        *EWAYBILL_BILLING_ADDRESS_FIELDS,
-        *EWAYBILL_SHIPPING_ADDRESS_FIELDS,
-        *E_WAYBILL_SE_FIELDS,
+        *E_WAYBILL_ADDRESS_FIELDS,
+        *E_WAYBILL_TRANSPORTER_FIELDS,
         stock_entry_e_waybill_field,
     ],
     "Subcontracting Receipt": [*E_WAYBILL_SCR_FIELDS, purchase_e_waybill_field],
     "Asset Movement": [
-        *EWAYBILL_BILLING_ADDRESS_FIELDS,
-        *EWAYBILL_SHIPPING_ADDRESS_FIELDS,
-        *E_WAYBILL_SE_FIELDS,
+        *E_WAYBILL_ADDRESS_FIELDS,
+        *E_WAYBILL_TRANSPORTER_FIELDS,
         asset_movement_e_waybill_field,
     ],
 }

@@ -157,6 +157,10 @@ india_compliance.taxes_controller = class TaxesController {
     }
 
     async update_tax_amount() {
+        /**
+         * This method is used to update the tax amount in the tax rows
+         */
+
         let total_taxes = 0;
         const total_taxable_value = this.calculate_total_taxable_value();
 

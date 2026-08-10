@@ -160,6 +160,7 @@ class CustomTaxController:
 
     def update_item_taxable_value(self):
         for item in self.item_list:
+            # a new row has no value yet, and get() cannot default a key that is set to None
             taxable_value = flt(self.get_value("amount", item), item.precision("taxable_value"))
             taxable_value += flt(item.get("additional_taxable_value", 0), item.precision("taxable_value"))
 
@@ -236,7 +237,11 @@ class CustomTaxController:
         return {f"{tax.parent},{tax.tax_type}": tax.tax_rate for tax in tax_rates}
 
     def get_rows_to_update(self, item_name=None, tax_name=None):
+        """
+        Returns items and taxes to update based on item_name and tax_name passed.
+        If item_name and tax_name are not passed, all items and taxes are returned.
 
+        """
         items = self.item_list
         taxes = self.doc.get("taxes") or []
 
