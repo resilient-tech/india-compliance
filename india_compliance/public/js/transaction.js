@@ -17,10 +17,21 @@ const SUBCONTRACTING_DOCTYPES = ["Stock Entry", "Subcontracting Order", "Subcont
 
 const POST_SUBMIT_GST_FIELDS = ["gst_category", "place_of_supply", "billing_address_gstin", "supplier_gstin"];
 
+const HSN_CODE_DOCTYPES = [
+    ...TRANSACTION_DOCTYPES,
+    ...SUBCONTRACTING_DOCTYPES,
+    "Material Request",
+    "POS Invoice",
+];
+
 for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
     validate_overseas_gst_category(doctype);
     set_and_validate_gstin_status(doctype);
+}
+
+for (const doctype of HSN_CODE_DOCTYPES) {
+    set_hsn_code_autocomplete(doctype);
 }
 
 for (const doctype of SUBCONTRACTING_DOCTYPES) {
@@ -201,6 +212,26 @@ function ignore_port_code_validation(doctype) {
     });
 }
 
+<<<<<<< HEAD
+=======
+function set_gst_tax_breakup_on_load(doctype) {
+    frappe.ui.form.on(doctype, {
+        refresh(frm) {
+            frm.doc.gst_breakup_table = frm.doc.__onload?._gst_breakup_table;
+            frm.refresh_field("gst_breakup_table");
+        },
+    });
+}
+
+function set_hsn_code_autocomplete(doctype) {
+    frappe.ui.form.on(doctype, {
+        setup(frm) {
+            india_compliance.set_hsn_code_autocomplete(frm);
+        },
+    });
+}
+
+>>>>>>> b296625a (fix: convert hsn field in transactions as autocomplete fields)
 function is_foreign_transaction(frm) {
     return frm.doc.gst_category === "Overseas" && frm.doc.place_of_supply === "96-Other Countries";
 }
