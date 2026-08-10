@@ -10,16 +10,13 @@ A credit note reduces what is owed, so we store its amounts negative. The portal
 unsigned and reads the direction from the note type instead.
 """
 
-from india_compliance.gst_returns.fields.gstr1 import (
-    B2BInvoiceType,
-    CreditDebitNoteType,
-    SubCategory,
-)
+from india_compliance.gst_returns.fields.gstr1 import CreditDebitNoteType, SubCategory
 from india_compliance.gst_returns.fields.gstr1 import DocField as doc
 from india_compliance.gst_returns.fields.gstr1 import ItemField as item
 from india_compliance.gst_returns.fields.gstr1 import RawField as raw
 
 from . import _shared as s
+from .b2b import INVOICE_CODES, INVOICE_TYPES  # same portal field, same labels
 
 SUBCATEGORY = SubCategory.CDNR.value
 
@@ -48,16 +45,6 @@ NOTE_TYPES = {
     "D": CreditDebitNoteType.D.value,
 }
 NOTE_CODES = s.flip(NOTE_TYPES)
-
-# inv_typ -> readable invoice type. Deemed exports reads longer here than it does in B2B,
-# a portal-era difference we keep rather than silently change what gets filed.
-INVOICE_TYPES = {
-    "R": B2BInvoiceType.R.value,
-    "SEWP": B2BInvoiceType.SEWP.value,
-    "SEWOP": B2BInvoiceType.SEWOP.value,
-    "DE": SubCategory.DE.value,
-}
-INVOICE_CODES = s.flip(INVOICE_TYPES)
 
 ITEM_DEFAULTS = dict.fromkeys(s.ITEM_TOTALS, 0)
 
@@ -90,7 +77,7 @@ def to_canonical(gov_data, names=None):
         row = s.drop_flag(s.with_defaults(s.pick(note, KEYS), header))
 
         s.remap(row, doc.TRANSACTION_TYPE, NOTE_TYPES)  # C -> Credit Note
-        s.remap(row, doc.DOC_TYPE, INVOICE_TYPES)  # DE -> Deemed Exports
+        s.remap(row, doc.DOC_TYPE, INVOICE_TYPES)  # DE -> Deemed Exp
         s.convert(row, doc.DOC_DATE, s.date_from_gov)  # 23-09-2016 -> 2016-09-23
         s.convert(row, doc.POS, s.pos_from_gov)  # 03 -> 03-Punjab
         s.flip_signs(row, multiplier, (doc.DOC_VALUE,))  # credit note 123123 -> -123123
@@ -114,7 +101,7 @@ def to_gov(rows, company_gstin=""):
         out = s.abs_amounts(s.round_money(s.pick_back(row, KEYS), MONEY), (raw.DOC_VALUE,))
 
         s.remap(out, raw.NOTE_TYPE, NOTE_CODES)  # Credit Note -> C
-        s.remap(out, raw.INVOICE_TYPE, INVOICE_CODES)  # Deemed Exports -> DE
+        s.remap(out, raw.INVOICE_TYPE, INVOICE_CODES)  # Deemed Exp -> DE
         s.convert(out, raw.NOTE_DATE, s.date_to_gov)  # 2016-09-23 -> 23-09-2016
         s.convert(out, raw.POS, s.pos_to_gov)  # 03-Punjab -> 03
 

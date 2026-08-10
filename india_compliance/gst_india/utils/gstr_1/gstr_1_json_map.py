@@ -11,7 +11,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     SUB_CATEGORY_GOV_CATEGORY_MAPPING,
 )
 from india_compliance.gst_india.utils.gstr_1 import (
-    GSTR1_DataField as inv_f,
+    DocField as doc,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_books_map import (  # noqa: F401
     BooksDataMapper,
@@ -37,7 +37,7 @@ def convert_to_internal_data_format(gov_data, for_errors=False):
     errors = []
     for category, rows in output.items():
         for row in rows.values():
-            if not (row.get(inv_f.ERROR_CD) or row.get(inv_f.ERROR_MSG)):
+            if not (row.get(doc.ERROR_CD) or row.get(doc.ERROR_MSG)):
                 continue
 
             row["category"] = category

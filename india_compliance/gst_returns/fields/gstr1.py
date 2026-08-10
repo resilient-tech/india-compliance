@@ -44,11 +44,6 @@ class SubCategory(Enum):
     SUPECOM_9_5 = "Liable to pay tax u/s 9(5)"
 
 
-class SUPECOM(Enum):
-    US_9_5 = "Liable to pay tax u/s 9(5)"
-    US_52 = "Liable to collect tax u/s 52(TCS)"
-
-
 class DocField:
     # canonical names
     TRANSACTION_TYPE = "transaction_type"
@@ -239,10 +234,10 @@ class JsonKey(Enum):
 
 
 class HSNKey(Enum):
-    # excel only
-    HSN = "hsn"
-    HSN_B2B = "hsn_b2b"
-    HSN_B2C = "hsn_b2c"
+    # the json keys HSN rows can arrive under, for picking excel sheets
+    HSN = JsonKey.HSN.value
+    HSN_B2B = RawField.HSN_B2B
+    HSN_B2C = RawField.HSN_B2C
 
 
 class SheetName(Enum):
@@ -382,69 +377,3 @@ SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX = [
     SubCategory.SUPECOM_9_5.value,
     *SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
 ]
-
-
-# gov code -> label. labels from enums, one home.
-B2B_DOCUMENT_CATEGORIES = {
-    "R": B2BInvoiceType.R.value,
-    "SEWP": B2BInvoiceType.SEWP.value,
-    "SEWOP": B2BInvoiceType.SEWOP.value,
-    "DE": B2BInvoiceType.DE.value,
-}
-
-B2B_SUBCATEGORIES = {
-    "SEWP": SubCategory.SEZWP.value,
-    "SEWOP": SubCategory.SEZWOP.value,
-    "DE": SubCategory.DE.value,
-}
-
-EXPORTS_SUBCATEGORIES = {
-    "WPAY": SubCategory.EXPWP.value,
-    "WOPAY": SubCategory.EXPWOP.value,
-}
-
-NIL_DOCUMENT_CATEGORIES = {
-    "INTRB2B": NilRatedCategory.INTER_B2B.value,
-    "INTRB2C": NilRatedCategory.INTER_B2C.value,
-    "INTRAB2B": NilRatedCategory.INTRA_B2B.value,
-    "INTRAB2C": NilRatedCategory.INTRA_B2C.value,
-}
-
-# DE uses SEZ label "Deemed Exports", not B2B's "Deemed Exp" -- CDNR's old value.
-CDNR_DOCUMENT_CATEGORIES = {
-    "R": B2BInvoiceType.R.value,
-    "SEWP": B2BInvoiceType.SEWP.value,
-    "SEWOP": B2BInvoiceType.SEWOP.value,
-    "DE": SubCategory.DE.value,
-}
-
-CREDIT_DEBIT_NOTE_TYPES = {
-    "C": CreditDebitNoteType.C.value,
-    "D": CreditDebitNoteType.D.value,
-}
-
-HSN_DOCUMENT_CATEGORIES = {
-    RawField.HSN_B2B: SubCategory.HSN_B2B.value,
-    RawField.HSN_B2C: SubCategory.HSN_B2C.value,
-    RawField.HSN_DATA: SubCategory.HSN.value,  # back-compat
-}
-
-DOC_ISSUE_NATURE = {
-    1: DocumentNature.OUTWARD_SUPPLY.value,
-    2: DocumentNature.INWARD_SUPPLY_UNREGISTERED.value,
-    3: DocumentNature.REVISED_INVOICE.value,
-    4: DocumentNature.DEBIT_NOTE.value,
-    5: DocumentNature.CREDIT_NOTE.value,
-    6: DocumentNature.RECEIPT_VOUCHER.value,
-    7: DocumentNature.PAYMENT_VOUCHER.value,
-    8: DocumentNature.REFUND_VOUCHER.value,
-    9: DocumentNature.DELIVERY_CHALLAN_JOB_WORK.value,
-    10: DocumentNature.DELIVERY_CHALLAN_APPROVAL.value,
-    11: DocumentNature.DELIVERY_CHALLAN_LIQUID_GAS.value,
-    12: DocumentNature.DELIVERY_CHALLAN_OTHER.value,
-}
-
-SUPECOM_DOCUMENT_CATEGORIES = {
-    RawField.SUPECOM_52: SubCategory.SUPECOM_52.value,
-    RawField.SUPECOM_9_5: SubCategory.SUPECOM_9_5.value,
-}

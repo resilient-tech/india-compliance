@@ -6,11 +6,11 @@ from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     GenerateGSTR1,
 )
 from india_compliance.gst_india.utils.itc_04 import (
-    GovDataField,
     GovDataField_SE,
     ITC04_DataField,
     ITC04_ItemField,
     ITC04JsonKey,
+    RawField,
 )
 from india_compliance.gst_india.utils.itc_04.itc_04_json_map import (
     FGReceived,
@@ -28,28 +28,28 @@ class TestFGReceived(IntegrationTestCase):
         super().setUpClass()
         cls.json_data = [
             {
-                GovDataField.JOB_WORKER_STATE_CODE.value: "24",
-                GovDataField.JOB_WORKER_GSTIN.value: "24AABCD8856A8FG",
-                GovDataField.ITEMS.value: [
+                RawField.JOB_WORKER_STATE_CODE.value: "24",
+                RawField.JOB_WORKER_GSTIN.value: "24AABCD8856A8FG",
+                RawField.ITEMS.value: [
                     {
-                        GovDataField.JOB_WORK_CHALLAN_DATE.value: "12-06-2024",
-                        GovDataField.ORIGINAL_CHALLAN_NUMBER.value: "124",
-                        GovDataField.UOM.value: "BAG",
-                        GovDataField.ORIGINAL_CHALLAN_DATE.value: "10-06-2024",
-                        GovDataField.QUANTITY.value: 15,
-                        GovDataField.NATURE_OF_JOB.value: "WORK",
-                        GovDataField.JOB_WORK_CHALLAN_NUMBER.value: "1236",
-                        GovDataField.DESCRIPTION.value: "New -17",
+                        RawField.JOB_WORK_CHALLAN_DATE.value: "12-06-2024",
+                        RawField.ORIGINAL_CHALLAN_NUMBER.value: "124",
+                        RawField.UOM.value: "BAG",
+                        RawField.ORIGINAL_CHALLAN_DATE.value: "10-06-2024",
+                        RawField.QUANTITY.value: 15,
+                        RawField.NATURE_OF_JOB.value: "WORK",
+                        RawField.JOB_WORK_CHALLAN_NUMBER.value: "1236",
+                        RawField.DESCRIPTION.value: "New -17",
                     },
                     {
-                        GovDataField.JOB_WORK_CHALLAN_DATE.value: "12-06-2024",
-                        GovDataField.ORIGINAL_CHALLAN_NUMBER.value: "124",
-                        GovDataField.UOM.value: "BAG",
-                        GovDataField.ORIGINAL_CHALLAN_DATE.value: "10-06-2024",
-                        GovDataField.QUANTITY.value: 10,
-                        GovDataField.NATURE_OF_JOB.value: "WORK",
-                        GovDataField.JOB_WORK_CHALLAN_NUMBER.value: "1236",
-                        GovDataField.DESCRIPTION.value: "New -18",
+                        RawField.JOB_WORK_CHALLAN_DATE.value: "12-06-2024",
+                        RawField.ORIGINAL_CHALLAN_NUMBER.value: "124",
+                        RawField.UOM.value: "BAG",
+                        RawField.ORIGINAL_CHALLAN_DATE.value: "10-06-2024",
+                        RawField.QUANTITY.value: 10,
+                        RawField.NATURE_OF_JOB.value: "WORK",
+                        RawField.JOB_WORK_CHALLAN_NUMBER.value: "1236",
+                        RawField.DESCRIPTION.value: "New -18",
                     },
                 ],
             }
@@ -99,20 +99,20 @@ class TestRMSent(IntegrationTestCase):
         super().setUpClass()
         cls.json_data = [
             {
-                GovDataField.JOB_WORKER_STATE_CODE.value: "27",
+                RawField.JOB_WORKER_STATE_CODE.value: "27",
                 GovDataField_SE.ORIGINAL_CHALLAN_NUMBER.value: "A4",
                 GovDataField_SE.ORIGINAL_CHALLAN_DATE.value: "12-09-2017",
                 GovDataField_SE.ITEMS.value: [
                     {
-                        GovDataField.GOODS_TYPE.value: "7b",
-                        GovDataField.DESCRIPTION.value: "qwqwqwe",
-                        GovDataField.UOM.value: "BTL",
-                        GovDataField.QUANTITY.value: 1243,
-                        GovDataField.TAXABLE_VALUE.value: 10.2,
-                        GovDataField.CGST.value: 0,
-                        GovDataField.SGST.value: 0,
-                        GovDataField.IGST.value: 10,
-                        GovDataField.CESS_AMOUNT.value: 0,
+                        RawField.GOODS_TYPE.value: "7b",
+                        RawField.DESCRIPTION.value: "qwqwqwe",
+                        RawField.UOM.value: "BTL",
+                        RawField.QUANTITY.value: 1243,
+                        RawField.TAXABLE_VALUE.value: 10.2,
+                        RawField.CGST.value: 0,
+                        RawField.SGST.value: 0,
+                        RawField.IGST.value: 10,
+                        RawField.CESS_AMOUNT.value: 0,
                     },
                 ],
             }

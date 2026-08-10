@@ -16,10 +16,10 @@ import itertools
 import unittest
 from typing import ClassVar
 
+from india_compliance.gst_returns.fields.gstr1 import B2BInvoiceType, SubCategory
 from india_compliance.gst_returns.fields.gstr1 import DocField as doc
 from india_compliance.gst_returns.fields.gstr1 import ItemField as item
 from india_compliance.gst_returns.fields.gstr1 import RawField as raw
-from india_compliance.gst_returns.fields.gstr1 import SubCategory
 
 from . import (
     SECTIONS,
@@ -277,6 +277,28 @@ class TestCreditNoteSigns(unittest.TestCase):
         out = cdnr.to_gov(flatten(cdnr.to_canonical(self.RAW)))[0][raw.NOTE_DETAILS][0]
         self.assertEqual(out[raw.DOC_VALUE], 123123)
         self.assertEqual(out[raw.ITEMS][0][raw.ITEM_DETAILS][raw.TAXABLE_VALUE], 5225.28)
+
+    def test_deemed_export_note_files_the_portal_code(self):
+        """Books writes one invoice-type label for both B2B and credit notes.
+
+        CDNR used to render "DE" as "Deemed Exports" while books wrote B2B's "Deemed Exp", so the
+        label never translated back and the portal received it verbatim. One table now, both ways.
+        """
+        books_row = {
+            doc.CUST_GSTIN: "24AANFA2641L1ZF",
+            doc.TRANSACTION_TYPE: "Credit Note",
+            doc.DOC_NUMBER: "533515",
+            doc.DOC_DATE: "2016-09-23",
+            doc.POS: "03-Punjab",
+            doc.DOC_TYPE: B2BInvoiceType.DE.value,
+            doc.DOC_VALUE: -123123,
+            doc.ITEMS: [{item.TAXABLE_VALUE: -100, item.TAX_RATE: 5}],
+        }
+        out = cdnr.to_gov([books_row])[0][raw.NOTE_DETAILS][0]
+        self.assertEqual(out[raw.INVOICE_TYPE], "DE")
+
+    def test_registered_and_unregistered_notes_share_one_note_type_table(self):
+        self.assertIs(cdnr.NOTE_TYPES, cdnur.NOTE_TYPES)
 
     def test_debit_note_stays_positive(self):
         payload = [

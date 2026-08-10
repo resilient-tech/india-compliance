@@ -8,13 +8,13 @@ Canonical: {"Credit/Debit Notes (Unregistered)": {"533515": {transaction_type: "
 Same sign rule as registered notes: stored negative, filed unsigned.
 """
 
-from india_compliance.gst_returns.fields.gstr1 import CreditDebitNoteType, SubCategory
 from india_compliance.gst_returns.fields.gstr1 import DocField as doc
 from india_compliance.gst_returns.fields.gstr1 import ItemField as item
 from india_compliance.gst_returns.fields.gstr1 import RawField as raw
+from india_compliance.gst_returns.fields.gstr1 import SubCategory
 
 from . import _shared as s
-from .cdnr import sign
+from .cdnr import NOTE_CODES, NOTE_TYPES, sign  # same portal field, same labels
 
 SUBCATEGORY = SubCategory.CDNUR.value
 
@@ -35,13 +35,6 @@ KEYS = {
     raw.ERROR_CD: doc.ERROR_CD,
     raw.ERROR_MSG: doc.ERROR_MSG,
 }
-
-# ntty -> readable note type
-NOTE_TYPES = {
-    "C": CreditDebitNoteType.C.value,
-    "D": CreditDebitNoteType.D.value,
-}
-NOTE_CODES = s.flip(NOTE_TYPES)
 
 # exports have no place of supply to report
 EXPORT_TYPES = ("EXPWP", "EXPWOP")

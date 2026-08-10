@@ -14,11 +14,11 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
-    GSTR1_Category,
-    GSTR1_SubCategory,
+    Category,
+    DocField,
+    ItemField,
+    SubCategory,
 )
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import (
     GSTR1DocumentIssuedSummary,
     GSTR1Invoices,
@@ -35,34 +35,34 @@ class BooksDataMapper:
         else:
             return "Invoice"
 
-    def get_category_from_subcategory(self, invoice_sub_category: str) -> GSTR1_Category:
-        invoice_sub_category = GSTR1_SubCategory(invoice_sub_category)
+    def get_category_from_subcategory(self, invoice_sub_category: str) -> Category:
+        invoice_sub_category = SubCategory(invoice_sub_category)
         for category, sub_category in CATEGORY_SUB_CATEGORY_MAPPING.items():
             if invoice_sub_category in sub_category:
                 return category
 
     DATA_TO_ITEM_FIELD_MAPPING: ClassVar[dict] = {
-        inv_f.TAXABLE_VALUE: item_f.TAXABLE_VALUE,
-        inv_f.IGST: item_f.IGST,
-        inv_f.CGST: item_f.CGST,
-        inv_f.SGST: item_f.SGST,
-        inv_f.CESS: item_f.CESS,
+        DocField.TAXABLE_VALUE: ItemField.TAXABLE_VALUE,
+        DocField.IGST: ItemField.IGST,
+        DocField.CGST: ItemField.CGST,
+        DocField.SGST: ItemField.SGST,
+        DocField.CESS: ItemField.CESS,
     }
 
     ITEM_TO_INVOICE_FIELD_MAPPING: ClassVar[dict] = {
-        item_f.TAXABLE_VALUE: "taxable_value",
-        item_f.IGST: "igst_amount",
-        item_f.CGST: "cgst_amount",
-        item_f.SGST: "sgst_amount",
-        item_f.CESS: "total_cess_amount",
+        ItemField.TAXABLE_VALUE: "taxable_value",
+        ItemField.IGST: "igst_amount",
+        ItemField.CGST: "cgst_amount",
+        ItemField.SGST: "sgst_amount",
+        ItemField.CESS: "total_cess_amount",
     }
 
     DATA_TO_INVOICE_FIELD_MAPPING: ClassVar[dict] = {
-        inv_f.TAXABLE_VALUE: "taxable_value",
-        inv_f.IGST: "igst_amount",
-        inv_f.CGST: "cgst_amount",
-        inv_f.SGST: "sgst_amount",
-        inv_f.CESS: "total_cess_amount",
+        DocField.TAXABLE_VALUE: "taxable_value",
+        DocField.IGST: "igst_amount",
+        DocField.CGST: "cgst_amount",
+        DocField.SGST: "sgst_amount",
+        DocField.CESS: "total_cess_amount",
     }
 
     PRECISION = 2
@@ -89,20 +89,20 @@ class BooksDataMapper:
             sub_category_dict = prepared_data[sub_category]
             sub_category_dict[invoice_no] = {
                 # TODO: make a method for creating the dict
-                inv_f.TRANSACTION_TYPE: self.get_transaction_type(doc),
-                inv_f.CUST_GSTIN: doc.billing_address_gstin,
-                inv_f.CUST_NAME: doc.customer_name,
-                inv_f.DOC_DATE: doc.posting_date,
-                inv_f.DOC_NUMBER: doc.invoice_no,
-                inv_f.DOC_VALUE: doc.invoice_total,
-                inv_f.POS: doc.place_of_supply,
-                inv_f.REVERSE_CHARGE: ("Y" if doc.is_reverse_charge else "N"),
-                inv_f.DOC_TYPE: doc.invoice_type,
+                DocField.TRANSACTION_TYPE: self.get_transaction_type(doc),
+                DocField.CUST_GSTIN: doc.billing_address_gstin,
+                DocField.CUST_NAME: doc.customer_name,
+                DocField.DOC_DATE: doc.posting_date,
+                DocField.DOC_NUMBER: doc.invoice_no,
+                DocField.DOC_VALUE: doc.invoice_total,
+                DocField.POS: doc.place_of_supply,
+                DocField.REVERSE_CHARGE: ("Y" if doc.is_reverse_charge else "N"),
+                DocField.DOC_TYPE: doc.invoice_type,
                 **self.get_invoice_values(),
-                inv_f.DIFF_PERCENTAGE: 0,
-                inv_f.SHIPPING_PORT_CODE: doc.shipping_port_code,
-                inv_f.SHIPPING_BILL_NUMBER: doc.shipping_bill_number,
-                inv_f.SHIPPING_BILL_DATE: doc.shipping_bill_date,
+                DocField.DIFF_PERCENTAGE: 0,
+                DocField.SHIPPING_PORT_CODE: doc.shipping_port_code,
+                DocField.SHIPPING_BILL_NUMBER: doc.shipping_bill_number,
+                DocField.SHIPPING_BILL_DATE: doc.shipping_bill_date,
                 "items": [],
             }
 
@@ -115,7 +115,7 @@ class BooksDataMapper:
                     for key, field in self.ITEM_TO_INVOICE_FIELD_MAPPING.items():
                         tax_item[key] += item.get(field, 0)
 
-                tax_item[item_f.TAX_RATE] = gst_rate
+                tax_item[ItemField.TAX_RATE] = gst_rate
                 invoice["items"].append(dict(tax_item))
 
             # Aggregate the values for each item field with same GST Rate
@@ -149,7 +149,7 @@ class BooksDataMapper:
         if not grouped_data:
             return
 
-        sub_category = GSTR1_SubCategory.NIL_EXEMPT.value
+        sub_category = SubCategory.NIL_EXEMPT.value
         nil_exempt = prepared_data.setdefault(sub_category, {})
 
         for _, rate_wise_item in grouped_data.items():
@@ -161,37 +161,37 @@ class BooksDataMapper:
             invoices_by_type = nil_exempt[item.invoice_type]
 
             invoice = {
-                inv_f.TRANSACTION_TYPE: self.get_transaction_type(item),
-                inv_f.CUST_GSTIN: item.billing_address_gstin,
-                inv_f.CUST_NAME: item.customer_name,
-                inv_f.DOC_NUMBER: item.invoice_no,
-                inv_f.DOC_DATE: item.posting_date,
-                inv_f.DOC_VALUE: item.invoice_total,
-                inv_f.POS: item.place_of_supply,
-                inv_f.REVERSE_CHARGE: ("Y" if item.is_reverse_charge else "N"),
-                inv_f.DOC_TYPE: item.invoice_type,
-                inv_f.TAXABLE_VALUE: 0,
-                inv_f.NIL_RATED_AMOUNT: 0,
-                inv_f.EXEMPTED_AMOUNT: 0,
-                inv_f.NON_GST_AMOUNT: 0,
+                DocField.TRANSACTION_TYPE: self.get_transaction_type(item),
+                DocField.CUST_GSTIN: item.billing_address_gstin,
+                DocField.CUST_NAME: item.customer_name,
+                DocField.DOC_NUMBER: item.invoice_no,
+                DocField.DOC_DATE: item.posting_date,
+                DocField.DOC_VALUE: item.invoice_total,
+                DocField.POS: item.place_of_supply,
+                DocField.REVERSE_CHARGE: ("Y" if item.is_reverse_charge else "N"),
+                DocField.DOC_TYPE: item.invoice_type,
+                DocField.TAXABLE_VALUE: 0,
+                DocField.NIL_RATED_AMOUNT: 0,
+                DocField.EXEMPTED_AMOUNT: 0,
+                DocField.NON_GST_AMOUNT: 0,
             }
 
             invoices_by_type.append(invoice)
 
             for item in chain(*rate_wise_item.values()):
-                invoice[inv_f.TAXABLE_VALUE] += item.taxable_value
+                invoice[DocField.TAXABLE_VALUE] += item.taxable_value
 
                 if item.gst_treatment == "Nil-Rated":
-                    invoice[inv_f.NIL_RATED_AMOUNT] += item.taxable_value
+                    invoice[DocField.NIL_RATED_AMOUNT] += item.taxable_value
 
                 elif item.gst_treatment == "Exempted":
-                    invoice[inv_f.EXEMPTED_AMOUNT] += item.taxable_value
+                    invoice[DocField.EXEMPTED_AMOUNT] += item.taxable_value
 
                 elif item.gst_treatment == "Non-GST":
-                    invoice[inv_f.NON_GST_AMOUNT] += item.taxable_value
+                    invoice[DocField.NON_GST_AMOUNT] += item.taxable_value
 
             # Round
-            key = inv_f.TAXABLE_VALUE
+            key = DocField.TAXABLE_VALUE
             val = invoice.get(key, 0)
             rounded = flt(val, self.PRECISION)
             diff = val - rounded
@@ -214,7 +214,7 @@ class BooksDataMapper:
         if not grouped_data:
             return
 
-        sub_category = GSTR1_Category.B2CS.value
+        sub_category = Category.B2CS.value
         b2c_others = prepared_data.setdefault(sub_category, {})
 
         for _, rate_wise_item in grouped_data.items():
@@ -228,16 +228,16 @@ class BooksDataMapper:
                 invoice_list = b2c_others[key]
 
                 invoice = {
-                    inv_f.DOC_DATE: item.posting_date,
-                    inv_f.DOC_NUMBER: item.invoice_no,
-                    inv_f.DOC_VALUE: item.invoice_total,
-                    inv_f.CUST_NAME: item.customer_name,
+                    DocField.DOC_DATE: item.posting_date,
+                    DocField.DOC_NUMBER: item.invoice_no,
+                    DocField.DOC_VALUE: item.invoice_total,
+                    DocField.CUST_NAME: item.customer_name,
                     # currently other value is not supported in GSTR-1
-                    inv_f.DOC_TYPE: "OE",
-                    inv_f.TRANSACTION_TYPE: self.get_transaction_type(item),
-                    inv_f.POS: item.place_of_supply,
-                    inv_f.TAX_RATE: item.gst_rate,
-                    inv_f.ECOMMERCE_GSTIN: item.ecommerce_gstin,
+                    DocField.DOC_TYPE: "OE",
+                    DocField.TRANSACTION_TYPE: self.get_transaction_type(item),
+                    DocField.POS: item.place_of_supply,
+                    DocField.TAX_RATE: item.gst_rate,
+                    DocField.ECOMMERCE_GSTIN: item.ecommerce_gstin,
                     **self.get_invoice_values(),
                 }
 
@@ -269,7 +269,7 @@ class BooksDataMapper:
 
         data_to_invoice_field_map = {
             **self.DATA_TO_INVOICE_FIELD_MAPPING,
-            inv_f.QUANTITY: "qty",
+            DocField.QUANTITY: "qty",
         }
         tax_fields = self.DATA_TO_INVOICE_FIELD_MAPPING.keys()
 
@@ -292,12 +292,12 @@ class BooksDataMapper:
                 item = items[0]
 
                 sub_category_dict[key] = {
-                    inv_f.DOC_TYPE: sub_category,
-                    inv_f.HSN_CODE: item.gst_hsn_code,
-                    inv_f.DESCRIPTION: descriptions.get(item.gst_hsn_code),
-                    inv_f.UOM: item.uom,
-                    inv_f.QUANTITY: 0,
-                    inv_f.TAX_RATE: item.gst_rate,
+                    DocField.DOC_TYPE: sub_category,
+                    DocField.HSN_CODE: item.gst_hsn_code,
+                    DocField.DESCRIPTION: descriptions.get(item.gst_hsn_code),
+                    DocField.UOM: item.uom,
+                    DocField.QUANTITY: 0,
+                    DocField.TAX_RATE: item.gst_rate,
                     **self.get_invoice_values(),
                 }
 
@@ -312,7 +312,7 @@ class BooksDataMapper:
 
                 doc_value = sum([invoice.get(field, 0) for field in tax_fields])
 
-                invoice[inv_f.DOC_VALUE] = flt(doc_value, self.PRECISION)
+                invoice[DocField.DOC_VALUE] = flt(doc_value, self.PRECISION)
 
             if hasattr(self, "invoice_totals"):
                 self.adjust_hsn_totals(sub_category, sub_category_dict)
@@ -352,9 +352,9 @@ class BooksDataMapper:
                 entry = sub_category.setdefault(
                     eco_gstin,
                     {
-                        inv_f.DOC_TYPE: supply_type,
-                        inv_f.ECOMMERCE_GSTIN: eco_gstin,
-                        inv_f.ECOMMERCE_OPERATOR_NAME: get_party_name_for_gstin(eco_gstin, party_name_map),
+                        DocField.DOC_TYPE: supply_type,
+                        DocField.ECOMMERCE_GSTIN: eco_gstin,
+                        DocField.ECOMMERCE_OPERATOR_NAME: get_party_name_for_gstin(eco_gstin, party_name_map),
                         **empty_invoice_values.copy(),
                     },
                 )
@@ -379,13 +379,13 @@ class BooksDataMapper:
             return
 
         prepared_data[key] = {
-            inv_f.DOC_TYPE: row["nature_of_document"],
-            inv_f.FROM_SR: row["from_serial_no"],
-            inv_f.TO_SR: row["to_serial_no"],
-            inv_f.TOTAL_COUNT: row["total_issued"],
-            inv_f.DRAFT_COUNT: row["total_draft"],
-            inv_f.CANCELLED_COUNT: row["cancelled"],
-            inv_f.NET_ISSUE: row["total_submitted"],
+            DocField.DOC_TYPE: row["nature_of_document"],
+            DocField.FROM_SR: row["from_serial_no"],
+            DocField.TO_SR: row["to_serial_no"],
+            DocField.TOTAL_COUNT: row["total_issued"],
+            DocField.DRAFT_COUNT: row["total_draft"],
+            DocField.CANCELLED_COUNT: row["cancelled"],
+            DocField.NET_ISSUE: row["total_submitted"],
         }
 
     def process_data_for_advances_received_or_adjusted(self, row, prepared_data, multiplier=1):
@@ -395,26 +395,26 @@ class BooksDataMapper:
 
         mapped_dict = prepared_data.setdefault(key, [])
 
-        advances[inv_f.CUST_NAME] = row["party"]
-        advances[inv_f.DOC_NUMBER] = row["name"]
-        advances[inv_f.DOC_DATE] = row["posting_date"]
-        advances[inv_f.POS] = row["place_of_supply"]
-        advances[inv_f.TAXABLE_VALUE] = row["taxable_value"] * multiplier
-        advances[inv_f.TAX_RATE] = tax_rate
-        advances[inv_f.CESS] = row["cess_amount"] * multiplier
+        advances[DocField.CUST_NAME] = row["party"]
+        advances[DocField.DOC_NUMBER] = row["name"]
+        advances[DocField.DOC_DATE] = row["posting_date"]
+        advances[DocField.POS] = row["place_of_supply"]
+        advances[DocField.TAXABLE_VALUE] = row["taxable_value"] * multiplier
+        advances[DocField.TAX_RATE] = tax_rate
+        advances[DocField.CESS] = row["cess_amount"] * multiplier
 
         if row.get("reference_name"):
             advances["against_voucher"] = row["reference_name"]
 
         if row["place_of_supply"][0:2] == row["company_gstin"][0:2]:
-            advances[inv_f.CGST] = row["tax_amount"] / 2 * multiplier
-            advances[inv_f.SGST] = row["tax_amount"] / 2 * multiplier
-            advances[inv_f.IGST] = 0
+            advances[DocField.CGST] = row["tax_amount"] / 2 * multiplier
+            advances[DocField.SGST] = row["tax_amount"] / 2 * multiplier
+            advances[DocField.IGST] = 0
 
         else:
-            advances[inv_f.IGST] = row["tax_amount"] * multiplier
-            advances[inv_f.CGST] = 0
-            advances[inv_f.SGST] = 0
+            advances[DocField.IGST] = row["tax_amount"] * multiplier
+            advances[DocField.CGST] = 0
+            advances[DocField.SGST] = 0
 
         mapped_dict.append(advances)
 
@@ -425,11 +425,11 @@ class BooksDataMapper:
             invoice = {}
 
         return {
-            inv_f.TAXABLE_VALUE: invoice.get("taxable_value", 0),
-            inv_f.IGST: invoice.get("igst_amount", 0),
-            inv_f.CGST: invoice.get("cgst_amount", 0),
-            inv_f.SGST: invoice.get("sgst_amount", 0),
-            inv_f.CESS: invoice.get("total_cess_amount", 0),
+            DocField.TAXABLE_VALUE: invoice.get("taxable_value", 0),
+            DocField.IGST: invoice.get("igst_amount", 0),
+            DocField.CGST: invoice.get("cgst_amount", 0),
+            DocField.SGST: invoice.get("sgst_amount", 0),
+            DocField.CESS: invoice.get("total_cess_amount", 0),
         }
 
     def initialize_totals(self):
@@ -461,7 +461,7 @@ class BooksDataMapper:
         # sort -> to ensure adjusted to same row
         hsn_data = sorted(
             sub_category_dict.values(),
-            key=lambda item: item.get(inv_f.TAXABLE_VALUE, 0),
+            key=lambda item: item.get(DocField.TAXABLE_VALUE, 0),
             reverse=True,
         )
 
@@ -504,9 +504,9 @@ class GSTR1BooksData(BooksDataMapper):
         self.process_data_for_supecom(data_for_supecom, prepared_data)
 
         other_categories = {
-            GSTR1_Category.AT.value: self.prepare_advances_recevied_data(),
-            GSTR1_Category.TXP.value: self.prepare_advances_adjusted_data(),
-            GSTR1_Category.DOC_ISSUE.value: self.prepare_document_issued_data(),
+            Category.AT.value: self.prepare_advances_recevied_data(),
+            Category.TXP.value: self.prepare_advances_adjusted_data(),
+            Category.DOC_ISSUE.value: self.prepare_document_issued_data(),
         }
 
         self.process_data_for_hsn_summary(data_for_hsn, other_categories)
@@ -559,20 +559,20 @@ class GSTR1BooksData(BooksDataMapper):
 
             key = (item.get("invoice_sub_category"), item.get("invoice_no"))
 
-            invoice_category = GSTR1_Category(item.get("invoice_category"))
+            invoice_category = Category(item.get("invoice_category"))
             if invoice_category in (
-                GSTR1_Category.B2B,
-                GSTR1_Category.EXP,
-                GSTR1_Category.B2CL,
-                GSTR1_Category.CDNR,
-                GSTR1_Category.CDNUR,
+                Category.B2B,
+                Category.EXP,
+                Category.B2CL,
+                Category.CDNR,
+                Category.CDNUR,
             ):
                 data_for_invoice_no_key[key][gst_rate].append(item)
 
-            elif invoice_category == GSTR1_Category.NIL_EXEMPT:
+            elif invoice_category == Category.NIL_EXEMPT:
                 data_for_nil_exempt[key][gst_rate].append(item)
 
-            elif invoice_category == GSTR1_Category.B2CS:
+            elif invoice_category == Category.B2CS:
                 data_for_b2cs[key][gst_rate].append(item)
 
             # E-commerce invoices are aggregated into SUPECOM: 52/TCS in addition to
@@ -638,12 +638,12 @@ class GSTR1BooksData(BooksDataMapper):
 
         is_m3 = self.current_month % 3 == 0
         m1_m2_subcategories = (
-            GSTR1_SubCategory.B2B_REGULAR.value,
-            GSTR1_SubCategory.B2B_REVERSE_CHARGE.value,
-            GSTR1_SubCategory.SEZWP.value,
-            GSTR1_SubCategory.SEZWOP.value,
-            GSTR1_SubCategory.DE.value,
-            GSTR1_SubCategory.CDNR.value,
+            SubCategory.B2B_REGULAR.value,
+            SubCategory.B2B_REVERSE_CHARGE.value,
+            SubCategory.SEZWP.value,
+            SubCategory.SEZWOP.value,
+            SubCategory.DE.value,
+            SubCategory.CDNR.value,
         )
 
         if is_m3:
@@ -682,10 +682,10 @@ class GSTR1BooksData(BooksDataMapper):
                 continue
 
             if category in (
-                GSTR1_SubCategory.HSN.value,  # Backwards Compatibility
-                GSTR1_SubCategory.HSN_B2B.value,
-                GSTR1_SubCategory.HSN_B2C.value,
-                GSTR1_SubCategory.DOC_ISSUE.value,
+                SubCategory.HSN.value,  # Backwards Compatibility
+                SubCategory.HSN_B2B.value,
+                SubCategory.HSN_B2C.value,
+                SubCategory.DOC_ISSUE.value,
             ):
                 del data[category]
                 continue

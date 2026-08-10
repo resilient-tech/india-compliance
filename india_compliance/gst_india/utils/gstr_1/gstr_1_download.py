@@ -6,7 +6,7 @@ from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
-from india_compliance.gst_india.utils.gstr_1 import GovJsonKey
+from india_compliance.gst_india.utils.gstr_1 import JsonKey
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     convert_to_internal_data_format,
 )
@@ -158,7 +158,7 @@ def get_sections_to_download(summary):
 
     actions = set()
 
-    for row in summary.get(GovJsonKey.RET_SUM.value, []):
+    for row in summary.get(JsonKey.RET_SUM.value, []):
         section = row.get("sec_nm")
 
         # total no of records
