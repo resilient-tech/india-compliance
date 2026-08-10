@@ -1193,14 +1193,21 @@ def is_outward_stock_entry(doc):
 
 ## Asset Movement Utils
 def is_inward_transaction(doc):
-    if doc.get("doctype") == "Asset Movement":
+    doctype = doc.get("doctype")
+
+    if doctype == "Asset Movement":
+        # purpose has no is_return equivalent
         return doc.get("purpose") == "Receipt"
 
+    if doctype == "Stock Entry":
+        return bool(doc.get("is_return"))
+
+    # Sales / Purchase transactions: a return reverses the direction
     return bool(doc.get("is_return"))
 
 
 def is_same_gstin_allowed(doc):
-    return bool(is_outward_stock_entry(doc)) or doc.doctype == "Asset Movement"
+    return bool(is_outward_stock_entry(doc)) or doc.get("doctype") == "Asset Movement"
 
 
 def create_notification(message_content, document_type, document_name=None, request_id=None):
