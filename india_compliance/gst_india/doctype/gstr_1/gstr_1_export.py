@@ -39,6 +39,7 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     convert_to_gov_data_format,
     get_category_wise_data,
 )
+from india_compliance.gst_india.utils.gstr_1.sections._shared import strip_empty
 
 # Used for storing user preferences for GSTR-1 download sections.
 GSTR1_SECTIONS_DEFAULT_KEY = "gstr1_download_sections"
@@ -2290,7 +2291,9 @@ def get_gstr_1_json(
             subcategory_data.pop(key)
 
     gstr1_log.normalize_data(data)
-    gov_data = convert_to_gov_data_format(data, company_gstin)
+
+    # the portal rejects blank fields, so they are dropped here rather than while mapping
+    gov_data = strip_empty(convert_to_gov_data_format(data, company_gstin))
 
     if sections:
         gov_data = _filter_data_by_sections(gov_data, sections)

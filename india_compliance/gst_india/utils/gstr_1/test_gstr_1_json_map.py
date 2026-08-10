@@ -14,20 +14,23 @@ from india_compliance.gst_india.utils.gstr_1 import (
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
-    AT,
-    B2B,
-    B2CL,
-    B2CS,
-    CDNR,
-    CDNUR,
-    DOC_ISSUE,
-    HSNSUM,
-    SUPECOM,
-    TXPD,
-    Exports,
-    NilRated,
     get_category_wise_data,
 )
+from india_compliance.gst_india.utils.gstr_1.sections import (
+    advances,
+    b2b,
+    b2cl,
+    b2cs,
+    cdnr,
+    cdnur,
+    doc_issue,
+    exports,
+    hsn,
+    nil_rated,
+    supecom,
+)
+from india_compliance.gst_india.utils.gstr_1.sections._shared import strip_empty
+from india_compliance.gst_returns.roundtrip import assert_roundtrip
 
 
 def get_party_for_gstin(gstin):
@@ -36,6 +39,11 @@ def get_party_for_gstin(gstin):
 
 def normalize_data(data):
     return GenerateGSTR1().normalize_data(data)
+
+
+def strip_empty_of(writer, *args, **kwargs):
+    """Portal payload as get_gstr_1_json builds it: mapped, then blanks dropped."""
+    return strip_empty(writer(*args, **kwargs))
 
 
 def process_mapped_data(data):
@@ -281,12 +289,23 @@ class TestB2B(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = B2B().convert_to_internal_data_format(self.json_data)
+        output = b2b.to_canonical(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = B2B().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
+        output = strip_empty_of(b2b.to_gov, process_mapped_data(self.mapped_data))
         self.assertListEqual(self.json_data, output)
+
+    def test_losslessness_harness_on_real_data(self):
+        internal = b2b.to_canonical(copy.deepcopy(self.json_data))
+        gov = strip_empty_of(b2b.to_gov, process_mapped_data(internal))
+        assert_roundtrip(self.json_data, gov)
+
+        lossy = copy.deepcopy(self.json_data)
+        lossy[0][gov_f.INVOICES][0]["extra_empty"] = ""
+        gov = strip_empty_of(b2b.to_gov, process_mapped_data(b2b.to_canonical(lossy)))
+        assert_roundtrip(lossy, gov)  # tolerated
+        self.assertNotEqual(lossy, gov)  # not exactly equal -- a loss did occur
 
 
 class TestB2CL(IntegrationTestCase):
@@ -485,11 +504,11 @@ class TestB2CL(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = B2CL().convert_to_internal_data_format(self.json_data)
+        output = b2cl.to_canonical(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = B2CL().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
+        output = strip_empty_of(b2cl.to_gov, process_mapped_data(self.mapped_data))
         self.assertListEqual(self.json_data, output)
 
 
@@ -589,11 +608,11 @@ class TestExports(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = Exports().convert_to_internal_data_format(self.json_data)
+        output = exports.to_canonical(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = Exports().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
+        output = strip_empty_of(exports.to_gov, process_mapped_data(self.mapped_data))
         self.assertListEqual(self.json_data, output)
 
 
@@ -659,11 +678,11 @@ class TestB2CS(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = B2CS().convert_to_internal_data_format(self.json_data)
+        output = b2cs.to_canonical(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = B2CS().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
+        output = strip_empty_of(b2cs.to_gov, process_mapped_data(self.mapped_data))
         self.assertListEqual(self.json_data, output)
 
 
@@ -712,11 +731,11 @@ class TestNilRated(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = NilRated().convert_to_internal_data_format(self.json_data)
+        output = nil_rated.to_canonical(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = NilRated().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
+        output = strip_empty_of(nil_rated.to_gov, process_mapped_data(self.mapped_data))
         self.assertDictEqual(self.json_data, output)
 
 
@@ -806,11 +825,11 @@ class TestCDNR(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = CDNR().convert_to_internal_data_format(copy.deepcopy(self.json_data))
+        output = cdnr.to_canonical(copy.deepcopy(self.json_data))
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = CDNR().convert_to_gov_data_format(process_mapped_data(copy.deepcopy(self.mapped_data)))
+        output = strip_empty_of(cdnr.to_gov, process_mapped_data(copy.deepcopy(self.mapped_data)))
         self.assertListEqual(self.json_data, output)
 
 
@@ -868,11 +887,11 @@ class TestCDNUR(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = CDNUR().convert_to_internal_data_format(copy.deepcopy(self.json_data))
+        output = cdnur.to_canonical(copy.deepcopy(self.json_data))
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = CDNUR().convert_to_gov_data_format(process_mapped_data(copy.deepcopy(self.mapped_data)))
+        output = strip_empty_of(cdnur.to_gov, process_mapped_data(copy.deepcopy(self.mapped_data)))
         self.assertListEqual(self.json_data, output)
 
 
@@ -938,11 +957,11 @@ class TestHSNSUM(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = HSNSUM().convert_to_internal_data_format(self.json_data)
+        output = hsn.to_canonical(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = HSNSUM().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
+        output = strip_empty_of(hsn.to_gov, process_mapped_data(self.mapped_data))
         self.assertDictEqual(self.json_data, output)
 
 
@@ -1012,11 +1031,11 @@ class TestHSNSUM_With_Bifurcation(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = HSNSUM().convert_to_internal_data_format(self.json_data)
+        output = hsn.to_canonical(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = HSNSUM().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
+        output = strip_empty_of(hsn.to_gov, process_mapped_data(self.mapped_data))
         self.assertDictEqual(self.json_data, output)
 
 
@@ -1128,11 +1147,11 @@ class TestAT(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = AT().convert_to_internal_data_format(self.json_data)
+        output = advances.received_to_canonical(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = AT().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
+        output = strip_empty_of(advances.received_to_gov, process_mapped_data(self.mapped_data))
         self.assertListEqual(self.json_data, output)
 
 
@@ -1244,11 +1263,11 @@ class TestTXPD(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = TXPD().convert_to_internal_data_format(self.json_data)
+        output = advances.adjusted_to_canonical(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = TXPD().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
+        output = strip_empty_of(advances.adjusted_to_gov, process_mapped_data(self.mapped_data))
         self.assertListEqual(self.json_data, output)
 
 
@@ -1340,11 +1359,11 @@ class TestDOC_ISSUE(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = DOC_ISSUE().convert_to_internal_data_format(self.json_data)
+        output = doc_issue.to_canonical(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = DOC_ISSUE().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
+        output = strip_empty_of(doc_issue.to_gov, process_mapped_data(self.mapped_data))
         self.assertDictEqual(self.json_data, output)
 
 
@@ -1401,11 +1420,11 @@ class TestSUPECOM(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = SUPECOM().convert_to_internal_data_format(self.json_data)
+        output = supecom.to_canonical(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = SUPECOM().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
+        output = strip_empty_of(supecom.to_gov, process_mapped_data(self.mapped_data))
         self.assertDictEqual(self.json_data, output)
 
 
@@ -1488,5 +1507,5 @@ class TestHSNSUMError(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = HSNSUM().convert_to_internal_data_format(self.json_data)
+        output = hsn.to_canonical(self.json_data)
         self.assertDictEqual(self.mapped_data, output)

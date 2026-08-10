@@ -95,6 +95,9 @@ class DocField:
     ERROR_CD = "error_code"
     ERROR_MSG = "error_message"
 
+    # portal row marker: "D" deletes the row on upload
+    FLAG = "flag"
+
 
 class ItemField:
     INDEX = "idx"
@@ -165,6 +168,12 @@ class RawField:
 
     SUPECOM_52 = "clttx"
     SUPECOM_9_5 = "paytx"
+
+    # e-commerce rows spell the taxes out instead of abbreviating them
+    ECOM_IGST = "igst"
+    ECOM_CGST = "cgst"
+    ECOM_SGST = "sgst"
+    ECOM_CESS = "cess"
 
     HSN_B2B = "hsn_b2b"
     HSN_B2C = "hsn_b2c"
@@ -262,6 +271,35 @@ class B2BInvoiceType(Enum):
     DE = "Deemed Exp"
 
 
+class CreditDebitNoteType(Enum):
+    C = "Credit Note"
+    D = "Debit Note"
+
+
+class NilRatedCategory(Enum):
+    INTER_B2B = "Inter-State supplies to registered persons"
+    INTER_B2C = "Inter-State supplies to unregistered persons"
+    INTRA_B2B = "Intra-State supplies to registered persons"
+    INTRA_B2C = "Intra-State supplies to unregistered persons"
+
+
+class DocumentNature(Enum):
+    OUTWARD_SUPPLY = "Invoices for outward supply"
+    INWARD_SUPPLY_UNREGISTERED = "Invoices for inward supply from unregistered person"
+    REVISED_INVOICE = "Revised Invoice"
+    DEBIT_NOTE = "Debit Note"
+    CREDIT_NOTE = "Credit Note"
+    RECEIPT_VOUCHER = "Receipt voucher"
+    PAYMENT_VOUCHER = "Payment Voucher"
+    REFUND_VOUCHER = "Refund voucher"
+    DELIVERY_CHALLAN_JOB_WORK = "Delivery Challan for job work"
+    DELIVERY_CHALLAN_APPROVAL = "Delivery Challan for supply on approval"
+    DELIVERY_CHALLAN_LIQUID_GAS = "Delivery Challan in case of liquid gas"
+    DELIVERY_CHALLAN_OTHER = (
+        "Delivery Challan in cases other than by way of supply (excluding at S no. 9 to 11)"
+    )
+
+
 CATEGORY_SUB_CATEGORY_MAPPING = {
     Category.B2B: (
         SubCategory.B2B_REGULAR,
@@ -344,3 +382,69 @@ SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX = [
     SubCategory.SUPECOM_9_5.value,
     *SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
 ]
+
+
+# gov code -> label. labels from enums, one home.
+B2B_DOCUMENT_CATEGORIES = {
+    "R": B2BInvoiceType.R.value,
+    "SEWP": B2BInvoiceType.SEWP.value,
+    "SEWOP": B2BInvoiceType.SEWOP.value,
+    "DE": B2BInvoiceType.DE.value,
+}
+
+B2B_SUBCATEGORIES = {
+    "SEWP": SubCategory.SEZWP.value,
+    "SEWOP": SubCategory.SEZWOP.value,
+    "DE": SubCategory.DE.value,
+}
+
+EXPORTS_SUBCATEGORIES = {
+    "WPAY": SubCategory.EXPWP.value,
+    "WOPAY": SubCategory.EXPWOP.value,
+}
+
+NIL_DOCUMENT_CATEGORIES = {
+    "INTRB2B": NilRatedCategory.INTER_B2B.value,
+    "INTRB2C": NilRatedCategory.INTER_B2C.value,
+    "INTRAB2B": NilRatedCategory.INTRA_B2B.value,
+    "INTRAB2C": NilRatedCategory.INTRA_B2C.value,
+}
+
+# DE uses SEZ label "Deemed Exports", not B2B's "Deemed Exp" -- CDNR's old value.
+CDNR_DOCUMENT_CATEGORIES = {
+    "R": B2BInvoiceType.R.value,
+    "SEWP": B2BInvoiceType.SEWP.value,
+    "SEWOP": B2BInvoiceType.SEWOP.value,
+    "DE": SubCategory.DE.value,
+}
+
+CREDIT_DEBIT_NOTE_TYPES = {
+    "C": CreditDebitNoteType.C.value,
+    "D": CreditDebitNoteType.D.value,
+}
+
+HSN_DOCUMENT_CATEGORIES = {
+    RawField.HSN_B2B: SubCategory.HSN_B2B.value,
+    RawField.HSN_B2C: SubCategory.HSN_B2C.value,
+    RawField.HSN_DATA: SubCategory.HSN.value,  # back-compat
+}
+
+DOC_ISSUE_NATURE = {
+    1: DocumentNature.OUTWARD_SUPPLY.value,
+    2: DocumentNature.INWARD_SUPPLY_UNREGISTERED.value,
+    3: DocumentNature.REVISED_INVOICE.value,
+    4: DocumentNature.DEBIT_NOTE.value,
+    5: DocumentNature.CREDIT_NOTE.value,
+    6: DocumentNature.RECEIPT_VOUCHER.value,
+    7: DocumentNature.PAYMENT_VOUCHER.value,
+    8: DocumentNature.REFUND_VOUCHER.value,
+    9: DocumentNature.DELIVERY_CHALLAN_JOB_WORK.value,
+    10: DocumentNature.DELIVERY_CHALLAN_APPROVAL.value,
+    11: DocumentNature.DELIVERY_CHALLAN_LIQUID_GAS.value,
+    12: DocumentNature.DELIVERY_CHALLAN_OTHER.value,
+}
+
+SUPECOM_DOCUMENT_CATEGORIES = {
+    RawField.SUPECOM_52: SubCategory.SUPECOM_52.value,
+    RawField.SUPECOM_9_5: SubCategory.SUPECOM_9_5.value,
+}
