@@ -32,15 +32,14 @@ def execute():
 
     tax_categories = frappe.get_all(
         "Tax Category",
-        fields=["name", "is_inter_state", "is_reverse_charge", "gst_state"],
-        filters={"disabled": 0, "gst_state": ["is", "not set"]},
+        fields=["name", "is_inter_state", "is_reverse_charge"],
+        filters={"disabled": 0, "name": ["in", list(used_categories)]},
+        order_by="creation desc",
     )
 
     defaults = []
     for is_inter_state, is_reverse_charge in DEFAULT_SCENARIOS:
-        category = get_default_tax_category(
-            tax_categories, used_categories, is_inter_state, is_reverse_charge
-        )
+        category = get_default_tax_category(tax_categories, is_inter_state, is_reverse_charge)
         if category:
             defaults.append(category)
 
@@ -53,13 +52,9 @@ def execute():
     ).run()
 
 
-def get_default_tax_category(categories, used_categories, is_inter_state, is_reverse_charge):
+def get_default_tax_category(categories, is_inter_state, is_reverse_charge):
     for category in categories:
-        if (
-            category.is_inter_state == is_inter_state
-            and category.is_reverse_charge == is_reverse_charge
-            and category.name in used_categories
-        ):
+        if category.is_inter_state == is_inter_state and category.is_reverse_charge == is_reverse_charge:
             return category.name
 
     return None
