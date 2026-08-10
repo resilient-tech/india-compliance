@@ -511,15 +511,17 @@ CUSTOM_FIELDS = {
         "translatable": 0,
     },
     # Sales - GST Details Section
-    ("Sales Order", "Delivery Note", "Sales Invoice"): [
+    "Sales Order": [
         {
             "fieldname": "gst_section",
             "label": "GST Details",
             "fieldtype": "Section Break",
-            "insert_after": "gst_vehicle_type",
+            "insert_after": "language",
             "print_hide": 1,
             "collapsible": 1,
         },
+    ],
+    ("Sales Order", "Delivery Note", "Sales Invoice"): [
         {
             "fieldname": "ecommerce_gstin",
             "label": "E-commerce GSTIN",
@@ -616,8 +618,17 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
     ],
-    # Sales Shipping Fields
     ("Delivery Note", "Sales Invoice"): [
+        # Sales - GST Details Section
+        {
+            "fieldname": "gst_section",
+            "label": "GST Details",
+            "fieldtype": "Section Break",
+            "insert_after": "gst_vehicle_type",
+            "print_hide": 1,
+            "collapsible": 1,
+        },
+        # Sales Shipping Fields
         {
             "fieldname": "port_address",
             "label": "Origin Port / Border Checkpost Address Name",
