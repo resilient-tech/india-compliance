@@ -499,6 +499,29 @@ def get_hsn_settings():
     return validate_hsn_code, valid_hsn_length
 
 
+@frappe.whitelist()
+def get_hsn_code_list(txt: str | None = None, limit: int = 20):
+    """
+    GST HSN Code is seeded public data, readable by all roles, hence no permission check.
+    """
+    hsn_code = frappe.qb.DocType("GST HSN Code")
+    query = (
+        frappe.qb.from_(hsn_code)
+        .select(hsn_code.name.as_("value"), hsn_code.name.as_("label"), hsn_code.description)
+        .orderby(hsn_code.name)
+        .limit(cint(limit))
+    )
+
+    validate_hsn_code, valid_hsn_length = get_hsn_settings()
+    if validate_hsn_code and valid_hsn_length:
+        query = query.where(hsn_code.name.like("_" * min(valid_hsn_length) + "%"))
+
+    if txt:
+        query = query.where(hsn_code.name.like(f"{txt}%") | hsn_code.description.like(f"%{txt}%"))
+
+    return query.run(as_dict=True)
+
+
 def get_place_of_supply(party_details, doctype):
     """
     :param party_details: A frappe._dict or document containing fields related to party

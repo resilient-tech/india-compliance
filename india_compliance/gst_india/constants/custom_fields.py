@@ -685,7 +685,7 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "gst_hsn_code",
             "label": "HSN/SAC",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
             "fetch_from": "item_code.gst_hsn_code",
             "insert_after": "description",
             "allow_on_submit": 1,
@@ -807,7 +807,7 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "gst_hsn_code",
             "label": "HSN/SAC",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
             "fetch_from": "item_code.gst_hsn_code",
             "insert_after": "description",
             "allow_on_submit": 1,
