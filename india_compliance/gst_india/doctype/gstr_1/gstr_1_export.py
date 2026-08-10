@@ -1236,7 +1236,7 @@ class BooksExcel(DataProcessor):
                 "fieldname": DocField.TRANSACTION_TYPE,
             },
             {
-                "label": "Documenrt Date",
+                "label": "Document Date",
                 "fieldname": DocField.DOC_DATE,
                 "header_format": {"width": ExcelWidth.XS.value},
             },

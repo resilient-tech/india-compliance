@@ -113,7 +113,9 @@ def drop_zero_diff(row):
 
 def pos_from_gov(number):
     """Portal sends the state number only; the app stores "05-Uttarakhand" everywhere."""
-    return f"{number}-{STATE_NAMES.get(number)}"
+    name = STATE_NAMES.get(number)
+
+    return f"{number}-{name}" if name else number
 
 
 def pos_to_gov(pos):
@@ -220,6 +222,9 @@ def abs_amounts(row, fields):
 
 def supply_type(pos, company_gstin):
     """Same state as the seller means intra-state."""
+    if not company_gstin:
+        raise ValueError("company_gstin is needed to tell intra-state from inter-state")
+
     return "INTRA" if pos == company_gstin[:2] else "INTER"
 
 

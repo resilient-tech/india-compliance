@@ -79,7 +79,7 @@ def to_gov(rows, company_gstin=""):
         if row.get(doc.DOC_TYPE) in EXPORT_TYPES:
             out.pop(raw.POS, None)
 
-        items = [s.abs_amounts(line, ITEM_DEFAULTS) for line in row[doc.ITEMS]]
+        items = [s.abs_amounts(dict(line), ITEM_DEFAULTS) for line in row[doc.ITEMS]]
         out[raw.ITEMS] = s.wrapped_items_to_gov(items, KEYS, ITEM_MONEY)
 
         return s.drop_zero_diff(out)

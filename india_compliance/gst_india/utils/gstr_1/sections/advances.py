@@ -85,7 +85,7 @@ def to_gov(rows, company_gstin="", multiplier=RECEIVED):
     by_pos = {}
 
     for row in rows:
-        s.flip_signs(row, multiplier, AMOUNTS)
+        row = s.flip_signs(dict(row), multiplier, AMOUNTS)  # copy, the stored row keeps its sign
 
         out = s.drop_zero_diff(s.round_money(s.pick_back(row, KEYS), MONEY))
         s.convert(out, raw.POS, s.pos_to_gov)  # 05-Uttarakhand -> 05

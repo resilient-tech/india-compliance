@@ -65,7 +65,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
             return
 
     def update_json_for(self, file_field, json_data, overwrite=True, reset_reconcile=False):
-        if "summary" not in file_field:
+        if "summary" not in file_field and file_field != RAW_FIELD:
             json_data["creation"] = get_datetime_str(get_datetime())
             self.remove_json_for(f"{file_field}_summary")
 

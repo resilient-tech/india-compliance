@@ -67,7 +67,6 @@ class TestGSTReturnLog(IntegrationTestCase):
         store_raw_return_data(self.GSTIN, "GSTR2b", "052099", payload)
         got = get_raw_return_data(self.GSTIN, "GSTR2b", "052099")
 
-        got.pop("creation", None)
         self.assertEqual(got, original)
 
     @patch("india_compliance.gst_india.utils.gstr_1.gstr_1_download.GSTR1API")
@@ -107,4 +106,4 @@ class TestGSTReturnLog(IntegrationTestCase):
 
         stored = get_raw_return_data(self.GSTIN, "GSTR1", period)
         self.assertEqual(stored["chksum"], "abc123")
-        self.assertNotIn("creation", raw)
+        self.assertNotIn("creation", stored)

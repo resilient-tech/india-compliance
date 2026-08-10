@@ -32,6 +32,9 @@ from india_compliance.gst_india.utils.gstr_1.sections import (
 from india_compliance.gst_india.utils.gstr_1.sections._shared import strip_empty
 from india_compliance.gst_returns.roundtrip import assert_roundtrip
 
+# Delhi, a state no fixture below supplies to, so every row stays inter-state
+COMPANY_GSTIN = "07AAUPV7468F1ZW"
+
 
 def get_party_for_gstin(gstin):
     return _get_party_for_gstin(gstin, "Customer") or "Unknown"
@@ -682,7 +685,7 @@ class TestB2CS(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = strip_empty_of(b2cs.to_gov, process_mapped_data(self.mapped_data))
+        output = strip_empty_of(b2cs.to_gov, process_mapped_data(self.mapped_data), COMPANY_GSTIN)
         self.assertListEqual(self.json_data, output)
 
 
@@ -1151,7 +1154,9 @@ class TestAT(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = strip_empty_of(advances.received_to_gov, process_mapped_data(self.mapped_data))
+        output = strip_empty_of(
+            advances.received_to_gov, process_mapped_data(self.mapped_data), COMPANY_GSTIN
+        )
         self.assertListEqual(self.json_data, output)
 
 
@@ -1267,7 +1272,9 @@ class TestTXPD(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = strip_empty_of(advances.adjusted_to_gov, process_mapped_data(self.mapped_data))
+        output = strip_empty_of(
+            advances.adjusted_to_gov, process_mapped_data(self.mapped_data), COMPANY_GSTIN
+        )
         self.assertListEqual(self.json_data, output)
 
 

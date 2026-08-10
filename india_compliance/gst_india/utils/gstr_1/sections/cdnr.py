@@ -105,7 +105,7 @@ def to_gov(rows, company_gstin=""):
         s.convert(out, raw.NOTE_DATE, s.date_to_gov)  # 2016-09-23 -> 23-09-2016
         s.convert(out, raw.POS, s.pos_to_gov)  # 03-Punjab -> 03
 
-        items = [s.abs_amounts(line, ITEM_DEFAULTS) for line in row[doc.ITEMS]]
+        items = [s.abs_amounts(dict(line), ITEM_DEFAULTS) for line in row[doc.ITEMS]]
         out[raw.ITEMS] = s.wrapped_items_to_gov(items, KEYS, ITEM_MONEY)
 
         return s.drop_zero_diff(out)

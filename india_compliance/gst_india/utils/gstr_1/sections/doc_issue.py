@@ -81,8 +81,14 @@ def to_gov(rows, company_gstin=""):
 
 
 def net_issued(row):
-    """Drafts never reached anyone, so count them as cancelled; the rest were issued."""
-    row[doc.CANCELLED_COUNT] = (row.get(doc.CANCELLED_COUNT) or 0) + (row.get(doc.DRAFT_COUNT) or 0)
-    row[doc.NET_ISSUE] = row[doc.TOTAL_COUNT] - row[doc.CANCELLED_COUNT]
+    """Drafts never reached anyone, so count them as cancelled; the rest were issued.
 
-    return row
+    A new row, so counts do not pile up when the same range is written twice.
+    """
+    cancelled = (row.get(doc.CANCELLED_COUNT) or 0) + (row.get(doc.DRAFT_COUNT) or 0)
+
+    return {
+        **row,
+        doc.CANCELLED_COUNT: cancelled,
+        doc.NET_ISSUE: row[doc.TOTAL_COUNT] - cancelled,
+    }

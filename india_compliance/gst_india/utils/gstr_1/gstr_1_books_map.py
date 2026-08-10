@@ -662,15 +662,13 @@ class GSTR1BooksData(BooksDataMapper):
         if not categories_to_process:
             return
 
-        included = data.setdefault("already_included_docs_for_quarterly", [])
-
         for category in categories_to_process:
             for key, row in data[category].copy().items():
                 if key in included_docs:
                     continue
 
                 row["sub_category"] = category
-                included.append(row)
+                data.setdefault("already_included_docs_for_quarterly", []).append(row)
                 del data[category][key]
 
     def process_excluded_docs_for_quarterly(self, data, m1_m2_subcategories):

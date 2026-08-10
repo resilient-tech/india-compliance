@@ -12,6 +12,7 @@ Needs a site: rounding and the party-name lookup both read site settings.
         india_compliance.gst_india.utils.gstr_1.sections.test_sections
 """
 
+import copy
 import itertools
 import unittest
 from typing import ClassVar
@@ -588,6 +589,52 @@ SECTIONS_BY_NAME = {
     "advances_received": advances,
     "advances_adjusted": advances,
 }
+
+
+class TestSupplyType(unittest.TestCase):
+    def test_reads_the_seller_state_off_the_gstin(self):
+        self.assertEqual(s.supply_type("24", COMPANY_GSTIN), "INTRA")
+        self.assertEqual(s.supply_type("05", COMPANY_GSTIN), "INTER")
+
+    def test_refuses_a_missing_seller(self):
+        # a blank one would file every intra-state supply as inter-state, and say nothing
+        with self.assertRaises(ValueError):
+            b2cs.to_gov(flatten(b2cs.to_canonical(PAYLOADS["b2cs"][2])))
+
+
+class TestWritingLeavesStoredRowsAlone(unittest.TestCase):
+    """A writer gets the stored rows themselves, so it must not rewrite them.
+
+    `convert_to_gov_data_format` hands its caller's rows straight to each writer. A sign flipped
+    or a count added in place would corrupt what is saved and change the next payload written.
+    """
+
+    def test_no_writer_changes_the_rows_it_was_given(self):
+        for name, (reader, writer, payload) in PAYLOADS.items():
+            with self.subTest(name):
+                rows = flatten(reader(payload))
+                before = copy.deepcopy(rows)
+
+                writer(rows, company_gstin=COMPANY_GSTIN)
+
+                self.assertEqual(rows, before)
+
+    def test_a_draft_is_counted_as_cancelled_once(self):
+        # books-only field, so no payload above carries it
+        rows = [
+            {
+                doc.DOC_TYPE: "Invoices for outward supply",
+                doc.FROM_SR: "1",
+                doc.TO_SR: "10",
+                doc.TOTAL_COUNT: 10,
+                doc.CANCELLED_COUNT: 1,
+                doc.DRAFT_COUNT: 2,
+            }
+        ]
+
+        first = doc_issue.to_gov(rows)
+        self.assertEqual(first, doc_issue.to_gov(rows))
+        self.assertEqual(first[raw.DOC_ISSUE_DETAILS][0][raw.DOC_ISSUE_LIST][0][raw.NET_ISSUE], 7)
 
 
 class TestSummary(unittest.TestCase):

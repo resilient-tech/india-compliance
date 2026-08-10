@@ -9,8 +9,6 @@ Canonical: {"summary": {"B2B Regular": {description: "B2B Regular", no_of_record
                                         total_taxable_value: 5000, total_igst_amount: 900}}}
 """
 
-from frappe.utils import flt
-
 from india_compliance.gst_returns.fields.gstr1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
@@ -173,7 +171,8 @@ def to_canonical(gov_data):
 
 
 def total_of(row):
-    return flt(sum(row.get(field, 0) for field in TOTAL_FIELDS), 2)
+    """Zero-test for an overview row. A null the portal sent counts as nothing."""
+    return s.sum_money(row, TOTAL_FIELDS)
 
 
 def to_overview(rows):
@@ -192,7 +191,7 @@ def to_overview(rows):
 
         # amendments are collected into one closing line instead of shown per category
         for field in TOTAL_FIELDS:
-            amended[field] += by_description.get(f"{category} {AMENDED}", {}).get(field, 0)
+            amended[field] += by_description.get(f"{category} {AMENDED}", {}).get(field) or 0
 
         if total_of(by_description[category]) == 0:
             continue
