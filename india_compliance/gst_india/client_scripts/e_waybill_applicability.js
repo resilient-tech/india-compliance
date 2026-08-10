@@ -296,9 +296,31 @@ class AssetMovementEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_applicable(show_message = false) {
-        return (
-            super.is_e_waybill_applicable(show_message) && gst_settings.enable_e_waybill_from_asset_movement
-        );
+        if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_from_asset_movement)
+            return false;
+
+        let is_ewb_applicable = true;
+        let message_list = [];
+
+        const [gstin_label, address_label] = this.is_inward()
+            ? ["Bill To GSTIN", "Bill To Address"]
+            : ["Bill From GSTIN", "Bill From Address"];
+
+        if (!this.get_company_gstin()) {
+            is_ewb_applicable = false;
+            message_list.push(`${gstin_label} is not set. Ensure its set in ${address_label}.`);
+        }
+
+        // at least one item is not a service
+        is_ewb_applicable = this.has_goods_item(is_ewb_applicable, message_list);
+
+        this.frm._ewb_message = "";
+
+        if (show_message) {
+            this.frm._ewb_message = message_list.map((message) => `<li>${message}</li>`).join("");
+        }
+
+        return is_ewb_applicable;
     }
 
     is_e_waybill_generatable(show_message = false) {
