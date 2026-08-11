@@ -27,6 +27,7 @@ SECTION = "sec_nm"
 LINE_TYPE = "typ"
 SUB_SECTIONS = "sub_sections"
 NET_DOC_ISSUED = "net_doc_issued"
+NIL_AMOUNTS = ("ttl_expt_amt", "ttl_nilsup_amt", "ttl_ngsup_amt")
 
 KEYS = {
     SECTION: doc.DESCRIPTION,
@@ -141,6 +142,10 @@ def read_row(entry):
     # document ranges count what was actually issued, not what was declared
     if entry.get(SECTION) == "DOC_ISSUE":
         row["no_of_records"] = entry.get(NET_DOC_ISSUED, 0)
+
+    # the portal files nil-rated without a taxable value; add one up to compare against books
+    elif entry.get(SECTION) == "NIL":
+        row[doc.TAXABLE_VALUE] = s.sum_money(entry, NIL_AMOUNTS)
 
     return row
 

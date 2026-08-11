@@ -9,6 +9,7 @@ from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
 from india_compliance.gst_india.utils import get_party_for_gstin as _get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_1 import (
     B2BInvoiceType,
+    Category,
     SubCategory,
 )
 from india_compliance.gst_india.utils.gstr_1 import DocField as doc
@@ -29,6 +30,7 @@ from india_compliance.gst_india.utils.gstr_1.sections import (
     exports,
     hsn,
     nil_rated,
+    summary,
     supecom,
 )
 from india_compliance.gst_india.utils.gstr_1.sections._shared import strip_empty
@@ -1526,7 +1528,7 @@ class TestRETSUM(IntegrationTestCase):
     from the nil rated / exempted / non-GST amounts to compare against books.
     """
 
-    NIL_EXEMPT = GSTR1_Category.NIL_EXEMPT.value
+    NIL_EXEMPT = Category.NIL_EXEMPT.value
 
     @classmethod
     def setUpClass(cls):
@@ -1541,9 +1543,9 @@ class TestRETSUM(IntegrationTestCase):
         }
 
     def get_gov_summary(self, section=None):
-        summary = RETSUM().convert_to_internal_data_format([section or self.nil_section])["summary"]
+        rows = summary.to_canonical([section or self.nil_section])["summary"]
 
-        return summarize_retsum_data(summary.values())
+        return summarize_retsum_data(rows.values())
 
     def get_books_summary(self, **kwargs):
         return [
@@ -1561,20 +1563,20 @@ class TestRETSUM(IntegrationTestCase):
         ]
 
     def test_convert_to_internal_data_format(self):
-        summary = RETSUM().convert_to_internal_data_format([self.nil_section])["summary"]
+        rows = summary.to_canonical([self.nil_section])["summary"]
 
-        self.assertEqual(summary[self.NIL_EXEMPT][inv_f.TAXABLE_VALUE], 20055.0)
+        self.assertEqual(rows[self.NIL_EXEMPT][doc.TAXABLE_VALUE], 20055.0)
 
         section = {**self.nil_section, "ttl_ngsup_amt": None}
-        summary = RETSUM().convert_to_internal_data_format([section])["summary"]
+        rows = summary.to_canonical([section])["summary"]
 
-        self.assertEqual(summary[self.NIL_EXEMPT][inv_f.TAXABLE_VALUE], 20040.0)
+        self.assertEqual(rows[self.NIL_EXEMPT][doc.TAXABLE_VALUE], 20040.0)
 
     def test_nil_section_summarized_without_records(self):
         """Section is summarized even if govt reports no records against it"""
         gov_summary = self.get_gov_summary({**self.nil_section, "ttl_rec": 0})
 
-        self.assertEqual(gov_summary[0][inv_f.TAXABLE_VALUE], 20055.0)
+        self.assertEqual(gov_summary[0][doc.TAXABLE_VALUE], 20055.0)
 
     def test_empty_nil_section_excluded(self):
         self.assertEqual(self.get_gov_summary({"sec_nm": "NIL", "ttl_rec": 0}), [])

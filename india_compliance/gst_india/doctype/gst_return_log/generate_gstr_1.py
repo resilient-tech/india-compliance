@@ -1077,9 +1077,7 @@ def get_differing_categories(mapped_summary, gov_summary):
     # TODO: Check this for all categories
     CATEGORY_KEYS = {
         (Category.NIL_EXEMPT.value): {
-            "total_exempted_amount",
-            "total_nil_rated_amount",
-            "total_non_gst_amount",
+            "total_taxable_value",
         },
         (Category.DOC_ISSUE.value): {
             "no_of_records",
