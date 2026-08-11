@@ -1496,7 +1496,7 @@ class TestHSNSUMError(FrappeTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
 
-class TestRETSUM(IntegrationTestCase):
+class TestRETSUM(FrappeTestCase):
     """
     Govt reports the Nil-Rated section without a taxable value. It's computed
     from the nil rated / exempted / non-GST amounts to compare against books.
