@@ -62,9 +62,9 @@ doctype_js = {
         "gst_india/client_scripts/address.js",
     ],
     "Asset Movement": [
-        "gst_india/client_scripts/asset_movement.js",
         "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
+        "gst_india/client_scripts/asset_movement.js",
     ],
     "Company": [
         "gst_india/client_scripts/party.js",
