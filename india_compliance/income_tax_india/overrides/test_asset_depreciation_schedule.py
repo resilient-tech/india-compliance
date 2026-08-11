@@ -1,12 +1,12 @@
 import frappe
+from erpnext.accounts.doctype.payment_reconciliation.test_payment_reconciliation import create_fiscal_year
 from erpnext.assets.doctype.asset.depreciation import post_depreciation_entries, scrap_asset
+from erpnext.assets.doctype.asset.test_asset import create_asset
 from erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule import (
     get_asset_depr_schedule_doc,
 )
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import flt, getdate
-
-from india_compliance.tests.erpnext_test_utils import create_asset, create_fiscal_year
 
 COMPANY = "_Test Indian Registered Company"
 ABBR = "_TIRC"
@@ -15,7 +15,7 @@ COST = 100000
 RATE = 15
 
 
-class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
+class TestAssetDepreciationByIncomeTaxAct(FrappeTestCase):
     """Depreciation as per the Income Tax Act, for a Finance Book with `for_income_tax` set.
 
     Both behaviours are regional overrides, see `hooks.py`:
