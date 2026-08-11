@@ -307,6 +307,12 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
         reference_name=[doctype, "reference_doctype"],
     )
 
+    # Link counts are not fetched at all unless `fieldname` is set (see set_open_count
+    # in frappe/public/js/frappe/form/dashboard.js). Doctypes with no standard dashboard
+    # data (eg Asset Movement) have none, so set one.
+    if not data.get("fieldname"):
+        data.fieldname = "reference_name"
+
     transactions = data.setdefault("transactions", [])
 
     # GST Logs section looks best at the 3rd position
