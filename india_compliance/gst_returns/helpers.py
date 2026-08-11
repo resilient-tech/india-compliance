@@ -4,6 +4,9 @@ from datetime import date, datetime
 
 def round_to(value, precision=2):
     """Round like frappe's default. (2.675 -> 2.68)."""
+    if value is None:
+        return 0.0
+
     factor = 10**precision
     scaled = round(float(value) * factor, 8)
     floor = math.floor(scaled)

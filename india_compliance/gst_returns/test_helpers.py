@@ -17,6 +17,9 @@ class TestRoundTo(unittest.TestCase):
         self.assertEqual(round_to(99.995), 100.0)
         self.assertEqual(round_to(1234.565), 1234.57)
 
+    def test_none_counts_as_nothing(self):
+        self.assertEqual(round_to(None), 0.0)
+
     def test_plain_values(self):
         self.assertEqual(round_to(0), 0.0)
         self.assertEqual(round_to(100), 100.0)
