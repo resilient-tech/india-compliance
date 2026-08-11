@@ -1541,6 +1541,11 @@ class TestRETSUM(IntegrationTestCase):
 
         self.assertEqual(summary[self.NIL_EXEMPT][inv_f.TAXABLE_VALUE], 20055.0)
 
+        section = {**self.nil_section, "ttl_ngsup_amt": None}
+        summary = RETSUM().convert_to_internal_data_format([section])["summary"]
+
+        self.assertEqual(summary[self.NIL_EXEMPT][inv_f.TAXABLE_VALUE], 20040.0)
+
     def test_nil_section_summarized_without_records(self):
         """Section is summarized even if govt reports no records against it"""
         gov_summary = self.get_gov_summary({**self.nil_section, "ttl_rec": 0})

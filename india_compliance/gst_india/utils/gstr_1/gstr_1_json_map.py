@@ -1778,7 +1778,9 @@ class RETSUM(GSTR1DataMapper):
         # Computed to compare against books summary.
         elif data.get("sec_nm") == "NIL":
             response[inv_f.TAXABLE_VALUE] = flt(
-                data.get("ttl_expt_amt", 0) + data.get("ttl_nilsup_amt", 0) + data.get("ttl_ngsup_amt", 0),
+                flt(data.get("ttl_expt_amt"))
+                + flt(data.get("ttl_nilsup_amt"))
+                + flt(data.get("ttl_ngsup_amt")),
                 2,
             )
 
