@@ -1110,7 +1110,7 @@ def get_differing_categories(mapped_summary, gov_summary):
         keys_to_compare = CATEGORY_KEYS.get(category, KEYS_TO_COMPARE)
 
         for key in keys_to_compare:
-            if gov_entry.get(key, 0) != row.get(key):
+            if (gov_entry.get(key) or 0) != (row.get(key) or 0):
                 differing_categories.add(category)
                 break
 
@@ -1126,7 +1126,7 @@ def get_differing_categories(mapped_summary, gov_summary):
         keys_to_compare = CATEGORY_KEYS.get(row["description"], KEYS_TO_COMPARE)
 
         for key in keys_to_compare:
-            if row.get(key, 0) != 0:
+            if (row.get(key) or 0) != 0:
                 differing_categories.add(row["description"])
                 break
 
