@@ -4,11 +4,13 @@ from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     GenerateGSTR1,
+    get_differing_categories,
 )
 from india_compliance.gst_india.utils import get_party_for_gstin as _get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_1 import GovDataField as gov_f
 from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_B2B_InvoiceType,
+    GSTR1_Category,
     GSTR1_SubCategory,
 )
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
@@ -22,11 +24,13 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     CDNUR,
     DOC_ISSUE,
     HSNSUM,
+    RETSUM,
     SUPECOM,
     TXPD,
     Exports,
     NilRated,
     get_category_wise_data,
+    summarize_retsum_data,
 )
 
 
@@ -1490,3 +1494,84 @@ class TestHSNSUMError(FrappeTestCase):
     def test_convert_to_internal_data_format(self):
         output = HSNSUM().convert_to_internal_data_format(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
+
+
+class TestRETSUM(FrappeTestCase):
+    """
+    Govt reports the Nil-Rated section without a taxable value. It's computed
+    from the nil rated / exempted / non-GST amounts to compare against books.
+    """
+
+    NIL_EXEMPT = GSTR1_Category.NIL_EXEMPT.value
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.nil_section = {
+            "sec_nm": "NIL",
+            "ttl_rec": 1,
+            "ttl_expt_amt": 20000.0,
+            "ttl_nilsup_amt": 40.0,
+            "ttl_ngsup_amt": 15.0,
+        }
+
+    def get_gov_summary(self, section=None):
+        summary = RETSUM().convert_to_internal_data_format([section or self.nil_section])["summary"]
+
+        return summarize_retsum_data(summary.values())
+
+    def get_books_summary(self, **kwargs):
+        return [
+            {
+                "description": self.NIL_EXEMPT,
+                "no_of_records": 1,
+                "indent": 0,
+                "total_taxable_value": 20055.0,
+                "total_igst_amount": 0.0,
+                "total_cgst_amount": 0.0,
+                "total_sgst_amount": 0.0,
+                "total_cess_amount": 0.0,
+                **kwargs,
+            }
+        ]
+
+    def test_convert_to_internal_data_format(self):
+        summary = RETSUM().convert_to_internal_data_format([self.nil_section])["summary"]
+
+        self.assertEqual(summary[self.NIL_EXEMPT][inv_f.TAXABLE_VALUE], 20055.0)
+
+        section = {**self.nil_section, "ttl_ngsup_amt": None}
+        summary = RETSUM().convert_to_internal_data_format([section])["summary"]
+
+        self.assertEqual(summary[self.NIL_EXEMPT][inv_f.TAXABLE_VALUE], 20040.0)
+
+    def test_nil_section_summarized_without_records(self):
+        """Section is summarized even if govt reports no records against it"""
+        gov_summary = self.get_gov_summary({**self.nil_section, "ttl_rec": 0})
+
+        self.assertEqual(gov_summary[0][inv_f.TAXABLE_VALUE], 20055.0)
+
+    def test_empty_nil_section_excluded(self):
+        self.assertEqual(self.get_gov_summary({"sec_nm": "NIL", "ttl_rec": 0}), [])
+
+    def test_matching_nil_summary(self):
+        self.assertEqual(
+            get_differing_categories(self.get_books_summary(), self.get_gov_summary()),
+            set(),
+        )
+
+    def test_differing_nil_summary(self):
+        books_summary = self.get_books_summary(total_taxable_value=20000.0)
+
+        self.assertEqual(
+            get_differing_categories(books_summary, self.get_gov_summary()),
+            {self.NIL_EXEMPT},
+        )
+
+    def test_missing_value_compared_as_zero(self):
+        """Keys absent in either summary should compare as zero, not differ"""
+        books_summary = self.get_books_summary(no_of_records="")
+        books_summary[0].pop("total_cess_amount")
+
+        self.assertEqual(get_differing_categories(books_summary, self.get_gov_summary()), set())
