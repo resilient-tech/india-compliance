@@ -110,6 +110,9 @@ TRANSPORT_TYPES = {
 
 # transaction types where goods are shipped to an address different from Bill To
 SHIP_TO_TRANSACTION_TYPES = (2, 4)
+
+# transaction types where goods are dispatched from an address different from Bill From
+DISPATCH_FROM_TRANSACTION_TYPES = (3, 4)
 VEHICLE_TYPES = {"Regular": "R", "Over Dimensional Cargo (ODC)": "O"}
 
 TRANSIT_TYPES = {"Road": "R", "Warehouse": "W", "Others": "O"}
