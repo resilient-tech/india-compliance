@@ -397,3 +397,7 @@ def get_b2c_limit(date):
             return limit
 
     return B2C_LIMIT[-1][1]
+
+
+def truncate_hsn_description(description):
+    return description.strip()[:HSN_DESCRIPTION_LIMIT].rstrip()
