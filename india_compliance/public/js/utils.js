@@ -414,6 +414,15 @@ Object.assign(india_compliance, {
         };
     },
 
+    set_hsn_code_autocomplete(frm, table_fieldname = "items") {
+        const grid = frm.fields_dict[table_fieldname].grid;
+        frm.set_query("gst_hsn_code", table_fieldname, () => ({
+            query: "india_compliance.gst_india.utils.get_hsn_code_list",
+        }));
+
+        frappe.meta.get_docfield(grid.doctype, "gst_hsn_code").ignore_validation = 1;
+    },
+
     setup_itc_claim_period_query(frm) {
         frm.set_query("itc_claim_period", () => ({
             query: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
