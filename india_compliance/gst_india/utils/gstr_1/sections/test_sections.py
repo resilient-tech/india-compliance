@@ -707,6 +707,19 @@ class TestCategoryRules(unittest.TestCase):
         self.assertEqual(goods[raw.HSN_B2B][0][raw.UOM], "BOX")
         self.assertEqual(service[raw.HSN_B2B][0][raw.UOM], "NA")
 
+    def test_an_hsn_description_is_trimmed_then_capped_at_thirty(self):
+        rows = [
+            {
+                doc.DOC_TYPE: SubCategory.HSN_B2B.value,
+                doc.HSN_CODE: "1102",
+                doc.DESCRIPTION: "  CEREAL FLOURS OTHER THAN THAT OF WHEAT  ",
+            }
+        ]
+        written = hsn.to_gov(rows)[raw.HSN_B2B][0][raw.DESCRIPTION]
+
+        self.assertEqual(written, "CEREAL FLOURS OTHER THAN THAT")
+        self.assertLessEqual(len(written), hsn.DESCRIPTION_LIMIT)
+
     def test_each_hsn_section_numbers_its_rows_from_one(self):
         rows = [
             {doc.DOC_TYPE: SubCategory.HSN_B2B.value, doc.HSN_CODE: "1102"},

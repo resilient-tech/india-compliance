@@ -147,7 +147,7 @@ class SummarizeGSTR1:
                     continue
 
                 for key in self.AMOUNT_FIELDS:
-                    summary_row[key] += row.get(key, 0)
+                    summary_row[key] += row.get(key) or 0
 
                 if doc_num := row.get("document_number"):
                     summary_row["unique_records"].add(doc_num)
@@ -199,7 +199,7 @@ class SummarizeGSTR1:
                     ):
                         continue
 
-                    summary_row[field] += row.get(field, 0)
+                    summary_row[field] += row.get(field) or 0
 
         return subcategory_summary
 
@@ -239,9 +239,9 @@ class SummarizeGSTR1:
             return
 
         summary_row["no_of_records"] += (
-            data_row.get(doc.TOTAL_COUNT, 0)
-            - data_row.get(doc.CANCELLED_COUNT, 0)
-            - data_row.get(doc.DRAFT_COUNT, 0)
+            (data_row.get(doc.TOTAL_COUNT) or 0)
+            - (data_row.get(doc.CANCELLED_COUNT) or 0)
+            - (data_row.get(doc.DRAFT_COUNT) or 0)
         )
 
     @staticmethod

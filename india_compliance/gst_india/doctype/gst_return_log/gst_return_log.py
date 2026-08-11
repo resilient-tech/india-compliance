@@ -103,7 +103,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
 
         content = get_compressed_data(new_json)
 
-        file.save_file(content=content, overwrite=True)
+        file.save_file(content=content, overwrite=True, ignore_existing_file_check=True)
         self.db_set(file_field, file.file_url)
 
     def remove_json_for(self, file_field):

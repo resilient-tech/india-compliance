@@ -68,8 +68,8 @@ def subcategory_of(invoice):
     return SubCategory.B2B_REGULAR.value
 
 
-def to_canonical(gov_data, names=None):
-    names = {} if names is None else names
+def to_canonical(gov_data):
+    names = {}
     output = {}
 
     def buyer(group):

@@ -1,9 +1,11 @@
+from .helpers import round_to
+
 _MISSING = object()
 
 
 def _clean(value, precision):
     if isinstance(value, float):
-        return round(value, precision)
+        return round_to(value, precision)
     if isinstance(value, dict):
         cleaned = ((k, _clean(v, precision)) for k, v in value.items())
         return {k: v for k, v in cleaned if not _is_empty(v)}

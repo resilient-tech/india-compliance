@@ -14,7 +14,10 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     get_raw_return_data,
     store_raw_return_data,
 )
-from india_compliance.gst_india.utils.gstr_1.gstr_1_download import download_gstr1_json_data
+from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
+    download_gstr1_json_data,
+    save_gstr_1,
+)
 
 
 class TestGSTReturnLog(IntegrationTestCase):
@@ -107,3 +110,18 @@ class TestGSTReturnLog(IntegrationTestCase):
         stored = get_raw_return_data(self.GSTIN, "GSTR1", period)
         self.assertEqual(stored["chksum"], "abc123")
         self.assertNotIn("creation", stored)
+
+        save_gstr_1(
+            self.GSTIN,
+            period,
+            {"b2b": [{"ctin": "24AABCR6898M1ZN", "inv": []}]},
+            "GSTR1",
+        )
+        stored = get_raw_return_data(self.GSTIN, "GSTR1", period)
+        self.assertEqual(stored["chksum"], "abc123")
+        self.assertIn("b2b", stored)
+
+        download_gstr1_json_data(frappe.get_doc("GST Return Log", log_name))
+        stored = get_raw_return_data(self.GSTIN, "GSTR1", period)
+        self.assertEqual(stored["chksum"], "abc123")
+        self.assertNotIn("b2b", stored)

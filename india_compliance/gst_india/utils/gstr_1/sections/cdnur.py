@@ -40,6 +40,7 @@ KEYS = {
 EXPORT_TYPES = ("EXPWP", "EXPWOP")
 
 ITEM_DEFAULTS = dict.fromkeys(s.ITEM_TOTALS_IGST, 0)
+ITEM_AMOUNTS = tuple(ITEM_DEFAULTS)
 
 MONEY = (raw.DOC_VALUE, raw.DIFF_PERCENTAGE)
 ITEM_MONEY = (raw.TAXABLE_VALUE, raw.IGST, raw.CESS)
@@ -58,7 +59,7 @@ def to_canonical(gov_data):
         s.flip_signs(row, multiplier, (doc.DOC_VALUE,))  # credit note 123123 -> -123123
 
         row[doc.ITEMS] = [
-            s.flip_signs(line, multiplier, ITEM_DEFAULTS)
+            s.flip_signs(line, multiplier, ITEM_AMOUNTS)
             for line in s.wrapped_items_from_gov(note.get(raw.ITEMS), KEYS, ITEM_DEFAULTS)
         ]
         s.add_item_totals(row, row[doc.ITEMS], s.ITEM_TOTALS_IGST)
@@ -79,7 +80,7 @@ def to_gov(rows, company_gstin=""):
         if row.get(doc.DOC_TYPE) in EXPORT_TYPES:
             out.pop(raw.POS, None)
 
-        items = [s.abs_amounts(dict(line), ITEM_DEFAULTS) for line in row[doc.ITEMS]]
+        items = [s.abs_amounts(dict(line), ITEM_AMOUNTS) for line in row[doc.ITEMS]]
         out[raw.ITEMS] = s.wrapped_items_to_gov(items, KEYS, ITEM_MONEY)
 
         return s.drop_zero_diff(out)

@@ -23,6 +23,7 @@ from . import (
     summary,
     supecom,
 )
+from ._shared import strip_empty as strip_empty
 
 # portal json key -> how to read it, and how to write it back (summary is read only)
 SECTIONS = {

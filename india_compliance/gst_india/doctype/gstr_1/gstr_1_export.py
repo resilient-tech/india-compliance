@@ -39,7 +39,7 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     convert_to_gov_data_format,
     get_category_wise_data,
 )
-from india_compliance.gst_india.utils.gstr_1.sections._shared import strip_empty
+from india_compliance.gst_india.utils.gstr_1.sections import strip_empty
 
 # Used for storing user preferences for GSTR-1 download sections.
 GSTR1_SECTIONS_DEFAULT_KEY = "gstr1_download_sections"

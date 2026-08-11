@@ -47,6 +47,7 @@ NOTE_TYPES = {
 NOTE_CODES = s.flip(NOTE_TYPES)
 
 ITEM_DEFAULTS = dict.fromkeys(s.ITEM_TOTALS, 0)
+ITEM_AMOUNTS = tuple(ITEM_DEFAULTS)
 
 MONEY = (raw.DOC_VALUE, raw.DIFF_PERCENTAGE)
 ITEM_MONEY = (raw.TAXABLE_VALUE, raw.IGST, raw.SGST, raw.CGST, raw.CESS)
@@ -59,8 +60,8 @@ def sign(note_type):
     return -1 if note_type == CREDIT_NOTE else 1
 
 
-def to_canonical(gov_data, names=None):
-    names = {} if names is None else names
+def to_canonical(gov_data):
+    names = {}
     output = {}
 
     def buyer(group):
@@ -83,7 +84,7 @@ def to_canonical(gov_data, names=None):
         s.flip_signs(row, multiplier, (doc.DOC_VALUE,))  # credit note 123123 -> -123123
 
         row[doc.ITEMS] = [
-            s.flip_signs(line, multiplier, ITEM_DEFAULTS)
+            s.flip_signs(line, multiplier, ITEM_AMOUNTS)
             for line in s.wrapped_items_from_gov(note.get(raw.ITEMS), KEYS, ITEM_DEFAULTS)
         ]
         s.add_item_totals(row, row[doc.ITEMS], s.ITEM_TOTALS)
@@ -105,7 +106,7 @@ def to_gov(rows, company_gstin=""):
         s.convert(out, raw.NOTE_DATE, s.date_to_gov)  # 2016-09-23 -> 23-09-2016
         s.convert(out, raw.POS, s.pos_to_gov)  # 03-Punjab -> 03
 
-        items = [s.abs_amounts(dict(line), ITEM_DEFAULTS) for line in row[doc.ITEMS]]
+        items = [s.abs_amounts(dict(line), ITEM_AMOUNTS) for line in row[doc.ITEMS]]
         out[raw.ITEMS] = s.wrapped_items_to_gov(items, KEYS, ITEM_MONEY)
 
         return s.drop_zero_diff(out)
