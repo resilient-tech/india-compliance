@@ -921,15 +921,15 @@ class TestHSNSUM(IntegrationTestCase):
                     raw.TAX_RATE: 0.1,
                 },
                 {
-                    gov_f.INDEX: 2,
-                    gov_f.HSN_CODE: "1011",
-                    gov_f.DESCRIPTION: "Goods Description with a very",
-                    gov_f.UOM: "NOS",
-                    gov_f.QUANTITY: 2.05,
-                    gov_f.TAXABLE_VALUE: 10.23,
-                    gov_f.IGST: 14.52,
-                    gov_f.CESS: 500,
-                    gov_f.TAX_RATE: 5,
+                    raw.INDEX: 2,
+                    raw.HSN_CODE: "1011",
+                    raw.DESCRIPTION: "Goods Description with a very",
+                    raw.UOM: "NOS",
+                    raw.QUANTITY: 2.05,
+                    raw.TAXABLE_VALUE: 10.23,
+                    raw.IGST: 14.52,
+                    raw.CESS: 500,
+                    raw.TAX_RATE: 5,
                 },
             ]
         }
@@ -949,16 +949,16 @@ class TestHSNSUM(IntegrationTestCase):
                     doc.DOC_VALUE: 524.75,
                 },
                 "1011 - NOS-NUMBERS - 5.0": {
-                    inv_f.DOC_TYPE: GSTR1_SubCategory.HSN.value,
-                    inv_f.HSN_CODE: "1011",
-                    inv_f.DESCRIPTION: "Goods Description with a very",
-                    inv_f.UOM: "NOS-NUMBERS",
-                    inv_f.QUANTITY: 2.05,
-                    inv_f.TAXABLE_VALUE: 10.23,
-                    inv_f.IGST: 14.52,
-                    inv_f.CESS: 500,
-                    inv_f.TAX_RATE: 5,
-                    inv_f.DOC_VALUE: 524.75,
+                    doc.DOC_TYPE: SubCategory.HSN.value,
+                    doc.HSN_CODE: "1011",
+                    doc.DESCRIPTION: "Goods Description with a very",
+                    doc.UOM: "NOS-NUMBERS",
+                    doc.QUANTITY: 2.05,
+                    doc.TAXABLE_VALUE: 10.23,
+                    doc.IGST: 14.52,
+                    doc.CESS: 500,
+                    doc.TAX_RATE: 5,
+                    doc.DOC_VALUE: 524.75,
                 },
             }
         }
@@ -970,11 +970,11 @@ class TestHSNSUM(IntegrationTestCase):
     def test_convert_to_gov_data_format(self):
         mapped_data = copy.deepcopy(self.mapped_data)
 
-        mapped_data[GSTR1_SubCategory.HSN.value]["1011 - NOS-NUMBERS - 5.0"][inv_f.DESCRIPTION] = (
+        mapped_data[SubCategory.HSN.value]["1011 - NOS-NUMBERS - 5.0"][doc.DESCRIPTION] = (
             "Goods Description with a very long text"
         )
 
-        output = HSNSUM().convert_to_gov_data_format(process_mapped_data(mapped_data))
+        output = strip_empty_of(hsn.to_gov, process_mapped_data(mapped_data))
         self.assertDictEqual(self.json_data, output)
 
 

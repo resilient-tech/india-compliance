@@ -10,7 +10,7 @@ from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
 from india_compliance.gst_india.utils.gstr_1 import (
-    GSTR1_SubCategory,
+    SubCategory,
     truncate_hsn_description,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices

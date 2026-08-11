@@ -11,6 +11,7 @@ response arrives as one object rather than a list. Both shapes are accepted.
 
 from frappe.utils import flt
 
+from india_compliance.gst_india.utils.gstr_1 import truncate_hsn_description
 from india_compliance.gst_returns.fields.gstr1 import DocField as doc
 from india_compliance.gst_returns.fields.gstr1 import ItemField as item
 from india_compliance.gst_returns.fields.gstr1 import RawField as raw
@@ -50,13 +51,6 @@ MONEY = (
     raw.SGST,
     raw.CESS,
 )
-
-DESCRIPTION_LIMIT = 30
-
-
-def truncate_description(text):
-    """The portal caps descriptions at 30 characters, without padding."""
-    return text.strip()[:DESCRIPTION_LIMIT].rstrip()
 
 
 def group_key(entry):
@@ -116,7 +110,7 @@ def to_gov(rows, company_gstin=""):
         out = s.round_money(s.with_defaults(s.pick_back(row, KEYS), {raw.INDEX: counts[section]}), MONEY)
 
         s.convert(out, raw.UOM, lambda uom: s.uom_to_gov(uom, row.get(doc.HSN_CODE)))
-        s.convert(out, raw.DESCRIPTION, truncate_description)
+        s.convert(out, raw.DESCRIPTION, truncate_hsn_description)
 
         output.setdefault(section, []).append(out)
 

@@ -718,7 +718,7 @@ class TestCategoryRules(unittest.TestCase):
         written = hsn.to_gov(rows)[raw.HSN_B2B][0][raw.DESCRIPTION]
 
         self.assertEqual(written, "CEREAL FLOURS OTHER THAN THAT")
-        self.assertLessEqual(len(written), hsn.DESCRIPTION_LIMIT)
+        self.assertLessEqual(len(written), 30)
 
     def test_each_hsn_section_numbers_its_rows_from_one(self):
         rows = [
