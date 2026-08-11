@@ -1,4 +1,3 @@
-frappe.provide("india_compliance");
 const DOCTYPE = "Asset Movement";
 
 setup_e_waybill_actions(DOCTYPE);
@@ -28,6 +27,7 @@ frappe.ui.form.on(DOCTYPE, {
 
     onload(frm) {
         frm.taxes_controller = new india_compliance.taxes_controller(frm);
+        set_address_labels(frm);
     },
 
     refresh(frm) {
@@ -58,6 +58,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     purpose(frm) {
+        set_address_labels(frm);
         set_company_address(frm);
     },
 
@@ -65,6 +66,17 @@ frappe.ui.form.on(DOCTYPE, {
         frm.taxes_controller.update_taxes(frm);
     },
 });
+
+function set_address_labels(frm) {
+    // company is billed to on a Receipt, and bills from otherwise
+    const [company_field, company_label, party_field, party_label] =
+        frm.doc.purpose === "Receipt"
+            ? ["bill_to_address", __("Bill To (Company)"), "bill_from_address", __("Bill From")]
+            : ["bill_from_address", __("Bill From (Company)"), "bill_to_address", __("Bill To")];
+
+    frm.set_df_property(company_field, "label", company_label);
+    frm.set_df_property(party_field, "label", party_label);
+}
 
 function set_company_address(frm) {
     if (!frm.doc.company || !india_compliance.is_e_waybill_applicable_for_asset_movement(frm.doc)) return;
