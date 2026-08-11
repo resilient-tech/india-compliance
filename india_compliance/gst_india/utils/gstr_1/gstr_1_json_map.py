@@ -1777,6 +1777,16 @@ class RETSUM(GSTR1DataMapper):
         if data.get("sec_nm") == "DOC_ISSUE":
             response["no_of_records"] = data.get("net_doc_issued", 0)
 
+        # Nil-Rated section is reported without a taxable value by the govt.
+        # Computed to compare against books summary.
+        elif data.get("sec_nm") == "NIL":
+            response[inv_f.TAXABLE_VALUE] = flt(
+                flt(data.get("ttl_expt_amt"))
+                + flt(data.get("ttl_nilsup_amt"))
+                + flt(data.get("ttl_ngsup_amt")),
+                2,
+            )
+
         return response
 
     def format_subsection_data(self, section, subsection_data):
