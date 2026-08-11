@@ -61,6 +61,21 @@ class TestGSTHSNCode(FrappeTestCase):
         # LIKE is case insensitive on MariaDB, and rendered as ILIKE on Postgres
         self.assertEqual(options, get_hsn_code_list(txt="horses for polo", limit=100))
 
+    @change_settings("GST Settings", {"validate_hsn_code": 1, "min_hsn_digits": 6})
+    def test_get_hsn_code_list_excludes_invalid_lengths(self):
+        # no seeded code has an invalid length, so make one longer than min_hsn_digits
+        invalid_hsn = frappe.get_doc(
+            {"doctype": "GST HSN Code", "hsn_code": f"{FOUR_DIGIT_HSN}123", "description": "HORSES"}
+        )
+        invalid_hsn.flags.ignore_validate = True
+        invalid_hsn.insert(ignore_if_duplicate=True)
+        self.addCleanup(invalid_hsn.delete)
+
+        codes = [option.value for option in get_hsn_code_list(txt=FOUR_DIGIT_HSN, limit="100")]
+
+        self.assertIn(SIX_DIGIT_HSN, codes)
+        self.assertNotIn(invalid_hsn.name, codes)
+
     @change_settings("GST Settings", {"validate_hsn_code": 1, "min_hsn_digits": 8})
     def test_get_hsn_code_list_respects_min_hsn_digits(self):
         options = get_hsn_code_list(txt=FOUR_DIGIT_HSN, limit="100")
