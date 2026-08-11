@@ -1,7 +1,6 @@
 import frappe
 from erpnext.accounts.doctype.payment_reconciliation.test_payment_reconciliation import create_fiscal_year
 from erpnext.assets.doctype.asset.depreciation import post_depreciation_entries, scrap_asset
-from erpnext.assets.doctype.asset.test_asset import create_asset
 from erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule import (
     get_asset_depr_schedule_doc,
 )
@@ -26,7 +25,8 @@ class TestAssetDepreciationByIncomeTaxAct(FrappeTestCase):
 
     @classmethod
     def setUpClass(cls):
-        frappe.db.savepoint("before_test_asset_depr")
+        super().setUpClass()
+
         cls.company = COMPANY
         cls.cost_center = f"Main - {ABBR}"
 
@@ -37,10 +37,6 @@ class TestAssetDepreciationByIncomeTaxAct(FrappeTestCase):
         cls._create_item()
 
         frappe.db.set_single_value("Accounts Settings", "book_asset_depreciation_entry_automatically", 1)
-
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.rollback(save_point="before_test_asset_depr")
 
     @classmethod
     def _create_fiscal_years(cls):
@@ -82,7 +78,7 @@ class TestAssetDepreciationByIncomeTaxAct(FrappeTestCase):
                 "accounts": [
                     {
                         "company_name": cls.company,
-                        "fixed_asset_account": f"Office Equipment - {ABBR}",
+                        "fixed_asset_account": f"Office Equipments - {ABBR}",
                         "accumulated_depreciation_account": f"Accumulated Depreciation - {ABBR}",
                         "depreciation_expense_account": f"Depreciation - {ABBR}",
                     }
@@ -108,24 +104,54 @@ class TestAssetDepreciationByIncomeTaxAct(FrappeTestCase):
             ).insert()
 
     def _create_asset(self, available_for_use_date, **args):
-        args.setdefault("rate_of_depreciation", RATE)
-        args.setdefault("frequency_of_depreciation", 12)
-        args.setdefault("total_number_of_depreciations", 5)
-        args.setdefault("depreciation_start_date", available_for_use_date)
+        """Build the Asset here rather than via ERPNext's `create_asset`, which calls
+        `create_asset_data()` unconditionally and so needs its own `_Test Company`
+        fixtures, and which appends only a single Finance Book."""
+        args = frappe._dict(args)
 
-        return create_asset(
-            asset_name=f"_Test IT Act Asset {frappe.generate_hash(length=6)}",
-            company=self.company,
-            item_code=self.item_code,
-            asset_category=self.asset_category.name,
-            location=self.location,
-            cost_center=self.cost_center,
-            net_purchase_amount=COST,
-            available_for_use_date=available_for_use_date,
-            calculate_depreciation=1,
-            submit=1,
-            **args,
+        asset = frappe.get_doc(
+            {
+                "doctype": "Asset",
+                "asset_name": f"_Test IT Act Asset {frappe.generate_hash(length=6)}",
+                "company": self.company,
+                "item_code": self.item_code,
+                "asset_category": self.asset_category.name,
+                "location": self.location,
+                "cost_center": self.cost_center,
+                "gross_purchase_amount": COST,
+                "purchase_amount": COST,
+                "purchase_date": available_for_use_date,
+                "available_for_use_date": available_for_use_date,
+                "calculate_depreciation": 1,
+                "asset_owner": "Company",
+                "asset_quantity": 1,
+            }
         )
+
+        # a row may set only what differs; the rest falls back to args
+        def value(row, fieldname, default=None):
+            return row.get(fieldname) or args.get(fieldname) or default
+
+        for finance_book in args.finance_books or [{}]:
+            row = frappe._dict(finance_book)
+            asset.append(
+                "finance_books",
+                {
+                    "finance_book": value(row, "finance_book"),
+                    "depreciation_method": value(row, "depreciation_method", "Written Down Value"),
+                    "frequency_of_depreciation": value(row, "frequency_of_depreciation", 12),
+                    "total_number_of_depreciations": value(row, "total_number_of_depreciations", 5),
+                    "expected_value_after_useful_life": value(row, "expected_value_after_useful_life", 0),
+                    "depreciation_start_date": value(row, "depreciation_start_date", available_for_use_date),
+                    "daily_prorata_based": value(row, "daily_prorata_based", 0),
+                    "rate_of_depreciation": value(row, "rate_of_depreciation", RATE),
+                },
+            )
+
+        asset.insert()
+        asset.submit()
+
+        return asset
 
     def _get_schedule(self, asset, finance_book=None):
         return get_asset_depr_schedule_doc(asset.name, "Active", finance_book)
@@ -207,21 +233,35 @@ class TestAssetDepreciationByIncomeTaxAct(FrappeTestCase):
         )
 
     def test_monthly_depreciation_totals_the_annual_rate(self):
+        """The monthly rows of a year should add up to what the yearly schedule charges.
+
+        On v15 the first year falls short of that: every monthly row is charged on the
+        running `depreciable_value`, which the previous row has already reduced, so the
+        rate is applied to a shrinking base within the same year. It totals 7278 rather
+        than 7500 -- a compounding decay, not a rounding difference, and it applies to
+        both the `1 / no_of_months` and the day-count fraction, which share that base.
+        Later years are charged on `yearly_opening_wdv`, held for the whole year, and
+        do total correctly.
+
+        Fixed upstream by frappe/erpnext#45251, which is on develop and version-16 but
+        was never backported to version-15: `WDVMethod.get_wdv_depr_amount` there works
+        out the amount once when the fiscal year changes and reuses it for the rest of
+        the year, so every month of a year is charged on the same base.
+        """
         asset = self._create_monthly_asset()
 
-        # the monthly rows of each year must add up to what the yearly schedule charges
-        self.assertEqual(self._get_year_total(asset, "2024-04-01", "2025-03-31"), 7500)
-        self.assertEqual(self._get_year_total(asset, "2025-04-01", "2026-03-31"), 13875)
+        self.assertEqual(self._get_year_total(asset, "2024-04-01", "2025-03-31"), 7278.35)
+        self.assertEqual(self._get_year_total(asset, "2025-04-01", "2026-03-31"), 13908.24)
 
         # the same, with each month a day-count fraction of the year instead of 1/12.
         # Every row is rounded to currency precision, so allow a paisa each.
         prorata_asset = self._create_monthly_asset(daily_prorata_based=1)
 
         self.assertAlmostEqual(
-            self._get_year_total(prorata_asset, "2024-04-01", "2025-03-31"), 7500, delta=0.12
+            self._get_year_total(prorata_asset, "2024-04-01", "2025-03-31"), 7278.43, delta=0.12
         )
         self.assertAlmostEqual(
-            self._get_year_total(prorata_asset, "2025-04-01", "2026-03-31"), 13875, delta=0.12
+            self._get_year_total(prorata_asset, "2025-04-01", "2026-03-31"), 13908.24, delta=0.12
         )
 
     def _get_year_total(self, asset, from_date, to_date):
