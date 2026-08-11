@@ -17,10 +17,21 @@ const SUBCONTRACTING_DOCTYPES = ["Stock Entry", "Subcontracting Order", "Subcont
 
 const POST_SUBMIT_GST_FIELDS = ["gst_category", "place_of_supply", "billing_address_gstin", "supplier_gstin"];
 
+const HSN_CODE_DOCTYPES = [
+    ...TRANSACTION_DOCTYPES,
+    ...SUBCONTRACTING_DOCTYPES,
+    "Material Request",
+    "POS Invoice",
+];
+
 for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
     validate_overseas_gst_category(doctype);
     set_and_validate_gstin_status(doctype);
+}
+
+for (const doctype of HSN_CODE_DOCTYPES) {
+    set_hsn_code_autocomplete(doctype);
 }
 
 for (const doctype of SUBCONTRACTING_DOCTYPES) {
@@ -197,6 +208,14 @@ function ignore_port_code_validation(doctype) {
     frappe.ui.form.on(doctype, {
         onload(frm) {
             frm.set_df_property("port_code", "ignore_validation", 1);
+        },
+    });
+}
+
+function set_hsn_code_autocomplete(doctype) {
+    frappe.ui.form.on(doctype, {
+        setup(frm) {
+            india_compliance.set_hsn_code_autocomplete(frm);
         },
     });
 }
