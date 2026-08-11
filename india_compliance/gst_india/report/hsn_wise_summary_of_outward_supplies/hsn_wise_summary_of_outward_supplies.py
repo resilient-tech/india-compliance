@@ -9,7 +9,10 @@ from frappe import _
 from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
+from india_compliance.gst_india.utils.gstr_1 import (
+    HSN_DESCRIPTION_LIMIT,
+    GSTR1_SubCategory,
+)
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 
@@ -217,7 +220,7 @@ def get_hsn_wise_json_data(report_data, filters):
         }
 
         if hsn_description := hsn.get("description"):
-            row["desc"] = hsn_description[:30]
+            row["desc"] = hsn_description[:HSN_DESCRIPTION_LIMIT].strip()
 
         row["iamt"] += hsn.get("total_igst_amount")
         row["camt"] += hsn.get("total_cgst_amount")

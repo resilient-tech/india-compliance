@@ -14,6 +14,7 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
+    HSN_DESCRIPTION_LIMIT,
     SUB_CATEGORY_GOV_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
@@ -1149,7 +1150,7 @@ class HSNSUM(GSTR1DataMapper):
         self.value_formatters_for_internal = {gov_f.UOM: self.map_uom}
         self.value_formatters_for_gov = {
             inv_f.UOM: self.map_uom,
-            inv_f.DESCRIPTION: lambda x, *args: x[:30],
+            inv_f.DESCRIPTION: lambda x, *args: x[:HSN_DESCRIPTION_LIMIT].strip(),
         }
 
     def convert_to_internal_data_format(self, input_data):
