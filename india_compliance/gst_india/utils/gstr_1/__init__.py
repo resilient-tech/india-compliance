@@ -41,6 +41,8 @@ from india_compliance.gst_returns.fields.gstr1 import (  # noqa: F401
 
 HSN_BIFURCATION_FROM = getdate("2025-05-01")
 
+HSN_DESCRIPTION_LIMIT = 30
+
 B2C_LIMIT = [
     ("2024-07-31", 2_50_000),
     ("2099-03-31", 1_00_000),
