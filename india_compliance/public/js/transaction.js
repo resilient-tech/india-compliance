@@ -212,17 +212,6 @@ function ignore_port_code_validation(doctype) {
     });
 }
 
-<<<<<<< HEAD
-=======
-function set_gst_tax_breakup_on_load(doctype) {
-    frappe.ui.form.on(doctype, {
-        refresh(frm) {
-            frm.doc.gst_breakup_table = frm.doc.__onload?._gst_breakup_table;
-            frm.refresh_field("gst_breakup_table");
-        },
-    });
-}
-
 function set_hsn_code_autocomplete(doctype) {
     frappe.ui.form.on(doctype, {
         setup(frm) {
@@ -231,7 +220,6 @@ function set_hsn_code_autocomplete(doctype) {
     });
 }
 
->>>>>>> b296625a (fix: convert hsn field in transactions as autocomplete fields)
 function is_foreign_transaction(frm) {
     return frm.doc.gst_category === "Overseas" && frm.doc.place_of_supply === "96-Other Countries";
 }

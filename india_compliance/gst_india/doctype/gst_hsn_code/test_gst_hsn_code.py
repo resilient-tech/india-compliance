@@ -10,20 +10,12 @@ from india_compliance.gst_india.doctype.gst_hsn_code.gst_hsn_code import (
 )
 from india_compliance.gst_india.utils import get_hsn_code_list
 
-<<<<<<< HEAD
-=======
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Item Tax Template", "Tax Category"]
 
 FOUR_DIGIT_HSN = "0101"
 SIX_DIGIT_HSN = "010121"
 EIGHT_DIGIT_HSN = "01012100"
 
-
-class TestGSTHSNCode(IntegrationTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
->>>>>>> b296625a (fix: convert hsn field in transactions as autocomplete fields)
 
 class TestGSTHSNCode(FrappeTestCase):
     @change_settings("GST Settings", {"validate_hsn_code": 0})
