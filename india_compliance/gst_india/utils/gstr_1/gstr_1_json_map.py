@@ -14,7 +14,6 @@ from india_compliance.gst_india.utils.gstr_1 import (
     DocField as doc,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_books_map import (  # noqa: F401
-    BooksDataMapper,
     GSTR1BooksData,
 )
 from india_compliance.gst_india.utils.gstr_1.sections import SECTIONS

@@ -15,11 +15,11 @@ from india_compliance.gst_india.utils.gstr_1 import (
 from india_compliance.gst_india.utils.gstr_1 import (
     DocField as doc,
 )
-from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
-from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
+from india_compliance.gst_india.utils.gstr_1.gstr_1_books_map import (
     BooksDataMapper,
     GSTR1BooksData,
 )
+from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
