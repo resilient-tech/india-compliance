@@ -261,26 +261,43 @@ def get_tax_amount(taxes, gst_tax_type):
     )
 
 
-def set_ineligibility_reason(doc, show_alert=True):
-    doc.ineligibility_reason = ""
+def get_ineligibility_reason(doc):
+    """
+    Return the ITC ineligibility reason.
+    """
+    ineligibility_reason = ""
 
     for item in doc.items:
         if item.is_ineligible_for_itc:
-            doc.ineligibility_reason = "Ineligible As Per Section 17(5)"
+            ineligibility_reason = "Ineligible As Per Section 17(5)"
             break
 
     if (
-        doc.place_of_supply not in ["96-Other Countries", "97-Other Territory"]
+        doc.place_of_supply
+        and doc.company_gstin
+        and doc.place_of_supply not in ["96-Other Countries", "97-Other Territory"]
         and doc.place_of_supply[:2] != doc.company_gstin[:2]
     ):
-        doc.ineligibility_reason = "ITC restricted due to PoS rules"
+        ineligibility_reason = "ITC restricted due to PoS rules"
 
-    if show_alert and doc.ineligibility_reason:
-        frappe.msgprint(
-            _("ITC Ineligible: {0}").format(frappe.bold(doc.ineligibility_reason)),
-            alert=True,
-            indicator="orange",
-        )
+    return ineligibility_reason
+
+
+def show_ineligibility_alert(reason):
+    if not reason:
+        return
+    frappe.msgprint(
+        _("ITC Ineligible: {0}").format(frappe.bold(reason)),
+        alert=True,
+        indicator="orange",
+    )
+
+
+def set_ineligibility_reason(doc, show_alert=True):
+    doc.ineligibility_reason = get_ineligibility_reason(doc)
+
+    if show_alert:
+        show_ineligibility_alert(doc.ineligibility_reason)
 
 
 def validate_reverse_charge(doc):

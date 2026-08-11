@@ -275,8 +275,15 @@ class TestSubcontractingTransaction(IntegrationTestCase):
     def test_create_and_update_stock_entry(self):
         stock_entry = make_subcontracting_stock_entry(do_not_submit=True)
 
-        # Update the subcontracting transaction
-        stock_entry.run_method("onload")  # update virtual fields
+        self.assertTrue(stock_entry.bill_from_address_display)
+        self.assertTrue(stock_entry.bill_to_address_display)
+        self.assertEqual(
+            stock_entry.as_dict().get("bill_from_address_display"),
+            stock_entry.bill_from_address_display,
+        )
+
+        # onload maps the company/supplier GSTIN fields for e-Waybill data.
+        stock_entry.run_method("onload")
         stock_entry.select_print_heading = "Credit Note"
         stock_entry.save()
 
