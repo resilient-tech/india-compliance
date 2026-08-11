@@ -613,7 +613,7 @@ class GSTR1BooksData(BooksDataMapper):
             )
             multipler = 1
 
-        elif type_of_business == "Adjustment":
+        else:
             query = _class.get_11B_query()
             fields = _class.get_11B_payment_entry_fields(
                 name="name",

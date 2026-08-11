@@ -17,7 +17,11 @@ import itertools
 import unittest
 from typing import ClassVar
 
-from india_compliance.gst_returns.fields.gstr1 import B2BInvoiceType, SubCategory
+from india_compliance.gst_returns.fields.gstr1 import (
+    B2BInvoiceType,
+    DocumentNature,
+    SubCategory,
+)
 from india_compliance.gst_returns.fields.gstr1 import DocField as doc
 from india_compliance.gst_returns.fields.gstr1 import ItemField as item
 from india_compliance.gst_returns.fields.gstr1 import RawField as raw
@@ -219,6 +223,48 @@ class TestMoney(unittest.TestCase):
         out = b2b.to_gov(rows)[0][raw.INVOICES][0]
         self.assertEqual(out[raw.DOC_VALUE], 729248.16)
         self.assertEqual(out[raw.ITEMS][0][raw.ITEM_DETAILS][raw.TAXABLE_VALUE], 10.01)
+
+
+class TestBlanksFromThePortal(unittest.TestCase):
+    """What the portal leaves out, and what it explicitly sends as nothing, are different things."""
+
+    def payload(self, item_details, **invoice):
+        return [
+            {
+                raw.CUST_GSTIN: "24AANFA2641L1ZF",
+                raw.INVOICES: [
+                    {
+                        raw.DOC_NUMBER: "S1",
+                        raw.DOC_DATE: "24-11-2016",
+                        raw.POS: "06",
+                        raw.INVOICE_TYPE: "R",
+                        **invoice,
+                        **(
+                            {raw.ITEMS: [{raw.INDEX: 1, raw.ITEM_DETAILS: item_details}]}
+                            if item_details
+                            else {}
+                        ),
+                    }
+                ],
+            }
+        ]
+
+    def test_a_null_amount_is_not_turned_into_a_zero(self):
+        payload = self.payload({raw.TAX_RATE: 5, raw.TAXABLE_VALUE: 100, raw.IGST: None})
+        row = flatten(b2b.to_canonical(payload))[0]
+
+        self.assertIsNone(row[doc.ITEMS][0][item.IGST])
+        self.assertEqual(row[doc.ITEMS][0][item.CGST], 0)
+        self.assertNotIn(doc.IGST, row)  # nothing to add to the invoice total
+
+        written = b2b.to_gov([row])[0][raw.INVOICES][0]
+        self.assertNotIn(raw.IGST, s.strip_empty(written)[raw.ITEMS][0][raw.ITEM_DETAILS])
+
+    def test_an_invoice_with_no_items_still_reads(self):
+        row = flatten(b2b.to_canonical(self.payload(None, **{raw.DOC_VALUE: 100})))[0]
+
+        self.assertNotIn(doc.ITEMS, row)
+        self.assertNotIn(doc.TAXABLE_VALUE, row)
 
 
 class TestFlag(unittest.TestCase):
@@ -637,6 +683,70 @@ class TestWritingLeavesStoredRowsAlone(unittest.TestCase):
         self.assertEqual(first[raw.DOC_ISSUE_DETAILS][0][raw.DOC_ISSUE_LIST][0][raw.NET_ISSUE], 7)
 
 
+class TestCategoryRules(unittest.TestCase):
+    """The rules that belong to one category only, and so are easy to lose in a rewrite."""
+
+    def test_an_export_credit_note_reports_no_place_of_supply(self):
+        rows = flatten(cdnur.to_canonical(PAYLOADS["cdnur"][2]))
+        self.assertIn(raw.POS, cdnur.to_gov(rows)[0])
+
+        rows[0][doc.DOC_TYPE] = "EXPWP"
+        self.assertNotIn(raw.POS, cdnur.to_gov(rows)[0])
+
+    def test_an_export_type_with_no_invoices_still_gets_a_bucket(self):
+        self.assertEqual(
+            exports.to_canonical([{raw.EXPORT_TYPE: "WPAY", raw.INVOICES: []}]),
+            {SubCategory.EXPWP.value: {}},
+        )
+
+    def test_a_service_hsn_reports_no_unit(self):
+        goods, service = (
+            hsn.to_gov([{doc.DOC_TYPE: SubCategory.HSN_B2B.value, doc.HSN_CODE: code, doc.UOM: "BOX-BOX"}])
+            for code in ("1102", "9954")
+        )
+        self.assertEqual(goods[raw.HSN_B2B][0][raw.UOM], "BOX")
+        self.assertEqual(service[raw.HSN_B2B][0][raw.UOM], "NA")
+
+    def test_each_hsn_section_numbers_its_rows_from_one(self):
+        rows = [
+            {doc.DOC_TYPE: SubCategory.HSN_B2B.value, doc.HSN_CODE: "1102"},
+            {doc.DOC_TYPE: SubCategory.HSN_B2B.value, doc.HSN_CODE: "1103"},
+            {doc.DOC_TYPE: SubCategory.HSN_B2C.value, doc.HSN_CODE: "1104"},
+        ]
+        out = hsn.to_gov(rows)
+
+        self.assertEqual([row[raw.INDEX] for row in out[raw.HSN_B2B]], [1, 2])
+        self.assertEqual([row[raw.INDEX] for row in out[raw.HSN_B2C]], [1])
+
+    def test_a_repeated_hsn_section_merges_instead_of_replacing(self):
+        error_payload = [
+            {raw.HSN_B2B: [{raw.HSN_CODE: "1102", raw.UOM: "BOX", raw.TAX_RATE: 1}]},
+            {raw.HSN_B2B: [{raw.HSN_CODE: "1103", raw.UOM: "BOX", raw.TAX_RATE: 1}]},
+        ]
+        rows = hsn.to_canonical(error_payload)[SubCategory.HSN_B2B.value]
+
+        self.assertEqual(sorted(rows), ["1102 - BOX-BOX - 1.0", "1103 - BOX-BOX - 1.0"])
+
+    def test_a_range_excluded_from_the_report_is_not_filed(self):
+        rows = [
+            {doc.DOC_TYPE: f"{doc_issue.NOT_REPORTED} (Invalid Invoice Number)", doc.TOTAL_COUNT: 2},
+            {
+                doc.DOC_TYPE: DocumentNature.OUTWARD_SUPPLY.value,
+                doc.FROM_SR: "3",
+                doc.TO_SR: "4",
+                doc.TOTAL_COUNT: 2,
+            },
+        ]
+        details = doc_issue.to_gov(rows)[raw.DOC_ISSUE_DETAILS]
+
+        self.assertEqual(len(details), 1)
+        self.assertEqual(details[0][raw.DOC_ISSUE_LIST][0][raw.FROM_SR], "3")
+
+    def test_a_nil_rated_line_with_nothing_in_it_is_dropped(self):
+        payload = {raw.INVOICES: [{raw.SUPPLY_TYPE: "INTRB2B", raw.EXEMPTED_AMOUNT: 0}]}
+        self.assertEqual(nil_rated.to_canonical(payload), {nil_rated.SUBCATEGORY: {}})
+
+
 class TestSummary(unittest.TestCase):
     RAW: ClassVar[list] = [
         {"sec_nm": "B2B", "ttl_rec": 2, "ttl_tax": 5000, "ttl_igst": 900},
@@ -659,6 +769,23 @@ class TestSummary(unittest.TestCase):
         self.assertEqual([row["indent"] for row in overview], [0, 1])
         self.assertEqual(overview[0][doc.DESCRIPTION], "B2B, SEZ, DE")
         self.assertEqual(overview[1][doc.DESCRIPTION], SubCategory.B2B_REGULAR.value)
+
+    def test_an_amended_ecommerce_section_names_its_subsections(self):
+        """Pins which subsection code the portal sends inside an amended section."""
+        rows = summary.to_canonical(
+            [
+                {
+                    "sec_nm": "SUPECOMA",
+                    "ttl_rec": 1,
+                    "sub_sections": [{"typ": "SUPECOM_14A", "ttl_rec": 1, "ttl_tax": 60}],
+                }
+            ]
+        )["summary"]
+
+        self.assertIn(f"{SubCategory.SUPECOM_52.value} {summary.AMENDED}", rows)
+
+    def test_a_summary_without_subsections_falls_back_to_our_own(self):
+        self.assertEqual(summary.to_canonical([{"sec_nm": "SUPECOM", "ttl_rec": 1}]), {})
 
     def test_amendments_collapse_into_one_closing_line(self):
         rows = [
