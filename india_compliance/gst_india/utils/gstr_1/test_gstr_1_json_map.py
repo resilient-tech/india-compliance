@@ -901,7 +901,7 @@ class TestHSNSUM(FrappeTestCase):
                 {
                     gov_f.INDEX: 2,
                     gov_f.HSN_CODE: "1011",
-                    gov_f.DESCRIPTION: "Goods Description",
+                    gov_f.DESCRIPTION: "Goods Description with a very",
                     gov_f.UOM: "NOS",
                     gov_f.QUANTITY: 2.05,
                     gov_f.TAXABLE_VALUE: 10.23,
@@ -929,7 +929,7 @@ class TestHSNSUM(FrappeTestCase):
                 "1011 - NOS-NUMBERS - 5.0": {
                     inv_f.DOC_TYPE: GSTR1_SubCategory.HSN.value,
                     inv_f.HSN_CODE: "1011",
-                    inv_f.DESCRIPTION: "Goods Description",
+                    inv_f.DESCRIPTION: "Goods Description with a very",
                     inv_f.UOM: "NOS-NUMBERS",
                     inv_f.QUANTITY: 2.05,
                     inv_f.TAXABLE_VALUE: 10.23,
@@ -946,7 +946,13 @@ class TestHSNSUM(FrappeTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = HSNSUM().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
+        mapped_data = copy.deepcopy(self.mapped_data)
+
+        mapped_data[GSTR1_SubCategory.HSN.value]["1011 - NOS-NUMBERS - 5.0"][inv_f.DESCRIPTION] = (
+            "Goods Description with a very long text"
+        )
+
+        output = HSNSUM().convert_to_gov_data_format(process_mapped_data(mapped_data))
         self.assertDictEqual(self.json_data, output)
 
 
