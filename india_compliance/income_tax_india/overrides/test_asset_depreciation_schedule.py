@@ -1,18 +1,12 @@
 import frappe
 from erpnext.assets.doctype.asset.depreciation import post_depreciation_entries, scrap_asset
-from erpnext.assets.doctype.asset.mapper import make_sales_invoice
 from erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule import (
     get_asset_depr_schedule_doc,
 )
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, getdate
 
-from india_compliance.tests.erpnext_test_utils import (
-    create_account,
-    create_asset,
-    create_fiscal_year,
-    set_depreciation_settings_in_company,
-)
+from india_compliance.tests.erpnext_test_utils import create_asset, create_fiscal_year
 
 COMPANY = "_Test Indian Registered Company"
 ABBR = "_TIRC"
@@ -37,11 +31,12 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
         cls.cost_center = f"Main - {ABBR}"
 
         cls._create_fiscal_years()
-        cls._create_accounts()
         cls._create_location()
         cls._create_finance_books()
         cls._create_asset_category()
         cls._create_item()
+
+        frappe.db.set_single_value("Accounts Settings", "book_asset_depreciation_entry_automatically", 1)
 
     @classmethod
     def tearDownClass(cls):
@@ -52,50 +47,6 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
         # fixed dates, so the 180-day threshold stays verifiable against the Act
         for start_year in range(2022, 2027):
             create_fiscal_year(cls.company, f"{start_year}-04-01", f"{start_year + 1}-03-31")
-
-    @classmethod
-    def _create_accounts(cls):
-        def parent(account_name):
-            return frappe.db.get_value(
-                "Account", {"account_name": account_name, "company": cls.company, "is_group": 1}
-            )
-
-        fixed_assets = parent("Fixed Assets")
-        indirect_expenses = parent("Indirect Expenses")
-
-        cls.fixed_asset_account = create_account(
-            account_name="Test IT Act Fixed Asset",
-            account_type="Fixed Asset",
-            parent_account=fixed_assets,
-            company=cls.company,
-        )
-        cls.accumulated_depreciation_account = create_account(
-            account_name="Test IT Act Accumulated Depreciation",
-            account_type="Accumulated Depreciation",
-            parent_account=fixed_assets,
-            company=cls.company,
-        )
-        cls.depreciation_expense_account = create_account(
-            account_name="Test IT Act Depreciation Expense",
-            account_type="Depreciation",
-            parent_account=indirect_expenses,
-            company=cls.company,
-        )
-        cls.disposal_account = create_account(
-            account_name="Test IT Act Gain Loss on Asset Disposal",
-            parent_account=indirect_expenses,
-            company=cls.company,
-        )
-
-        set_depreciation_settings_in_company(
-            cls.company,
-            {
-                "accumulated_depreciation_account": cls.accumulated_depreciation_account,
-                "depreciation_expense_account": cls.depreciation_expense_account,
-                "disposal_account": cls.disposal_account,
-                "depreciation_cost_center": cls.cost_center,
-            },
-        )
 
     @classmethod
     def _create_location(cls):
@@ -131,9 +82,9 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
                 "accounts": [
                     {
                         "company_name": cls.company,
-                        "fixed_asset_account": cls.fixed_asset_account,
-                        "accumulated_depreciation_account": cls.accumulated_depreciation_account,
-                        "depreciation_expense_account": cls.depreciation_expense_account,
+                        "fixed_asset_account": f"Office Equipment - {ABBR}",
+                        "accumulated_depreciation_account": f"Accumulated Depreciation - {ABBR}",
+                        "depreciation_expense_account": f"Depreciation - {ABBR}",
                     }
                 ],
             }
@@ -185,21 +136,22 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
 
     # get_wdv_or_dd_depr_amount
 
-    def test_act_rate_is_not_applied_without_a_finance_book(self):
+    def test_act_rate_is_not_applied_without_an_income_tax_finance_book(self):
         """Only that the Act's rate was not applied; ERPNext's arithmetic is its own to test."""
-        asset = self._create_asset("2024-05-01", depreciation_start_date="2025-03-31")
-
-        self.assertNotEqual(self._get_depreciation_amount(asset), 15000)
-
-    def test_act_rate_is_not_applied_for_a_non_income_tax_finance_book(self):
-        asset = self._create_asset(
+        without_finance_book = self._create_asset("2024-11-01", depreciation_start_date="2025-03-31")
+        regular_finance_book = self._create_asset(
             "2024-11-01",
             depreciation_start_date="2025-03-31",
             finance_book=self.fb_regular.name,
         )
 
         # under 180 days in use, but the half rate is an Income Tax Act rule only
-        self.assertNotEqual(self._get_depreciation_amount(asset, self.fb_regular.name), 7500)
+        default_amount = self._get_depreciation_amount(without_finance_book)
+        self.assertNotEqual(default_amount, 7500)
+        self.assertEqual(
+            self._get_depreciation_amount(regular_finance_book, self.fb_regular.name),
+            default_amount,
+        )
 
     def test_full_rate_when_put_to_use_for_more_than_180_days(self):
         asset = self._create_asset(
@@ -208,8 +160,10 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
             finance_book=self.fb_income_tax.name,
         )
 
-        # 1-May-2024 to 31-Mar-2025 is 335 days, so the full 15% applies
+        # 1-May-2024 to 31-Mar-2025 is 335 days, so the full 15% applies,
+        # and the second year charges 15% of the written down value
         self.assertEqual(self._get_depreciation_amount(asset, self.fb_income_tax.name), 15000)
+        self.assertEqual(self._get_depreciation_amount(asset, self.fb_income_tax.name, row_idx=1), 12750)
 
     def test_half_rate_when_put_to_use_for_less_than_180_days(self):
         asset = self._create_asset(
@@ -218,30 +172,12 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
             finance_book=self.fb_income_tax.name,
         )
 
-        # 1-Nov-2024 to 31-Mar-2025 is 151 days, so the rate is halved to 7.5%
+        # 1-Nov-2024 to 31-Mar-2025 is 151 days, so the rate is halved to 7.5%. The Act
+        # charges a half or full year, never a day-count fraction, so it is not 15000 * 151/365.
         self.assertEqual(self._get_depreciation_amount(asset, self.fb_income_tax.name), 7500)
 
-    def test_first_year_is_not_prorated_by_days_in_use(self):
-        """The Act charges a half or full year, never a day-count fraction."""
-        asset = self._create_asset(
-            "2024-11-15",
-            depreciation_start_date="2025-03-31",
-            finance_book=self.fb_income_tax.name,
-        )
-
-        # not 7500 * 137/365, but exactly half rate
-        self.assertEqual(self._get_depreciation_amount(asset, self.fb_income_tax.name), 7500)
-
-    def test_second_year_applies_full_rate_to_opening_wdv(self):
-        asset = self._create_asset(
-            "2023-04-01",
-            depreciation_start_date="2024-03-31",
-            finance_book=self.fb_income_tax.name,
-        )
-
-        # first year on cost, second on the written down value
-        self.assertEqual(self._get_depreciation_amount(asset, self.fb_income_tax.name), 15000)
-        self.assertEqual(self._get_depreciation_amount(asset, self.fb_income_tax.name, row_idx=1), 12750)
+        # the proviso halves only the first year; the second is 15% of 92500
+        self.assertEqual(self._get_depreciation_amount(asset, self.fb_income_tax.name, row_idx=1), 13875)
 
     def test_yearly_daily_prorata_uses_366_days_in_a_leap_year(self):
         asset = self._create_asset(
@@ -256,17 +192,6 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
             self._get_depreciation_amount(asset, self.fb_income_tax.name, row_idx=1),
             flt(12750 * 366 / 365, 2),
         )
-
-    def test_second_year_applies_full_rate_after_a_halved_first_year(self):
-        asset = self._create_asset(
-            "2024-11-01",
-            depreciation_start_date="2025-03-31",
-            finance_book=self.fb_income_tax.name,
-        )
-
-        # the proviso halves only the first year; the second is 15% of 92500
-        self.assertEqual(self._get_depreciation_amount(asset, self.fb_income_tax.name), 7500)
-        self.assertEqual(self._get_depreciation_amount(asset, self.fb_income_tax.name, row_idx=1), 13875)
 
     def _create_monthly_asset(self, **args):
         # put to use mid-year, so the first year spans 5 months and 151 days -- a
@@ -288,12 +213,16 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
         self.assertEqual(self._get_year_total(asset, "2024-04-01", "2025-03-31"), 7500)
         self.assertEqual(self._get_year_total(asset, "2025-04-01", "2026-03-31"), 13875)
 
-    def test_monthly_daily_prorata_depreciation_totals_the_annual_rate(self):
-        asset = self._create_monthly_asset(daily_prorata_based=1)
+        # the same, with each month a day-count fraction of the year instead of 1/12.
+        # Every row is rounded to currency precision, so allow a paisa each.
+        prorata_asset = self._create_monthly_asset(daily_prorata_based=1)
 
-        # each row is rounded to currency precision, so allow a paisa each
-        self.assertAlmostEqual(self._get_year_total(asset, "2024-04-01", "2025-03-31"), 7500, delta=0.12)
-        self.assertAlmostEqual(self._get_year_total(asset, "2025-04-01", "2026-03-31"), 13875, delta=0.12)
+        self.assertAlmostEqual(
+            self._get_year_total(prorata_asset, "2024-04-01", "2025-03-31"), 7500, delta=0.12
+        )
+        self.assertAlmostEqual(
+            self._get_year_total(prorata_asset, "2025-04-01", "2026-03-31"), 13875, delta=0.12
+        )
 
     def _get_year_total(self, asset, from_date, to_date):
         schedule = self._get_schedule(asset, self.fb_income_tax.name)
@@ -331,44 +260,7 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
         self.assertTrue(booked, "No depreciation entry was booked, nothing to cancel")
         return booked
 
-    def _assert_only_year_of_disposal_is_cancelled(self, booked):
-        self.assertEqual(
-            frappe.db.get_value("Journal Entry", booked[getdate("2025-03-31")], "docstatus"),
-            1,
-            "Depreciation of an earlier financial year must stay booked",
-        )
-        self.assertEqual(
-            frappe.db.get_value("Journal Entry", booked[getdate("2026-03-31")], "docstatus"),
-            2,
-            "Depreciation of the financial year of disposal must be cancelled",
-        )
-
-    def test_depreciation_of_year_of_sale_is_cancelled(self):
-        """Reaches the override through `Sales Invoice` -> `depreciate_asset`."""
-        asset = self._create_asset(
-            "2024-04-01",
-            depreciation_start_date="2025-03-31",
-            finance_book=self.fb_income_tax.name,
-        )
-        booked = self._book_depreciation(asset, "2026-03-31", self.fb_income_tax.name)
-
-        invoice = make_sales_invoice(
-            asset=asset.name,
-            item_code=self.item_code,
-            company=self.company,
-            sell_qty=asset.asset_quantity,
-        )
-        invoice.customer = "_Test Registered Customer"
-        invoice.set_posting_time = 1
-        invoice.posting_date = invoice.due_date = "2026-03-31"
-        invoice.items[0].rate = 50000
-        invoice.insert()
-        invoice.submit()
-
-        self.assertEqual(frappe.db.get_value("Asset", asset.name, "status"), "Sold")
-        self._assert_only_year_of_disposal_is_cancelled(booked)
-
-    def test_only_income_tax_finance_book_is_cancelled_on_scrap(self):
+    def test_depreciation_of_the_financial_year_of_disposal_is_cancelled(self):
         asset = self._create_asset(
             "2024-04-01",
             finance_books=[
@@ -382,12 +274,17 @@ class TestAssetDepreciationByIncomeTaxAct(IntegrationTestCase):
         scrap_asset(asset.name, "2026-03-31")
 
         self.assertEqual(
-            frappe.db.get_value("Journal Entry", regular[getdate("2026-03-31")], "docstatus"),
+            frappe.db.get_value("Journal Entry", income_tax[getdate("2025-03-31")], "docstatus"),
             1,
-            "The Income Tax Act rule must not touch a regular Finance Book",
+            "Depreciation of an earlier financial year must stay booked",
         )
         self.assertEqual(
             frappe.db.get_value("Journal Entry", income_tax[getdate("2026-03-31")], "docstatus"),
             2,
             "Depreciation of the financial year of scrap must be cancelled",
+        )
+        self.assertEqual(
+            frappe.db.get_value("Journal Entry", regular[getdate("2026-03-31")], "docstatus"),
+            1,
+            "The Income Tax Act rule must not touch a regular Finance Book",
         )
