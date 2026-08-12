@@ -266,6 +266,16 @@ class TestBlanksFromThePortal(unittest.TestCase):
         self.assertNotIn(doc.ITEMS, row)
         self.assertNotIn(doc.TAXABLE_VALUE, row)
 
+    def test_a_null_place_of_supply_still_reads(self):
+        """A kept null must not break the pos-rate key the row is stored under."""
+        b2cs_rows = b2cs.to_canonical([{raw.POS: None, raw.TAX_RATE: 5, raw.TAXABLE_VALUE: 100}])
+        self.assertIn(" - 5.0", b2cs_rows[b2cs.SUBCATEGORY])
+
+        at_rows = advances.received_to_canonical(
+            [{raw.POS: None, raw.ITEMS: [{raw.TAX_RATE: 5, raw.ADVANCE_AMOUNT: 100}]}]
+        )
+        self.assertIn(" - 5.0", at_rows[SubCategory.AT.value])
+
 
 class TestFlag(unittest.TestCase):
     ROW: ClassVar[dict] = {
@@ -342,6 +352,21 @@ class TestCreditNoteSigns(unittest.TestCase):
             doc.ITEMS: [{item.TAXABLE_VALUE: -100, item.TAX_RATE: 5}],
         }
         out = cdnr.to_gov([books_row])[0][raw.NOTE_DETAILS][0]
+        self.assertEqual(out[raw.INVOICE_TYPE], "DE")
+
+    def test_a_note_stored_with_the_old_label_still_files_the_portal_code(self):
+        """Rows mapped before the unification carry "Deemed Exports"; they must still file as DE."""
+        stored_row = {
+            doc.CUST_GSTIN: "24AANFA2641L1ZF",
+            doc.TRANSACTION_TYPE: "Credit Note",
+            doc.DOC_NUMBER: "533515",
+            doc.DOC_DATE: "2016-09-23",
+            doc.POS: "03-Punjab",
+            doc.DOC_TYPE: SubCategory.DE.value,
+            doc.DOC_VALUE: -123123,
+            doc.ITEMS: [{item.TAXABLE_VALUE: -100, item.TAX_RATE: 5}],
+        }
+        out = cdnr.to_gov([stored_row])[0][raw.NOTE_DETAILS][0]
         self.assertEqual(out[raw.INVOICE_TYPE], "DE")
 
     def test_registered_and_unregistered_notes_share_one_note_type_table(self):
@@ -784,18 +809,19 @@ class TestSummary(unittest.TestCase):
         self.assertEqual(overview[1][doc.DESCRIPTION], SubCategory.B2B_REGULAR.value)
 
     def test_an_amended_ecommerce_section_names_its_subsections(self):
-        """Pins which subsection code the portal sends inside an amended section."""
-        rows = summary.to_canonical(
-            [
-                {
-                    "sec_nm": "SUPECOMA",
-                    "ttl_rec": 1,
-                    "sub_sections": [{"typ": "SUPECOM_14A", "ttl_rec": 1, "ttl_tax": 60}],
-                }
-            ]
-        )["summary"]
+        """The portal's amended subsection code is unverified; both spellings must resolve."""
+        for code in ("SUPECOM_14A", "SUPECOMA_14A"):
+            rows = summary.to_canonical(
+                [
+                    {
+                        "sec_nm": "SUPECOMA",
+                        "ttl_rec": 1,
+                        "sub_sections": [{"typ": code, "ttl_rec": 1, "ttl_tax": 60}],
+                    }
+                ]
+            )["summary"]
 
-        self.assertIn(f"{SubCategory.SUPECOM_52.value} {summary.AMENDED}", rows)
+            self.assertIn(f"{SubCategory.SUPECOM_52.value} {summary.AMENDED}", rows)
 
     def test_a_summary_without_subsections_falls_back_to_our_own(self):
         self.assertEqual(summary.to_canonical([{"sec_nm": "SUPECOM", "ttl_rec": 1}]), {})

@@ -20,6 +20,8 @@ from .b2b import INVOICE_CODES, INVOICE_TYPES  # same portal field, same labels
 
 SUBCATEGORY = SubCategory.CDNR.value
 
+LEGACY_INVOICE_CODES = {**INVOICE_CODES, SubCategory.DE.value: "DE"}
+
 KEYS = {
     raw.FLAG: doc.FLAG,
     raw.NOTE_TYPE: doc.TRANSACTION_TYPE,
@@ -102,7 +104,7 @@ def to_gov(rows, company_gstin=""):
         out = s.abs_amounts(s.round_money(s.pick_back(row, KEYS), MONEY), (raw.DOC_VALUE,))
 
         s.remap(out, raw.NOTE_TYPE, NOTE_CODES)  # Credit Note -> C
-        s.remap(out, raw.INVOICE_TYPE, INVOICE_CODES)  # Deemed Exp -> DE
+        s.remap(out, raw.INVOICE_TYPE, LEGACY_INVOICE_CODES)  # Deemed Exp -> DE
         s.convert(out, raw.NOTE_DATE, s.date_to_gov)  # 2016-09-23 -> 23-09-2016
         s.convert(out, raw.POS, s.pos_to_gov)  # 03-Punjab -> 03
 

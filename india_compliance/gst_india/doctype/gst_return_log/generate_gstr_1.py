@@ -404,9 +404,16 @@ class ReconcileGSTR1:
         if not books_row:
             reconcile_row["match_status"] = "Missing in Books"
 
+        amount_keys = {
+            key
+            for row in (reconcile_row, books_row, gov_row)
+            for key, value in row.items()
+            if isinstance(value, int | float)
+        }
+
         # Compute Differences
-        for key, value in reconcile_row.items():
-            if isinstance(value, int | float) and key not in AggregateInvoices.IGNORED_FIELDS:
+        for key in [*reconcile_row, *sorted(amount_keys - set(reconcile_row))]:
+            if key in amount_keys and key not in AggregateInvoices.IGNORED_FIELDS:
                 reconcile_row[key] = flt((books_row.get(key) or 0) - (gov_row.get(key) or 0), 2)
                 has_different_value = reconcile_row[key] != 0
 

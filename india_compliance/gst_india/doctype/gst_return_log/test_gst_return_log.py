@@ -8,6 +8,9 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
+from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
+    ReconcileGSTR1,
+)
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     add_comment_to_gst_return_log,
     get_gst_return_log,
@@ -125,3 +128,26 @@ class TestGSTReturnLog(IntegrationTestCase):
         stored = get_raw_return_data(self.GSTIN, "GSTR1", period)
         self.assertEqual(stored["chksum"], "abc123")
         self.assertNotIn("b2b", stored)
+
+    def test_reconcile_compares_amounts_the_portal_sent_as_null(self):
+        """Gov data keeps a null the portal sent, so an amount can be None or missing entirely.
+        The comparison must still see the books value and flag a mismatch."""
+        books_row = {
+            "document_number": "S1",
+            "total_taxable_value": 100,
+            "total_igst_amount": 18,
+            "total_cess_amount": 5,
+        }
+        gov_row = {
+            "document_number": "S1",
+            "total_taxable_value": 100,
+            "total_igst_amount": None,
+        }
+
+        reconciled = ReconcileGSTR1.get_reconciled_row(books_row, gov_row)
+
+        self.assertEqual(reconciled["match_status"], "Mismatch")
+        self.assertEqual(reconciled["total_igst_amount"], 18)
+        self.assertEqual(reconciled["total_cess_amount"], 5)
+        self.assertIn("Total Igst Amount", reconciled["differences"])
+        self.assertIn("Total Cess Amount", reconciled["differences"])

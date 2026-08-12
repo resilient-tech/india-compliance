@@ -62,7 +62,7 @@ MONEY = (
 
 def group_key(row):
     """Identity used to match books against the portal. Discarded before the data is stored."""
-    return " - ".join((row.get(doc.POS, ""), str(flt(row.get(item.TAX_RATE, "")))))
+    return " - ".join((row.get(doc.POS) or "", str(flt(row.get(item.TAX_RATE, "")))))
 
 
 def to_canonical(gov_data, multiplier=RECEIVED):

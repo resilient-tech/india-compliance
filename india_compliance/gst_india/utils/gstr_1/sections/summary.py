@@ -111,6 +111,8 @@ SUBSECTION_NAMES = {
     "SUPECOMA": {
         "SUPECOM_14A": f"{SubCategory.SUPECOM_52.value} {AMENDED}",
         "SUPECOM_14B": f"{SubCategory.SUPECOM_9_5.value} {AMENDED}",
+        "SUPECOMA_14A": f"{SubCategory.SUPECOM_52.value} {AMENDED}",
+        "SUPECOMA_14B": f"{SubCategory.SUPECOM_9_5.value} {AMENDED}",
     },
     "EXP": {
         "EXPWP": SubCategory.EXPWP.value,
