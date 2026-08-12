@@ -251,6 +251,7 @@ class SummarizeGSTR1:
 
 class ReconcileGSTR1:
     IGNORED_FIELDS: ClassVar[set] = {doc.TAX_RATE, doc.DOC_VALUE}
+    BOOKS_ONLY_FIELDS: ClassVar[set] = {doc.DRAFT_COUNT}
     UNREQUIRED_KEYS: ClassVar[set] = {
         doc.TRANSACTION_TYPE,
         doc.DOC_NUMBER,
@@ -409,7 +410,7 @@ class ReconcileGSTR1:
             for row in (reconcile_row, books_row, gov_row)
             for key, value in row.items()
             if isinstance(value, int | float)
-        }
+        } - ReconcileGSTR1.BOOKS_ONLY_FIELDS
 
         # Compute Differences
         for key in [*reconcile_row, *sorted(amount_keys - set(reconcile_row))]:

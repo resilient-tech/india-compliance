@@ -35,12 +35,13 @@ def convert_to_internal_data_format(gov_data, for_errors=False):
 
     errors = []
     for category, rows in output.items():
-        for row in rows.values():
-            if not (row.get(doc.ERROR_CD) or row.get(doc.ERROR_MSG)):
-                continue
+        for value in rows.values():
+            for row in value if isinstance(value, list) else [value]:
+                if not (row.get(doc.ERROR_CD) or row.get(doc.ERROR_MSG)):
+                    continue
 
-            row["category"] = category
-            errors.append(row)
+                row["category"] = category
+                errors.append(row)
 
     return errors
 

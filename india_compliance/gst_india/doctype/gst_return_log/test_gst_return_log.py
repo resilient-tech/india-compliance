@@ -151,3 +151,47 @@ class TestGSTReturnLog(IntegrationTestCase):
         self.assertEqual(reconciled["total_cess_amount"], 5)
         self.assertIn("Total Igst Amount", reconciled["differences"])
         self.assertIn("Total Cess Amount", reconciled["differences"])
+
+    def test_our_own_draft_count_is_never_compared(self):
+        """The portal has no draft of its own -- it counts a draft as cancelled, which is how we
+        file it. So comparing draft count can only ever invent a difference."""
+        books_row = {
+            "document_type": "Invoices for outward supply",
+            "total_count": 5,
+            "cancelled_count": 1,
+            "draft_count": 1,
+            "net_issue": 3,
+        }
+        gov_row = {
+            "document_type": "Invoices for outward supply",
+            "total_count": 5,
+            "cancelled_count": 2,  # our cancelled one plus our draft
+            "net_issue": 3,
+        }
+
+        reconciled = ReconcileGSTR1.get_reconciled_row(books_row, gov_row)
+
+        self.assertNotIn("Draft Count", reconciled["differences"])
+        self.assertNotIn("draft_count", reconciled)
+
+        self.assertEqual(reconciled["differences"], "Cancelled Count")
+
+    def test_a_genuinely_extra_cancellation_reports_as_develop_does(self):
+        books_row = {
+            "document_type": "Invoices for outward supply",
+            "total_count": 5,
+            "cancelled_count": 2,
+            "draft_count": 1,
+            "net_issue": 2,
+        }
+        gov_row = {
+            "document_type": "Invoices for outward supply",
+            "total_count": 5,
+            "cancelled_count": 2,
+            "net_issue": 3,
+        }
+
+        reconciled = ReconcileGSTR1.get_reconciled_row(books_row, gov_row)
+
+        self.assertEqual(reconciled["match_status"], "Mismatch")
+        self.assertEqual(reconciled["differences"], "Net Issue")

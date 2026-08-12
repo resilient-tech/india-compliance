@@ -16,6 +16,7 @@ from india_compliance.gst_india.utils.gstr_1 import DocField as doc
 from india_compliance.gst_india.utils.gstr_1 import ItemField as item
 from india_compliance.gst_india.utils.gstr_1 import RawField as raw
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
+    convert_to_internal_data_format,
     get_category_wise_data,
     summarize_retsum_data,
 )
@@ -1607,3 +1608,66 @@ class TestRETSUM(IntegrationTestCase):
         books_summary[0].pop("total_cess_amount")
 
         self.assertEqual(get_differing_categories(books_summary, self.get_gov_summary()), set())
+
+
+class TestUploadErrorReport(IntegrationTestCase):
+    """The report the portal sends back when it rejects individual records."""
+
+    def test_a_rejected_invoice_is_reported(self):
+        errors = convert_to_internal_data_format(
+            {
+                "b2b": [
+                    {
+                        # the portal reports a b2b error against the supplier group, not the invoice
+                        raw.CUST_GSTIN: "24AANFA2641L1ZF",
+                        raw.ERROR_CD: "RET191113",
+                        raw.ERROR_MSG: "The GSTIN is invalid.",
+                        raw.INVOICES: [
+                            {
+                                raw.DOC_NUMBER: "S1",
+                                raw.DOC_DATE: "24-11-2016",
+                                raw.INVOICE_TYPE: "R",
+                                raw.ITEMS: [],
+                            }
+                        ],
+                    }
+                ]
+            },
+            for_errors=True,
+        )
+
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0][doc.ERROR_CD], "RET191113")
+        self.assertEqual(errors[0]["category"], SubCategory.B2B_REGULAR.value)
+
+    def test_a_rejected_row_in_a_list_category_is_reported(self):
+        """B2C (Others) keys a list of rows; iterating it as a single row used to raise
+        AttributeError, so an upload error naming this category took the whole report down."""
+        errors = convert_to_internal_data_format(
+            {
+                "b2cs": [
+                    {
+                        raw.SUPPLY_TYPE: "INTRA",
+                        raw.POS: "27",
+                        raw.TAX_RATE: 18,
+                        raw.TYPE: "OE",
+                        raw.TAXABLE_VALUE: 100,
+                        raw.ERROR_CD: "RET191113",
+                        raw.ERROR_MSG: "The GSTIN is invalid.",
+                    }
+                ]
+            },
+            for_errors=True,
+        )
+
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0][doc.ERROR_CD], "RET191113")
+        self.assertEqual(errors[0]["category"], SubCategory.B2CS.value)
+
+    def test_rows_without_an_error_are_left_out(self):
+        errors = convert_to_internal_data_format(
+            {"b2cs": [{raw.SUPPLY_TYPE: "INTRA", raw.POS: "27", raw.TAX_RATE: 18, raw.TAXABLE_VALUE: 100}]},
+            for_errors=True,
+        )
+
+        self.assertEqual(errors, [])
