@@ -43,6 +43,37 @@ def to_canonical(gov_data):
     return output
 
 
+def from_books(grouped_rows, operator_name):
+    """Books rows -> one row per e-commerce operator, per kind of supply.
+
+        {"Liable to collect tax u/s 52(TCS)": {"SINV-1": [item rows]}}
+     -> {"Liable to collect tax u/s 52(TCS)": {"20ALYPD6528PQC5": {total_taxable_value: 10000}}}
+
+    One operator carries many invoices, so each invoice is totalled and then added to the operator.
+    """
+    output = {}
+
+    for supply_type, rows_by_invoice in grouped_rows.items():
+        operators = output.setdefault(supply_type, {})
+
+        for rows in rows_by_invoice.values():
+            gstin = rows[0].get("ecommerce_gstin", "")
+            entry = operators.setdefault(
+                gstin,
+                {
+                    doc.DOC_TYPE: supply_type,
+                    doc.ECOMMERCE_GSTIN: gstin,
+                    doc.ECOMMERCE_OPERATOR_NAME: operator_name(gstin),
+                    **s.zero_totals(),
+                },
+            )
+
+            for total, column in s.BOOKS_COLUMNS.items():
+                entry[total] = s.money(entry[total] + s.sum_column(rows, column))
+
+    return output
+
+
 def to_gov(rows, company_gstin=""):
     output = {}
 

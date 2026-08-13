@@ -75,6 +75,34 @@ def to_gov(rows, company_gstin=""):
     }
 
 
+def from_books(rows):
+    """Books ranges -> one row per document kind and starting number.
+
+       [{nature_of_document: "Invoices for outward supply", from_serial_no: "1", ...}]
+    -> {"Document Issued": {"Invoices for outward supply - 1": {from_sr_no: "1", ...}}}
+    """
+    output = {}
+
+    for entry in rows:
+        key = f"{entry['nature_of_document']} - {entry['from_serial_no']}"
+
+        # the first range for a key wins; the query can repeat one across naming series
+        if key in output:
+            continue
+
+        output[key] = {
+            doc.DOC_TYPE: entry["nature_of_document"],
+            doc.FROM_SR: entry["from_serial_no"],
+            doc.TO_SR: entry["to_serial_no"],
+            doc.TOTAL_COUNT: entry["total_issued"],
+            doc.DRAFT_COUNT: entry["total_draft"],
+            doc.CANCELLED_COUNT: entry["cancelled"],
+            doc.NET_ISSUE: entry["total_submitted"],
+        }
+
+    return output
+
+
 def net_issued(row):
     """Drafts reached nobody, so count them as cancelled. New row, so counts never pile up."""
     cancelled = (row.get(doc.CANCELLED_COUNT) or 0) + (row.get(doc.DRAFT_COUNT) or 0)

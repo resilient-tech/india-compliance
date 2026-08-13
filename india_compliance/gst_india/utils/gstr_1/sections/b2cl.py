@@ -23,6 +23,8 @@ KEYS = {
     raw.CESS: item.CESS,
 }
 
+SUBCATEGORIES = (SUBCATEGORY,)
+
 ITEM_DEFAULTS = dict.fromkeys(s.ITEM_TOTALS_IGST, 0)
 
 MONEY = (raw.DOC_VALUE, raw.DIFF_PERCENTAGE)
@@ -53,6 +55,11 @@ def to_canonical(gov_data):
         output[row[doc.DOC_NUMBER]] = row
 
     return {SUBCATEGORY: output}
+
+
+def from_books(grouped_rows):
+    """Books rows -> one row per invoice, for the subcategories this category reports."""
+    return s.invoice_rows_from_books(grouped_rows, SUBCATEGORIES)
 
 
 def to_gov(rows, company_gstin=""):
