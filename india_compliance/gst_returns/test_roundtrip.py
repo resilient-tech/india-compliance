@@ -37,6 +37,13 @@ class TestAssertRoundtrip(unittest.TestCase):
         with self.assertRaises(AssertionError):
             assert_roundtrip({"txval": 10.5}, {"txval": 10.6})
 
+    def test_rounds_like_the_mappers(self):
+        assert_roundtrip({"txval": 2.675}, {"txval": 2.68})
+        assert_roundtrip({"txval": 6210.995}, {"txval": 6211.0})
+        assert_roundtrip({"rt": 0.145}, {"rt": 0.15})
+        with self.assertRaises(AssertionError):
+            assert_roundtrip({"txval": 2.675}, {"txval": 2.67})
+
     def test_int_float_equal(self):
         assert_roundtrip({"n": 5}, {"n": 5.0})
 
