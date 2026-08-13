@@ -110,7 +110,7 @@ class TestSettleAmounts(unittest.TestCase):
 
     def test_nothing_lost_when_the_amounts_already_have_two_decimals(self):
         _, lost = settle([row("A", 18, "1001", cgst_amount=10.00, taxable_value=55.55)])
-        self.assertEqual(set(filter(None, lost.values())), set())
+        self.assertEqual({value for value in lost.values() if value}, set())
 
 
 class TestExactSums(unittest.TestCase):
