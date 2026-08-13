@@ -44,7 +44,7 @@ from india_compliance.gst_india.utils import (
     validate_gst_category,
     validate_gstin,
 )
-from india_compliance.gst_india.utils.gstr_1 import SUPECOM
+from india_compliance.gst_returns.fields.gstr1 import SubCategory
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     get_tax_withholding_accounts,
 )
@@ -1975,6 +1975,6 @@ def set_ecommerce_supply_type(doc):
         return
 
     if doc.is_reverse_charge:
-        doc.ecommerce_supply_type = SUPECOM.US_9_5.value
+        doc.ecommerce_supply_type = SubCategory.SUPECOM_9_5.value
     else:
-        doc.ecommerce_supply_type = SUPECOM.US_52.value
+        doc.ecommerce_supply_type = SubCategory.SUPECOM_52.value

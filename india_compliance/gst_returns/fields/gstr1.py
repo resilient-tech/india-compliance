@@ -44,11 +44,6 @@ class SubCategory(Enum):
     SUPECOM_9_5 = "Liable to pay tax u/s 9(5)"
 
 
-class SUPECOM(Enum):
-    US_9_5 = "Liable to pay tax u/s 9(5)"
-    US_52 = "Liable to collect tax u/s 52(TCS)"
-
-
 class DocField:
     # canonical names
     TRANSACTION_TYPE = "transaction_type"
@@ -94,6 +89,9 @@ class DocField:
 
     ERROR_CD = "error_code"
     ERROR_MSG = "error_message"
+
+    # row marker: "D" deletes the row on upload
+    FLAG = "flag"
 
 
 class ItemField:
@@ -166,6 +164,12 @@ class RawField:
     SUPECOM_52 = "clttx"
     SUPECOM_9_5 = "paytx"
 
+    # e-commerce rows spell the taxes out
+    ECOM_IGST = "igst"
+    ECOM_CGST = "cgst"
+    ECOM_SGST = "sgst"
+    ECOM_CESS = "cess"
+
     HSN_B2B = "hsn_b2b"
     HSN_B2C = "hsn_b2c"
 
@@ -230,10 +234,10 @@ class JsonKey(Enum):
 
 
 class HSNKey(Enum):
-    # excel only
-    HSN = "hsn"
-    HSN_B2B = "hsn_b2b"
-    HSN_B2C = "hsn_b2c"
+    # json keys HSN rows arrive under, for picking excel sheets
+    HSN = JsonKey.HSN.value
+    HSN_B2B = RawField.HSN_B2B
+    HSN_B2C = RawField.HSN_B2C
 
 
 class SheetName(Enum):
@@ -260,6 +264,35 @@ class B2BInvoiceType(Enum):
     SEWP = "SEZ supplies with payment"
     SEWOP = "SEZ supplies without payment"
     DE = "Deemed Exp"
+
+
+class CreditDebitNoteType(Enum):
+    C = "Credit Note"
+    D = "Debit Note"
+
+
+class NilRatedCategory(Enum):
+    INTER_B2B = "Inter-State supplies to registered persons"
+    INTER_B2C = "Inter-State supplies to unregistered persons"
+    INTRA_B2B = "Intra-State supplies to registered persons"
+    INTRA_B2C = "Intra-State supplies to unregistered persons"
+
+
+class DocumentNature(Enum):
+    OUTWARD_SUPPLY = "Invoices for outward supply"
+    INWARD_SUPPLY_UNREGISTERED = "Invoices for inward supply from unregistered person"
+    REVISED_INVOICE = "Revised Invoice"
+    DEBIT_NOTE = "Debit Note"
+    CREDIT_NOTE = "Credit Note"
+    RECEIPT_VOUCHER = "Receipt voucher"
+    PAYMENT_VOUCHER = "Payment Voucher"
+    REFUND_VOUCHER = "Refund voucher"
+    DELIVERY_CHALLAN_JOB_WORK = "Delivery Challan for job work"
+    DELIVERY_CHALLAN_APPROVAL = "Delivery Challan for supply on approval"
+    DELIVERY_CHALLAN_LIQUID_GAS = "Delivery Challan in case of liquid gas"
+    DELIVERY_CHALLAN_OTHER = (
+        "Delivery Challan in cases other than by way of supply (excluding at S no. 9 to 11)"
+    )
 
 
 CATEGORY_SUB_CATEGORY_MAPPING = {

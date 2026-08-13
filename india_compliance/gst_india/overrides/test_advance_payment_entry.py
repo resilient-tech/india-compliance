@@ -20,7 +20,7 @@ from erpnext.controllers.stock_controller import show_accounting_ledger_preview
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, getdate
 
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
+from india_compliance.gst_india.utils.gstr_1 import DocField as doc
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
 from india_compliance.gst_india.utils.tests import create_transaction
 
@@ -902,7 +902,7 @@ class TestPaymentReconciliationMatrix(IntegrationTestCase):
 
     def _assert_advance_row(self, prepared, payment_name, taxable_value):
         row = next(
-            (r for rows in prepared.values() for r in rows if r[inv_f.DOC_NUMBER] == payment_name),
+            (r for rows in prepared.values() for r in rows if r[doc.DOC_NUMBER] == payment_name),
             None,
         )
 
@@ -911,13 +911,13 @@ class TestPaymentReconciliationMatrix(IntegrationTestCase):
             return
 
         self.assertIsNotNone(row, f"advance row expected for {payment_name}")
-        self.assertEqual(row[inv_f.TAX_RATE], 18)
-        self.assertEqual(flt(row[inv_f.TAXABLE_VALUE], 2), taxable_value)
+        self.assertEqual(row[doc.TAX_RATE], 18)
+        self.assertEqual(flt(row[doc.TAXABLE_VALUE], 2), taxable_value)
         # intra-state @ 18% => CGST 9% + SGST 9%, no IGST/cess
-        self.assertEqual(flt(row[inv_f.CGST], 2), flt(taxable_value * 0.09, 2))
-        self.assertEqual(flt(row[inv_f.SGST], 2), flt(taxable_value * 0.09, 2))
-        self.assertEqual(flt(row[inv_f.IGST], 2), 0.0)
-        self.assertEqual(flt(row[inv_f.CESS], 2), 0.0)
+        self.assertEqual(flt(row[doc.CGST], 2), flt(taxable_value * 0.09, 2))
+        self.assertEqual(flt(row[doc.SGST], 2), flt(taxable_value * 0.09, 2))
+        self.assertEqual(flt(row[doc.IGST], 2), 0.0)
+        self.assertEqual(flt(row[doc.CESS], 2), 0.0)
 
     # ---- ledger helpers (net per account / per against-voucher, drops zero nets) ----
 

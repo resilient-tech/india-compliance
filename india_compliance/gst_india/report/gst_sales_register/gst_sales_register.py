@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_Category
+from india_compliance.gst_india.utils.gstr_1 import Category
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 
@@ -312,7 +312,7 @@ def get_columns(filters):
         ]
     )
 
-    if not filters.invoice_category or filters.invoice_category == GSTR1_Category.SUPECOM.value:
+    if not filters.invoice_category or filters.invoice_category == Category.SUPECOM.value:
         columns.append(
             {
                 "label": _("Invoice Category"),
@@ -322,7 +322,7 @@ def get_columns(filters):
             }
         )
 
-    if not filters.invoice_sub_category or filters.invoice_category == GSTR1_Category.SUPECOM.value:
+    if not filters.invoice_sub_category or filters.invoice_category == Category.SUPECOM.value:
         columns.append(
             {
                 "label": _("Invoice Sub Category"),

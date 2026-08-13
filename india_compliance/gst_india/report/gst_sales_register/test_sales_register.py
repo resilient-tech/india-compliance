@@ -5,7 +5,7 @@ from frappe.utils import flt, getdate
 from india_compliance.gst_india.report.gst_sales_register.gst_sales_register import (
     execute,
 )
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_Category, GSTR1_SubCategory
+from india_compliance.gst_india.utils.gstr_1 import Category, SubCategory
 from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 today = getdate()
@@ -733,18 +733,18 @@ class TestSalesRegisterEcommerce(IntegrationTestCase):
         rows = rows_for(base)
         self.assertTrue(rows)
         for row in rows:
-            self.assertEqual(row["invoice_category"], GSTR1_Category.ECOM_RCM.value)
+            self.assertEqual(row["invoice_category"], Category.ECOM_RCM.value)
             self.assertFalse(row.get("invoice_sub_category"))
-            self.assertEqual(row["ecommerce_supply_type"], GSTR1_SubCategory.SUPECOM_9_5.value)
+            self.assertEqual(row["ecommerce_supply_type"], SubCategory.SUPECOM_9_5.value)
 
-        self.assertFalse(rows_for({**base, "invoice_category": GSTR1_Category.B2B.value}))
+        self.assertFalse(rows_for({**base, "invoice_category": Category.B2B.value}))
 
         self.assertTrue(
             rows_for(
                 {
                     **base,
-                    "invoice_category": GSTR1_Category.SUPECOM.value,
-                    "invoice_sub_category": GSTR1_SubCategory.SUPECOM_9_5.value,
+                    "invoice_category": Category.SUPECOM.value,
+                    "invoice_sub_category": SubCategory.SUPECOM_9_5.value,
                 }
             )
         )
@@ -752,6 +752,6 @@ class TestSalesRegisterEcommerce(IntegrationTestCase):
         hsn_rows = rows_for({**FILTERS, "summary_by": "Summary by HSN"})
         self.assertTrue(hsn_rows)
         for row in hsn_rows:
-            self.assertEqual(row["invoice_category"], GSTR1_Category.ECOM_RCM.value)
+            self.assertEqual(row["invoice_category"], Category.ECOM_RCM.value)
             self.assertFalse(row.get("invoice_sub_category"))
-            self.assertEqual(row["ecommerce_supply_type"], GSTR1_SubCategory.SUPECOM_9_5.value)
+            self.assertEqual(row["ecommerce_supply_type"], SubCategory.SUPECOM_9_5.value)
