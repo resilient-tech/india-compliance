@@ -85,12 +85,7 @@ india_compliance.patches.v15.update_itc_classification_for_sez_import_invoices
 india_compliance.patches.v15.set_boe_applicable_for_import_goods_purchase_invoices
 india_compliance.patches.post_install.update_gst_treatment_for_import_transactions
 execute:import frappe; frappe.db.set_single_value("GST Settings", "nil_exempt_e_invoice_treatment", "Do Not Generate")
-<<<<<<< HEAD
 india_compliance.patches.v16.update_tds_section_display_name
-india_compliance.patches.post_install.set_india_compliance_default_tax_category
-=======
 india_compliance.patches.post_install.set_india_compliance_default_tax_category #1
-india_compliance.patches.post_install.remove_tax_category_gst_state
->>>>>>> c14b4f27 (fix: remove state based logic from patch)
 india_compliance.patches.v16.remove_gstr_2a_category_preferences
 india_compliance.patches.v16.update_reconciliation_email_template_dates
