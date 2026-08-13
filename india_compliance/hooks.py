@@ -467,10 +467,7 @@ audit_trail_doctypes = [
     # Additional ERPNext DocTypes that constitute "Books of Account"
     "Asset Depreciation Schedule",
     "POS Invoice",
-    # Affects the GL entry creation
     "Cost Center Allocation",
-    # ERPNext DocTypes that have track_changes enabled by default
-    # Need to add here to stop them from being disabled when Audit Trail is enabled
     "Exchange Rate Revaluation",
     "Asset Value Adjustment",
     # India Compliance DocTypes that make GL Entries
