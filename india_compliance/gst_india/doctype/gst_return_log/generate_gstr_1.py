@@ -251,7 +251,6 @@ class SummarizeGSTR1:
 
 class ReconcileGSTR1:
     IGNORED_FIELDS: ClassVar[set] = {doc.TAX_RATE, doc.DOC_VALUE}
-    BOOKS_ONLY_FIELDS: ClassVar[set] = {doc.DRAFT_COUNT}
     UNREQUIRED_KEYS: ClassVar[set] = {
         doc.TRANSACTION_TYPE,
         doc.DOC_NUMBER,
@@ -405,14 +404,14 @@ class ReconcileGSTR1:
         if not books_row:
             reconcile_row["match_status"] = "Missing in Books"
 
+        books_values = ReconcileGSTR1.comparable_books_values(books_row)
+
         amount_keys = {
             key
-            for row in (reconcile_row, books_row, gov_row)
+            for row in (reconcile_row, books_values, gov_row)
             for key, value in row.items()
             if isinstance(value, int | float)
-        } - ReconcileGSTR1.BOOKS_ONLY_FIELDS
-
-        books_values = ReconcileGSTR1.comparable_books_values(books_row)
+        }
 
         # Compute Differences
         for key in [*reconcile_row, *sorted(amount_keys - set(reconcile_row))]:
@@ -449,14 +448,15 @@ class ReconcileGSTR1:
 
     @staticmethod
     def comparable_books_values(books_row: dict):
-        """We file a draft as cancelled, so compare it that way."""
-        if not books_row.get(doc.DRAFT_COUNT):
+        """We file a draft as cancelled, so compare it that way. Draft count is ours alone."""
+        if doc.DRAFT_COUNT not in books_row:
             return books_row
 
-        return {
-            **books_row,
-            doc.CANCELLED_COUNT: (books_row.get(doc.CANCELLED_COUNT) or 0) + books_row[doc.DRAFT_COUNT],
-        }
+        values = books_row.copy()
+        draft = values.pop(doc.DRAFT_COUNT)
+        values[doc.CANCELLED_COUNT] = (values.get(doc.CANCELLED_COUNT) or 0) + (draft or 0)
+
+        return values
 
     @staticmethod
     def get_empty_row(row: dict, unrequired_keys=None):

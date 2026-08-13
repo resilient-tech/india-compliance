@@ -1,35 +1,31 @@
 # Copyright (c) 2024, Resilient Tech and Contributors
 # See license.txt
 
-"""Pure self-tests for helpers. Site-less. round_to expectations = frappe.flt(x, precision)."""
+"""Pure self-tests for helpers. Site-less. round2 expectations = frappe.flt(x, 2)."""
 
 import unittest
 from datetime import date, datetime
 
-from .helpers import format_date, parse_date, round_to
+from .helpers import format_date, parse_date, round2
 
 
-class TestRoundTo(unittest.TestCase):
+class TestRound2(unittest.TestCase):
+    def test_none_and_zero(self):
+        self.assertEqual(round2(None), 0.0)
+        self.assertEqual(round2(0), 0.0)
+        self.assertEqual(round2(0.0), 0.0)
+
     def test_epsilon_corrected_halves(self):
-        self.assertEqual(round_to(2.675), 2.68)
-        self.assertEqual(round_to(-50.005), -50.0)
-        self.assertEqual(round_to(10.005), 10.01)
-        self.assertEqual(round_to(99.995), 100.0)
-        self.assertEqual(round_to(1234.565), 1234.57)
-
-    def test_none_counts_as_nothing(self):
-        self.assertEqual(round_to(None), 0.0)
+        self.assertEqual(round2(2.675), 2.68)
+        self.assertEqual(round2(-50.005), -50.0)
+        self.assertEqual(round2(10.005), 10.01)
+        self.assertEqual(round2(99.995), 100.0)
+        self.assertEqual(round2(1234.565), 1234.57)
 
     def test_plain_values(self):
-        self.assertEqual(round_to(0), 0.0)
-        self.assertEqual(round_to(100), 100.0)
-        self.assertEqual(round_to(33.333333), 33.33)
-        self.assertEqual(round_to(0.1 + 0.2), 0.3)
-
-    def test_other_precisions(self):
-        self.assertEqual(round_to(2.5, 0), 3.0)
-        self.assertEqual(round_to(0.12345, 3), 0.123)
-        self.assertEqual(round_to(0.1235, 3), 0.124)
+        self.assertEqual(round2(100), 100.0)
+        self.assertEqual(round2(33.333333), 33.33)
+        self.assertEqual(round2(0.1 + 0.2), 0.3)
 
 
 class TestDateHelpers(unittest.TestCase):

@@ -6,6 +6,8 @@ blanks go at the JSON boundary.
 
 from datetime import datetime
 
+import frappe
+from frappe import _
 from frappe.utils import flt
 
 from india_compliance.gst_india.constants import (
@@ -211,7 +213,7 @@ def abs_amounts(row, fields):
 def supply_type(pos, company_gstin):
     """Same state as the seller means intra-state."""
     if not company_gstin:
-        raise ValueError("company_gstin is needed to tell intra-state from inter-state")
+        frappe.throw(_("Company GSTIN is needed to tell an intra-state supply from an inter-state one"))
 
     return "INTRA" if pos == company_gstin[:2] else "INTER"
 

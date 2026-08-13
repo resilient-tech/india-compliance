@@ -8,6 +8,7 @@ import itertools
 import unittest
 from typing import ClassVar
 
+import frappe
 from frappe.utils import flt
 
 from india_compliance.gst_returns.fields.gstr1 import (
@@ -674,7 +675,7 @@ class TestSupplyType(unittest.TestCase):
 
     def test_refuses_a_missing_seller(self):
         # a blank one would file every intra-state supply as inter-state, quietly
-        with self.assertRaises(ValueError):
+        with self.assertRaises(frappe.ValidationError):
             b2cs.to_gov(flatten(b2cs.to_canonical(PAYLOADS["b2cs"][2])))
 
 
