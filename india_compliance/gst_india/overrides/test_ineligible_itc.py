@@ -237,6 +237,123 @@ class TestIneligibleITC(IntegrationTestCase):
         self.assertEqual(status, "Completed")
         self.assertGLEntry(doc.name, expected_entries)
 
+    @toggle_perpetual_inventory()
+    def test_purchase_invoice_with_update_stock_for_non_perpetual(self):
+        """
+        Without perpetual inventory, ERPNext books the item debit from base net amount
+        instead of valuation rate. Ineligible ITC is hence not accounted for on its own,
+        and is debited to the same account the item is booked in:
+        - Fixed Asset: CWIP Account, capitalized along with the asset
+        - Stock Item: Cost of Goods Sold, as stock is not booked in GL
+        """
+        transaction_details = {
+            "doctype": "Purchase Invoice",
+            "bill_no": "BILL-10",
+            "update_stock": 1,
+            "items": SAMPLE_ITEM_LIST,
+            "is_in_state": 1,
+        }
+
+        doc = create_transaction(**transaction_details)
+
+        self.assertEqual(doc.ineligibility_reason, "Ineligible As Per Section 17(5)")
+
+        self.assertGLEntry(
+            doc.name,
+            [
+                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 369.72,
+                    "credit": 369.72,
+                },  # 179.64 + 179.82 + 10.26
+                {
+                    "account": "Input Tax SGST - _TIRC",
+                    "debit": 427.86,
+                    "credit": 184.86,  # 369.72 / 2
+                },
+                {
+                    "account": "Input Tax CGST - _TIRC",
+                    "debit": 427.86,
+                    "credit": 184.86,
+                },
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 2677.64,  # 500 * 3 + 499 * 2 + 179.64
+                    "credit": 0.0,
+                },
+                {
+                    "account": "CWIP Account - _TIRC",
+                    "debit": 2178.82,
+                    "credit": 0.0,
+                },  # 1000 + 999 + 179.82
+                {
+                    "account": "Cost of Goods Sold - _TIRC",
+                    "debit": 267.26,
+                    "credit": 0.0,
+                },  # 20 * 5 + 19 * 3 + 100 * 1 + 10.26
+                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+            ],
+        )
+
+        self.assertAssetValues(
+            "Purchase Invoice",
+            doc.name,
+            {"Test Fixed Asset": 1000, "Test Ineligible Fixed Asset": 1178.82},
+        )  # 999 + 179.82
+
+    def test_purchase_invoice_with_update_stock_for_asset_expense_account(self):
+        """
+        Ineligible ITC for an item that is neither Stock Item nor Fixed Asset is debited
+        to it's expense account, even where the same is not an Expense account.
+        """
+        transaction_details = {
+            "doctype": "Purchase Invoice",
+            "bill_no": "BILL-11",
+            "update_stock": 1,
+            "items": [
+                {
+                    "item_code": "Test Ineligible Service Item",
+                    "qty": 2,
+                    "rate": 499,
+                    "expense_account": "CWIP Account - _TIRC",
+                }
+            ],
+            "is_in_state": 1,
+        }
+
+        doc = create_transaction(**transaction_details)
+
+        self.assertEqual(doc.ineligibility_reason, "Ineligible As Per Section 17(5)")
+
+        self.assertGLEntry(
+            doc.name,
+            [
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 179.64,
+                    "credit": 179.64,
+                },  # 499 * 2 * 18%
+                {
+                    "account": "Input Tax SGST - _TIRC",
+                    "debit": 89.82,
+                    "credit": 89.82,
+                },
+                {
+                    "account": "Input Tax CGST - _TIRC",
+                    "debit": 89.82,
+                    "credit": 89.82,
+                },
+                {
+                    "account": "CWIP Account - _TIRC",
+                    "debit": 1177.64,
+                    "credit": 0.0,
+                },  # 998 + 179.64
+                {"account": "Round Off - _TIRC", "debit": 0.36, "credit": 0.0},
+                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 1178.0},
+            ],
+        )
+
     def test_purchase_invoice_with_ineligible_pos(self):
         transaction_details = {
             "doctype": "Purchase Invoice",
