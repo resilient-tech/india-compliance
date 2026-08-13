@@ -1,11 +1,10 @@
-from collections import defaultdict
-from datetime import datetime
-from itertools import chain
-from typing import ClassVar
+"""Move GSTR-1 data between the portal's shape and ours.
 
-import frappe
-from frappe.utils import cint, flt
+Each category lives in its own module under `sections/`; this file only picks which one runs.
+Portal docs: https://developer.gst.gov.in/apiportal/taxpayer/returns
+"""
 
+<<<<<<< HEAD
 from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX, UOM_MAP
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
@@ -15,18 +14,15 @@ from india_compliance.gst_india.utils import (
     MONTHS,
     get_gst_accounts_by_type,
     get_party_for_gstin,
+=======
+from india_compliance.gst_india.utils.gstr_1 import (
+    SUB_CATEGORY_GOV_CATEGORY_MAPPING,
+>>>>>>> a4e0638 (refactor: gstr 1  (#4718))
 )
 from india_compliance.gst_india.utils.gstr_1 import (
-    CATEGORY_SUB_CATEGORY_MAPPING,
-    SUB_CATEGORY_GOV_CATEGORY_MAPPING,
-    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
-    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
-    GovJsonKey,
-    GSTR1_B2B_InvoiceType,
-    GSTR1_Category,
-    GSTR1_SubCategory,
-    truncate_hsn_description,
+    DocField as doc,
 )
+<<<<<<< HEAD
 from india_compliance.gst_india.utils.gstr_1 import GovDataField as gov_f
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
@@ -1818,31 +1814,37 @@ CLASS_MAP = {
     GovJsonKey.SUPECOM.value: SUPECOM,
     GovJsonKey.RET_SUM.value: RETSUM,
 }
+=======
+from india_compliance.gst_india.utils.gstr_1.gstr_1_books_map import (  # noqa: F401
+    GSTR1BooksData,
+)
+from india_compliance.gst_india.utils.gstr_1.sections import SECTIONS
+from india_compliance.gst_india.utils.gstr_1.sections.summary import to_overview
+>>>>>>> a4e0638 (refactor: gstr 1  (#4718))
 
 
 def convert_to_internal_data_format(gov_data, for_errors=False):
-    """
-    Converts Gov data format to internal data format for all categories
-    """
+    """Portal payload -> our rows, every category present."""
     output = {}
 
-    for category, mapper_class in CLASS_MAP.items():
+    for category, (read, _write) in SECTIONS.items():
         if not gov_data.get(category):
             continue
 
-        output.update(mapper_class().convert_to_internal_data_format(gov_data.get(category)))
+        output.update(read(gov_data[category]))
 
     if not for_errors:
         return output
 
     errors = []
-    for category, data in output.items():
-        for row in data.values():
-            if not (row.get(inv_f.ERROR_CD) or row.get(inv_f.ERROR_MSG)):
-                continue
+    for category, rows in output.items():
+        for value in rows.values():
+            for row in value if isinstance(value, list) else [value]:
+                if not (row.get(doc.ERROR_CD) or row.get(doc.ERROR_MSG)):
+                    continue
 
-            row["category"] = category
-            errors.append(row)
+                row["category"] = category
+                errors.append(row)
 
     return errors
 
@@ -1851,33 +1853,9 @@ def get_category_wise_data(
     subcategory_wise_data: dict,
     mapping: dict = SUB_CATEGORY_GOV_CATEGORY_MAPPING,
 ) -> dict:
-    """
-    returns category wise data from subcategory wise data
-
-    Args:
-        subcategory_wise_data (dict): subcategory wise data
-        mapping (dict): subcategory to category mapping
-        with_subcategory (bool): include subcategory level data
-
-    Returns:
-        dict: category wise data
-
-    Example (with_subcategory=True):
-        {
-            "B2B, SEZ, DE": {
-                "B2B": data,
-                ...
-            }
-            ...
-        }
-
-    Example (with_subcategory=False):
-        {
-            "B2B, SEZ, DE": data,
-            ...
-        }
-    """
+    """Put subcategory rows under the portal category that reports them."""
     category_wise_data = {}
+
     for subcategory, category in mapping.items():
         if not subcategory_wise_data.get(subcategory.value):
             continue
@@ -1890,25 +1868,21 @@ def get_category_wise_data(
 
 
 def convert_to_gov_data_format(internal_data: dict, company_gstin: str) -> dict:
-    """
-    converts internal data format to Gov data format for all categories
-    """
-
+    """Our rows -> portal payload. Blanks go later, at the JSON boundary."""
     category_wise_data = get_category_wise_data(internal_data)
 
     output = {}
-    for category, mapper_class in CLASS_MAP.items():
-        if not category_wise_data.get(category):
+    for category, (_read, write) in SECTIONS.items():
+        if not write or not category_wise_data.get(category):
             continue
 
-        output[category] = mapper_class().convert_to_gov_data_format(
-            category_wise_data.get(category), company_gstin=company_gstin
-        )
+        output[category] = write(category_wise_data[category], company_gstin=company_gstin)
 
     return output
 
 
 def summarize_retsum_data(input_data):
+<<<<<<< HEAD
     if not input_data:
         return []
 
@@ -2710,3 +2684,6 @@ class GSTR1BooksData(BooksDataMapper):
                 filed_invoices.update(invoices.keys())
 
         return filed_invoices
+=======
+    return to_overview(input_data)
+>>>>>>> a4e0638 (refactor: gstr 1  (#4718))

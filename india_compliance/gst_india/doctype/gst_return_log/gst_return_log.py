@@ -62,7 +62,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
             return
 
     def update_json_for(self, file_field, json_data, overwrite=True, reset_reconcile=False):
-        if "summary" not in file_field:
+        if "summary" not in file_field and file_field != RAW_FIELD:
             json_data["creation"] = get_datetime_str(get_datetime())
             self.remove_json_for(f"{file_field}_summary")
 
@@ -100,7 +100,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
 
         content = get_compressed_data(new_json)
 
-        file.save_file(content=content, overwrite=True)
+        file.save_file(content=content, overwrite=True, ignore_existing_file_check=True)
         self.db_set(file_field, file.file_url)
 
     def remove_json_for(self, file_field):
@@ -312,6 +312,26 @@ def get_decompressed_data(content):
     return frappe.parse_json(frappe.safe_decode(gzip.decompress(content)))
 
 
+<<<<<<< HEAD
+=======
+def store_raw_return_data(gstin, return_type, return_period, json_data, overwrite=True):
+    """Keep the portal payload (gzipped) in the period's log `raw_gov_data` field."""
+    name = f"{return_type}-{return_period}-{gstin}"
+    with filelock(frappe.scrub(f"raw_return_{name}")):
+        get_gst_return_log(name).update_json_for(RAW_FIELD, json_data, overwrite=overwrite)
+
+
+def get_raw_return_data(gstin, return_type, return_period):
+    """Stored portal payload, or None."""
+    name = f"{return_type}-{return_period}-{gstin}"
+    if not frappe.db.exists(DOCTYPE, name):
+        return None
+
+    with filelock(frappe.scrub(f"raw_return_{name}")):
+        return get_gst_return_log(name).get_json_for(RAW_FIELD)
+
+
+>>>>>>> a4e0638 (refactor: gstr 1  (#4718))
 def create_ims_return_log(company_gstin):
     company = get_party_for_gstin(company_gstin, "Company")
 
