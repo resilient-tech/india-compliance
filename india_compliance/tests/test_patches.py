@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 from pathlib import Path
 from typing import ClassVar
+from unittest.mock import patch
 
 import frappe
 from frappe.database.schema import add_column
@@ -18,6 +19,26 @@ from india_compliance.install import POST_INSTALL_PATCHES
 
 
 class TestPatches(IntegrationTestCase):
+    @patch(
+        "india_compliance.patches.v16.update_reconciliation_email_template_dates.frappe.get_all",
+        return_value=[],
+    )
+    @patch(
+        "india_compliance.patches.v16.update_reconciliation_email_template_dates.frappe.db.has_column",
+        return_value=False,
+    )
+    def test_reconciliation_email_patch_without_reference_doctype(self, has_column, get_all):
+        from india_compliance.patches.v16.update_reconciliation_email_template_dates import execute
+
+        execute()
+
+        has_column.assert_called_once_with("Email Template", "reference_doctype")
+        get_all.assert_called_once_with(
+            "Email Template",
+            or_filters={"name": "Purchase Reconciliation"},
+            fields=("name", "subject", "response", "response_html"),
+        )
+
     def test_post_install_patch_exists(self):
         for patch in POST_INSTALL_PATCHES:
             self.assertTrue(frappe.get_attr(f"india_compliance.patches.post_install.{patch}.execute"))
