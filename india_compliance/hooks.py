@@ -465,7 +465,11 @@ audit_trail_doctypes = [
     "Stock Reconciliation",
     "Subcontracting Receipt",
     # Additional ERPNext DocTypes that constitute "Books of Account"
+    "Asset Depreciation Schedule",
     "POS Invoice",
+    "Cost Center Allocation",
+    "Exchange Rate Revaluation",
+    "Asset Value Adjustment",
     # India Compliance DocTypes that make GL Entries
     "Bill of Entry",
 ]
