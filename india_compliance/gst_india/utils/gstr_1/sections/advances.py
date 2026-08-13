@@ -94,6 +94,52 @@ def to_gov(rows, company_gstin="", multiplier=RECEIVED):
     return list(by_pos.values())
 
 
+def from_books(rows, multiplier=RECEIVED):
+    """Books advance entries -> one row per state and rate.
+
+        [{party: "X", taxable_value: 100, tax_amount: 18, place_of_supply: "05-Uttarakhand"}]
+     -> {"05-Uttarakhand - 18.0": [{total_taxable_value: 100, tax_rate: 18}]}
+
+    The rate is worked back out of the tax, because an advance is taken before any line exists.
+    """
+    output = {}
+
+    for entry in rows:
+        rate = round((entry["tax_amount"] / entry["taxable_value"]) * 100)
+        intra_state = entry["place_of_supply"][:2] == entry["company_gstin"][:2]
+
+        row = {
+            doc.CUST_NAME: entry["party"],
+            doc.DOC_NUMBER: entry["name"],
+            doc.DOC_DATE: entry["posting_date"],
+            doc.POS: entry["place_of_supply"],
+            doc.TAXABLE_VALUE: entry["taxable_value"] * multiplier,
+            doc.TAX_RATE: rate,
+            doc.CESS: entry["cess_amount"] * multiplier,
+        }
+
+        if entry.get("reference_name"):
+            row["against_voucher"] = entry["reference_name"]
+
+        # an advance carries no items, so the tax is split here rather than per line
+        half = entry["tax_amount"] / 2 * multiplier
+        row[doc.CGST] = half if intra_state else 0
+        row[doc.SGST] = half if intra_state else 0
+        row[doc.IGST] = 0 if intra_state else entry["tax_amount"] * multiplier
+
+        output.setdefault(f"{entry['place_of_supply']} - {flt(rate)}", []).append(row)
+
+    return output
+
+
+def received_from_books(rows):
+    return from_books(rows, RECEIVED)
+
+
+def adjusted_from_books(rows):
+    return from_books(rows, ADJUSTED)
+
+
 def received_to_canonical(gov_data):
     return {SubCategory.AT.value: to_canonical(gov_data, RECEIVED)}
 

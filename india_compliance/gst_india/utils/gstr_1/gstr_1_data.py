@@ -27,6 +27,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     SubCategory,
     get_b2c_limit,
 )
+from india_compliance.gst_india.utils.gstr_1.sections import cdnur, exports, nil_rated
 from india_compliance.gst_india.utils.gstr_1.sections._shared import split
 
 CATEGORY_CONDITIONS = {
@@ -352,11 +353,11 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
     def set_for_exports(self, invoice):
         if invoice.is_export_with_gst:
             invoice.invoice_sub_category = SubCategory.EXPWP.value
-            invoice.invoice_type = "WPAY"
+            invoice.invoice_type = exports.WITH_TAX
 
         else:
             invoice.invoice_sub_category = SubCategory.EXPWOP.value
-            invoice.invoice_type = "WOPAY"
+            invoice.invoice_type = exports.WITHOUT_TAX
 
     def set_for_b2cs(self, invoice):
         # NO INVOICE VALUE
@@ -367,10 +368,8 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
         is_registered = self.has_gstin_and_is_not_export(invoice)
         is_interstate = self.is_inter_state(invoice)
 
-        gst_registration = "registered" if is_registered else "unregistered"
-        supply_type = "Inter-State" if is_interstate else "Intra-State"
-
-        invoice.invoice_type = f"{supply_type} supplies to {gst_registration} persons"
+        code = nil_rated.supply_code(is_interstate, is_registered)
+        invoice.invoice_type = nil_rated.SUPPLY_TYPES[code]
         invoice.invoice_sub_category = SubCategory.NIL_EXEMPT.value
 
     def set_for_cdnr(self, invoice):
@@ -381,13 +380,13 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
         invoice.invoice_sub_category = SubCategory.CDNUR.value
         if self.is_export(invoice):
             if invoice.is_export_with_gst:
-                invoice.invoice_type = "EXPWP"
+                invoice.invoice_type = cdnur.EXPORT_WITH_TAX
                 return
 
-            invoice.invoice_type = "EXPWOP"
+            invoice.invoice_type = cdnur.EXPORT_WITHOUT_TAX
             return
 
-        invoice.invoice_type = "B2CL"
+        invoice.invoice_type = cdnur.LARGE_UNREGISTERED
         return
 
     def set_for_ecommerce_supply_type(self, invoice):

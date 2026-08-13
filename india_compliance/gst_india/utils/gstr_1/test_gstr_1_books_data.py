@@ -16,10 +16,11 @@ from india_compliance.gst_india.utils.gstr_1 import (
     DocField as doc,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_books_map import (
-    BooksDataMapper,
     GSTR1BooksData,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
+from india_compliance.gst_india.utils.gstr_1.sections import supecom
+from india_compliance.gst_india.utils.gstr_1.sections._shared import BOOKS_COLUMNS
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
@@ -184,7 +185,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
         )
 
         # Check if HSN Summary is same as Invoice Summary
-        for key in _class.DATA_TO_ITEM_FIELD_MAPPING:
+        for key in BOOKS_COLUMNS:
             invoice_total = 0
             for row in data[SubCategory.B2B_REGULAR.value].values():
                 invoice_total += row.get(key, 0.0)
@@ -233,7 +234,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
         )
 
         # Check if HSN Summary is same as Invoice Summary
-        for key in _class.DATA_TO_ITEM_FIELD_MAPPING:
+        for key in BOOKS_COLUMNS:
             invoice_total = 0
             for invoices in data[SubCategory.B2CS.value].values():
                 for row in invoices:
@@ -290,7 +291,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
         )
 
         # Check if HSN Summary is same as Invoice Summary
-        for key in _class.DATA_TO_ITEM_FIELD_MAPPING:
+        for key in BOOKS_COLUMNS:
             invoice_total = 0
             for invoices in data[SubCategory.NIL_EXEMPT.value].values():
                 for row in invoices:
@@ -1071,8 +1072,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
             }
         }
 
-        prepared_data = {}
-        BooksDataMapper().process_data_for_supecom(grouped_data, prepared_data)
+        prepared_data = supecom.from_books(grouped_data, lambda gstin: "")
 
         row = prepared_data[supply_type][eco_gstin]
         # Each invoice rounds to 0.01; two invoices → 0.02

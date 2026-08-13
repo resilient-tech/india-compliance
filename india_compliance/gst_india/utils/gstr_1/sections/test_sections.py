@@ -80,6 +80,22 @@ class TestKeyTables(unittest.TestCase):
         with self.assertRaises(ValueError):
             s.invert(summary.KEYS)
 
+    def test_every_category_reads_from_both_sources_and_writes_back(self):
+        """One category, one file, the same three functions -- whichever way the data flows."""
+        for module in (b2b, b2cl, exports, b2cs, nil_rated, cdnr, cdnur, hsn, doc_issue, supecom):
+            with self.subTest(module.__name__):
+                for name in ("to_canonical", "from_books", "to_gov"):
+                    self.assertTrue(callable(getattr(module, name, None)), f"missing {name}")
+
+        # advances name theirs per direction, because received and adjusted differ only in sign
+        for name in ("received_from_books", "adjusted_from_books", "received_to_gov", "adjusted_to_gov"):
+            self.assertTrue(callable(getattr(advances, name, None)), f"missing {name}")
+
+    def test_invoice_categories_claim_every_subcategory_between_them(self):
+        # the books query hands all five one bucket, so their claims must not overlap or leave gaps
+        claimed = [sub for m in (b2b, b2cl, exports, cdnr, cdnur) for sub in m.SUBCATEGORIES]
+        self.assertEqual(len(claimed), len(set(claimed)), "two categories claim the same subcategory")
+
     def test_every_category_is_registered(self):
         self.assertEqual(len(SECTIONS), 13)
 

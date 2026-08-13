@@ -21,11 +21,9 @@ from frappe.utils import cint, flt
 
 from india_compliance.gst_india.utils.gstr_1 import Category, SubCategory
 from india_compliance.gst_india.utils.gstr_1 import DocField as doc
-from india_compliance.gst_india.utils.gstr_1.gstr_1_books_map import (
-    BooksDataMapper,
-    GSTR1BooksData,
-)
+from india_compliance.gst_india.utils.gstr_1.gstr_1_books_map import GSTR1BooksData
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
+from india_compliance.gst_india.utils.gstr_1.sections import hsn
 from india_compliance.gst_india.utils.gstr_1.sections._shared import sum_column
 
 AMOUNTS = ("taxable_value", "igst_amount", "cgst_amount", "sgst_amount", "total_cess_amount")
@@ -197,7 +195,7 @@ class TestRoundingDifferenceReport(unittest.TestCase):
 
     def report(self, lost):
         prepared = {}
-        BooksDataMapper().update_rounding_difference(prepared, lost)
+        GSTR1BooksData(frappe._dict()).update_rounding_difference(prepared, lost)
         return prepared["rounding_difference"]["rounding_difference"]
 
     def test_reported_under_the_invoice_total_names(self):
@@ -238,9 +236,7 @@ class TestHsnRowsAddUp(unittest.TestCase):
         It adjusted the tax amounts after `document_value` had already been worked out, leaving the
         row claiming a total its own columns no longer added up to.
         """
-        mapper = BooksDataMapper()
-        prepared = {}
-        mapper.process_data_for_hsn_summary(
+        prepared = hsn.from_books(
             {
                 "HSN Summary": {
                     "1001 - NOS-NUMBERS - 18.0": [
@@ -249,7 +245,7 @@ class TestHsnRowsAddUp(unittest.TestCase):
                     ]
                 }
             },
-            prepared,
+            describe=lambda code: code,
         )
 
         for hsn_row in prepared["HSN Summary"].values():
