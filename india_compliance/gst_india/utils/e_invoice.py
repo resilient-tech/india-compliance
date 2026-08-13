@@ -668,9 +668,9 @@ class EInvoiceData(GSTTransactionData):
                 "serial_no": "",
                 "is_service_item": ("Y" if item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX) else "N"),
                 "unit_rate": (
-                    abs(self.rounded(item_details.taxable_amount / item.qty, 3))
+                    self.rounded(abs(item_details.taxable_amount / item.qty), 3)
                     if item.qty
-                    else abs(self.rounded(item_details.taxable_amount, 3))
+                    else self.rounded(abs(item_details.taxable_amount), 3)
                 ),
                 "barcode": self.sanitize_value(item.barcode, max_length=30, truncate=False),
             }
@@ -686,7 +686,7 @@ class EInvoiceData(GSTTransactionData):
             )
 
         if self.doc.is_reverse_charge:
-            item_details["total_value"] = abs(self.rounded(item.taxable_value, 2))
+            item_details["total_value"] = self.rounded(abs(item.taxable_value), 2)
 
     def update_transaction_details(self):
         invoice_type = "INV"
@@ -734,7 +734,7 @@ class EInvoiceData(GSTTransactionData):
             credit_days = (getdate(self.doc.due_date) - getdate(self.doc.posting_date)).days
 
         if (self.doc.is_pos or self.doc.advances) and self.doc.base_paid_amount:
-            paid_amount = abs(self.rounded(self.doc.base_paid_amount))
+            paid_amount = self.rounded(abs(self.doc.base_paid_amount))
 
         self.transaction_details.update(
             {
@@ -742,7 +742,7 @@ class EInvoiceData(GSTTransactionData):
                 "mode_of_payment": self.get_mode_of_payment(),
                 "paid_amount": paid_amount,
                 "credit_days": credit_days,
-                "outstanding_amount": abs(self.rounded(self.doc.outstanding_amount)),
+                "outstanding_amount": self.rounded(abs(self.doc.outstanding_amount)),
                 "payment_terms": self.sanitize_value(self.doc.payment_terms_template),
             }
         )
