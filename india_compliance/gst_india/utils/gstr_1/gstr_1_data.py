@@ -27,6 +27,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     SubCategory,
     get_b2c_limit,
 )
+from india_compliance.gst_returns.helpers import split
 
 CATEGORY_CONDITIONS = {
     Category.ECOM_RCM.value: {
@@ -465,6 +466,35 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 gst_uom = get_full_gst_uom(uom, settings)
                 identified_uom[uom] = gst_uom
                 invoice["uom"] = gst_uom
+
+        self.rounding_difference = self.settle_amounts(invoices)
+
+    def settle_amounts(self, invoices):
+        """Round the amounts once, here, so every report reads the same figures.
+
+        The total per invoice per tax rate is what has to tie back to the ledger, so it is rounded
+        exactly as before. Each row then takes a share of that total, which is why the rows still
+        add back to it however a report later groups them -- by invoice, or by HSN across invoices.
+
+        Returns what rounding cost, for the summary to report.
+        """
+        rows_by_rate = {}
+        for invoice in invoices:
+            key = (invoice.get("invoice_no"), flt(invoice.get("gst_rate")))
+            rows_by_rate.setdefault(key, []).append(invoice)
+
+        lost = dict.fromkeys(self.AMOUNT_FIELDS, 0.0)
+
+        for rows in rows_by_rate.values():
+            for field in self.AMOUNT_FIELDS:
+                weights = [row.get(field) or 0 for row in rows]
+                total = flt(sum(weights), 2)
+                lost[field] += sum(weights) - total
+
+                for row, share in zip(rows, split(total, weights), strict=True):
+                    row[field] = share
+
+        return lost
 
     def assign_categories(self, invoice):
         if not invoice.invoice_sub_category:
