@@ -359,7 +359,11 @@ class PurchaseInvoice(IneligibleITC):
 
     def is_debit_entry_required(self, item):
         # For Stock Entry / Fixed Asset in PI, Additional Debit is accounted automatically from valuation rates
-        return self.is_expense_item(item)
+        return not (
+            self.doc.update_stock
+            and self.is_perpetual
+            and (item.get("_is_stock_item") or item.get("is_fixed_asset"))
+        )
 
     def is_expense_item(self, item):
         """
