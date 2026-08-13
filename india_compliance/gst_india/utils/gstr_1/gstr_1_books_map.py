@@ -24,6 +24,14 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_data import (
     GSTR1Invoices,
     GSTR11A11BData,
 )
+from india_compliance.gst_india.utils.gstr_1.sections._shared import sum_money as total_of
+
+# gst_treatment -> the nil-rated amount it belongs to
+NIL_RATED_AMOUNTS = {
+    "Nil-Rated": DocField.NIL_RATED_AMOUNT,
+    "Exempted": DocField.EXEMPTED_AMOUNT,
+    "Non-GST": DocField.NON_GST_AMOUNT,
+}
 
 
 class BooksDataMapper:
@@ -109,32 +117,15 @@ class BooksDataMapper:
             invoice = sub_category_dict[invoice_no]
 
             for gst_rate, items in rate_wise_item.items():
-                tax_item = defaultdict(int)
-
-                for item in items:
-                    for key, field in self.ITEM_TO_INVOICE_FIELD_MAPPING.items():
-                        tax_item[key] += item.get(field, 0)
-
+                tax_item = {
+                    key: total_of(items, field) for key, field in self.ITEM_TO_INVOICE_FIELD_MAPPING.items()
+                }
                 tax_item[ItemField.TAX_RATE] = gst_rate
-                invoice["items"].append(dict(tax_item))
+                invoice["items"].append(tax_item)
 
-            # Aggregate the values for each item field with same GST Rate
-            # Round off this aggregated value and compute the difference at GST Rate level
-
-            for key, field in self.DATA_TO_ITEM_FIELD_MAPPING.items():
-                for item in invoice["items"]:
-                    value = item.get(field, 0)
-                    rounded = flt(value, self.PRECISION)
-                    diff = value - rounded
-
-                    item[field] = rounded
-                    invoice[key] += rounded
-
-                    self.rounding_difference[key] += diff
-
-                rounded = flt(invoice[key], self.PRECISION)
-                invoice[key] = rounded
-                self.invoice_totals[doc.hsn_sub_category][key] += rounded
+            # amounts arrive settled to two decimals, so the totals only have to add up
+            for total, field in self.DATA_TO_ITEM_FIELD_MAPPING.items():
+                invoice[total] = total_of(invoice["items"], field)
 
     def process_data_for_nil_exempt(self, grouped_data, prepared_data):
         """
@@ -178,28 +169,13 @@ class BooksDataMapper:
 
             invoices_by_type.append(invoice)
 
-            for item in chain(*rate_wise_item.values()):
-                invoice[DocField.TAXABLE_VALUE] += item.taxable_value
+            lines = list(chain(*rate_wise_item.values()))
+            invoice[DocField.TAXABLE_VALUE] = total_of(lines, "taxable_value")
 
-                if item.gst_treatment == "Nil-Rated":
-                    invoice[DocField.NIL_RATED_AMOUNT] += item.taxable_value
-
-                elif item.gst_treatment == "Exempted":
-                    invoice[DocField.EXEMPTED_AMOUNT] += item.taxable_value
-
-                elif item.gst_treatment == "Non-GST":
-                    invoice[DocField.NON_GST_AMOUNT] += item.taxable_value
-
-            # Round
-            key = DocField.TAXABLE_VALUE
-            val = invoice.get(key, 0)
-            rounded = flt(val, self.PRECISION)
-            diff = val - rounded
-
-            invoice[key] = rounded
-
-            self.rounding_difference[key] += diff
-            self.invoice_totals[item.hsn_sub_category][key] += rounded
+            for treatment, field in NIL_RATED_AMOUNTS.items():
+                invoice[field] = total_of(
+                    [line for line in lines if line.gst_treatment == treatment], "taxable_value"
+                )
 
     def process_data_for_b2cs(self, grouped_data, prepared_data):
         """
@@ -243,18 +219,8 @@ class BooksDataMapper:
 
                 invoice_list.append(invoice)
 
-                for key, field in self.DATA_TO_INVOICE_FIELD_MAPPING.items():
-                    for item in items:
-                        invoice[key] += item.get(field, 0)
-
-                    val = invoice.get(key, 0)
-                    rounded = flt(val, self.PRECISION)
-                    diff = val - rounded
-
-                    invoice[key] = rounded
-
-                    self.rounding_difference[key] += diff
-                    self.invoice_totals[item.hsn_sub_category][key] += rounded
+                for total, field in self.DATA_TO_INVOICE_FIELD_MAPPING.items():
+                    invoice[total] = total_of(items, field)
 
     def process_data_for_hsn_summary(self, grouped_data, prepared_data):
         """
@@ -304,18 +270,10 @@ class BooksDataMapper:
                 invoice = sub_category_dict[key]
 
                 # Aggregate
-                for key, field in data_to_invoice_field_map.items():
-                    for item in items:
-                        invoice[key] += item.get(field, 0)
+                for total, field in data_to_invoice_field_map.items():
+                    invoice[total] = total_of(items, field)
 
-                    invoice[key] = flt(invoice[key], self.PRECISION)
-
-                doc_value = sum([invoice.get(field, 0) for field in tax_fields])
-
-                invoice[DocField.DOC_VALUE] = flt(doc_value, self.PRECISION)
-
-            if hasattr(self, "invoice_totals"):
-                self.adjust_hsn_totals(sub_category, sub_category_dict)
+                invoice[DocField.DOC_VALUE] = flt(sum(invoice.get(field, 0) for field in tax_fields), 2)
 
     def process_data_for_supecom(self, grouped_data, prepared_data):
         """
@@ -432,50 +390,21 @@ class BooksDataMapper:
             DocField.CESS: invoice.get("total_cess_amount", 0),
         }
 
-    def initialize_totals(self):
-        """
-        Initialize the rounding difference dictionary.
-        This method is used to reset the rounding difference.
-        """
-        self.invoice_totals = defaultdict(lambda: defaultdict(float))
-        self.rounding_difference = defaultdict(float)
+    def update_rounding_difference(self, prepared_data, lost_to_rounding):
+        """Report what settling the amounts cost.
 
-    def update_rounding_difference(self, prepared_data):
-        """
-        Round off the rounding difference values to 2 decimal places.
-        This method is used to round off the rounding difference values.
+        Reported under the invoice total names, because the page offers to post a journal entry
+        from these figures -- that is how the residual gets back into the ledger.
         """
         precision = cint(frappe.db.get_default("currency_precision")) or None
+        reported_as = {column: total for total, column in self.DATA_TO_INVOICE_FIELD_MAPPING.items()}
 
-        for key, value in self.rounding_difference.items():
-            self.rounding_difference[key] = flt(value, precision)
+        difference = {
+            reported_as[column]: flt(value, precision) for column, value in lost_to_rounding.items()
+        }
 
         # saved as object -> it's normalized
-        prepared_data["rounding_difference"] = {"rounding_difference": self.rounding_difference}
-
-    def adjust_hsn_totals(self, sub_category, sub_category_dict):
-        expected_totals = self.invoice_totals.get(sub_category)
-        if not expected_totals:
-            return
-
-        # sort -> to ensure adjusted to same row
-        hsn_data = sorted(
-            sub_category_dict.values(),
-            key=lambda item: item.get(DocField.TAXABLE_VALUE, 0),
-            reverse=True,
-        )
-
-        # diff
-        for row in hsn_data:
-            for key in expected_totals:
-                expected_totals[key] -= row.get(key, 0)
-
-        # adjust totals
-        for key, diff in expected_totals.items():
-            for row in hsn_data:
-                if row.get(key):
-                    row[key] = flt(row[key] + diff, self.PRECISION)
-                    break
+        prepared_data["rounding_difference"] = {"rounding_difference": difference}
 
 
 class GSTR1BooksData(BooksDataMapper):
@@ -489,10 +418,7 @@ class GSTR1BooksData(BooksDataMapper):
 
         _class = GSTR1Invoices(self.filters)
         data = _class.get_invoices_for_item_wise_summary()
-        _class.process_invoices(data)
-
-        # initialize rounding difference and hsn error
-        self.initialize_totals()
+        _class.process_invoices(data)  # amounts come back settled to two decimals
 
         data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs, data_for_supecom = (
             self.get_structured_data(data)
@@ -517,7 +443,7 @@ class GSTR1BooksData(BooksDataMapper):
 
         self.process_for_quarterly(prepared_data)
 
-        self.update_rounding_difference(prepared_data)
+        self.update_rounding_difference(prepared_data, _class.rounding_difference)
 
         return prepared_data
 
