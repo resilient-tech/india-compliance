@@ -2292,7 +2292,7 @@ def get_gstr_1_json(
 
     gstr1_log.normalize_data(data)
 
-    # the portal rejects blank fields, so they are dropped here rather than while mapping
+    # portal rejects blanks, so they go here, not while mapping
     gov_data = strip_empty(convert_to_gov_data_format(data, company_gstin))
 
     if sections:

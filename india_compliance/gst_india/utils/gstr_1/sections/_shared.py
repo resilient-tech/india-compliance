@@ -1,11 +1,7 @@
-"""Named steps shared by every GSTR-1 category.
+"""Steps every category shares.
 
-Replaces the old `GovDataMapper.format_data`: each step has a name and is called on a visible
-line, instead of being dispatched from a formatter dict behind a `for_gov` flag.
-
-Two rules the package relies on:
-    reading   keep blanks, round nothing -- canonical must be able to rebuild the portal payload
-    writing   round money, then drop blanks at the JSON boundary, which is where the portal cares
+Reading keeps blanks and rounds nothing, so the payload can be rebuilt. Writing rounds money;
+blanks go at the JSON boundary.
 """
 
 from datetime import datetime
@@ -25,7 +21,7 @@ from india_compliance.gst_returns.fields.gstr1 import RawField as raw
 # state number -> state name
 STATE_NAMES = {number: name for name, number in STATE_NUMBERS.items()}
 
-# item amount -> the invoice total it adds up to
+# item amount -> its invoice total
 ITEM_TOTALS = {
     item.TAXABLE_VALUE: doc.TAXABLE_VALUE,
     item.IGST: doc.IGST,
@@ -34,7 +30,7 @@ ITEM_TOTALS = {
     item.CESS: doc.CESS,
 }
 
-# inter-state categories carry no central or state tax
+# inter-state: no central or state tax
 ITEM_TOTALS_IGST = {
     item.TAXABLE_VALUE: doc.TAXABLE_VALUE,
     item.IGST: doc.IGST,
@@ -46,12 +42,12 @@ ITEM_TOTALS_IGST = {
 
 
 def pick(src, keys):
-    """Portal row -> canonical row, in table order. Unlisted keys dropped, blanks kept."""
+    """Portal row -> our row, table order. Unlisted keys go, blanks stay."""
     return {new: src[old] for old, new in keys.items() if old in src}
 
 
 def pick_back(src, keys):
-    """Canonical row -> portal row. Same table, read the other way."""
+    """Our row -> portal row. Same table, other way."""
     return {old: src[new] for old, new in keys.items() if new in src}
 
 
@@ -61,7 +57,7 @@ def flip(mapping):
 
 
 def invert(keys):
-    """Reverse a key table, refusing to lose a key."""
+    """Reverse a key table. Refuses to lose a key."""
     flipped = flip(keys)
     if len(flipped) != len(keys):
         raise ValueError("key table is not reversible")
@@ -70,16 +66,12 @@ def invert(keys):
 
 
 def with_defaults(row, defaults):
-    """Put fixed fields in front of a row. Blank defaults are dropped -- they are not portal data."""
+    """Fixed fields in front of a row. Blank ones are dropped."""
     return {**{k: v for k, v in defaults.items() if v or v == 0}, **row}
 
 
 def convert(row, field, using):
-    """Rewrite one field through the given function.
-
-    Blanks pass straight through -- there is nothing to convert, and the boundary drops them.
-    Zero does not: it is a real amount and still gets rounded.
-    """
+    """Rewrite one field. Blanks pass through, zero does not -- it is a real amount."""
     if field in row and not is_blank(row[field]):
         row[field] = using(row[field])
 
@@ -95,7 +87,7 @@ def remap(row, field, table):
 
 
 def drop_flag(row):
-    """The portal's row marker means nothing once the row is ours."""
+    """Portal row marker means nothing once the row is ours."""
     row.pop(doc.FLAG, None)
     return row
 
@@ -112,7 +104,7 @@ def drop_zero_diff(row):
 
 
 def pos_from_gov(number):
-    """Portal sends the state number only; the app stores "05-Uttarakhand" everywhere."""
+    """ "05" -> "05-Uttarakhand", what we store everywhere."""
     name = STATE_NAMES.get(number)
 
     return f"{number}-{name}" if name else number
@@ -158,11 +150,7 @@ def _uom(uom):
 
 
 def customer_name(gstin, cache):
-    """Name behind a GSTIN, looked up once per download.
-
-    The one canonical field not derived from the payload, so a row mapped before its Customer
-    exists keeps saying "Unknown". Moves to render time with the Excel rewrite.
-    """
+    """Name behind a GSTIN, looked up once per download. Unknown until the Customer exists."""
     if gstin not in cache:
         cache[gstin] = get_party_for_gstin(gstin, "Customer") or "Unknown"
 
@@ -186,12 +174,12 @@ def round_money(row, fields):
 
 
 def sum_money(row, fields):
-    """Rounded total of the named amounts. A blank counts as nothing."""
+    """Rounded total of the named amounts. Blank counts as nothing."""
     return flt(sum(row.get(field) or 0 for field in fields), 2)
 
 
 def add_item_totals(row, items, totals):
-    """Add item amounts into the invoice totals. Accumulates, so call once per invoice."""
+    """Item amounts into the invoice totals. Adds up, so call once per invoice."""
     for line in items or []:
         for field, total in totals.items():
             if not is_blank(line.get(field)):
@@ -201,7 +189,7 @@ def add_item_totals(row, items, totals):
 
 
 def flip_signs(row, multiplier, fields):
-    """Negate the named amounts -- credit notes and adjustments reduce liability."""
+    """Negate the named amounts. Notes and adjustments reduce liability."""
     if multiplier == 1:
         return row
 
@@ -232,7 +220,7 @@ def supply_type(pos, company_gstin):
 
 
 def wrapped_items_from_gov(items, keys, defaults):
-    """Portal nests each item under "itm_det". Amounts the portal omits read as zero."""
+    """Portal nests each item under "itm_det". Missing amounts read as zero."""
     return [{**defaults, **pick(line.get(raw.ITEM_DETAILS, {}), keys)} for line in items or []]
 
 
@@ -247,7 +235,7 @@ def wrapped_items_to_gov(items, keys, money_fields):
 
 
 def flat_items_from_gov(items, keys, defaults):
-    """Some categories list item amounts directly, with no wrapper."""
+    """Some categories list item amounts with no wrapper."""
     return [{**defaults, **pick(line, keys)} for line in items or []]
 
 
@@ -259,13 +247,7 @@ def flat_items_to_gov(items, keys, money_fields):
 
 
 def groups_from_rows(rows, group_key, group_header, rows_field, write_row):
-    """Our flat rows -> the portal's grouped shape, one group per key.
-
-        [{customer_gstin: "24AA...", document_number: "S1"}, ...]
-     -> [{ctin: "24AA...", inv: [{inum: "S1"}, ...]}]
-
-    The first row of a key writes the group's header; later rows only add to its list.
-    """
+    """Our rows -> the portal's groups. First row of a key writes the header."""
     groups = {}
 
     for row in rows:
@@ -276,11 +258,7 @@ def groups_from_rows(rows, group_key, group_header, rows_field, write_row):
 
 
 def rows_from_groups(groups, rows_field, group_header, read_row):
-    """The portal's grouped shape -> our flat rows, with the group's own fields on each.
-
-       [{ctin: "24AA...", inv: [{inum: "S1"}, ...]}]
-    -> [{customer_gstin: "24AA...", document_number: "S1"}, ...]
-    """
+    """The portal's groups -> our rows, group fields copied onto each."""
     for group in groups:
         header = group_header(group)
 
@@ -289,7 +267,7 @@ def rows_from_groups(groups, rows_field, group_header, read_row):
 
 
 def strip_empty(value):
-    """Drop the blanks the portal rejects. Zero and False stay -- they are real amounts."""
+    """Drop the blanks the portal rejects. Zero and False stay."""
     if isinstance(value, dict):
         return {k: strip_empty(v) for k, v in value.items() if not is_blank(v)}
 

@@ -1,4 +1,4 @@
-"""Map books data (invoices, advances, document ranges) into the canonical GSTR-1 shape."""
+"""Books data -- invoices, advances, document ranges -- into our GSTR-1 shape."""
 
 from collections import defaultdict
 from itertools import chain

@@ -1,9 +1,4 @@
-"""Credit and debit notes against unregistered buyers and exports (table 9B).
-
-Portal:    [{ntty: "C", nt_num: "533515", typ: "B2CL", itms: [{num: 1, itm_det: {txval: 5225.28}}]}]
-Canonical: {"Credit/Debit Notes (Unregistered)": {"533515": {transaction_type: "Credit Note",
-                                                             items: [{taxable_value: -5225.28}],
-                                                             total_taxable_value: -5225.28}}}
+"""Credit and debit notes to unregistered buyers and exports (table 9B).
 
 Same sign rule as registered notes: stored negative, filed unsigned.
 """
@@ -36,7 +31,7 @@ KEYS = {
     raw.ERROR_MSG: doc.ERROR_MSG,
 }
 
-# exports have no place of supply to report
+# exports report no place of supply
 EXPORT_TYPES = ("EXPWP", "EXPWOP")
 
 ITEM_DEFAULTS = dict.fromkeys(s.ITEM_TOTALS_IGST, 0)
@@ -54,9 +49,9 @@ def to_canonical(gov_data):
         row = s.drop_flag(s.pick(note, KEYS))
 
         s.remap(row, doc.TRANSACTION_TYPE, NOTE_TYPES)  # C -> Credit Note
-        s.convert(row, doc.DOC_DATE, s.date_from_gov)  # 23-09-2016 -> 2016-09-23
-        s.convert(row, doc.POS, s.pos_from_gov)  # 03 -> 03-Punjab
-        s.flip_signs(row, multiplier, (doc.DOC_VALUE,))  # credit note 123123 -> -123123
+        s.convert(row, doc.DOC_DATE, s.date_from_gov)
+        s.convert(row, doc.POS, s.pos_from_gov)
+        s.flip_signs(row, multiplier, (doc.DOC_VALUE,))
 
         row[doc.ITEMS] = [
             s.flip_signs(line, multiplier, ITEM_AMOUNTS)
@@ -74,8 +69,8 @@ def to_gov(rows, company_gstin=""):
         out = s.round_money(s.abs_amounts(s.pick_back(row, KEYS), (raw.DOC_VALUE,)), MONEY)
 
         s.remap(out, raw.NOTE_TYPE, NOTE_CODES)  # Credit Note -> C
-        s.convert(out, raw.NOTE_DATE, s.date_to_gov)  # 2016-09-23 -> 23-09-2016
-        s.convert(out, raw.POS, s.pos_to_gov)  # 03-Punjab -> 03
+        s.convert(out, raw.NOTE_DATE, s.date_to_gov)
+        s.convert(out, raw.POS, s.pos_to_gov)
 
         if row.get(doc.DOC_TYPE) in EXPORT_TYPES:
             out.pop(raw.POS, None)

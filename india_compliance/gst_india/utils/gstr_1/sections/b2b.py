@@ -1,12 +1,4 @@
-"""B2B — invoices to registered buyers, including SEZ and deemed exports (table 4).
-
-Portal groups invoices under the buyer's GSTIN:
-    [{ctin: "24AANFA2641L1ZF", inv: [{inum: "S008400", itms: [{num: 1, itm_det: {txval: 10000}}]}]}]
-
-We keep one row per invoice, filed under the subcategory its invoice type decides:
-    {"B2B Regular": {"S008400": {customer_gstin: "24AANFA...", document_number: "S008400",
-                                 items: [{taxable_value: 10000}], total_taxable_value: 10000}}}
-"""
+"""Invoices to registered buyers, SEZ and deemed exports (table 4). Portal groups by buyer."""
 
 from india_compliance.gst_returns.fields.gstr1 import B2BInvoiceType, SubCategory
 from india_compliance.gst_returns.fields.gstr1 import DocField as doc
@@ -15,7 +7,7 @@ from india_compliance.gst_returns.fields.gstr1 import RawField as raw
 
 from . import _shared as s
 
-# portal key -> canonical name. One table for the invoice and its items -- the portal reuses names.
+# portal key -> our name. Invoice and items share one table.
 KEYS = {
     raw.FLAG: doc.FLAG,
     raw.DOC_NUMBER: doc.DOC_NUMBER,
@@ -35,7 +27,7 @@ KEYS = {
     raw.CESS: item.CESS,
 }
 
-# inv_typ -> readable invoice type
+# inv_typ -> invoice type
 INVOICE_TYPES = {
     "R": B2BInvoiceType.R.value,
     "SEWP": B2BInvoiceType.SEWP.value,
@@ -44,7 +36,7 @@ INVOICE_TYPES = {
 }
 INVOICE_CODES = s.flip(INVOICE_TYPES)
 
-# inv_typ -> the subcategory the invoice is filed under
+# inv_typ -> its subcategory
 SUBCATEGORY_OF = {
     "SEWP": SubCategory.SEZWP.value,
     "SEWOP": SubCategory.SEZWOP.value,
@@ -58,7 +50,7 @@ ITEM_MONEY = (raw.TAXABLE_VALUE, raw.IGST, raw.CGST, raw.SGST, raw.CESS)
 
 
 def subcategory_of(invoice):
-    """SEZ and deemed exports file separately; the rest split by who pays the tax."""
+    """Which table 4 row this invoice goes to."""
     if invoice.get(raw.INVOICE_TYPE) in SUBCATEGORY_OF:
         return SUBCATEGORY_OF[invoice[raw.INVOICE_TYPE]]
 
@@ -84,11 +76,11 @@ def to_canonical(gov_data):
     def read(invoice, header):
         row = s.drop_flag(s.with_defaults(s.pick(invoice, KEYS), header))
 
-        s.convert(row, doc.DOC_DATE, s.date_from_gov)  # 24-11-2016 -> 2016-11-24
-        s.convert(row, doc.POS, s.pos_from_gov)  # 06 -> 06-Haryana
+        s.convert(row, doc.DOC_DATE, s.date_from_gov)
+        s.convert(row, doc.POS, s.pos_from_gov)
         s.remap(row, doc.DOC_TYPE, INVOICE_TYPES)  # R -> Regular B2B
         s.convert(row, doc.ITEMS, lambda items: s.wrapped_items_from_gov(items, KEYS, ITEM_DEFAULTS))
-        s.add_item_totals(row, row.get(doc.ITEMS), s.ITEM_TOTALS)  # items 10000 + 5000 -> 15000
+        s.add_item_totals(row, row.get(doc.ITEMS), s.ITEM_TOTALS)
 
         return subcategory_of(invoice), row
 
@@ -102,8 +94,8 @@ def to_gov(rows, company_gstin=""):
     def write(row):
         out = s.round_money(s.pick_back(row, KEYS), MONEY)
 
-        s.convert(out, raw.DOC_DATE, s.date_to_gov)  # 2016-11-24 -> 24-11-2016
-        s.convert(out, raw.POS, s.pos_to_gov)  # 06-Haryana -> 06
+        s.convert(out, raw.DOC_DATE, s.date_to_gov)
+        s.convert(out, raw.POS, s.pos_to_gov)
         s.remap(out, raw.INVOICE_TYPE, INVOICE_CODES)  # Regular B2B -> R
         s.convert(out, raw.ITEMS, lambda items: s.wrapped_items_to_gov(items, KEYS, ITEM_MONEY))
 

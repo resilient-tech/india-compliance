@@ -1,12 +1,7 @@
-"""HSN summary — quantities and tax per product code, split by buyer type (table 12).
+"""Quantity and tax per product code, split by buyer type (table 12).
 
-Portal:    {hsn_b2b: [{num: 1, hsn_sc: "1102", uqc: "BOX", qty: 2, txval: 100, camt: 0.5}]}
-Canonical: {"HSN Summary - B2B": {"1102 - BOX-BOX - 1.0": {hsn_code: "1102", uom: "BOX-BOX",
-                                                           quantity: 2, total_taxable_value: 100,
-                                                           document_value: 101}}}
-
-Older returns used a single "data" key instead of the b2b/b2c split, and the portal's error
-response arrives as one object rather than a list. Both shapes are accepted.
+Older returns use one "data" key instead of the b2b/b2c split, and errors arrive as one object.
+Both shapes are read.
 """
 
 from frappe.utils import flt
@@ -32,7 +27,7 @@ KEYS = {
     raw.TAX_RATE: item.TAX_RATE,
 }
 
-# portal json key -> the subcategory its rows are filed under
+# portal json key -> its subcategory
 SECTIONS = {
     raw.HSN_B2B: SubCategory.HSN_B2B.value,
     raw.HSN_B2C: SubCategory.HSN_B2C.value,
@@ -40,7 +35,7 @@ SECTIONS = {
 }
 SECTION_KEYS = s.flip(SECTIONS)
 
-# what the summary line is worth in total
+# what the line is worth in total
 VALUE_PARTS = (doc.TAXABLE_VALUE, doc.IGST, doc.CGST, doc.SGST, doc.CESS)
 
 MONEY = (
@@ -54,7 +49,7 @@ MONEY = (
 
 
 def group_key(entry):
-    """Identity used to match books against the portal. Discarded before the data is stored."""
+    """Row identity, books against portal. Not stored."""
     return " - ".join(
         (
             entry.get(raw.HSN_CODE, ""),
@@ -83,10 +78,10 @@ def to_canonical(gov_data):
             for entry in entries:
                 row = s.with_defaults(s.pick(entry, KEYS), {**errors, doc.DOC_TYPE: subcategory})
 
-                s.convert(row, doc.UOM, s.uom_from_gov)  # BOX -> BOX-BOX
-                row[doc.DOC_VALUE] = s.sum_money(row, VALUE_PARTS)  # 100 + 0.5 + 0.5 -> 101
+                s.convert(row, doc.UOM, s.uom_from_gov)
+                row[doc.DOC_VALUE] = s.sum_money(row, VALUE_PARTS)
 
-                # the portal reports errors per line; name the code it complained about
+                # errors come per line, so name the code
                 if (message := row.get(doc.ERROR_MSG, "").strip()) and (hsn := row.get(doc.HSN_CODE)):
                     row[doc.ERROR_MSG] = f"HSN Code: {hsn} - {message}"
 

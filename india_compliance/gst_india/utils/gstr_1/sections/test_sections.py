@@ -1,16 +1,7 @@
 # Copyright (c) 2024, Resilient Tech and Contributors
 # See license.txt
 
-"""Tests for the rules the category modules share.
-
-Guards the behaviour the refactor introduced -- table-ordered keys, blanks kept while reading and
-dropped only at the JSON boundary, money rounded one way only -- and proves every category can
-rebuild the portal payload it was read from.
-
-Needs a site: rounding and the party-name lookup both read site settings.
-    bench --site <site> run-tests --module \
-        india_compliance.gst_india.utils.gstr_1.sections.test_sections
-"""
+"""Tests for the rules every category shares. Needs a site -- rounding reads its settings."""
 
 import copy
 import itertools
@@ -49,7 +40,7 @@ COMPANY_GSTIN = "24AAUPV7468F1ZW"
 
 
 def flatten(canonical):
-    """Rows as the export sees them, once the matching keys are dropped."""
+    """Rows as the export sees them, matching keys dropped."""
     rows = []
 
     for section in canonical.values():
@@ -63,14 +54,14 @@ class TestPick(unittest.TestCase):
     KEYS: ClassVar[dict] = {"b": "second", "a": "first"}
 
     def test_emits_in_table_order_not_source_order(self):
-        # the portal reads key order off the table, so a source-ordered rename would change output
+        # portal reads key order off the table
         self.assertEqual(list(s.pick({"a": 1, "b": 2}, self.KEYS)), ["second", "first"])
 
     def test_drops_keys_not_in_table(self):
         self.assertEqual(s.pick({"a": 1, "zz": 9}, self.KEYS), {"first": 1})
 
     def test_keeps_a_blank_the_portal_sent(self):
-        # this is what makes canonical lossless: an empty value the portal sent is still data
+        # an empty value the portal sent is still data
         self.assertEqual(s.pick({"a": ""}, self.KEYS), {"first": ""})
 
     def test_reads_back_the_other_way(self):
@@ -84,7 +75,7 @@ class TestKeyTables(unittest.TestCase):
                 s.invert(module.KEYS)
 
     def test_summary_table_is_not_reversible_and_does_not_have_to_be(self):
-        # two portal keys become one description; the summary is never filed back
+        # two portal keys, one description. Summary is never filed back
         with self.assertRaises(ValueError):
             s.invert(summary.KEYS)
 
@@ -152,7 +143,7 @@ class TestStripEmpty(unittest.TestCase):
         self.assertEqual(s.strip_empty({"a": 1, "b": None, "c": "", "d": {}, "e": []}), {"a": 1})
 
     def test_keeps_zero_and_false(self):
-        # a zero amount is a filed amount
+        # a zero amount is still filed
         self.assertEqual(s.strip_empty({"a": 0, "b": 0.0, "c": False}), {"a": 0, "b": 0.0, "c": False})
 
     def test_reaches_inside_lists_and_nested_rows(self):
@@ -162,7 +153,7 @@ class TestStripEmpty(unittest.TestCase):
         )
 
     def test_keeps_a_row_that_empties_out(self):
-        # matches what the mapper used to emit: the wrapper stays, its blank contents go
+        # wrapper stays, its blank contents go
         self.assertEqual(s.strip_empty({"itm_det": {"txval": ""}}), {"itm_det": {}})
 
 
@@ -180,7 +171,7 @@ class TestPlaceOfSupply(unittest.TestCase):
 
 class TestItemTotals(unittest.TestCase):
     def test_item_amounts_pair_with_prefixed_invoice_totals(self):
-        # replaces building the name with f"total_{field}", which produced total_total_* for advances
+        # building the name by hand gave total_total_* for advances
         for line, total in s.ITEM_TOTALS.items():
             self.assertEqual(total, f"total_{line}")
 
@@ -228,7 +219,7 @@ class TestMoney(unittest.TestCase):
 
 
 class TestBlanksFromThePortal(unittest.TestCase):
-    """What the portal leaves out, and what it explicitly sends as nothing, are different things."""
+    """What the portal left out and what it sent as nothing are different things."""
 
     def payload(self, item_details, **invoice):
         return [
@@ -269,7 +260,7 @@ class TestBlanksFromThePortal(unittest.TestCase):
         self.assertNotIn(doc.TAXABLE_VALUE, row)
 
     def test_a_null_place_of_supply_still_reads(self):
-        """A kept null must not break the pos-rate key the row is stored under."""
+        """A kept null must not break the pos-rate key."""
         b2cs_rows = b2cs.to_canonical([{raw.POS: None, raw.TAX_RATE: 5, raw.TAXABLE_VALUE: 100}])
         self.assertIn(" - 5.0", b2cs_rows[b2cs.SUBCATEGORY])
 
@@ -338,11 +329,7 @@ class TestCreditNoteSigns(unittest.TestCase):
         self.assertEqual(out[raw.ITEMS][0][raw.ITEM_DETAILS][raw.TAXABLE_VALUE], 5225.28)
 
     def test_deemed_export_note_files_the_portal_code(self):
-        """Books writes one invoice-type label for both B2B and credit notes.
-
-        CDNR used to render "DE" as "Deemed Exports" while books wrote B2B's "Deemed Exp", so the
-        label never translated back and the portal received it verbatim. One table now, both ways.
-        """
+        """Books writes one label for both B2B and notes, so one table serves both ways."""
         books_row = {
             doc.CUST_GSTIN: "24AANFA2641L1ZF",
             doc.TRANSACTION_TYPE: "Credit Note",
@@ -382,7 +369,7 @@ class TestCreditNoteSigns(unittest.TestCase):
             )
 
     def test_a_note_stored_with_the_old_label_still_files_the_portal_code(self):
-        """Rows mapped before the unification carry "Deemed Exports"; they must still file as DE."""
+        """Rows mapped before the merge say "Deemed Exports". Must still file as DE."""
         stored_row = {
             doc.CUST_GSTIN: "24AANFA2641L1ZF",
             doc.TRANSACTION_TYPE: "Credit Note",
@@ -409,7 +396,7 @@ class TestCreditNoteSigns(unittest.TestCase):
         self.assertEqual(flatten(cdnr.to_canonical(payload))[0][doc.DOC_VALUE], 123123)
 
 
-# one realistic portal payload per category, used by the round-trip and zero-difference tests
+# one real-shaped payload per category, for the round-trip and zero-difference tests
 PAYLOADS = {
     "b2b": (b2b.to_canonical, b2b.to_gov, TestMoney.RAW),
     "cdnr": (cdnr.to_canonical, cdnr.to_gov, TestCreditNoteSigns.RAW),
@@ -459,7 +446,7 @@ PAYLOADS = {
             }
         ],
     ),
-    # supply type is derived on write, so the payload already carries the portal's value
+    # supply type is worked out on write, so the payload carries it already
     "b2cs": (
         b2cs.to_canonical,
         b2cs.to_gov,
@@ -612,17 +599,12 @@ PAYLOADS = {
 
 
 def rebuild(reader, writer, payload):
-    """What the portal would receive: mapped back, then blanks dropped as the boundary does."""
+    """What the portal would get: mapped back, blanks dropped."""
     return s.strip_empty(writer(flatten(reader(payload)), company_gstin=COMPANY_GSTIN))
 
 
 class TestRoundTrip(unittest.TestCase):
-    """Everything the portal sent must survive raw -> canonical -> raw, for every category.
-
-    Nothing is dropped while reading any more, so no field can go missing. Two differences are
-    allowed and both are additions, not losses: amounts are rounded to the two decimals the portal
-    accepts, and every item line is filled out with zeros for the amounts it did not carry.
-    """
+    """Everything the portal sent survives raw -> ours -> raw. Only rounding and zeros are added."""
 
     def survives(self, sent, back, path="root"):
         if isinstance(sent, dict):
@@ -652,11 +634,7 @@ class TestRoundTrip(unittest.TestCase):
 
 
 class TestZeroDifference(unittest.TestCase):
-    """A zero rate difference must not reach the portal, which rejects it.
-
-    The old engine dropped it once for every category; now each writer says so itself, so this
-    checks all of them rather than trusting one.
-    """
+    """A zero rate difference must not reach the portal. Every writer drops its own now."""
 
     def test_dropped_by_every_category_that_maps_it(self):
         for name, (reader, writer, payload) in PAYLOADS.items():
@@ -695,17 +673,13 @@ class TestSupplyType(unittest.TestCase):
         self.assertEqual(s.supply_type("05", COMPANY_GSTIN), "INTER")
 
     def test_refuses_a_missing_seller(self):
-        # a blank one would file every intra-state supply as inter-state, and say nothing
+        # a blank one would file every intra-state supply as inter-state, quietly
         with self.assertRaises(ValueError):
             b2cs.to_gov(flatten(b2cs.to_canonical(PAYLOADS["b2cs"][2])))
 
 
 class TestWritingLeavesStoredRowsAlone(unittest.TestCase):
-    """A writer gets the stored rows themselves, so it must not rewrite them.
-
-    `convert_to_gov_data_format` hands its caller's rows straight to each writer. A sign flipped
-    or a count added in place would corrupt what is saved and change the next payload written.
-    """
+    """A writer gets the stored rows themselves, so it must leave them alone."""
 
     def test_no_writer_changes_the_rows_it_was_given(self):
         for name, (reader, writer, payload) in PAYLOADS.items():
@@ -718,7 +692,7 @@ class TestWritingLeavesStoredRowsAlone(unittest.TestCase):
                 self.assertEqual(rows, before)
 
     def test_a_draft_is_counted_as_cancelled_once(self):
-        # books-only field, so no payload above carries it
+        # books-only field, no payload above has it
         rows = [
             {
                 doc.DOC_TYPE: "Invoices for outward supply",
@@ -736,7 +710,7 @@ class TestWritingLeavesStoredRowsAlone(unittest.TestCase):
 
 
 class TestCategoryRules(unittest.TestCase):
-    """The rules that belong to one category only, and so are easy to lose in a rewrite."""
+    """Rules that belong to one category only, so easy to lose in a rewrite."""
 
     def test_an_export_credit_note_reports_no_place_of_supply(self):
         rows = flatten(cdnur.to_canonical(PAYLOADS["cdnur"][2]))
@@ -836,7 +810,7 @@ class TestSummary(unittest.TestCase):
         self.assertEqual(overview[1][doc.DESCRIPTION], SubCategory.B2B_REGULAR.value)
 
     def test_an_amended_ecommerce_section_names_its_subsections(self):
-        """The portal's amended subsection code is unverified; both spellings must resolve."""
+        """Amended subsection code is unverified, so both spellings must resolve."""
         for code in ("SUPECOM_14A", "SUPECOMA_14A"):
             rows = summary.to_canonical(
                 [

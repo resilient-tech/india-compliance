@@ -1,13 +1,6 @@
-"""Credit and debit notes against registered buyers, grouped by buyer (table 9B).
+"""Credit and debit notes to registered buyers (table 9B).
 
-Portal:    [{ctin: "24AANFA2641L1ZF", nt: [{ntty: "C", nt_num: "533515", val: 123123,
-                                            itms: [{num: 1, itm_det: {txval: 5225.28}}]}]}]
-Canonical: {"Credit/Debit Notes (Registered)": {"533515": {transaction_type: "Credit Note",
-                                                           items: [{taxable_value: -5225.28}],
-                                                           total_taxable_value: -10450.56}}}
-
-A credit note reduces what is owed, so we store its amounts negative. The portal wants them
-unsigned and reads the direction from the note type instead.
+Credit note reduces what is owed, so we store it negative. Portal wants unsigned plus a note type.
 """
 
 from india_compliance.gst_returns.fields.gstr1 import CreditDebitNoteType, SubCategory
@@ -41,7 +34,7 @@ KEYS = {
     raw.CESS: item.CESS,
 }
 
-# ntty -> readable note type
+# ntty -> note type
 NOTE_TYPES = {
     "C": CreditDebitNoteType.C.value,
     "D": CreditDebitNoteType.D.value,
@@ -58,7 +51,7 @@ CREDIT_NOTE = "C"
 
 
 def sign(note_type):
-    """Credit notes are stored negative, debit notes positive."""
+    """Credit notes stored negative, debit notes positive."""
     return -1 if note_type == CREDIT_NOTE else 1
 
 
@@ -81,9 +74,9 @@ def to_canonical(gov_data):
 
         s.remap(row, doc.TRANSACTION_TYPE, NOTE_TYPES)  # C -> Credit Note
         s.remap(row, doc.DOC_TYPE, INVOICE_TYPES)  # DE -> Deemed Exp
-        s.convert(row, doc.DOC_DATE, s.date_from_gov)  # 23-09-2016 -> 2016-09-23
-        s.convert(row, doc.POS, s.pos_from_gov)  # 03 -> 03-Punjab
-        s.flip_signs(row, multiplier, (doc.DOC_VALUE,))  # credit note 123123 -> -123123
+        s.convert(row, doc.DOC_DATE, s.date_from_gov)
+        s.convert(row, doc.POS, s.pos_from_gov)
+        s.flip_signs(row, multiplier, (doc.DOC_VALUE,))
 
         row[doc.ITEMS] = [
             s.flip_signs(line, multiplier, ITEM_AMOUNTS)
@@ -105,8 +98,8 @@ def to_gov(rows, company_gstin=""):
 
         s.remap(out, raw.NOTE_TYPE, NOTE_CODES)  # Credit Note -> C
         s.remap(out, raw.INVOICE_TYPE, LEGACY_INVOICE_CODES)  # Deemed Exp -> DE
-        s.convert(out, raw.NOTE_DATE, s.date_to_gov)  # 2016-09-23 -> 23-09-2016
-        s.convert(out, raw.POS, s.pos_to_gov)  # 03-Punjab -> 03
+        s.convert(out, raw.NOTE_DATE, s.date_to_gov)
+        s.convert(out, raw.POS, s.pos_to_gov)
 
         items = [s.abs_amounts(dict(line), ITEM_AMOUNTS) for line in row[doc.ITEMS]]
         out[raw.ITEMS] = s.wrapped_items_to_gov(items, KEYS, ITEM_MONEY)

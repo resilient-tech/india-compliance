@@ -90,7 +90,7 @@ class DocField:
     ERROR_CD = "error_code"
     ERROR_MSG = "error_message"
 
-    # portal row marker: "D" deletes the row on upload
+    # row marker: "D" deletes the row on upload
     FLAG = "flag"
 
 
@@ -164,7 +164,7 @@ class RawField:
     SUPECOM_52 = "clttx"
     SUPECOM_9_5 = "paytx"
 
-    # e-commerce rows spell the taxes out instead of abbreviating them
+    # e-commerce rows spell the taxes out
     ECOM_IGST = "igst"
     ECOM_CGST = "cgst"
     ECOM_SGST = "sgst"
@@ -234,7 +234,7 @@ class JsonKey(Enum):
 
 
 class HSNKey(Enum):
-    # the json keys HSN rows can arrive under, for picking excel sheets
+    # json keys HSN rows arrive under, for picking excel sheets
     HSN = JsonKey.HSN.value
     HSN_B2B = RawField.HSN_B2B
     HSN_B2C = RawField.HSN_B2C

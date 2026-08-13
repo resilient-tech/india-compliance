@@ -1,10 +1,7 @@
 """Move GSTR-1 data between the portal's shape and ours.
 
-The portal's own docs: https://developer.gst.gov.in/apiportal/taxpayer/returns
-
-Each category is handled by its own module under `sections/`; this file only decides which one
-runs. Reading keeps everything the portal sent, so the payload can always be rebuilt from what we
-stored. Writing rounds amounts; blanks are removed once, where the JSON leaves for the portal.
+Each category lives in its own module under `sections/`; this file only picks which one runs.
+Portal docs: https://developer.gst.gov.in/apiportal/taxpayer/returns
 """
 
 from india_compliance.gst_india.utils.gstr_1 import (
@@ -21,7 +18,7 @@ from india_compliance.gst_india.utils.gstr_1.sections.summary import to_overview
 
 
 def convert_to_internal_data_format(gov_data, for_errors=False):
-    """Portal payload -> canonical rows, for every category present."""
+    """Portal payload -> our rows, every category present."""
     output = {}
 
     for category, (read, _write) in SECTIONS.items():
@@ -50,11 +47,7 @@ def get_category_wise_data(
     subcategory_wise_data: dict,
     mapping: dict = SUB_CATEGORY_GOV_CATEGORY_MAPPING,
 ) -> dict:
-    """Collect subcategory rows under the portal category that reports them.
-
-    Example:
-        {"B2B Regular": [...], "SEZ With Payment of Tax": [...]}  ->  {"b2b": [...both...]}
-    """
+    """Put subcategory rows under the portal category that reports them."""
     category_wise_data = {}
 
     for subcategory, category in mapping.items():
@@ -69,7 +62,7 @@ def get_category_wise_data(
 
 
 def convert_to_gov_data_format(internal_data: dict, company_gstin: str) -> dict:
-    """Canonical rows -> portal payload. Blanks are dropped later, at the JSON boundary."""
+    """Our rows -> portal payload. Blanks go later, at the JSON boundary."""
     category_wise_data = get_category_wise_data(internal_data)
 
     output = {}

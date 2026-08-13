@@ -1,10 +1,4 @@
-"""Supplies through e-commerce operators, one total per operator (table 14).
-
-Portal:    {clttx: [{etin: "20ALYPD6528PQC5", suppval: 10000, igst: 1000}]}
-Canonical: {"Liable to collect tax u/s 52(TCS)": {"20ALYPD6528PQC5": {ecommerce_gstin: "20ALYPD...",
-                                                                     total_taxable_value: 10000,
-                                                                     total_igst_amount: 1000}}}
-"""
+"""Supplies through e-commerce operators, one total per operator (table 14)."""
 
 from india_compliance.gst_returns.fields.gstr1 import DocField as doc
 from india_compliance.gst_returns.fields.gstr1 import RawField as raw
@@ -22,14 +16,14 @@ KEYS = {
     raw.FLAG: doc.FLAG,
 }
 
-# portal json key -> the subcategory its rows are filed under
+# portal json key -> its subcategory
 SECTIONS = {
     raw.SUPECOM_52: SubCategory.SUPECOM_52.value,
     raw.SUPECOM_9_5: SubCategory.SUPECOM_9_5.value,
 }
 SECTION_KEYS = s.flip(SECTIONS)
 
-# only the supply value is rounded; the portal sends taxes already rounded here
+# only the supply value is rounded, taxes arrive rounded
 MONEY = (raw.NET_TAXABLE_VALUE,)
 
 

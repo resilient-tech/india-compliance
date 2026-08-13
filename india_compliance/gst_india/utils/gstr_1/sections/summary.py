@@ -1,12 +1,6 @@
-"""The portal's own summary of a filed return, and the overview built from it.
+"""The portal's summary of a filed return, and the overview built from it.
 
-Read only -- the portal computes this, we never file it back. That is why the keys here are plain
-functions over one table instead of a reversible mapping like every other category: two portal
-keys ("sec_nm" for a section, "typ" for a line inside one) both become the row's description.
-
-Portal:    [{sec_nm: "B2B_4A", ttl_rec: 12, ttl_tax: 5000, ttl_igst: 900}]
-Canonical: {"summary": {"B2B Regular": {description: "B2B Regular", no_of_records: 12,
-                                        total_taxable_value: 5000, total_igst_amount: 900}}}
+Read only, so the key table need not reverse: both "sec_nm" and "typ" become the description.
 """
 
 from india_compliance.gst_returns.fields.gstr1 import (
@@ -22,7 +16,7 @@ from . import _shared as s
 
 AMENDED = "(Amended)"
 
-# summary-only portal keys: "ttl_" is what was filed, "act_" what the portal recomputed
+# summary-only keys. "ttl_" is what was filed, "act_" what the portal worked out
 SECTION = "sec_nm"
 LINE_TYPE = "typ"
 SUB_SECTIONS = "sub_sections"
@@ -52,7 +46,7 @@ KEYS = {
     "ttl_doc_cancelled": doc.CANCELLED_COUNT,
 }
 
-# portal section code -> the name shown to the user
+# portal section code -> name shown to the user
 SECTION_NAMES = {
     "AT": Category.AT.value,
     "B2B_4A": SubCategory.B2B_REGULAR.value,
@@ -102,7 +96,7 @@ SECTION_NAMES = {
     "TTL_LIAB": "Total Liability",
 }
 
-# sections the portal breaks down one level further
+# sections the portal breaks down further
 SUBSECTION_NAMES = {
     "SUPECOM": {
         "SUPECOM_14A": SubCategory.SUPECOM_52.value,
@@ -124,7 +118,7 @@ SUBSECTION_NAMES = {
     },
 }
 
-# the columns an overview row adds up
+# columns an overview row adds up
 TOTAL_FIELDS = (
     "no_of_records",
     doc.IGST,
@@ -136,16 +130,16 @@ TOTAL_FIELDS = (
 
 
 def read_row(entry):
-    """One summary line, with its section code turned into a readable name."""
+    """One summary line, section code turned into a name."""
     row = s.pick(entry, KEYS)
 
     s.remap(row, doc.DESCRIPTION, SECTION_NAMES)
 
-    # document ranges count what was actually issued, not what was declared
+    # ranges count what went out, not what was declared
     if entry.get(SECTION) == "DOC_ISSUE":
         row["no_of_records"] = entry.get(NET_DOC_ISSUED, 0)
 
-    # the portal files nil-rated without a taxable value; add one up to compare against books
+    # portal files nil-rated with no taxable value, so add one up to compare
     elif entry.get(SECTION) == "NIL":
         row[doc.TAXABLE_VALUE] = s.sum_money(entry, NIL_AMOUNTS)
 
@@ -164,7 +158,7 @@ def to_canonical(gov_data):
 
         subsections = entry.get(SUB_SECTIONS, {})
 
-        # older summary APIs do not break sections down; fall back to computing our own
+        # older summary API has no breakdown, so work it out ourselves
         if not subsections:
             return {}
 
@@ -178,12 +172,12 @@ def to_canonical(gov_data):
 
 
 def total_of(row):
-    """Zero-test for an overview row. A null the portal sent counts as nothing."""
+    """Is the row empty. A null the portal sent counts as nothing."""
     return s.sum_money(row, TOTAL_FIELDS)
 
 
 def to_overview(rows):
-    """Portal summary -> the indented overview shown on the GSTR-1 page."""
+    """Portal summary -> the indented overview on the GSTR-1 page."""
     if not rows:
         return []
 
@@ -196,7 +190,7 @@ def to_overview(rows):
         if category not in by_description:
             continue
 
-        # amendments are collected into one closing line instead of shown per category
+        # amendments go into one closing line, not per category
         for field in TOTAL_FIELDS:
             amended[field] += by_description.get(f"{category} {AMENDED}", {}).get(field) or 0
 

@@ -77,8 +77,7 @@ class TestGSTReturnLog(IntegrationTestCase):
 
     @patch("india_compliance.gst_india.utils.gstr_1.gstr_1_download.GSTR1API")
     def test_download_gstr1_json_data(self, mock_api):
-        """`is_nil` is a Check column, so `isnil` off the downloaded payload has to be stored as
-        0/1 -- postgres rejects a bool on a smallint. The API is mocked as the GSTR-2A tests do."""
+        """`is_nil` is a Check column, so store 0/1. Postgres rejects a bool there."""
         log = get_gst_return_log(self.log_name, filing_preference="Monthly")
 
         for isnil, expected in (("Y", 1), ("N", 0)):
@@ -95,7 +94,7 @@ class TestGSTReturnLog(IntegrationTestCase):
 
     @patch("india_compliance.gst_india.utils.gstr_1.gstr_1_download.GSTR1API")
     def test_filed_gstr1_stores_raw(self, mock_api):
-        """Filed GSTR-1 keeps the portal payload as received; unfiled does not."""
+        """Filed GSTR-1 keeps the portal payload as received. Unfiled does not."""
         period = "052099"
         log_name = f"GSTR1-{period}-{self.GSTIN}"
         raw = frappe._dict(isnil="N", error_type=None, token=None, chksum="abc123")
@@ -130,8 +129,7 @@ class TestGSTReturnLog(IntegrationTestCase):
         self.assertNotIn("b2b", stored)
 
     def test_reconcile_compares_amounts_the_portal_sent_as_null(self):
-        """Gov data keeps a null the portal sent, so an amount can be None or missing entirely.
-        The comparison must still see the books value and flag a mismatch."""
+        """An amount can be None or missing. Books value must still show as a mismatch."""
         books_row = {
             "document_number": "S1",
             "total_taxable_value": 100,
@@ -153,9 +151,7 @@ class TestGSTReturnLog(IntegrationTestCase):
         self.assertIn("Total Cess Amount", reconciled["differences"])
 
     def test_a_document_range_holding_a_draft_reconciles(self):
-        """We file a draft as cancelled, so the portal's cancelled count includes it. Both sides agree
-        3 of 5 numbers were issued, so the range matches -- and the draft count itself, which the
-        portal can never report, is not compared either."""
+        """We file a draft as cancelled, so both sides agree and the range matches."""
         books_row = {
             "document_type": "Invoices for outward supply",
             "total_count": 5,
@@ -173,7 +169,7 @@ class TestGSTReturnLog(IntegrationTestCase):
         self.assertIsNone(ReconcileGSTR1.get_reconciled_row(books_row, gov_row))
 
     def test_a_genuinely_extra_cancellation_is_still_reported(self):
-        """The fold must not hide a real difference: one more cancelled than the portal knows about."""
+        """One more cancelled than the portal knows about must still show."""
         books_row = {
             "document_type": "Invoices for outward supply",
             "total_count": 5,

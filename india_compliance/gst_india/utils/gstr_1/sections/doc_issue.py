@@ -1,9 +1,4 @@
-"""Documents issued — serial number ranges used in the period, by document kind (table 13).
-
-Portal:    {doc_det: [{doc_num: 1, docs: [{num: 1, from: "1", to: "10", totnum: 10, cancel: 0}]}]}
-Canonical: {"Document Issued": {"Invoices for outward supply - 1": {from_sr_no: "1", to_sr_no: "10",
-                                                                    total_count: 10, cancelled_count: 0}}}
-"""
+"""Serial number ranges used in the period, by kind of document (table 13)."""
 
 from india_compliance.gst_returns.fields.gstr1 import DocField as doc
 from india_compliance.gst_returns.fields.gstr1 import DocumentNature, SubCategory
@@ -21,7 +16,7 @@ KEYS = {
     raw.NET_ISSUE: doc.NET_ISSUE,
 }
 
-# doc_num -> the kind of document the range covers
+# doc_num -> kind of document
 DOC_NATURE = {
     1: DocumentNature.OUTWARD_SUPPLY.value,
     2: DocumentNature.INWARD_SUPPLY_UNREGISTERED.value,
@@ -38,7 +33,7 @@ DOC_NATURE = {
 }
 DOC_NATURE_CODES = s.flip(DOC_NATURE)
 
-# ranges the report tracks but the portal must not see
+# ranges the portal must not see
 NOT_REPORTED = "Excluded from Report"
 
 
@@ -81,10 +76,7 @@ def to_gov(rows, company_gstin=""):
 
 
 def net_issued(row):
-    """Drafts never reached anyone, so count them as cancelled; the rest were issued.
-
-    A new row, so counts do not pile up when the same range is written twice.
-    """
+    """Drafts reached nobody, so count them as cancelled. New row, so counts never pile up."""
     cancelled = (row.get(doc.CANCELLED_COUNT) or 0) + (row.get(doc.DRAFT_COUNT) or 0)
 
     return {

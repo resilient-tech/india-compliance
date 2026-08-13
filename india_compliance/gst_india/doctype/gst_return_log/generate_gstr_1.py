@@ -449,7 +449,7 @@ class ReconcileGSTR1:
 
     @staticmethod
     def comparable_books_values(books_row: dict):
-        """We file a draft as cancelled, so compare the folded count."""
+        """We file a draft as cancelled, so compare it that way."""
         if not books_row.get(doc.DRAFT_COUNT):
             return books_row
 

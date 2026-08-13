@@ -1,12 +1,7 @@
-"""Advances — tax paid on money received before the invoice, and its later adjustment (tables 11A, 11B).
+"""Tax on money taken before the invoice, and its later adjustment (tables 11A, 11B).
 
-Portal:    [{pos: "05", itms: [{rt: 5, ad_amt: 100, iamt: 5}]}]
-Canonical: {"Advances Received": {"05-Uttarakhand - 5.0": [{place_of_supply: "05-Uttarakhand",
-                                                            total_taxable_value: 100, tax_rate: 5}]}}
-
-One canonical row per rate, so reading splits the portal's item list out into rows and writing
-pulls the amounts back down into items. Adjustments are the same shape with the sign flipped --
-they cancel a liability already declared.
+One row per rate, so reading splits the portal's items into rows and writing puts them back.
+Adjustments are the same shape, sign flipped.
 """
 
 from frappe.utils import flt
@@ -36,11 +31,11 @@ KEYS = {
     raw.ERROR_MSG: doc.ERROR_MSG,
 }
 
-# amounts live on the row itself here, because each item becomes its own row
+# amounts sit on the row, since each item becomes a row
 AMOUNTS = (doc.IGST, doc.CESS, doc.CGST, doc.SGST, doc.TAXABLE_VALUE)
 ITEM_DEFAULTS = dict.fromkeys(AMOUNTS, 0)
 
-# amounts the portal expects inside the item, in its own order
+# what the portal wants inside the item, its order
 GOV_ITEM_FIELDS = (
     raw.IGST,
     raw.CESS,
@@ -61,7 +56,7 @@ MONEY = (
 
 
 def group_key(row):
-    """Identity used to match books against the portal. Discarded before the data is stored."""
+    """Row identity, books against portal. Not stored."""
     return " - ".join((row.get(doc.POS) or "", str(flt(row.get(item.TAX_RATE, "")))))
 
 
@@ -70,7 +65,7 @@ def to_canonical(gov_data, multiplier=RECEIVED):
 
     for entry in gov_data:
         row = s.drop_flag(s.pick(entry, KEYS))
-        s.convert(row, doc.POS, s.pos_from_gov)  # 05 -> 05-Uttarakhand
+        s.convert(row, doc.POS, s.pos_from_gov)
 
         lines = s.flat_items_from_gov(row.pop(doc.ITEMS, []), KEYS, ITEM_DEFAULTS)
 
@@ -85,13 +80,13 @@ def to_gov(rows, company_gstin="", multiplier=RECEIVED):
     by_pos = {}
 
     for row in rows:
-        row = s.flip_signs(dict(row), multiplier, AMOUNTS)  # copy, the stored row keeps its sign
+        row = s.flip_signs(dict(row), multiplier, AMOUNTS)  # copy, stored row keeps its sign
 
         out = s.drop_zero_diff(s.round_money(s.pick_back(row, KEYS), MONEY))
-        s.convert(out, raw.POS, s.pos_to_gov)  # 05-Uttarakhand -> 05
-        out[raw.SUPPLY_TYPE] = s.supply_type(out[raw.POS], company_gstin)  # seller 24, buyer 05 -> INTER
+        s.convert(out, raw.POS, s.pos_to_gov)
+        out[raw.SUPPLY_TYPE] = s.supply_type(out[raw.POS], company_gstin)
 
-        # move this row's amounts into an item, leaving the state header behind
+        # amounts go into an item, state header stays
         line = {field: out.pop(field) for field in GOV_ITEM_FIELDS}
 
         by_pos.setdefault(row[doc.POS], out).setdefault(raw.ITEMS, []).append(line)

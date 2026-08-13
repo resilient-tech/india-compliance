@@ -1,9 +1,4 @@
-"""B2CS — small sales to unregistered buyers, reported as one total per state and rate (table 7).
-
-Portal:    [{typ: "OE", pos: "05", rt: 5, txval: 110, iamt: 5.5}]
-Canonical: {"B2C (Others)": {"05-Uttarakhand - 5.0": [{place_of_supply: "05-Uttarakhand",
-                                                       total_taxable_value: 110, document_type: "OE"}]}}
-"""
+"""Small sales to unregistered buyers (table 7). One total per state and rate."""
 
 from frappe.utils import flt
 
@@ -41,7 +36,7 @@ MONEY = (
 
 
 def group_key(row):
-    """Identity used to match books against the portal. Discarded before the data is stored."""
+    """Row identity, books against portal. Not stored."""
     return " - ".join((row.get(doc.POS) or "", str(flt(row.get(doc.TAX_RATE, "")))))
 
 
@@ -50,7 +45,7 @@ def to_canonical(gov_data):
 
     for entry in gov_data:
         row = s.drop_flag(s.pick(entry, KEYS))
-        s.convert(row, doc.POS, s.pos_from_gov)  # 05 -> 05-Uttarakhand
+        s.convert(row, doc.POS, s.pos_from_gov)
 
         output.setdefault(group_key(row), []).append(row)  # keyed "05-Uttarakhand - 5.0"
 
@@ -61,10 +56,10 @@ def to_gov(rows, company_gstin=""):
     def write(row):
         out = s.round_money(s.pick_back(row, KEYS), MONEY)
 
-        s.convert(out, raw.POS, s.pos_to_gov)  # 05-Uttarakhand -> 05
+        s.convert(out, raw.POS, s.pos_to_gov)
         s.drop_zero_diff(out)
 
-        out[raw.SUPPLY_TYPE] = s.supply_type(out[raw.POS], company_gstin)  # seller 24, buyer 05 -> INTER
+        out[raw.SUPPLY_TYPE] = s.supply_type(out[raw.POS], company_gstin)
 
         return out
 

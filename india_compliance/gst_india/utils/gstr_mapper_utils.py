@@ -93,7 +93,7 @@ class GovDataMapper:
     # common utils
 
     def update_totals(self, invoice, items):
-        """Sum item amounts into the invoice's total_ fields. Accumulates across calls."""
+        """Item amounts into the invoice totals. Adds up across calls."""
         for item in items or []:
             for field, value in item.items():
                 total = f"total_{field}"
