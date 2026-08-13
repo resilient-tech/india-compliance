@@ -71,7 +71,7 @@ def to_canonical(gov_data):
 
 def to_gov(rows, company_gstin=""):
     def write(row):
-        out = s.abs_amounts(s.round_money(s.pick_back(row, KEYS), MONEY), (raw.DOC_VALUE,))
+        out = s.round_money(s.abs_amounts(s.pick_back(row, KEYS), (raw.DOC_VALUE,)), MONEY)
 
         s.remap(out, raw.NOTE_TYPE, NOTE_CODES)  # Credit Note -> C
         s.convert(out, raw.NOTE_DATE, s.date_to_gov)  # 2016-09-23 -> 23-09-2016

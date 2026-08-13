@@ -17,6 +17,8 @@ import itertools
 import unittest
 from typing import ClassVar
 
+from frappe.utils import flt
+
 from india_compliance.gst_returns.fields.gstr1 import (
     B2BInvoiceType,
     DocumentNature,
@@ -353,6 +355,31 @@ class TestCreditNoteSigns(unittest.TestCase):
         }
         out = cdnr.to_gov([books_row])[0][raw.NOTE_DETAILS][0]
         self.assertEqual(out[raw.INVOICE_TYPE], "DE")
+
+    def test_a_note_value_is_made_unsigned_before_it_is_rounded(self):
+        """A note carries negative amounts, so take the magnitude first and round after."""
+        expected = flt(abs(-111.115), 2)
+
+        for section in (cdnr, cdnur):
+            row = {
+                doc.TRANSACTION_TYPE: "Credit Note",
+                doc.DOC_NUMBER: "C1",
+                doc.DOC_DATE: "2016-09-23",
+                doc.POS: "03-Punjab",
+                doc.DOC_TYPE: "Regular B2B" if section is cdnr else "B2CL",
+                doc.CUST_GSTIN: "24AANFA2641L1ZF",
+                doc.DOC_VALUE: -111.115,
+                doc.ITEMS: [{item.TAXABLE_VALUE: -111.115, item.TAX_RATE: 5}],
+            }
+            out = section.to_gov([row])[0]
+            note = out[raw.NOTE_DETAILS][0] if section is cdnr else out
+
+            self.assertEqual(note[raw.DOC_VALUE], expected, f"{section.__name__} document value")
+            self.assertEqual(
+                note[raw.ITEMS][0][raw.ITEM_DETAILS][raw.TAXABLE_VALUE],
+                expected,
+                f"{section.__name__} item value",
+            )
 
     def test_a_note_stored_with_the_old_label_still_files_the_portal_code(self):
         """Rows mapped before the unification carry "Deemed Exports"; they must still file as DE."""

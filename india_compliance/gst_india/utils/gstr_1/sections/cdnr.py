@@ -101,7 +101,7 @@ def to_canonical(gov_data):
 
 def to_gov(rows, company_gstin=""):
     def write(row):
-        out = s.abs_amounts(s.round_money(s.pick_back(row, KEYS), MONEY), (raw.DOC_VALUE,))
+        out = s.round_money(s.abs_amounts(s.pick_back(row, KEYS), (raw.DOC_VALUE,)), MONEY)
 
         s.remap(out, raw.NOTE_TYPE, NOTE_CODES)  # Credit Note -> C
         s.remap(out, raw.INVOICE_TYPE, LEGACY_INVOICE_CODES)  # Deemed Exp -> DE
