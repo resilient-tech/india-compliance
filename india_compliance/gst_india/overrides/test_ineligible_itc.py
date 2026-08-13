@@ -449,6 +449,66 @@ class TestIneligibleITC(FrappeTestCase):
             ],
         )
 
+    @change_settings(
+        "Accounts Settings",
+        {"allow_multi_currency_invoices_against_single_party_account": 1},
+    )
+    def test_purchase_invoice_in_foreign_currency(self):
+        transaction_details = {
+            "doctype": "Purchase Invoice",
+            "bill_no": "BILL-12",
+            "currency": "USD",
+            "conversion_rate": 100,
+            "items": [{"item_code": "Test Ineligible Service Item", "qty": 1, "rate": 1000}],
+            "is_in_state": 1,
+        }
+
+        doc = create_transaction(**transaction_details)
+
+        self.assertEqual(doc.ineligibility_reason, "Ineligible As Per Section 17(5)")
+
+        # 1000 USD = 100000 INR, GST 18% = 18000 INR or 180 USD
+        self.assertGLEntry(
+            doc.name,
+            [
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 18000.0,
+                    "credit": 18000.0,
+                    "debit_in_transaction_currency": 180.0,
+                    "credit_in_transaction_currency": 180.0,
+                },
+                {
+                    "account": "Input Tax SGST - _TIRC",
+                    "debit": 9000.0,
+                    "credit": 9000.0,
+                    "debit_in_transaction_currency": 90.0,
+                    "credit_in_transaction_currency": 90.0,
+                },
+                {
+                    "account": "Input Tax CGST - _TIRC",
+                    "debit": 9000.0,
+                    "credit": 9000.0,
+                    "debit_in_transaction_currency": 90.0,
+                    "credit_in_transaction_currency": 90.0,
+                },
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 118000.0,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 1180.0,
+                    "credit_in_transaction_currency": 0.0,
+                },  # 100000 + 18000
+                {
+                    "account": "Creditors - _TIRC",
+                    "debit": 0.0,
+                    "credit": 118000.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 1180.0,
+                },
+            ],
+        )
+
     def test_purchase_invoice_with_ineligible_pos(self):
         transaction_details = {
             "doctype": "Purchase Invoice",
