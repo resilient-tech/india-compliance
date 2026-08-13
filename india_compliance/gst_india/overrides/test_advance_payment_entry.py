@@ -20,7 +20,7 @@ from erpnext.controllers.stock_controller import show_accounting_ledger_preview
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import flt, getdate
 
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
+from india_compliance.gst_india.utils.gstr_1 import DocField as doc
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
 from india_compliance.gst_india.utils.tests import create_transaction
 from india_compliance.tests.erpnext_test_utils import create_account
@@ -1236,6 +1236,7 @@ class TestMultiCurrencyReconciliation(LedgerNetMixin, IntegrationTestCase):
         self.assertEqual(len(refs), 1, "expected exactly one PE reference to the invoice")
         self.assertEqual(flt(refs[0].allocated_amount, 2), 1.0, "net allocated should be 1 USD (base 100)")
 
+<<<<<<< HEAD
         # base (INR) ledgers identical to the single-currency matrix, USD accounts aside
         self.assertEqual(self._gl_net_by_account(payment_doc), FX_RECONCILED_GL)
 
@@ -1257,13 +1258,34 @@ class TestMultiCurrencyReconciliation(LedgerNetMixin, IntegrationTestCase):
         self.assertEqual(flt(reversal[0].credit, 2), 18.0, "reversal base credit should be 18 INR")
         self.assertEqual(
             flt(reversal[0].credit_in_account_currency, 2), 0.18, "reversal should be 0.18 in USD"
+=======
+    def _assert_advance_row(self, prepared, payment_name, taxable_value):
+        row = next(
+            (r for rows in prepared.values() for r in rows if r[doc.DOC_NUMBER] == payment_name),
+            None,
+>>>>>>> a4e0638 (refactor: gstr 1  (#4718))
         )
 
         # GSTR-1 reports base (INR) taxable values regardless of transaction currency
         self._assert_advance_report(payment_doc, received=500.0, adjusted=-100.0)
 
+<<<<<<< HEAD
         # both documents are at the same rate here, so nothing is left over: the receivable
         # carries exactly the rate it was received at, and no exchange gain/loss arises
+=======
+        self.assertIsNotNone(row, f"advance row expected for {payment_name}")
+        self.assertEqual(row[doc.TAX_RATE], 18)
+        self.assertEqual(flt(row[doc.TAXABLE_VALUE], 2), taxable_value)
+        # intra-state @ 18% => CGST 9% + SGST 9%, no IGST/cess
+        self.assertEqual(flt(row[doc.CGST], 2), flt(taxable_value * 0.09, 2))
+        self.assertEqual(flt(row[doc.SGST], 2), flt(taxable_value * 0.09, 2))
+        self.assertEqual(flt(row[doc.IGST], 2), 0.0)
+        self.assertEqual(flt(row[doc.CESS], 2), 0.0)
+
+    # ---- ledger helpers (net per account / per against-voucher, drops zero nets) ----
+
+    def _gl_net_by_account(self, payment_doc):
+>>>>>>> a4e0638 (refactor: gstr 1  (#4718))
         rows = frappe.get_all(
             "GL Entry",
             filters={
