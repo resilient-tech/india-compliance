@@ -1,11 +1,17 @@
 # Copyright (c) 2024, Resilient Tech and Contributors
 # See license.txt
 
+import copy
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
-from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import add_comment_to_gst_return_log
+from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+    add_comment_to_gst_return_log,
+    get_raw_return_data,
+    store_raw_return_data,
+)
 
 
 class TestGSTReturnLog(IntegrationTestCase):
@@ -42,3 +48,20 @@ class TestGSTReturnLog(IntegrationTestCase):
         )
         self.assertTrue(comment)
         self.assertIn("has been submitted by", comment.content)
+
+    def test_portal_data_roundtrip(self):
+        gstin = "24AAQCA8719H1ZC"
+        payload = {
+            "gstin": gstin,
+            "b2b": [{"ctin": "24AABCR6898M1ZN", "txval": 100.0, "iamt": 0}],
+            "itcsumm": {"itcavl": []},
+        }
+        original = copy.deepcopy(payload)
+
+        self.assertIsNone(get_raw_return_data(gstin, "GSTR2b", "052099"))
+
+        store_raw_return_data(gstin, "GSTR2b", "052099", payload)
+        got = get_raw_return_data(gstin, "GSTR2b", "052099")
+
+        got.pop("creation", None)
+        self.assertEqual(got, original)

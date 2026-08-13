@@ -101,7 +101,6 @@ doctype_js = {
         "gst_india/client_scripts/party.js",
         "gst_india/client_scripts/supplier.js",
     ],
-    "Tax Withholding Category": "income_tax_india/client_scripts/tax_withholding_category.js",
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
     "Customize Form": "audit_trail/client_scripts/customize_form.js",
     "Document Naming Settings": "gst_india/client_scripts/document_naming_settings.js",
@@ -125,7 +124,7 @@ doc_events = {
         "on_update": ["india_compliance.gst_india.overrides.address.update_party_gstin_and_gst_category"],
     },
     "Company": {
-        "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company",
+        "on_trash": "india_compliance.gst_india.overrides.company.on_trash",
         "on_update": [
             "india_compliance.income_tax_india.overrides.company.make_company_fixtures",
             "india_compliance.gst_india.overrides.company.make_company_fixtures",
@@ -450,7 +449,11 @@ audit_trail_doctypes = [
     "Stock Reconciliation",
     "Subcontracting Receipt",
     # Additional ERPNext DocTypes that constitute "Books of Account"
+    "Asset Depreciation Schedule",
     "POS Invoice",
+    "Cost Center Allocation",
+    "Exchange Rate Revaluation",
+    "Asset Value Adjustment",
     # India Compliance DocTypes that make GL Entries
     "Bill of Entry",
 ]

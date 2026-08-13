@@ -1077,9 +1077,7 @@ def get_differing_categories(mapped_summary, gov_summary):
     # TODO: Check this for all categories
     CATEGORY_KEYS = {
         (GSTR1_Category.NIL_EXEMPT.value): {
-            "total_exempted_amount",
-            "total_nil_rated_amount",
-            "total_non_gst_amount",
+            "total_taxable_value",
         },
         (GSTR1_Category.DOC_ISSUE.value): {
             "no_of_records",
@@ -1110,7 +1108,7 @@ def get_differing_categories(mapped_summary, gov_summary):
         keys_to_compare = CATEGORY_KEYS.get(category, KEYS_TO_COMPARE)
 
         for key in keys_to_compare:
-            if gov_entry.get(key, 0) != row.get(key):
+            if (gov_entry.get(key) or 0) != (row.get(key) or 0):
                 differing_categories.add(category)
                 break
 
@@ -1126,7 +1124,7 @@ def get_differing_categories(mapped_summary, gov_summary):
         keys_to_compare = CATEGORY_KEYS.get(row["description"], KEYS_TO_COMPARE)
 
         for key in keys_to_compare:
-            if row.get(key, 0) != 0:
+            if (row.get(key) or 0) != 0:
                 differing_categories.add(row["description"])
                 break
 

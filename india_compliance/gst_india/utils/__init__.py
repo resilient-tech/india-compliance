@@ -13,6 +13,7 @@ from erpnext.stock.get_item_details import purchase_doctypes
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.desk.form.load import get_docinfo, run_onload
+from frappe.query_builder.functions import Length
 from frappe.utils import (
     add_months,
     add_to_date,
@@ -497,6 +498,28 @@ def get_hsn_settings():
     valid_hsn_length = tuple(length for length in VALID_HSN_LENGTHS if length >= min_hsn_digits)
 
     return validate_hsn_code, valid_hsn_length
+
+
+@frappe.whitelist()
+def get_hsn_code_list(txt: str | None = None, limit: int = 20):
+    # GST HSN Code is public data, hence no permission check.
+
+    hsn_code = frappe.qb.DocType("GST HSN Code")
+    query = (
+        frappe.qb.from_(hsn_code)
+        .select(hsn_code.name.as_("value"), hsn_code.name.as_("label"), hsn_code.description)
+        .orderby(hsn_code.name)
+        .limit(cint(limit))
+    )
+
+    validate_hsn_code, valid_hsn_length = get_hsn_settings()
+    if validate_hsn_code and valid_hsn_length:
+        query = query.where(Length(hsn_code.name).isin(valid_hsn_length))
+
+    if txt:
+        query = query.where(hsn_code.name.like(f"{txt}%") | hsn_code.description.like(f"%{txt}%"))
+
+    return query.run(as_dict=True)
 
 
 def get_place_of_supply(party_details, doctype):
