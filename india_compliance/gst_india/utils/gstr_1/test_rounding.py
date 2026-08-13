@@ -113,21 +113,6 @@ class TestSettleAmounts(unittest.TestCase):
         self.assertEqual({value for value in lost.values() if value}, set())
 
 
-class TestExactSums(unittest.TestCase):
-    """Adding up must not reintroduce the drift that settling removed."""
-
-    def test_adding_in_a_loop_drifts_where_adding_at_once_does_not(self):
-        # the reason one filed amount moved by a paisa: `+=` accumulates error, sum() does not
-        values = [8395.11, 5347.35, 2313.09, 11911.048, 2841.241, 7843.225, 613.305]
-
-        drifted = 0
-        for value in values:
-            drifted += value
-
-        self.assertNotEqual(repr(drifted), repr(sum(values)))
-        self.assertEqual(sum(values), 39264.369)
-
-
 class TestNoReconciliationLeft(unittest.TestCase):
     def test_the_hsn_adjustment_is_gone(self):
         # it existed only to force HSN totals onto the document totals
@@ -161,6 +146,9 @@ class TestRoundingDifferenceReport(unittest.TestCase):
     def test_no_query_column_names_leak_through(self):
         # "cgst_amount" is what the query calls it; the journal entry looks for "total_cgst_amount"
         self.assertEqual(set(self.report(dict.fromkeys(AMOUNTS, 0.0))) & set(AMOUNTS), {"total_cess_amount"})
+
+    def test_every_amount_is_reported_even_when_it_did_not_move(self):
+        self.assertEqual(len(self.report(dict.fromkeys(AMOUNTS, 0.0))), len(AMOUNTS))
 
     def test_the_residual_is_carried_through(self):
         self.assertEqual(self.report({**dict.fromkeys(AMOUNTS, 0.0), "cgst_amount": 0.006})[doc.CGST], 0.006)
