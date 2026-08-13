@@ -152,9 +152,10 @@ class TestGSTReturnLog(IntegrationTestCase):
         self.assertIn("Total Igst Amount", reconciled["differences"])
         self.assertIn("Total Cess Amount", reconciled["differences"])
 
-    def test_our_own_draft_count_is_never_compared(self):
-        """The portal has no draft of its own -- it counts a draft as cancelled, which is how we
-        file it. So comparing draft count can only ever invent a difference."""
+    def test_a_document_range_holding_a_draft_reconciles(self):
+        """We file a draft as cancelled, so the portal's cancelled count includes it. Both sides agree
+        3 of 5 numbers were issued, so the range matches -- and the draft count itself, which the
+        portal can never report, is not compared either."""
         books_row = {
             "document_type": "Invoices for outward supply",
             "total_count": 5,
@@ -169,14 +170,10 @@ class TestGSTReturnLog(IntegrationTestCase):
             "net_issue": 3,
         }
 
-        reconciled = ReconcileGSTR1.get_reconciled_row(books_row, gov_row)
+        self.assertIsNone(ReconcileGSTR1.get_reconciled_row(books_row, gov_row))
 
-        self.assertNotIn("Draft Count", reconciled["differences"])
-        self.assertNotIn("draft_count", reconciled)
-
-        self.assertEqual(reconciled["differences"], "Cancelled Count")
-
-    def test_a_genuinely_extra_cancellation_reports_as_develop_does(self):
+    def test_a_genuinely_extra_cancellation_is_still_reported(self):
+        """The fold must not hide a real difference: one more cancelled than the portal knows about."""
         books_row = {
             "document_type": "Invoices for outward supply",
             "total_count": 5,
@@ -194,4 +191,6 @@ class TestGSTReturnLog(IntegrationTestCase):
         reconciled = ReconcileGSTR1.get_reconciled_row(books_row, gov_row)
 
         self.assertEqual(reconciled["match_status"], "Mismatch")
-        self.assertEqual(reconciled["differences"], "Net Issue")
+        self.assertIn("Cancelled Count", reconciled["differences"])
+        self.assertIn("Net Issue", reconciled["differences"])
+        self.assertNotIn("Draft Count", reconciled["differences"])

@@ -412,10 +412,12 @@ class ReconcileGSTR1:
             if isinstance(value, int | float)
         } - ReconcileGSTR1.BOOKS_ONLY_FIELDS
 
+        books_values = ReconcileGSTR1.comparable_books_values(books_row)
+
         # Compute Differences
         for key in [*reconcile_row, *sorted(amount_keys - set(reconcile_row))]:
             if key in amount_keys and key not in AggregateInvoices.IGNORED_FIELDS:
-                reconcile_row[key] = flt((books_row.get(key) or 0) - (gov_row.get(key) or 0), 2)
+                reconcile_row[key] = flt((books_values.get(key) or 0) - (gov_row.get(key) or 0), 2)
                 has_different_value = reconcile_row[key] != 0
 
             elif key in ("customer_gstin", "place_of_supply"):
@@ -444,6 +446,17 @@ class ReconcileGSTR1:
             return [reconcile_row]
 
         return reconcile_row
+
+    @staticmethod
+    def comparable_books_values(books_row: dict):
+        """We file a draft as cancelled, so compare the folded count."""
+        if not books_row.get(doc.DRAFT_COUNT):
+            return books_row
+
+        return {
+            **books_row,
+            doc.CANCELLED_COUNT: (books_row.get(doc.CANCELLED_COUNT) or 0) + books_row[doc.DRAFT_COUNT],
+        }
 
     @staticmethod
     def get_empty_row(row: dict, unrequired_keys=None):
