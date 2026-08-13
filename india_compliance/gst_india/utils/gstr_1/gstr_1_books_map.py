@@ -24,7 +24,7 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_data import (
     GSTR1Invoices,
     GSTR11A11BData,
 )
-from india_compliance.gst_india.utils.gstr_1.sections._shared import sum_money as total_of
+from india_compliance.gst_india.utils.gstr_1.sections._shared import sum_column
 
 # gst_treatment -> the nil-rated amount it belongs to
 NIL_RATED_AMOUNTS = {
@@ -118,14 +118,14 @@ class BooksDataMapper:
 
             for gst_rate, items in rate_wise_item.items():
                 tax_item = {
-                    key: total_of(items, field) for key, field in self.ITEM_TO_INVOICE_FIELD_MAPPING.items()
+                    key: sum_column(items, field) for key, field in self.ITEM_TO_INVOICE_FIELD_MAPPING.items()
                 }
                 tax_item[ItemField.TAX_RATE] = gst_rate
                 invoice["items"].append(tax_item)
 
             # amounts arrive settled to two decimals, so the totals only have to add up
             for total, field in self.DATA_TO_ITEM_FIELD_MAPPING.items():
-                invoice[total] = total_of(invoice["items"], field)
+                invoice[total] = sum_column(invoice["items"], field)
 
     def process_data_for_nil_exempt(self, grouped_data, prepared_data):
         """
@@ -170,10 +170,10 @@ class BooksDataMapper:
             invoices_by_type.append(invoice)
 
             lines = list(chain(*rate_wise_item.values()))
-            invoice[DocField.TAXABLE_VALUE] = total_of(lines, "taxable_value")
+            invoice[DocField.TAXABLE_VALUE] = sum_column(lines, "taxable_value")
 
             for treatment, field in NIL_RATED_AMOUNTS.items():
-                invoice[field] = total_of(
+                invoice[field] = sum_column(
                     [line for line in lines if line.gst_treatment == treatment], "taxable_value"
                 )
 
@@ -220,7 +220,7 @@ class BooksDataMapper:
                 invoice_list.append(invoice)
 
                 for total, field in self.DATA_TO_INVOICE_FIELD_MAPPING.items():
-                    invoice[total] = total_of(items, field)
+                    invoice[total] = sum_column(items, field)
 
     def process_data_for_hsn_summary(self, grouped_data, prepared_data):
         """
@@ -271,7 +271,7 @@ class BooksDataMapper:
 
                 # Aggregate
                 for total, field in data_to_invoice_field_map.items():
-                    invoice[total] = total_of(items, field)
+                    invoice[total] = sum_column(items, field)
 
                 invoice[DocField.DOC_VALUE] = flt(sum(invoice.get(field, 0) for field in tax_fields), 2)
 
