@@ -123,38 +123,62 @@ class TestIneligibleITC(FrappeTestCase):
         self.assertGLEntry(
             doc.name,
             [
-                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+                {
+                    "account": "Round Off - _TIRC",
+                    "debit": 0.28,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
                 {
                     "account": "GST Expense - _TIRC",
                     "debit": 369.72,
                     "credit": 369.72,
+                    "debit_in_transaction_currency": 369.72,
+                    "credit_in_transaction_currency": 369.72,
                 },  # 179.64 + 179.82 + 10.26
                 {
                     "account": "Input Tax SGST - _TIRC",
                     "debit": 427.86,
-                    "credit": 184.86,  # 369.72 / 2
+                    "credit": 184.86,
+                    "debit_in_transaction_currency": 427.86,
+                    "credit_in_transaction_currency": 184.86,  # 369.72 / 2
                 },
                 {
                     "account": "Input Tax CGST - _TIRC",
                     "debit": 427.86,
                     "credit": 184.86,
+                    "debit_in_transaction_currency": 427.86,
+                    "credit_in_transaction_currency": 184.86,
                 },
                 {
                     "account": "Administrative Expenses - _TIRC",
                     "debit": 2677.64,  # 500 * 3 + 499 * 2 + 179.64
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2677.64,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "CWIP Account - _TIRC",
                     "debit": 2178.82,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2178.82,
+                    "credit_in_transaction_currency": 0.0,
                 },  # 1000 + 999 + 179.82
                 {
                     "account": "Stock In Hand - _TIRC",
                     "debit": 267.26,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 267.26,
+                    "credit_in_transaction_currency": 0.0,
                 },  # 20 * 5 + 19 * 3 + 100 * 1 + 10.26
-                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+                {
+                    "account": "Creditors - _TIRC",
+                    "debit": 0.0,
+                    "credit": 5610.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 5610.0,
+                },
             ],
         )
 
@@ -183,38 +207,62 @@ class TestIneligibleITC(FrappeTestCase):
         doc.save()  # Repost Accounting on Save
 
         expected_entries = [
-            {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+            {
+                "account": "Round Off - _TIRC",
+                "debit": 0.28,
+                "credit": 0.0,
+                "debit_in_transaction_currency": 0.0,
+                "credit_in_transaction_currency": 0.0,
+            },
             {
                 "account": "GST Expense - _TIRC",
                 "debit": 369.72,
                 "credit": 369.72,
+                "debit_in_transaction_currency": 369.72,
+                "credit_in_transaction_currency": 369.72,
             },  # 179.64 + 179.82 + 10.26
             {
                 "account": "Input Tax SGST - _TIRC",
                 "debit": 427.86,
-                "credit": 184.86,  # 369.72 / 2
+                "credit": 184.86,
+                "debit_in_transaction_currency": 427.86,
+                "credit_in_transaction_currency": 184.86,  # 369.72 / 2
             },
             {
                 "account": "Input Tax CGST - _TIRC",
                 "debit": 427.86,
                 "credit": 184.86,
+                "debit_in_transaction_currency": 427.86,
+                "credit_in_transaction_currency": 184.86,
             },
             {
                 "account": "Office Rent - _TIRC",
                 "debit": 2677.64,  # 500 * 3 + 499 * 2 + 179.64
                 "credit": 0.0,
+                "debit_in_transaction_currency": 2677.64,
+                "credit_in_transaction_currency": 0.0,
             },
             {
                 "account": "CWIP Account - _TIRC",
                 "debit": 2178.82,
                 "credit": 0.0,
+                "debit_in_transaction_currency": 2178.82,
+                "credit_in_transaction_currency": 0.0,
             },  # 1000 + 999 + 179.82
             {
                 "account": "Stock In Hand - _TIRC",
                 "debit": 267.26,
                 "credit": 0.0,
+                "debit_in_transaction_currency": 267.26,
+                "credit_in_transaction_currency": 0.0,
             },  # 20 * 5 + 19 * 3 + 100 * 1 + 10.26
-            {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+            {
+                "account": "Creditors - _TIRC",
+                "debit": 0.0,
+                "credit": 5610.0,
+                "debit_in_transaction_currency": 0.0,
+                "credit_in_transaction_currency": 5610.0,
+            },
         ]
 
         self.assertGLEntry(doc.name, expected_entries)
@@ -261,41 +309,68 @@ class TestIneligibleITC(FrappeTestCase):
         self.assertGLEntry(
             doc.name,
             [
-                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+                {
+                    "account": "Round Off - _TIRC",
+                    "debit": 0.28,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
                 {
                     "account": "GST Expense - _TIRC",
                     "debit": 369.72,
                     "credit": 369.72,
+                    "debit_in_transaction_currency": 369.72,
+                    "credit_in_transaction_currency": 369.72,
                 },  # 179.64 + 179.82 + 10.26
                 {
                     "account": "Input Tax SGST - _TIRC",
                     "debit": 427.86,
-                    "credit": 184.86,  # 369.72 / 2
+                    "credit": 184.86,
+                    "debit_in_transaction_currency": 427.86,
+                    "credit_in_transaction_currency": 184.86,  # 369.72 / 2
                 },
                 {
                     "account": "Input Tax CGST - _TIRC",
                     "debit": 427.86,
                     "credit": 184.86,
+                    "debit_in_transaction_currency": 427.86,
+                    "credit_in_transaction_currency": 184.86,
                 },
                 {
                     "account": "Administrative Expenses - _TIRC",
                     "debit": 2677.64,  # 500 * 3 + 499 * 2 + 179.64
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2677.64,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "CWIP Account - _TIRC",
                     "debit": 2178.82,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2178.82,
+                    "credit_in_transaction_currency": 0.0,
                 },  # 1000 + 999 + 179.82
                 {
                     "account": "Cost of Goods Sold - _TIRC",
                     "debit": 267.26,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 267.26,
+                    "credit_in_transaction_currency": 0.0,
                 },  # 20 * 5 + 19 * 3 + 100 * 1 + 10.26
-                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+                {
+                    "account": "Creditors - _TIRC",
+                    "debit": 0.0,
+                    "credit": 5610.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 5610.0,
+                },
             ],
         )
 
+        # Stock Ledger is updated without perpetual inventory, but ineligible ITC is
+        # not capitalized in valuation rate, as it's booked in Cost of Goods Sold
+        self.assertStockValues(doc.name, {"Test Stock Item": 20, "Test Ineligible Stock Item": 19})
         self.assertAssetValues(
             "Purchase Invoice",
             doc.name,
@@ -333,24 +408,44 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "GST Expense - _TIRC",
                     "debit": 179.64,
                     "credit": 179.64,
+                    "debit_in_transaction_currency": 179.64,
+                    "credit_in_transaction_currency": 179.64,
                 },  # 499 * 2 * 18%
                 {
                     "account": "Input Tax SGST - _TIRC",
                     "debit": 89.82,
                     "credit": 89.82,
+                    "debit_in_transaction_currency": 89.82,
+                    "credit_in_transaction_currency": 89.82,
                 },
                 {
                     "account": "Input Tax CGST - _TIRC",
                     "debit": 89.82,
                     "credit": 89.82,
+                    "debit_in_transaction_currency": 89.82,
+                    "credit_in_transaction_currency": 89.82,
                 },
                 {
                     "account": "CWIP Account - _TIRC",
                     "debit": 1177.64,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 1177.64,
+                    "credit_in_transaction_currency": 0.0,
                 },  # 998 + 179.64
-                {"account": "Round Off - _TIRC", "debit": 0.36, "credit": 0.0},
-                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 1178.0},
+                {
+                    "account": "Round Off - _TIRC",
+                    "debit": 0.36,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
+                {
+                    "account": "Creditors - _TIRC",
+                    "debit": 0.0,
+                    "credit": 1178.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 1178.0,
+                },
             ],
         )
 
@@ -372,33 +467,55 @@ class TestIneligibleITC(FrappeTestCase):
         self.assertGLEntry(
             doc.name,
             [
-                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+                {
+                    "account": "Round Off - _TIRC",
+                    "debit": 0.28,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
                 {
                     "account": "GST Expense - _TIRC",
                     "debit": 855.72,
                     "credit": 855.72,
+                    "debit_in_transaction_currency": 855.72,
+                    "credit_in_transaction_currency": 855.72,
                 },  # full taxes reversed
                 {
                     "account": "Input Tax IGST - _TIRC",
                     "debit": 855.72,
                     "credit": 855.72,
+                    "debit_in_transaction_currency": 855.72,
+                    "credit_in_transaction_currency": 855.72,
                 },
                 {
                     "account": "Administrative Expenses - _TIRC",
                     "debit": 2947.64,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2947.64,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "CWIP Account - _TIRC",
                     "debit": 2358.82,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2358.82,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Stock In Hand - _TIRC",
                     "debit": 303.26,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 303.26,
+                    "credit_in_transaction_currency": 0.0,
                 },
-                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+                {
+                    "account": "Creditors - _TIRC",
+                    "debit": 0.0,
+                    "credit": 5610.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 5610.0,
+                },
             ],
         )
 
@@ -429,26 +546,36 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "GST Expense - _TIRC",
                     "debit": 0.0,
                     "credit": 190.08,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 190.08,
                 },  # 10.26 + 179.82
                 {
                     "account": "Asset Received But Not Billed - _TIRC",
                     "debit": 0.0,
                     "credit": 1999.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 1999.0,
                 },
                 {
                     "account": "CWIP Account - _TIRC",
                     "debit": 2178.82,  # 1999 + 179.82
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2178.82,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Stock Received But Not Billed - _TIRC",
                     "debit": 0.0,
                     "credit": 257.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 257.0,
                 },
                 {
                     "account": "Stock In Hand - _TIRC",
                     "debit": 267.26,  # 257 + 10.26
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 267.26,
+                    "credit_in_transaction_currency": 0.0,
                 },
             ],
         )
@@ -487,38 +614,62 @@ class TestIneligibleITC(FrappeTestCase):
         self.assertGLEntry(
             doc.name,
             [
-                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+                {
+                    "account": "Round Off - _TIRC",
+                    "debit": 0.28,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
                 {
                     "account": "GST Expense - _TIRC",
                     "debit": 369.72,  # 179.82 + 179.64 + 10.26
                     "credit": 179.64,  # Only Expense
+                    "debit_in_transaction_currency": 369.72,
+                    "credit_in_transaction_currency": 179.64,
                 },
                 {
                     "account": "Input Tax SGST - _TIRC",
                     "debit": 427.86,
                     "credit": 184.86,
+                    "debit_in_transaction_currency": 427.86,
+                    "credit_in_transaction_currency": 184.86,
                 },
                 {
                     "account": "Input Tax CGST - _TIRC",
                     "debit": 427.86,
-                    "credit": 184.86,  # 369.72 / 2
+                    "credit": 184.86,
+                    "debit_in_transaction_currency": 427.86,
+                    "credit_in_transaction_currency": 184.86,  # 369.72 / 2
                 },
                 {
                     "account": "Asset Received But Not Billed - _TIRC",
                     "debit": 1999.0,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 1999.0,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Administrative Expenses - _TIRC",
                     "debit": 2677.64,  # 1500 + 998 + 179.64
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2677.64,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Stock Received But Not Billed - _TIRC",
                     "debit": 257.0,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 257.0,
+                    "credit_in_transaction_currency": 0.0,
                 },
-                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+                {
+                    "account": "Creditors - _TIRC",
+                    "debit": 0.0,
+                    "credit": 5610.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 5610.0,
+                },
             ],
         )
 
@@ -540,26 +691,36 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "GST Expense - _TIRC",
                     "debit": 0.0,
                     "credit": 406.08,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 406.08,
                 },  # 855.72 - 449.64 (reversal on expense)
                 {
                     "account": "Asset Received But Not Billed - _TIRC",
                     "debit": 0.0,
                     "credit": 1999.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 1999.0,
                 },
                 {
                     "account": "CWIP Account - _TIRC",
                     "debit": 2358.82,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2358.82,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Stock Received But Not Billed - _TIRC",
                     "debit": 0.0,
                     "credit": 257.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 257.0,
                 },
                 {
                     "account": "Stock In Hand - _TIRC",
                     "debit": 303.26,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 303.26,
+                    "credit_in_transaction_currency": 0.0,
                 },
             ],
         )
@@ -587,33 +748,55 @@ class TestIneligibleITC(FrappeTestCase):
         self.assertGLEntry(
             doc.name,
             [
-                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+                {
+                    "account": "Round Off - _TIRC",
+                    "debit": 0.28,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
                 {
                     "account": "GST Expense - _TIRC",
                     "debit": 855.72,
-                    "credit": 449.64,  # expense reversal
+                    "credit": 449.64,
+                    "debit_in_transaction_currency": 855.72,
+                    "credit_in_transaction_currency": 449.64,  # expense reversal
                 },
                 {
                     "account": "Input Tax IGST - _TIRC",
                     "debit": 855.72,
                     "credit": 855.72,
+                    "debit_in_transaction_currency": 855.72,
+                    "credit_in_transaction_currency": 855.72,
                 },
                 {
                     "account": "Asset Received But Not Billed - _TIRC",
                     "debit": 1999.0,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 1999.0,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Administrative Expenses - _TIRC",
                     "debit": 2947.64,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2947.64,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Stock Received But Not Billed - _TIRC",
                     "debit": 257.0,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 257.0,
+                    "credit_in_transaction_currency": 0.0,
                 },
-                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+                {
+                    "account": "Creditors - _TIRC",
+                    "debit": 0.0,
+                    "credit": 5610.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 5610.0,
+                },
             ],
         )
 
@@ -634,38 +817,62 @@ class TestIneligibleITC(FrappeTestCase):
         self.assertGLEntry(
             doc.name,
             [
-                {"account": "Round Off - _TIRC", "debit": 0.0, "credit": 0.28},
+                {
+                    "account": "Round Off - _TIRC",
+                    "debit": 0.0,
+                    "credit": 0.28,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
                 {
                     "account": "GST Expense - _TIRC",
                     "debit": 369.72,
                     "credit": 369.72,
+                    "debit_in_transaction_currency": 369.72,
+                    "credit_in_transaction_currency": 369.72,
                 },
                 {
                     "account": "Input Tax SGST - _TIRC",
                     "debit": 0.0,
                     "credit": 243.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 243.0,
                 },
                 {
                     "account": "Input Tax CGST - _TIRC",
                     "debit": 0.0,
                     "credit": 243.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 243.0,
                 },
                 {
                     "account": "CWIP Account - _TIRC",
                     "debit": 0.0,
                     "credit": 2178.82,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 2178.82,
                 },
                 {
                     "account": "Administrative Expenses - _TIRC",
                     "debit": 0.0,
                     "credit": 2677.64,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 2677.64,
                 },
                 {
                     "account": "Stock In Hand - _TIRC",
                     "debit": 0.0,
                     "credit": 267.26,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 267.26,
                 },
-                {"account": "Creditors - _TIRC", "debit": 5610.0, "credit": 0.0},
+                {
+                    "account": "Creditors - _TIRC",
+                    "debit": 5610.0,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 5610.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
             ],
         )
 
@@ -692,31 +899,43 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "GST Expense - _TIRC",
                     "debit": 190.08,  # 10.26 + 179.82
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 190.08,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Asset Received But Not Billed - _TIRC",
                     "debit": 1999.0,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 1999.0,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "CWIP Account - _TIRC",
                     "debit": 0.0,
-                    "credit": 2178.82,  # 1999 + 179.82
+                    "credit": 2178.82,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 2178.82,  # 1999 + 179.82
                 },
                 {
                     "account": "Stock Received But Not Billed - _TIRC",
                     "debit": 257.0,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 257.0,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Stock In Hand - _TIRC",
                     "debit": 0.0,
-                    "credit": 267.26,  # 257 + 10.26
+                    "credit": 267.26,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 267.26,  # 257 + 10.26
                 },
                 {
                     "account": "Cost of Goods Sold - _TIRC",
                     "debit": 10.26,
                     "credit": 10.26,
+                    "debit_in_transaction_currency": 10.26,
+                    "credit_in_transaction_currency": 10.26,
                 },
             ],
         )
@@ -742,16 +961,22 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "GST Expense - _TIRC",
                     "debit": 0.0,
                     "credit": 179.82,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 179.82,
                 },  # only asset
                 {
                     "account": "Asset Received But Not Billed - _TIRC",
                     "debit": 0.0,
                     "credit": 1999.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 1999.0,
                 },
                 {
                     "account": "CWIP Account - _TIRC",
                     "debit": 2178.82,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2178.82,
+                    "credit_in_transaction_currency": 0.0,
                 },
             ],
         )
@@ -772,38 +997,62 @@ class TestIneligibleITC(FrappeTestCase):
         self.assertGLEntry(
             doc.name,
             [
-                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+                {
+                    "account": "Round Off - _TIRC",
+                    "debit": 0.28,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
                 {
                     "account": "GST Expense - _TIRC",
                     "debit": 369.72,
                     "credit": 189.9,
+                    "debit_in_transaction_currency": 369.72,
+                    "credit_in_transaction_currency": 189.9,
                 },
                 {
                     "account": "Input Tax SGST - _TIRC",
                     "debit": 427.86,
                     "credit": 184.86,
+                    "debit_in_transaction_currency": 427.86,
+                    "credit_in_transaction_currency": 184.86,
                 },
                 {
                     "account": "Input Tax CGST - _TIRC",
                     "debit": 427.86,
                     "credit": 184.86,
+                    "debit_in_transaction_currency": 427.86,
+                    "credit_in_transaction_currency": 184.86,
                 },
                 {
                     "account": "Asset Received But Not Billed - _TIRC",
                     "debit": 1999.0,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 1999.0,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Administrative Expenses - _TIRC",
                     "debit": 2677.64,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2677.64,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Cost of Goods Sold - _TIRC",
                     "debit": 267.26,  # stock with gst expense
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 267.26,
+                    "credit_in_transaction_currency": 0.0,
                 },
-                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+                {
+                    "account": "Creditors - _TIRC",
+                    "debit": 0.0,
+                    "credit": 5610.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 5610.0,
+                },
             ],
         )
 
@@ -825,46 +1074,68 @@ class TestIneligibleITC(FrappeTestCase):
         self.assertGLEntry(
             doc.name,
             [
-                {"account": "GST Expense - _TIRC", "debit": 0.0, "credit": 190.08},
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 0.0,
+                    "credit": 190.08,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 190.08,
+                },
                 {
                     "account": "Asset Received But Not Billed - _TIRC",
                     "debit": 0.0,
                     "credit": 1999.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 1999.0,
                 },
                 {
                     "account": "CWIP Account - _TIRC",
                     "debit": 2178.82,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2178.82,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Administrative Expenses - _TIRC",
                     "debit": 998.0,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 998.0,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Unsecured Loans - _TIRC",
                     "debit": 0.0,
                     "credit": 998.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 998.0,
                 },
                 {
                     "account": "Administrative Expenses - _TIRC",
                     "debit": 1500.0,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 1500.0,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Unsecured Loans - _TIRC",
                     "debit": 0.0,
                     "credit": 1500.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 1500.0,
                 },
                 {
                     "account": "Stock Received But Not Billed - _TIRC",
                     "debit": 0.0,
                     "credit": 257.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 257.0,
                 },
                 {
                     "account": "Stock In Hand - _TIRC",
                     "debit": 267.26,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 267.26,
+                    "credit_in_transaction_currency": 0.0,
                 },
             ],
         )
@@ -887,38 +1158,62 @@ class TestIneligibleITC(FrappeTestCase):
         self.assertGLEntry(
             doc.name,
             [
-                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+                {
+                    "account": "Round Off - _TIRC",
+                    "debit": 0.28,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
                 {
                     "account": "GST Expense - _TIRC",
                     "debit": 369.72,
                     "credit": 179.64,
+                    "debit_in_transaction_currency": 369.72,
+                    "credit_in_transaction_currency": 179.64,
                 },
                 {
                     "account": "Input Tax SGST - _TIRC",
                     "debit": 427.86,
                     "credit": 184.86,
+                    "debit_in_transaction_currency": 427.86,
+                    "credit_in_transaction_currency": 184.86,
                 },
                 {
                     "account": "Input Tax CGST - _TIRC",
                     "debit": 427.86,
                     "credit": 184.86,
+                    "debit_in_transaction_currency": 427.86,
+                    "credit_in_transaction_currency": 184.86,
                 },
                 {
                     "account": "Asset Received But Not Billed - _TIRC",
                     "debit": 1999.0,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 1999.0,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Administrative Expenses - _TIRC",
                     "debit": 2677.64,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 2677.64,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Stock Received But Not Billed - _TIRC",
                     "debit": 257.0,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 257.0,
+                    "credit_in_transaction_currency": 0.0,
                 },
-                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+                {
+                    "account": "Creditors - _TIRC",
+                    "debit": 0.0,
+                    "credit": 5610.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 5610.0,
+                },
             ],
         )
 
@@ -944,15 +1239,37 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Administrative Expenses - _TIRC",
                     "debit": 179.64,
                     "credit": 0.0,
+                    "debit_in_transaction_currency": 179.64,
+                    "credit_in_transaction_currency": 0.0,
                 },
                 {
                     "account": "Customs Duty Payable - _TIRC",
                     "debit": 0.0,
                     "credit": 855.72,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 855.72,
                 },
-                {"account": "GST Expense - _TIRC", "debit": 369.72, "credit": 179.64},
-                {"account": "Input Tax IGST - _TIRC", "debit": 0.0, "credit": 369.72},
-                {"account": "Input Tax IGST - _TIRC", "debit": 855.72, "credit": 0.0},
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 369.72,
+                    "credit": 179.64,
+                    "debit_in_transaction_currency": 369.72,
+                    "credit_in_transaction_currency": 179.64,
+                },
+                {
+                    "account": "Input Tax IGST - _TIRC",
+                    "debit": 0.0,
+                    "credit": 369.72,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 369.72,
+                },
+                {
+                    "account": "Input Tax IGST - _TIRC",
+                    "debit": 855.72,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 855.72,
+                    "credit_in_transaction_currency": 0.0,
+                },
             ],
         )
 
@@ -977,7 +1294,13 @@ class TestIneligibleITC(FrappeTestCase):
         gl_entries = frappe.get_all(
             "GL Entry",
             filters={"voucher_no": docname, "is_cancelled": 0},
-            fields=["account", "debit", "credit"],
+            fields=[
+                "account",
+                "debit",
+                "credit",
+                "debit_in_transaction_currency",
+                "credit_in_transaction_currency",
+            ],
         )
 
         out_str = json.dumps(sorted(gl_entries, key=json.dumps))
