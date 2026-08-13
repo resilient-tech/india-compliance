@@ -8,6 +8,13 @@ from frappe.tests.utils import FrappeTestCase, change_settings
 from india_compliance.gst_india.doctype.gst_hsn_code.gst_hsn_code import (
     update_taxes_in_item_master,
 )
+from india_compliance.gst_india.utils import get_hsn_code_list
+
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Item Tax Template", "Tax Category"]
+
+FOUR_DIGIT_HSN = "0101"
+SIX_DIGIT_HSN = "010121"
+EIGHT_DIGIT_HSN = "01012100"
 
 
 class TestGSTHSNCode(FrappeTestCase):
@@ -36,6 +43,46 @@ class TestGSTHSNCode(FrappeTestCase):
 
         doc = frappe.get_doc({"doctype": "GST HSN Code", "hsn_code": "10000000"})
         doc.save()
+
+    @change_settings("GST Settings", {"validate_hsn_code": 1, "min_hsn_digits": 6})
+    def test_get_hsn_code_list_by_description(self):
+        # codes whose description matches, but which the code prefix search would miss
+        options = get_hsn_code_list(txt="HORSES FOR POLO", limit=100)
+        self.assertEqual([option.value for option in options], ["01012910", "01019010"])
+
+        # LIKE is case insensitive on MariaDB, and rendered as ILIKE on Postgres
+        self.assertEqual(options, get_hsn_code_list(txt="horses for polo", limit=100))
+
+    @change_settings("GST Settings", {"validate_hsn_code": 1, "min_hsn_digits": 6})
+    def test_get_hsn_code_list_excludes_invalid_lengths(self):
+        # no seeded code has an invalid length, so make one longer than min_hsn_digits
+        invalid_hsn = frappe.get_doc(
+            {"doctype": "GST HSN Code", "hsn_code": f"{FOUR_DIGIT_HSN}123", "description": "HORSES"}
+        )
+        invalid_hsn.flags.ignore_validate = True
+        invalid_hsn.insert(ignore_if_duplicate=True)
+        self.addCleanup(invalid_hsn.delete)
+
+        codes = [option.value for option in get_hsn_code_list(txt=FOUR_DIGIT_HSN, limit="100")]
+
+        self.assertIn(SIX_DIGIT_HSN, codes)
+        self.assertNotIn(invalid_hsn.name, codes)
+
+    @change_settings("GST Settings", {"validate_hsn_code": 1, "min_hsn_digits": 8})
+    def test_get_hsn_code_list_respects_min_hsn_digits(self):
+        options = get_hsn_code_list(txt=FOUR_DIGIT_HSN, limit="100")
+        codes = [option.value for option in options]
+
+        self.assertIn(EIGHT_DIGIT_HSN, codes)
+        self.assertNotIn(FOUR_DIGIT_HSN, codes)
+        self.assertNotIn(SIX_DIGIT_HSN, codes)
+
+        option = options[0]
+        self.assertEqual(option.label, option.value)
+        self.assertEqual(
+            option.description,
+            frappe.db.get_value("GST HSN Code", option.value, "description"),
+        )
 
     def test_update_taxes_in_item_master(self):
         taxes = [{"item_tax_template": "GST 12% - _TIUC", "tax_category": "In-State"}]

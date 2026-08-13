@@ -2,10 +2,6 @@
 // For license information, please see license.txt
 
 const DOCTYPE = "Purchase Reconciliation Tool";
-const tooltip_info = {
-    purchase_period: "Returns purchases during this period where no match is found.",
-    inward_supply_period: "Returns all documents from GSTR 2A/2B during this return period.",
-};
 
 const api_enabled = india_compliance.is_api_enabled();
 const ALERT_HTML = `
@@ -39,7 +35,7 @@ function remove_gstr2b_alert(alert) {
 async function add_gstr2b_alert(frm) {
     let existing_alert = frm.layout.wrapper.find(".gstr2b-alert");
 
-    if (!frm.doc.inward_supply_period || !frm.doc.__onload?.has_missing_2b_documents) {
+    if (!frm.doc.period || !frm.doc.__onload?.has_missing_2b_documents) {
         remove_gstr2b_alert(existing_alert);
         return;
     }
@@ -53,7 +49,7 @@ async function add_gstr2b_alert(frm) {
         .on("click", async function () {
             await download_gstr(
                 frm,
-                [frm.doc.inward_supply_from_date, frm.doc.inward_supply_to_date],
+                [frm.doc.from_date, frm.doc.to_date],
                 ReturnType.GSTR2B,
                 frm.doc.company_gstin,
                 null,
@@ -66,7 +62,6 @@ async function add_gstr2b_alert(frm) {
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
         patch_set_active_tab(frm);
-        new india_compliance.quick_info_popover(frm, tooltip_info);
 
         await frappe.require("purchase_reconciliation_tool.bundle.js");
 
@@ -86,8 +81,8 @@ frappe.ui.form.on(DOCTYPE, {
     onload(frm) {
         add_gstr2b_alert(frm);
 
-        frm.trigger("purchase_period");
-        frm.trigger("inward_supply_period");
+        if (!frm.doc.period) frm.doc.period = "This Fiscal Year";
+        frm.trigger("period");
     },
 
     refresh(frm) {
@@ -108,20 +103,14 @@ frappe.ui.form.on(DOCTYPE, {
 
     async company_gstin(frm) {
         render_empty_state(frm);
-        await fetch_date_range(frm, "inward_supply", "get_date_range_and_check_missing_documents");
+        await fetch_date_range(frm, "get_date_range_and_check_missing_documents");
         add_gstr2b_alert(frm);
     },
 
-    async purchase_period(frm) {
+    async period(frm) {
         render_empty_state(frm);
-        await fetch_date_range(frm, "purchase");
-        set_date_range_description(frm, "purchase");
-    },
-
-    async inward_supply_period(frm) {
-        render_empty_state(frm);
-        await fetch_date_range(frm, "inward_supply", "get_date_range_and_check_missing_documents");
-        set_date_range_description(frm, "inward_supply");
+        await fetch_date_range(frm, "get_date_range_and_check_missing_documents");
+        set_date_range_description(frm);
         add_gstr2b_alert(frm);
     },
 
@@ -213,6 +202,11 @@ frappe.ui.form.on(DOCTYPE, {
 });
 
 class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
+    summary_matchers = {
+        supplier_tab: (item, row) => item.supplier_gstin == row.supplier_gstin,
+        summary_tab: (item, row) => item.match_status == row.match_status,
+    };
+
     get_tab_group_fields() {
         return [
             {
@@ -274,8 +268,8 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                     "Suggested Match",
                     "Mismatch",
                     "Manual Match",
-                    "Missing in 2A/2B",
-                    "Missing in PI",
+                    "Only in 2A/2B",
+                    "Only in Books",
                 ],
             },
             {
@@ -336,6 +330,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 ".match-status": "match_status",
                 ".action-performed": "action",
                 ".supplier-gstin": "supplier_gstin",
+                ".classification": "classification",
             },
         };
 
@@ -403,7 +398,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             new_row.tax_difference += row.tax_difference || 0;
             new_row.taxable_value_difference += row.taxable_value_difference || 0;
         });
-        return Object.values(data);
+        return this.sort_by_match_status(Object.values(data));
     }
 
     get_summary_columns() {
@@ -412,7 +407,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 label: "Match Status",
                 fieldname: "match_status",
                 width: 200,
-                _value: (...args) => `<a href="#" class='match-status'>${args[0]}</a>`,
+                _value: (...args) => this.get_match_status_link(args[0]),
             },
             {
                 label: "Count <br>2A/2B Docs",
@@ -476,7 +471,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             new_row.tax_difference += row.tax_difference || 0;
             new_row.taxable_value_difference += row.taxable_value_difference || 0;
         });
-        return Object.values(data);
+        return this.sort_by_supplier_gstin(Object.values(data));
     }
 
     get_supplier_columns() {
@@ -539,6 +534,8 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
 
     get_invoice_data() {
         this.mapped_invoice_data = {};
+        this.sort_by_supplier_gstin(this.filtered_data);
+
         this.filtered_data.forEach((row) => {
             this.mapped_invoice_data[get_hash(row)] = row;
             row.supplier_name_gstin = this.get_supplier_name_gstin(row);
@@ -558,7 +555,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             {
                 label: "Supplier Name",
                 fieldname: "supplier_name_gstin",
-                width: 150,
+                width: 200,
             },
             {
                 label: "Bill No.",
@@ -570,12 +567,16 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 _value: (...args) => frappe.datetime.str_to_user(args[0]),
             },
             {
+                label: "Classification",
+                fieldname: "classification",
+                width: 100,
+                _value: (...args) => `<a href="#" class='classification'>${args[0] || ""}</a>`,
+            },
+            {
                 label: "Match Status",
                 fieldname: "match_status",
                 width: 120,
-                _value: (...args) => {
-                    return `<a href="#" class='match-status'>${args[0]}</a>`;
-                },
+                _value: (...args) => this.get_match_status_link(args[0]),
             },
             {
                 label: "GST Inward <br>Supply",
@@ -664,13 +665,8 @@ class PurchaseReconciliationToolAction {
             missing_labels.push(__(frappe.meta.get_label(DOCTYPE, "gst_return")));
         }
 
-        const period_fields = ["purchase_period", "inward_supply_period"];
-
-        for (const fieldname of period_fields) {
-            const prefix = fieldname.replace("_period", "");
-            if (!doc[`${prefix}_from_date`] || !doc[`${prefix}_to_date`]) {
-                missing_labels.push(__(frappe.meta.get_label(DOCTYPE, fieldname)));
-            }
+        if (!doc.from_date || !doc.to_date) {
+            missing_labels.push(__(frappe.meta.get_label(DOCTYPE, "period")));
         }
 
         if (!missing_labels.length) return;
@@ -704,14 +700,13 @@ class PurchaseReconciliationToolAction {
         const action_group = __("Actions");
 
         if (!this.frm.reconciliation_tabs?.data?.length) return;
-        if (this.frm.get_active_tab()?.df.fieldname == "invoice_tab") {
-            this.frm.add_custom_button(
-                __("Unlink"),
-                () => reconciliation.unlink_documents(this.frm),
-                action_group,
-            );
-            this.frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
-        }
+
+        this.frm.add_custom_button(
+            __("Unlink"),
+            () => reconciliation.unlink_documents(this.frm),
+            action_group,
+        );
+        this.frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
 
         // Setup Actions
         ["Accept", "Pending", "Ignore"].forEach((action) =>
@@ -767,8 +762,8 @@ class PurchaseReconciliationToolAction {
 class DetailViewDialog extends reconciliation.detail_view_dialog {
     _get_custom_actions() {
         const doctype = this.dialog.get_value("doctype");
-        if (this.row.match_status == "Missing in 2A/2B") return ["Link", "Ignore"];
-        else if (this.row.match_status == "Missing in PI")
+        if (this.row.match_status == "Only in Books") return ["Link", "Ignore"];
+        else if (this.row.match_status == "Only in 2A/2B")
             if (doctype == "Purchase Invoice") return ["Create", "Link", "Pending", "Ignore"];
             else return ["Link", "Pending", "Ignore"];
         else return ["Unlink", "Accept", "Pending"];
@@ -807,18 +802,14 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
     }
 
     _set_missing_doctype() {
-        if (this.row.match_status == "Missing in 2A/2B") this.missing_doctype = "GST Inward Supply";
-        else if (this.row.match_status == "Missing in PI")
+        if (this.row.match_status == "Only in Books") this.missing_doctype = "GST Inward Supply";
+        else if (this.row.match_status == "Only in 2A/2B")
             if (["IMPG", "IMPGSEZ"].includes(this.row.classification)) this.missing_doctype = "Bill of Entry";
             else this.missing_doctype = "Purchase Invoice";
         else return;
 
         if (this.missing_doctype == "GST Inward Supply") this.doctype_options = ["GST Inward Supply"];
         else this.doctype_options = ["Purchase Invoice", "Bill of Entry"];
-    }
-
-    _get_default_date_range() {
-        return [this.frm.doc.purchase_from_date, this.frm.doc.purchase_to_date];
     }
 }
 
@@ -1044,8 +1035,8 @@ class ImportDialog {
                 label: "Period",
                 fieldname: "period",
                 fieldtype: "Select",
-                options: this.frm.get_field("inward_supply_period").df.options,
-                default: this.frm.doc.inward_supply_period,
+                options: this.frm.get_field("period").df.options,
+                default: this.frm.doc.period,
                 onchange: async () => {
                     const period = this.dialog.get_value("period");
                     if (!period) return;
@@ -1065,7 +1056,7 @@ class ImportDialog {
                 label: "Date Range",
                 fieldname: "date_range",
                 fieldtype: "DateRange",
-                default: [this.frm.doc.inward_supply_from_date, this.frm.doc.inward_supply_to_date],
+                default: [this.frm.doc.from_date, this.frm.doc.to_date],
                 depends_on: "eval:doc.period == 'Custom'",
                 onchange: () => {
                     this.date_range = this.dialog.get_value("date_range");
@@ -1200,33 +1191,25 @@ class EmailDialog {
     }
 }
 
-async function fetch_date_range(frm, field_prefix, method) {
-    const from_date_field = field_prefix + "_from_date";
-    const to_date_field = field_prefix + "_to_date";
-
-    const period = frm.doc[field_prefix + "_period"];
+async function fetch_date_range(frm, method) {
+    const { period } = frm.doc;
     if (!period || period == "Custom") return;
 
     const { message } = await frm._call(method || "get_date_range", { period });
 
-    frm.set_value(from_date_field, message[0]);
-    frm.set_value(to_date_field, message[1]);
+    frm.set_value("from_date", message[0]);
+    frm.set_value("to_date", message[1]);
 }
 
-function set_date_range_description(frm, field_prefixes) {
-    if (!field_prefixes) field_prefixes = ["inward_supply", "purchase"];
-    else field_prefixes = [field_prefixes];
+function set_date_range_description(frm) {
+    const { period } = frm.doc;
+    const field = frm.get_field("period");
 
-    field_prefixes.forEach((prefix) => {
-        const period_field = prefix + "_period";
-        const period = frm.doc[period_field];
+    if (!period || period == "Custom") return field.set_description("");
 
-        if (!period || period == "Custom") return frm.get_field(period_field).set_description("");
-
-        const from_date = frappe.datetime.str_to_user(frm.doc[prefix + "_from_date"]);
-        const to_date = frappe.datetime.str_to_user(frm.doc[prefix + "_to_date"]);
-        frm.get_field(period_field).set_description(`${from_date} to ${to_date}`);
-    });
+    const from_date = frappe.datetime.str_to_user(frm.doc.from_date);
+    const to_date = frappe.datetime.str_to_user(frm.doc.to_date);
+    field.set_description(`${from_date} to ${to_date}`);
 }
 
 function get_icon(value, column, data, icon) {
@@ -1273,11 +1256,9 @@ function apply_action(frm, action, selected_rows) {
     if (!active_tab) return;
 
     const tab = frm.reconciliation_tabs.tabs[active_tab];
-    if (!selected_rows) selected_rows = tab.datatable.get_checked_items();
+    const { data } = frm.reconciliation_tabs;
 
-    // get affected rows
-    const { filtered_data, data } = frm.reconciliation_tabs;
-    let affected_rows = get_affected_rows(active_tab, selected_rows, filtered_data);
+    let affected_rows = selected_rows || reconciliation.get_affected_rows(frm);
 
     if (!affected_rows.length)
         return frappe.show_alert({
@@ -1289,7 +1270,7 @@ function apply_action(frm, action, selected_rows) {
     if (action.includes("Accept")) {
         let warn = false;
         affected_rows = affected_rows.filter((row) => {
-            if (row.match_status.includes("Missing")) {
+            if (!is_linked(row)) {
                 warn = true;
                 return false;
             }
@@ -1299,13 +1280,13 @@ function apply_action(frm, action, selected_rows) {
         if (warn)
             frappe.msgprint(
                 __(
-                    "You can only Accept values where a match is available. Rows where match is missing will be ignored.",
+                    "<strong>Accept</strong> applies only to matched rows. Rows with one side missing were skipped.",
                 ),
             );
     } else if (action == "Ignore") {
         let warn = false;
         affected_rows = affected_rows.filter((row) => {
-            if (!row.match_status.includes("Missing")) {
+            if (is_linked(row)) {
                 warn = true;
                 return false;
             }
@@ -1315,13 +1296,13 @@ function apply_action(frm, action, selected_rows) {
         if (warn)
             frappe.msgprint(
                 __(
-                    "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B or Missing in PI. These rows will be ignored.",
+                    "<strong>Ignore</strong> applies only to rows that are <strong>Only in 2A/2B</strong> or <strong>Only in Books</strong>. Matched rows were skipped.",
                 ),
             );
     } else if (action == "Pending") {
         let warn = false;
         affected_rows = affected_rows.filter((row) => {
-            if (row.match_status == "Missing in 2A/2B") {
+            if (row.match_status == "Only in Books") {
                 warn = true;
                 return false;
             }
@@ -1331,7 +1312,7 @@ function apply_action(frm, action, selected_rows) {
         if (warn)
             frappe.msgprint(
                 __(
-                    "You cannot apply <strong>Pending</strong> action on rows where data is Missing in 2A/2B. These rows will be ignored.",
+                    "<strong>Pending</strong> does not apply to <strong>Only in Books</strong> rows. They were skipped.",
                 ),
             );
     }
@@ -1350,20 +1331,12 @@ function apply_action(frm, action, selected_rows) {
     reconciliation.after_successful_action(tab);
 }
 
-function has_matching_row(row, array) {
-    return array.filter((item) => JSON.stringify(item) === JSON.stringify(row)).length;
+function is_linked(row) {
+    return row.purchase_invoice_name && row.inward_supply_name;
 }
 
-function get_affected_rows(tab, selection, data) {
-    if (tab == "invoice_tab") return selection;
-
-    if (tab == "supplier_tab")
-        return data.filter(
-            (inv) => selection.filter((row) => row.supplier_gstin == inv.supplier_gstin).length,
-        );
-
-    if (tab == "summary_tab")
-        return data.filter((inv) => selection.filter((row) => row.match_status == inv.match_status).length);
+function has_matching_row(row, array) {
+    return array.some((item) => JSON.stringify(item) === JSON.stringify(row));
 }
 
 function render_empty_state(frm) {

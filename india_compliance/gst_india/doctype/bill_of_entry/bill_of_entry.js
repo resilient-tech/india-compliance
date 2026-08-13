@@ -4,6 +4,7 @@
 frappe.ui.form.on("Bill of Entry", {
     setup(frm) {
         india_compliance.setup_itc_claim_period_query(frm);
+        india_compliance.set_hsn_code_autocomplete(frm);
     },
 
     onload(frm) {

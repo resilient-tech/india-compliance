@@ -25,6 +25,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_B2B_InvoiceType,
     GSTR1_Category,
     GSTR1_SubCategory,
+    truncate_hsn_description,
 )
 from india_compliance.gst_india.utils.gstr_1 import GovDataField as gov_f
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
@@ -1149,7 +1150,7 @@ class HSNSUM(GSTR1DataMapper):
         self.value_formatters_for_internal = {gov_f.UOM: self.map_uom}
         self.value_formatters_for_gov = {
             inv_f.UOM: self.map_uom,
-            inv_f.DESCRIPTION: lambda x, *args: x[:30],
+            inv_f.DESCRIPTION: self.truncate_description,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -1257,6 +1258,9 @@ class HSNSUM(GSTR1DataMapper):
             return f"{uom}-{UOM_MAP[uom]}"
 
         return f"OTH-{UOM_MAP.get('OTH')}"
+
+    def truncate_description(self, description, data=None):
+        return truncate_hsn_description(description)
 
 
 class AT(GSTR1DataMapper):
@@ -1773,6 +1777,16 @@ class RETSUM(GSTR1DataMapper):
 
         if data.get("sec_nm") == "DOC_ISSUE":
             response["no_of_records"] = data.get("net_doc_issued", 0)
+
+        # Nil-Rated section is reported without a taxable value by the govt.
+        # Computed to compare against books summary.
+        elif data.get("sec_nm") == "NIL":
+            response[inv_f.TAXABLE_VALUE] = flt(
+                flt(data.get("ttl_expt_amt"))
+                + flt(data.get("ttl_nilsup_amt"))
+                + flt(data.get("ttl_ngsup_amt")),
+                2,
+            )
 
         return response
 
