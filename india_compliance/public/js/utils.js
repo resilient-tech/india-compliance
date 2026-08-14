@@ -61,6 +61,9 @@ Object.assign(india_compliance, {
         "Return Raw Material to Customer",
     ],
 
+    // Child table holding the item rows, where it isn't `items`.
+    ITEMS_FIELDNAME_OVERRIDES: { "Asset Movement": "assets" },
+
     // Stock Entry purposes eligible for e-Waybill
     E_WAYBILL_STOCK_ENTRY_PURPOSES: [
         "Material Transfer",
