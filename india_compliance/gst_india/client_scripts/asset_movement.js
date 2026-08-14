@@ -97,6 +97,8 @@ frappe.ui.form.on("Asset Movement Item", {
     item_tax_template: india_compliance.taxes_controller_events.item_tax_template,
 
     async asset(frm, cdt, cdn) {
+        if (!india_compliance.is_indian_registered_company(frm.doc.company)) return;
+
         const row = locals[cdt][cdn];
 
         if (!row.asset) {
