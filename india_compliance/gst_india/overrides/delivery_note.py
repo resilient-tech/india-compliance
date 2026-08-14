@@ -3,13 +3,12 @@ import frappe
 from india_compliance.gst_india.overrides.sales_invoice import (
     is_e_waybill_applicable,
     is_shipping_address_in_india,
-    update_dashboard_with_gst_logs,
     validate_port_address,
 )
 from india_compliance.gst_india.overrides.transaction import (
     validate_transaction,
 )
-from india_compliance.gst_india.utils import is_api_enabled
+from india_compliance.gst_india.utils import is_api_enabled, update_dashboard_with_gst_logs
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 
 
