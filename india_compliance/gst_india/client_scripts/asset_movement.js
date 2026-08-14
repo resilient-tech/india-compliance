@@ -41,19 +41,17 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     after_save(frm) {
-        if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm, true))
+        if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm))
             frappe.show_alert(
                 {
-                    message: frm._ewb_message
-                        ? `<ul class="mb-0 pl-3">${frm._ewb_message}</ul>`
-                        : __("Party Address is required to create e-Waybill"),
+                    message: __("Party Address is required to create e-Waybill"),
                     indicator: "yellow",
                 },
                 10,
             );
     },
 
-    async company(frm) {
+    company(frm) {
         set_company_address(frm);
     },
 
@@ -85,7 +83,6 @@ function set_company_address(frm) {
     frm.set_value("bill_to_address", null);
 
     const company_field = frm.doc.purpose === "Receipt" ? "bill_to_address" : "bill_from_address";
-    if (frm.doc[company_field]) return;
 
     frappe.call({
         method: "frappe.contacts.doctype.address.address.get_default_address",
