@@ -60,6 +60,10 @@ def set_taxable_value(doc):
 
 
 def get_dashboard_data(data):
+    # Asset Movement has no standard dashboard, so `fieldname` is unset. frappe's
+    # set_open_count bails out without one, and the GST Logs counts would never load.
+    data.setdefault("fieldname", "name")
+
     return update_dashboard_with_gst_logs(
         "Asset Movement",
         data,
