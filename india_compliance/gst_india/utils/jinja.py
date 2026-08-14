@@ -1,5 +1,4 @@
 import base64
-import json
 from datetime import datetime
 from io import BytesIO
 from typing import ClassVar
@@ -160,8 +159,7 @@ def get_e_invoice_amount_fields(data, doc):
 
 
 def get_gst_breakup(doc):
-    gst_breakup_data = GSTBreakup(doc).get()
-    return json.dumps(gst_breakup_data)
+    return GSTBreakup(doc).get()
 
 
 class GSTBreakup:

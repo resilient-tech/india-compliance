@@ -17,20 +17,26 @@ from india_compliance.gst_india.constants import (
     SUBCONTRACTING_DOCTYPES,
     TAX_TYPES,
     TAXABLE_GST_TREATMENTS,
+    TRANSPORTER_FIELDS,
 )
-from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
+from india_compliance.gst_india.constants.custom_fields import (
+    E_WAYBILL_FIELDS,
+    E_WAYBILL_INV_FIELDS,
+)
 from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
     restrict_gstr_1_transaction_for,
 )
 from india_compliance.gst_india.doctype.gstin.gstin import get_and_validate_gstin_status
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
+    get_changed_fields,
     get_gst_account_by_item_tax_template,
     get_gst_account_gst_tax_type_map,
     get_gst_accounts_by_type,
     get_hsn_settings,
     get_place_of_supply,
     get_place_of_supply_options,
+    has_changed,
     has_gst_taxes,
     is_import_transaction,
     is_overseas_doc,
@@ -38,7 +44,7 @@ from india_compliance.gst_india.utils import (
     validate_gst_category,
     validate_gstin,
 )
-from india_compliance.gst_india.utils.gstr_1 import SUPECOM
+from india_compliance.gst_returns.fields.gstr1 import SubCategory
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     get_tax_withholding_accounts,
 )
@@ -135,7 +141,7 @@ def validate_item_wise_tax_detail(doc):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
 
-    for row in doc.get("_item_wise_tax_details", []):
+    for row in doc.get("_item_wise_tax_details") or []:
         tax = row.tax
         if not tax.gst_tax_type:
             continue
@@ -1857,7 +1863,7 @@ def before_update_after_submit(doc, method=None):
         return
 
     if not frappe.flags.through_update_item:
-        sync_address_dependent_fields_on_submit(doc)
+        sync_address_dependent_fields_after_submit(doc)
         return
 
     update_item_gst_treatment(doc)  # normalize before validate_items reads it
@@ -1879,16 +1885,38 @@ ADDRESS_DEPENDENT_FIELDS = {
 }
 
 
-def sync_address_dependent_fields_on_submit(doc, method=None):
+def validate_transporter_fields_after_submit(doc, method=None):
+    """Transporter details stay editable after submit until an e-Waybill is generated"""
     if doc.docstatus != 1 or ignore_gst_validations(doc):
         return
 
-    def has_changed(field):
-        return doc.meta.has_field(field) and doc.has_value_changed(field)
+    if doc.doctype not in E_WAYBILL_FIELDS:
+        return
 
-    changed_address_fields = [field for field in ADDRESS_DEPENDENT_FIELDS if has_changed(field)]
+    changed_fields = get_changed_fields(doc, TRANSPORTER_FIELDS)
+    if not changed_fields:
+        return
 
-    if not changed_address_fields and not has_changed("place_of_supply"):
+    if doc.get("ewaybill"):
+        frappe.throw(
+            _(
+                "Cannot change transporter details after the e-Waybill has been"
+                " generated. Cancel the e-Waybill first, or use the Update Transporter"
+                " / Update Vehicle Info actions instead."
+            ),
+            title=_("Cannot Update After Submit"),
+        )
+
+    validate_gst_transporter_id(doc)
+
+
+def sync_address_dependent_fields_after_submit(doc, method=None):
+    if doc.docstatus != 1 or ignore_gst_validations(doc):
+        return
+
+    changed_fields = get_changed_fields(doc, ADDRESS_DEPENDENT_FIELDS)
+
+    if not changed_fields and not has_changed(doc, "place_of_supply"):
         return
 
     if doc.get("ewaybill") or doc.get("irn"):
@@ -1903,8 +1931,8 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
     if doc.doctype == "Sales Invoice":
         validate_backdated_transaction(doc, action="update")
 
-    if changed_address_fields:
-        sync_gst_details_from_address(doc, changed_address_fields)
+    if changed_fields:
+        sync_gst_details_from_address(doc, changed_fields)
 
     is_sales_transaction = doc.doctype in SALES_DOCTYPES
     gstin = doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin
@@ -1947,6 +1975,6 @@ def set_ecommerce_supply_type(doc):
         return
 
     if doc.is_reverse_charge:
-        doc.ecommerce_supply_type = SUPECOM.US_9_5.value
+        doc.ecommerce_supply_type = SubCategory.SUPECOM_9_5.value
     else:
-        doc.ecommerce_supply_type = SUPECOM.US_52.value
+        doc.ecommerce_supply_type = SubCategory.SUPECOM_52.value

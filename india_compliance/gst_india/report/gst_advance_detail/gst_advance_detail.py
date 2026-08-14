@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import Criterion
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import IfNull, Sum
+from frappe.query_builder.functions import IfNull, Max, Min, Sum
 from frappe.utils import flt, getdate
 from pypika.terms import Case
 
@@ -166,11 +166,16 @@ class GSTAdvanceDetail:
             .join(self.pe_ref)
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
             .select(
-                self.pe_ref.allocated_amount,
-                self.pe_ref.reference_doctype.as_("against_voucher_type"),
-                self.pe_ref.reference_name.as_("against_voucher"),
+                # Max(): grouped by voucher_no / voucher_detail_no, not the pe_ref PK
+                Max(self.pe_ref.allocated_amount).as_("allocated_amount"),
+                Max(self.pe_ref.reference_doctype).as_("against_voucher_type"),
+                Max(self.pe_ref.reference_name).as_("against_voucher"),
             )
             .where(self.gl_entry.debit_in_account_currency > 0)
+            # grouped rows come back in whatever order the engine produces them: mariadb scans
+            # in insertion order, postgres hashes. order by when the adjustment was posted so
+            # both list the allocations the same way.
+            .orderby(Min(self.gl_entry.creation))
         )
 
         if self.filters.get("show_summary"):
@@ -187,18 +192,19 @@ class GSTAdvanceDetail:
             .join(self.pe)
             .on(self.pe.name == self.gl_entry.voucher_no)
             .select(
-                self.gl_entry.voucher_no,
-                self.gl_entry.posting_date,
-                self.pe.name.as_("payment_entry"),
-                self.pe.party.as_("customer"),
-                self.pe.party_name.as_("customer_name"),
-                Case()
-                .when(self.gl_entry.credit_in_account_currency > 0, self.pe.paid_amount)
-                .else_(0)
-                .as_("paid_amount"),
+                # Max(): grouped by voucher_no / voucher_detail_no (not a PK), so every
+                # non-aggregate is wrapped; each is single-valued per group (MariaDB output unchanged).
+                Max(self.gl_entry.voucher_no).as_("voucher_no"),
+                Max(self.gl_entry.posting_date).as_("posting_date"),
+                Max(self.pe.name).as_("payment_entry"),
+                Max(self.pe.party).as_("customer"),
+                Max(self.pe.party_name).as_("customer_name"),
+                Max(
+                    Case().when(self.gl_entry.credit_in_account_currency > 0, self.pe.paid_amount).else_(0)
+                ).as_("paid_amount"),
                 Sum(self.gl_entry.credit_in_account_currency).as_("gst_paid"),
                 Sum(self.gl_entry.debit_in_account_currency).as_("gst_allocated"),
-                self.pe.place_of_supply,
+                Max(self.pe.place_of_supply).as_("place_of_supply"),
             )
             .where(Criterion.all(self.get_conditions()))
         )

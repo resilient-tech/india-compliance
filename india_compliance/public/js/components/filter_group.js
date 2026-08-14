@@ -26,16 +26,16 @@ const FILTER_GROUP_BUTTON = $(
         <div class="filter-selector">
             <div class="btn-group">
                 <button class="btn btn-default btn-sm filter-button">
-                    <span class="filter-icon">
-                        ${frappe.utils.icon("filter")}
+                    <span class="filter-icon button-icon">
+                        ${frappe.utils.icon("funnel")}
                     </span>
                     <span class="button-label hidden-xs">
                         ${__("Filter")}
-                    <span>
+                    </span>
                 </button>
                 <button class="btn btn-default btn-sm filter-x-button" title="${__("Clear all filters")}">
-                    <span class="filter-icon">
-                        ${frappe.utils.icon("filter-x")}
+                    <span class="filter-icon button-icon">
+                        ${frappe.utils.icon("x")}
                     </span>
                 </button>
             </div>
@@ -57,6 +57,12 @@ class _Filter extends frappe.ui.Filter {
         this.conditions = this.conditions.filter(
             (condition) => india_compliance.FILTER_OPERATORS[condition && condition[0]],
         );
+
+        // keep like / not like conditions
+        for (const [fieldtype, invalid] of Object.entries(this.invalid_condition_map))
+            this.invalid_condition_map[fieldtype] = invalid.filter(
+                (condition) => !this.like_conditions.includes(condition),
+            );
     }
 }
 
@@ -119,12 +125,16 @@ india_compliance.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
 };
 
 function _like(expected_value, value) {
-    expected_value = expected_value.toLowerCase();
-    value = value.toLowerCase();
+    expected_value = String(expected_value).toLowerCase();
+    value = String(value).toLowerCase();
 
-    if (!expected_value.endsWith("%")) return value.endsWith(expected_value.slice(1));
+    const starts_open = expected_value.startsWith("%");
+    const ends_open = expected_value.endsWith("%");
+    const text = expected_value.replace(/^%/, "").replace(/%$/, "");
 
-    if (!expected_value.startsWith("%")) return value.startsWith(expected_value.slice(0, -1));
+    if (starts_open && !ends_open) return value.endsWith(text);
+    if (ends_open && !starts_open) return value.startsWith(text);
 
-    return value.includes(expected_value.slice(1, -1));
+    // no wildcard typed, match anywhere
+    return value.includes(text);
 }

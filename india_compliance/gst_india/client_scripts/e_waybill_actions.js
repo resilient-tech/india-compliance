@@ -14,6 +14,16 @@ function setup_e_waybill_actions(doctype) {
         mode_of_transport(frm) {
             frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
         },
+        // these fields are fetch_if_empty, so clear them explicitly on removal
+        transporter(frm) {
+            if (frm.doc.transporter) return;
+
+            frm.set_value("gst_transporter_id", "");
+            frm.set_value("transporter_name", "");
+        },
+        driver(frm) {
+            if (!frm.doc.driver) frm.set_value("driver_name", "");
+        },
         setup(frm) {
             if (!india_compliance.is_api_enabled()) return;
 
@@ -45,7 +55,9 @@ function setup_e_waybill_actions(doctype) {
                 frm.doc.e_waybill_status === "Not Applicable"
             ) {
                 if (frm.doc.e_waybill_status === "Not Applicable" && is_ewb_generatable) {
-                    frm._ewb_message = "To generate e-Waybill, change e-Waybill Status to Pending.";
+                    frm._ewb_message_list = [
+                        __("To generate e-Waybill, change e-Waybill Status to Pending."),
+                    ];
                 }
 
                 frm.add_custom_button(
@@ -391,7 +403,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
         {
             label: "Distance (in km)",
             fieldname: "distance",
-            fieldtype: "Float",
+            fieldtype: "Int",
             default: frm.doc.distance || 0,
             description: "Set as zero to update distance as per the e-Waybill portal (if available)",
         },
@@ -976,7 +988,7 @@ async function show_extend_validity_dialog(frm) {
             {
                 label: "Remaining Distance (in km)",
                 fieldname: "remaining_distance",
-                fieldtype: "Float",
+                fieldtype: "Int",
                 default: frm.doc.distance,
                 reqd: 1,
             },
@@ -1336,12 +1348,13 @@ function get_transit_type(dialog) {
 
 function show_e_waybill_generatable_status(frm, is_ewb_generatable) {
     if (frm.doc.docstatus === 0 && is_ewb_generatable) {
-        frm._ewb_message = __("Please submit the doc to generate e-Waybill.");
+        frm._ewb_message_list = [__("Please submit the doc to generate e-Waybill.")];
     }
 
     frappe.msgprint({
         title: is_ewb_generatable ? __("e-Waybill can be generated") : __("e-Waybill cannot be generated"),
-        message: frm._ewb_message,
+        message: frm._ewb_message_list,
+        as_list: true,
         indicator: is_ewb_generatable ? "green" : "red",
     });
 }

@@ -106,7 +106,7 @@ const GSTR1_DataField = {
 
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
-        await frappe.require("gstr1.bundle.js");
+        await frappe.require(["gstr1.bundle.js", "india_compliance.bundle.css"]);
         frm.gstr1 = new GSTR1(frm);
 
         // Set Default Values
@@ -296,7 +296,8 @@ class GSTR1 {
         this.frm = frm;
         this.data = null;
         this.filters = [];
-        this.$wrapper = frm.fields_dict.tabs_html.$wrapper;
+        this.$wrapper = frm.fields_dict.tabs_html.$wrapper.addClass("gst-return-tabs");
+        frm.$wrapper.addClass("gst-return-tool");
     }
 
     refresh_data(data) {
@@ -763,10 +764,7 @@ class GSTR1 {
             .join("");
 
         const gst_liability_html = `
-        <div
-            class="gst-ledger-difference w-100"
-            style="border-bottom: 1px solid var(--border-color);"
-        >
+        <div class="gst-ledger-difference">
             <div class="m-2 text-center" style="font-size: 13px">
                 <span>Net Output GST Liability (Credit - Debit)</span>
             </div>
@@ -1090,7 +1088,7 @@ class TabManager {
             <div class="m-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center">
                     <div class="tab-back-button mr-4">
-                        <a><i class="fa fa-arrow-left"></i></a>
+                        <a>${frappe.utils.icon("arrow-left", "md")}</a>
                     </div>
                     <div>
                         <div class="tab-title-text">&nbsp</div>
@@ -1315,7 +1313,7 @@ class TabManager {
             class="btn ${icon} reconcile-row"
             data-row-index='${data.idx}'
         >
-            <i class="fa fa-${icon}"></i>
+            ${frappe.utils.icon(icon, "md")}
         </button>`;
     }
 
@@ -2210,7 +2208,7 @@ class FiledTab extends GSTR1_TabManager {
                     },
                     callback: (r) => {
                         india_compliance.trigger_file_download(
-                            JSON.stringify(r.message.data),
+                            JSON.stringify(r.message.data, null, 2),
                             r.message.filename,
                         );
                         dialog.hide();

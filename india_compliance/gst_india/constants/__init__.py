@@ -1,8 +1,14 @@
 import re
 
 from erpnext.stock.get_item_details import sales_doctypes
+from frappe.utils import getdate
 
 TIMEZONE = "Asia/Kolkata"
+
+# Date from which NIC requires Ship To GSTIN in the e-Invoice and e-Waybill APIs.
+# Kept on hold by GSTN advisory dated 29.07.2026 with no revised date, so this is
+# deliberately unreachable. Sandbox stays reachable via sandbox_mode.
+SHIP_TO_GSTIN_APPLICABLE_DATE = getdate("2099-12-31")
 
 ABBREVIATIONS = {"SEZ", "GST", "CGST", "SGST", "IGST", "CESS", "HSN"}
 
@@ -32,6 +38,22 @@ SUBCONTRACTING_PURPOSES = ("Send to Subcontractor", *SUBCONTRACTING_INWARD_PURPO
 
 # Stock Entry purposes eligible for e-Waybill
 E_WAYBILL_STOCK_ENTRY_PURPOSES = ("Material Transfer", "Material Issue", *SUBCONTRACTING_PURPOSES)
+
+# Transporter fields that stay editable after submit until an e-Waybill is generated.
+TRANSPORTER_FIELDS = (
+    "transporter",
+    "transporter_name",
+    "gst_transporter_id",
+    "driver",
+    "driver_name",
+    "lr_no",
+    "lr_date",
+    "vehicle_no",
+    "distance",
+    "mode_of_transport",
+    "gst_vehicle_type",
+)
+
 
 # Map for e-Invoice Supply Type
 GST_CATEGORIES = {
@@ -1490,6 +1512,10 @@ ORIGINAL_VS_AMENDED = (
     {
         "original": "IMPGSEZ",
         "amended": "",
+    },
+    {
+        "original": "ECOM",
+        "amended": "ECOMA",
     },
 )
 

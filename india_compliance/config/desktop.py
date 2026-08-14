@@ -6,7 +6,7 @@ def get_data():
         {
             "module_name": "India Compliance",
             "color": "grey",
-            "icon": "octicon octicon-file-directory",
+            "icon": "folder",
             "type": "module",
             "label": _("India Compliance"),
         }
