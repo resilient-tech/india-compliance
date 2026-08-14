@@ -1,5 +1,6 @@
 import frappe
 from erpnext.assets.doctype.asset.asset import get_asset_value_after_depreciation
+from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
 from frappe.utils import flt
 
 from india_compliance.gst_india.overrides.subcontracting_transaction import set_address_display
@@ -7,12 +8,12 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     is_inward_transaction,
 )
-from india_compliance.gst_india.utils.transaction_controller import GSTTransactionController
+from india_compliance.gst_india.utils.custom_transaction_controller import CustomEwaybillController
 
 ASSET_MOVEMENT_FIELD_MAP = {"amount": "taxable_value"}
 
 
-class AssetMovementController(GSTTransactionController):
+class AssetMovementController(CustomEwaybillController):
     DOCTYPE = "Asset Movement"
     TAXES_FIELD_MAP = ASSET_MOVEMENT_FIELD_MAP
     VALIDATES_TRANSACTION_NAME = True
@@ -41,6 +42,7 @@ class AssetMovementController(GSTTransactionController):
         return not (self.doc.taxes or self.doc.bill_from_address or self.doc.bill_to_address)
 
     def set_fields(self):
+        args = ItemDetailsCtx({"company": self.doc.company, "tax_category": self.doc.tax_category})
 
         for row in self.doc.assets:
             if not row.asset:
@@ -51,6 +53,13 @@ class AssetMovementController(GSTTransactionController):
                 get_asset_value_after_depreciation(row.asset),
                 row.precision("taxable_value"),
             )
+
+            if row.item_tax_template or not row.item_code:
+                continue
+
+            out = frappe._dict()
+            get_item_tax_template(args, frappe.get_cached_doc("Item", row.item_code), out)
+            row.item_tax_template = out.get("item_tax_template")
 
 
 def is_e_waybill_applicable(doc):
