@@ -122,7 +122,7 @@ class GSTTransactionController:
         return get_field_map(self.doc)
 
     def set_fields(self):
-        "set any doc field values that are needed for GST validation"
+        """Set any doc field values that are needed for GST validation."""
         pass
 
     def validate(self):
