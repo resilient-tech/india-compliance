@@ -17,6 +17,8 @@ from responses import matchers
 from india_compliance.gst_india.api_classes.base import (
     BASE_URL,
     SERVER_DOWN_CACHE_KEY,
+    get_server_down_key,
+    is_server_down,
 )
 from india_compliance.gst_india.constants import (
     SERVICE_HSN_PREFIX,
@@ -97,7 +99,7 @@ class TestEWaybill(IntegrationTestCase):
     def setUp(self):
         super().setUp()
         # server error in one test shouldn't fail fast the next
-        frappe.cache.delete_value(SERVER_DOWN_CACHE_KEY)
+        frappe.cache.delete_keys(SERVER_DOWN_CACHE_KEY)
 
     def test_get_data(self):
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
@@ -1174,9 +1176,6 @@ class TestEWaybill(IntegrationTestCase):
             frappe.get_cached_value("GST Settings", "GST Settings", "is_retry_einv_ewb_generation_pending"),
             1,
         )
-        # next requests fail fast, till the retry run probes again
-        self.assertTrue(frappe.cache.get_value(SERVER_DOWN_CACHE_KEY))
-
         retry_ewb_test_date = self.e_waybill_test_data.goods_item_with_ewaybill
 
         self._mock_e_waybill_response(
@@ -1188,10 +1187,13 @@ class TestEWaybill(IntegrationTestCase):
             replace=True,
         )
 
+        # armed by an earlier timeout, the retry run should probe again
+        frappe.cache.set_value(get_server_down_key("e-Waybill"), True, expires_in_sec=120)
+
         retry_e_invoice_e_waybill_generation()
         si = load_doc("Sales Invoice", si.name, "submit")
 
-        self.assertFalse(frappe.cache.get_value(SERVER_DOWN_CACHE_KEY))
+        self.assertFalse(is_server_down("e-Waybill"))
         self.assertEqual(si.e_waybill_status, "Generated")
         self.assertEqual(
             si.ewaybill,
@@ -2161,7 +2163,7 @@ class TestSubcontractingInwardEWaybill(IntegrationTestCase):
 
     def setUp(self):
         super().setUp()
-        frappe.cache.delete_value(SERVER_DOWN_CACHE_KEY)
+        frappe.cache.delete_keys(SERVER_DOWN_CACHE_KEY)
 
     @staticmethod
     def _set_transport_details(stock_entry, sub_supply_desc):

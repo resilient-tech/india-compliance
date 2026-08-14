@@ -65,7 +65,7 @@ class EInvoiceTestMixin:
     def setUp(self):
         super().setUp()
         # server error in one test shouldn't fail fast the next
-        frappe.cache.delete_value(SERVER_DOWN_CACHE_KEY)
+        frappe.cache.delete_keys(SERVER_DOWN_CACHE_KEY)
 
     def _mock_e_invoice_response(self, data, api="ei/api/invoice"):
         """Mock response for e-Invoice API"""

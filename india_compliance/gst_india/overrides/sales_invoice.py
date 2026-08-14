@@ -4,6 +4,8 @@ from frappe import _, bold
 from frappe.desk.form.load import run_onload
 from frappe.utils import flt, fmt_money
 
+from india_compliance.exceptions import GSPServerError
+from india_compliance.gst_india.api_classes.base import is_server_down
 from india_compliance.gst_india.constants import VALID_HSN_LENGTHS
 from india_compliance.gst_india.overrides.payment_entry import (
     get_proportionate_tax,
@@ -22,10 +24,9 @@ from india_compliance.gst_india.overrides.unreconcile_payment import (
 from india_compliance.gst_india.utils import (
     are_goods_supplied,
     get_validated_country_code,
+    handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
-    set_einvoice_status,
-    set_ewaybill_status,
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (
@@ -169,19 +170,13 @@ def on_submit(doc, method=None):
     if not is_api_enabled(gst_settings):
         return
 
-    # govt servers down: don't queue, scheduled retry will pick these up
-    retry_pending = (
-        gst_settings.enable_retry_einv_ewb_generation
-        and gst_settings.is_retry_einv_ewb_generation_pending
-        and (not gst_settings.sandbox_mode or frappe.flags.in_test)
-    )
-
     if (
         validate_e_invoice_applicability(doc, gst_settings, throw=False)
         and gst_settings.auto_generate_e_invoice
     ):
-        if retry_pending:
-            set_einvoice_status(doc, "Auto-Retry", notify=bool(frappe.request))
+        # server down: don't queue, handler marks it for the scheduled retry
+        if is_server_down("e-Invoice"):
+            handle_server_errors(gst_settings, doc, "e-Invoice", GSPServerError())
         else:
             frappe.enqueue(
                 "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
@@ -198,8 +193,8 @@ def on_submit(doc, method=None):
         and not doc.is_debit_note
         and not doc.is_return
     ):
-        if retry_pending:
-            set_ewaybill_status(doc, "Auto-Retry", notify=bool(frappe.request))
+        if is_server_down("e-Waybill"):
+            handle_server_errors(gst_settings, doc, "e-Waybill", GSPServerError())
         else:
             frappe.enqueue(
                 "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",

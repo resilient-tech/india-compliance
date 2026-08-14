@@ -131,7 +131,7 @@ def enqueue_bulk_e_waybill_generation(doctype: str, docnames: str):
     return rq_job.id
 
 
-def generate_e_waybills(doctype, docnames, force=False):
+def generate_e_waybills(doctype, docnames):
     """
     Bulk generate e-Waybill for the given documents.
     """
@@ -139,7 +139,7 @@ def generate_e_waybills(doctype, docnames, force=False):
     for docname in docnames:
         try:
             doc = load_doc(doctype, docname, "submit")
-            _generate_e_waybill(doc, force=force)
+            _generate_e_waybill(doc)
         except Exception:
             frappe.log_error(
                 title=_("e-Waybill generation failed for {0} {1}").format(doctype, docname),
@@ -156,16 +156,16 @@ def generate_e_waybills(doctype, docnames, force=False):
 
 # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 @frappe.whitelist()
-def generate_e_waybill(*, doctype: str, docname: str, values: str | dict | None = None, force: bool = False):
+def generate_e_waybill(*, doctype: str, docname: str, values: str | dict | None = None):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "submit")
     if values:
         update_transaction(doc, frappe.parse_json(values))
 
-    _generate_e_waybill(doc, throw=True if values else False, force=force)
+    _generate_e_waybill(doc, throw=True if values else False)
 
 
-def _generate_e_waybill(doc, throw=True, force=False):
+def _generate_e_waybill(doc, throw=True):
     settings = frappe.get_cached_doc("GST Settings")
 
     try:
@@ -176,13 +176,6 @@ def _generate_e_waybill(doc, throw=True, force=False):
                 ),
                 exc=AlreadyGeneratedError,
             )
-
-        if (
-            not force
-            and settings.enable_retry_einv_ewb_generation
-            and settings.is_retry_einv_ewb_generation_pending
-        ):
-            raise GSPServerError
 
         # Via e-Invoice API if not Return or Debit Note
         # Via e-Waybill API if has Non-Taxable items

@@ -24,6 +24,15 @@ SERVER_DOWN_CACHE_KEY = "gst_server_down"
 SERVER_DOWN_CACHE_TIMEOUT = 120
 
 
+def get_server_down_key(api_name):
+    # per portal, e-Invoice can be up while e-Waybill is down
+    return f"{SERVER_DOWN_CACHE_KEY}:{api_name}"
+
+
+def is_server_down(api_name):
+    return bool(frappe.cache.get_value(get_server_down_key(api_name)))
+
+
 class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
@@ -291,7 +300,7 @@ class BaseAPI:
                     )
 
     def check_server_status(self):
-        if not (self.FAIL_FAST_IF_SERVER_DOWN and frappe.cache.get_value(SERVER_DOWN_CACHE_KEY)):
+        if not (self.FAIL_FAST_IF_SERVER_DOWN and is_server_down(self.API_NAME)):
             return
 
         frappe.throw(
@@ -301,14 +310,15 @@ class BaseAPI:
         )
 
     def mark_server_down(self, error):
-        if not self.FAIL_FAST_IF_SERVER_DOWN:
+        # only timeouts, other errors fail on their own
+        if not self.FAIL_FAST_IF_SERVER_DOWN or not isinstance(error, GatewayTimeoutError):
             return
 
-        # limit exceeded is not an outage
-        if not isinstance(error, GSPServerError) or isinstance(error, GSPLimitExceededError):
-            return
-
-        frappe.cache.set_value(SERVER_DOWN_CACHE_KEY, True, expires_in_sec=SERVER_DOWN_CACHE_TIMEOUT)
+        frappe.cache.set_value(
+            get_server_down_key(self.API_NAME),
+            True,
+            expires_in_sec=SERVER_DOWN_CACHE_TIMEOUT,
+        )
 
     def is_ignored_error(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw

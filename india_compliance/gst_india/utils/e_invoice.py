@@ -89,7 +89,7 @@ def enqueue_bulk_e_invoice_generation(docnames: str):
     return rq_job.id
 
 
-def generate_e_invoices(docnames, force=False):
+def generate_e_invoices(docnames):
     """
     Bulk generate e-Invoices for the given Sales Invoices.
     Permission checks are done in the `generate_e_invoice` function.
@@ -105,7 +105,7 @@ def generate_e_invoices(docnames, force=False):
 
     for docname in docnames:
         try:
-            generate_e_invoice(docname, force=force)
+            generate_e_invoice(docname)
 
         except Exception:
             log_error(docname=docname)
@@ -118,7 +118,7 @@ def generate_e_invoices(docnames, force=False):
 
 
 @frappe.whitelist()
-def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
+def generate_e_invoice(docname: str, throw: bool = True):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc("Sales Invoice", docname, "submit")
 
@@ -130,13 +130,6 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
                 _("e-Invoice has already been generated for Sales Invoice {0}").format(frappe.bold(doc.name)),
                 exc=AlreadyGeneratedError,
             )
-
-        if (
-            not force
-            and settings.enable_retry_einv_ewb_generation
-            and settings.is_retry_einv_ewb_generation_pending
-        ):
-            raise GSPServerError
 
         if settings.e_invoice_reporting_time_limit_days and getdate() > add_to_date(
             doc.posting_date, days=settings.e_invoice_reporting_time_limit_days
@@ -607,7 +600,7 @@ def retry_e_invoice_e_waybill_generation():
     settings.db_set("is_retry_einv_ewb_generation_pending", 0, update_modified=False)
 
     # this run is the probe, let requests through
-    frappe.cache.delete_value(SERVER_DOWN_CACHE_KEY)
+    frappe.cache.delete_keys(SERVER_DOWN_CACHE_KEY)
 
     generate_pending_e_invoices()
 

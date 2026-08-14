@@ -37,7 +37,7 @@ frappe.ui.form.on("Sales Invoice", {
                 () => {
                     frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
-                        args: { docname: frm.doc.name, force: true },
+                        args: { docname: frm.doc.name },
                         callback: async (r) => {
                             if (r.message?.error_code == "2283") {
                                 await taxpayer_api.call({
