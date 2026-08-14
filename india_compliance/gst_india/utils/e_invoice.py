@@ -20,7 +20,6 @@ from india_compliance.exceptions import (
     GSPServerError,
     NotApplicableError,
 )
-from india_compliance.gst_india.api_classes.base import clear_server_down
 from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_e_invoice import (
@@ -46,10 +45,12 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
 from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
 from india_compliance.gst_india.utils import (
     are_goods_supplied,
+    clear_server_down,
     handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
     is_overseas_doc,
+    is_server_down,
     is_ship_to_gstin_applicable,
     load_doc,
     parse_datetime,
@@ -131,6 +132,9 @@ def generate_e_invoice(docname: str, throw: bool = True):
                 exc=AlreadyGeneratedError,
             )
 
+        if is_server_down("e-Invoice"):
+            raise GSPServerError
+
         if settings.e_invoice_reporting_time_limit_days and getdate() > add_to_date(
             doc.posting_date, days=settings.e_invoice_reporting_time_limit_days
         ):
@@ -182,6 +186,9 @@ def generate_e_invoice(docname: str, throw: bool = True):
             frappe.throw(_("e-Invoice generation failed"))
 
     except GSPServerError as e:
+        if frappe.request:
+            frappe.clear_last_message()
+
         handle_server_errors(settings, doc, "e-Invoice", e)
         return
 

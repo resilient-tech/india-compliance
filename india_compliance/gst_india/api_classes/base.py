@@ -14,27 +14,16 @@ from india_compliance.exceptions import (
     GSPLimitExceededError,
     GSPServerError,
 )
-from india_compliance.gst_india.utils import SERVER_DOWN_MESSAGE, is_api_enabled
+from india_compliance.gst_india.utils import (
+    SERVER_DOWN_MESSAGE,
+    is_api_enabled,
+    is_server_down,
+    mark_server_down,
+)
 from india_compliance.gst_india.utils.api import enqueue_integration_request
 
 BASE_URL = "https://asp.resilient.tech"
 DEFAULT_SUPPORT_EMAIL = "api-support@indiacompliance.app"
-
-SERVER_DOWN_CACHE_KEY = "gst_server_down"
-SERVER_DOWN_CACHE_TIMEOUT = 120
-
-
-def get_server_down_key(api_name):
-    # per portal, e-Invoice can be up while e-Waybill is down
-    return f"{SERVER_DOWN_CACHE_KEY}:{api_name}"
-
-
-def is_server_down(api_name):
-    return bool(frappe.cache.get_value(get_server_down_key(api_name)))
-
-
-def clear_server_down(*api_names):
-    frappe.cache.delete_value([get_server_down_key(api_name) for api_name in api_names])
 
 
 class BaseAPI:
@@ -230,7 +219,11 @@ class BaseAPI:
 
         except Exception as e:
             log.error = str(e)
-            self.mark_server_down(e)
+
+            # timeout or server down, next requests will fail too
+            if self.FAIL_FAST_IF_SERVER_DOWN and isinstance(e, GSPServerError):
+                mark_server_down(self.API_NAME)
+
             raise e
 
         finally:
@@ -313,17 +306,6 @@ class BaseAPI:
             msg=_(error_message),
             exc=GSPServerError,
             title=_("GSP/GST Server Down"),
-        )
-
-    def mark_server_down(self, error):
-        # timeout or server down, next requests will fail too
-        if not self.FAIL_FAST_IF_SERVER_DOWN or not isinstance(error, GSPServerError):
-            return
-
-        frappe.cache.set_value(
-            get_server_down_key(self.API_NAME),
-            True,
-            expires_in_sec=SERVER_DOWN_CACHE_TIMEOUT,
         )
 
     def is_ignored_error(self, response_json):

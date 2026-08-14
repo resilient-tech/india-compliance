@@ -10,12 +10,12 @@ from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
 from frappe.utils.data import format_date
 from responses import matchers
 
-from india_compliance.gst_india.api_classes.base import BASE_URL, clear_server_down
+from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.constants import SHIP_TO_GSTIN_APPLICABLE_DATE
 from india_compliance.gst_india.overrides.test_transaction import (
     create_refund_transaction,
 )
-from india_compliance.gst_india.utils import load_doc
+from india_compliance.gst_india.utils import clear_server_down, load_doc
 from india_compliance.gst_india.utils.e_invoice import (
     EInvoiceData,
     cancel_e_invoice,

@@ -5,7 +5,6 @@ from frappe.desk.form.load import run_onload
 from frappe.utils import flt, fmt_money
 
 from india_compliance.exceptions import GSPServerError
-from india_compliance.gst_india.api_classes.base import is_server_down
 from india_compliance.gst_india.constants import VALID_HSN_LENGTHS
 from india_compliance.gst_india.overrides.payment_entry import (
     get_proportionate_tax,
@@ -27,6 +26,7 @@ from india_compliance.gst_india.utils import (
     handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
+    is_server_down,
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (

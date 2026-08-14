@@ -1081,6 +1081,25 @@ def validate_invoice_number(doc, throw=True):
 SERVER_DOWN_MESSAGE = (
     "Government services are currently slow/down. We apologize for the inconvenience caused."
 )
+SERVER_DOWN_CACHE_KEY = "gst_server_down"
+SERVER_DOWN_CACHE_TIMEOUT = 120
+
+
+def get_server_down_key(api_name):
+    # per portal, e-Invoice can be up while e-Waybill is down
+    return f"{SERVER_DOWN_CACHE_KEY}:{api_name}"
+
+
+def is_server_down(api_name):
+    return bool(frappe.cache.get_value(get_server_down_key(api_name)))
+
+
+def mark_server_down(api_name):
+    frappe.cache.set_value(get_server_down_key(api_name), True, expires_in_sec=SERVER_DOWN_CACHE_TIMEOUT)
+
+
+def clear_server_down(*api_names):
+    frappe.cache.delete_value([get_server_down_key(api_name) for api_name in api_names])
 
 
 def handle_server_errors(settings, doc, document_type, error):

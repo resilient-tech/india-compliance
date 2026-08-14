@@ -6,9 +6,8 @@ import responses
 from frappe.tests import IntegrationTestCase
 
 from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
-from india_compliance.gst_india.api_classes.base import (
-    BASE_URL,
-    BaseAPI,
+from india_compliance.gst_india.api_classes.base import BASE_URL, BaseAPI
+from india_compliance.gst_india.utils import (
     clear_server_down,
     get_server_down_key,
     is_server_down,

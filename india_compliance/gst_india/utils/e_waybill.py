@@ -57,6 +57,7 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     is_foreign_doc,
     is_outward_stock_entry,
+    is_server_down,
     is_ship_to_gstin_applicable,
     load_doc,
     parse_datetime,
@@ -177,6 +178,9 @@ def _generate_e_waybill(doc, throw=True):
                 exc=AlreadyGeneratedError,
             )
 
+        if is_server_down("e-Waybill"):
+            raise GSPServerError
+
         # Via e-Invoice API if not Return or Debit Note
         # Via e-Waybill API if has Non-Taxable items
         # Handles following error when generating e-Waybill using IRN:
@@ -227,6 +231,9 @@ def _generate_e_waybill(doc, throw=True):
             frappe.throw(_("e-Waybill generation failed"))
 
     except GSPServerError as e:
+        if frappe.request:
+            frappe.clear_last_message()
+
         handle_server_errors(settings, doc, "e-Waybill", e)
         return
 

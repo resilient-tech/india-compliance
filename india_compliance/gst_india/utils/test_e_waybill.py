@@ -14,11 +14,7 @@ from frappe.utils.data import format_date
 from frappe.www.printview import get_html_and_style
 from responses import matchers
 
-from india_compliance.gst_india.api_classes.base import (
-    BASE_URL,
-    clear_server_down,
-    is_server_down,
-)
+from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.constants import (
     SERVICE_HSN_PREFIX,
     SHIP_TO_GSTIN_APPLICABLE_DATE,
@@ -30,7 +26,12 @@ from india_compliance.gst_india.overrides.sales_invoice import (
 from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
     create_subcontracting_data,
 )
-from india_compliance.gst_india.utils import load_doc, parse_datetime
+from india_compliance.gst_india.utils import (
+    clear_server_down,
+    is_server_down,
+    load_doc,
+    parse_datetime,
+)
 from india_compliance.gst_india.utils.e_invoice import (
     retry_e_invoice_e_waybill_generation,
 )
@@ -991,7 +992,7 @@ class TestEWaybill(IntegrationTestCase):
     @responses.activate
     def test_schedule_e_waybill_for_extension(self):
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
-        self._generate_e_waybill(si.name, force=True)
+        self._generate_e_waybill(si.name)
         doc = load_doc("Sales Invoice", si.name, "submit")
 
         valid_upto = frappe.db.get_value("e-Waybill Log", doc.ewaybill, "valid_upto")
@@ -1692,7 +1693,7 @@ class TestEWaybill(IntegrationTestCase):
         self.assertEqual(e_waybill_data.get("actToStateCode"), 24)
 
     # helper functions
-    def _generate_e_waybill(self, docname=None, doctype="Sales Invoice", test_data=None, force=False):
+    def _generate_e_waybill(self, docname=None, doctype="Sales Invoice", test_data=None):
         """
         Mocks response for generate_e_waybill and get_e_waybill.
         Calls generate_e_waybill function.
@@ -1729,7 +1730,7 @@ class TestEWaybill(IntegrationTestCase):
 
         values = frappe._dict(test_data.get("values")) if test_data.get("values") else None
 
-        generate_e_waybill(doctype=doctype, docname=docname, values=values, force=force)
+        generate_e_waybill(doctype=doctype, docname=docname, values=values)
 
     def _mock_e_waybill_response(self, data, match_list, method="POST", api=None, replace=False):
         """
