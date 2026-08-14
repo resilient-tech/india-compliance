@@ -2,25 +2,74 @@ import frappe
 from erpnext.assets.doctype.asset.asset import get_asset_value_after_depreciation
 from frappe.utils import flt
 
-from india_compliance.gst_india.overrides.sales_invoice import (
-    update_dashboard_with_gst_logs,
+from india_compliance.gst_india.overrides.subcontracting_transaction import set_address_display
+from india_compliance.gst_india.utils import (
+    is_api_enabled,
+    is_inward_transaction,
 )
-from india_compliance.gst_india.overrides.subcontracting_transaction import (
-    ignore_gst_validations_for_subcontracting,
-    is_e_waybill_applicable,
-    set_address_display,
-)
-from india_compliance.gst_india.overrides.subcontracting_transaction import (
-    validate as subcontracting_validate,
-)
-from india_compliance.gst_india.utils import is_inward_transaction
-from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.transaction_controller import GSTTransactionController
+
+ASSET_MOVEMENT_FIELD_MAP = {"amount": "taxable_value"}
+
+
+class AssetMovementController(GSTTransactionController):
+    DOCTYPE = "Asset Movement"
+    TAXES_FIELD_MAP = ASSET_MOVEMENT_FIELD_MAP
+    VALIDATES_TRANSACTION_NAME = True
+
+    def is_e_waybill_applicable(self):
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
+        return (
+            super().is_e_waybill_applicable()
+            and is_api_enabled(gst_settings)
+            and bool(gst_settings.enable_e_waybill_from_asset_movement)
+        )
+
+    @classmethod
+    def get_dashboard_data(cls, data):
+        # Asset Movement has no standard dashboard, so `fieldname` is unset. frappe's
+        # set_open_count bails out without one, and the GST Logs counts would never load.
+        data.setdefault("fieldname", "name")
+
+        return super().get_dashboard_data(data)
+
+    def ignore_gst_validations(self):
+        if super().ignore_gst_validations():
+            return True
+
+        return not (self.doc.taxes or self.doc.bill_from_address or self.doc.bill_to_address)
+
+    def set_fields(self):
+
+        for row in self.doc.assets:
+            if not row.asset:
+                continue
+
+            row.taxable_value = flt(
+                get_asset_value_after_depreciation(row.asset),
+                row.precision("taxable_value"),
+            )
+
+
+def is_e_waybill_applicable(doc):
+    return AssetMovementController(doc).is_e_waybill_applicable()
+
+
+def validate(doc, method=None):
+    AssetMovementController(doc).validate()
+
+
+def before_save(doc, method=None):
+    AssetMovementController(doc).before_save()
 
 
 def onload(doc, method=None):
     set_address_display(doc)
 
-    # company_gstin is referred as generator of e-waybill
+    # e-Waybill data generation reads these; they are only set here, so they are
+    # available after run_onload (load_doc) and not on a bare frappe.get_doc.
+    # company_gstin is the GSTIN generating the e-Waybill.
     if is_inward_transaction(doc):
         doc.company_gstin, doc.supplier_gstin = doc.bill_to_gstin, doc.bill_from_gstin
         doc.gst_category = doc.bill_from_gst_category
@@ -28,45 +77,8 @@ def onload(doc, method=None):
         doc.company_gstin, doc.supplier_gstin = doc.bill_from_gstin, doc.bill_to_gstin
         doc.gst_category = doc.bill_to_gst_category
 
-    # phantom fields for e-waybill generation flow
-    doc.posting_date = doc.transaction_date
-    doc.items = doc.assets
-
-    if not doc.get("ewaybill"):
-        return
-
-    gst_settings = frappe.get_cached_doc("GST Settings")
-
-    if (is_e_waybill_applicable(doc) or gst_settings.auto_cancel_e_waybill) and (
-        e_waybill_info := get_e_waybill_info(doc)
-    ):
-        doc.set_onload("e_waybill_info", e_waybill_info)
-
-
-def validate(doc, method=None):
-    # Taxable values feed the tax calculation in subcontracting_validate
-    if is_e_waybill_applicable(doc) and not ignore_gst_validations_for_subcontracting(doc):
-        set_taxable_value(doc)
-
-    subcontracting_validate(doc)
-
-
-def set_taxable_value(doc):
-    for row in doc.assets:
-        if row.taxable_value or not row.asset:
-            continue
-
-        row.taxable_value = flt(get_asset_value_after_depreciation(row.asset), row.precision("taxable_value"))
+    AssetMovementController(doc).set_e_waybill_info()
 
 
 def get_dashboard_data(data):
-    # Asset Movement has no standard dashboard, so `fieldname` is unset. frappe's
-    # set_open_count bails out without one, and the GST Logs counts would never load.
-    data.setdefault("fieldname", "name")
-
-    return update_dashboard_with_gst_logs(
-        "Asset Movement",
-        data,
-        "e-Waybill Log",
-        "Integration Request",
-    )
+    return AssetMovementController.get_dashboard_data(data)
