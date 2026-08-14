@@ -15,9 +15,6 @@ from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_GSTIN_FIELD_MAP,
     buying_address,
 )
-from india_compliance.gst_india.overrides.sales_invoice import (
-    update_dashboard_with_gst_logs,
-)
 from india_compliance.gst_india.overrides.transaction import (
     GSTAccounts,
     get_place_of_supply,
@@ -38,6 +35,7 @@ from india_compliance.gst_india.utils import (
     is_inward_transaction,
     is_outward_stock_entry,
     is_same_gstin_allowed,
+    update_dashboard_with_gst_logs,
 )
 from india_compliance.gst_india.utils import (
     validate_invoice_number as validate_transaction_name,
