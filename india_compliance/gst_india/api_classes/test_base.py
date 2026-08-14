@@ -8,8 +8,8 @@ from frappe.tests import IntegrationTestCase
 from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.api_classes.base import (
     BASE_URL,
-    SERVER_DOWN_CACHE_KEY,
     BaseAPI,
+    clear_server_down,
     get_server_down_key,
     is_server_down,
 )
@@ -36,11 +36,14 @@ class DownloadAPI(BaseAPI):
 class TestRequestTimeout(IntegrationTestCase):
     def setUp(self):
         super().setUp()
-        frappe.cache.delete_keys(SERVER_DOWN_CACHE_KEY)
+        self.clear_server_down()
 
     def tearDown(self):
-        frappe.cache.delete_keys(SERVER_DOWN_CACHE_KEY)
+        self.clear_server_down()
         super().tearDown()
+
+    def clear_server_down(self):
+        clear_server_down(FailFastAPI.API_NAME, OtherPortalAPI.API_NAME, DownloadAPI.API_NAME)
 
     def create_api(self, api_class=FailFastAPI):
         """Skip credential setup, only the request cycle is under test."""
@@ -104,13 +107,13 @@ class TestRequestTimeout(IntegrationTestCase):
 
         self.assertTrue(is_server_down(FailFastAPI.API_NAME))
 
-    def test_connection_error_does_not_mark_server_down(self):
+    def test_connection_error_marks_server_down(self):
         api = self.create_api()
 
         with self.mock_request(requests.exceptions.ConnectionError("connection reset")):
             self.assertRaises(GSPServerError, api.get, "ping")
 
-        self.assertFalse(is_server_down(FailFastAPI.API_NAME))
+        self.assertTrue(is_server_down(FailFastAPI.API_NAME))
 
     def test_request_skipped_if_server_is_down(self):
         self.set_server_down(FailFastAPI.API_NAME)
@@ -143,7 +146,7 @@ class TestRequestTimeout(IntegrationTestCase):
         self.assertTrue(is_server_down(FailFastAPI.API_NAME))
 
     @responses.activate
-    def test_server_down_response_does_not_mark_server_down(self):
+    def test_server_down_response_marks_server_down(self):
         responses.add(
             responses.GET,
             TEST_URL,
@@ -152,4 +155,16 @@ class TestRequestTimeout(IntegrationTestCase):
         )
 
         self.assertRaises(GSPServerError, self.create_api().get, "ping")
+        self.assertTrue(is_server_down(FailFastAPI.API_NAME))
+
+    @responses.activate
+    def test_other_errors_do_not_mark_server_down(self):
+        responses.add(
+            responses.GET,
+            TEST_URL,
+            json={"success": False, "message": "Invalid GSTIN"},
+            status=200,
+        )
+
+        self.assertRaises(frappe.ValidationError, self.create_api().get, "ping")
         self.assertFalse(is_server_down(FailFastAPI.API_NAME))

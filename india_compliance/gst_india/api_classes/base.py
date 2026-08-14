@@ -33,6 +33,10 @@ def is_server_down(api_name):
     return bool(frappe.cache.get_value(get_server_down_key(api_name)))
 
 
+def clear_server_down(*api_names):
+    frappe.cache.delete_value([get_server_down_key(api_name) for api_name in api_names])
+
+
 class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
@@ -310,8 +314,8 @@ class BaseAPI:
         )
 
     def mark_server_down(self, error):
-        # only timeouts, other errors fail on their own
-        if not self.FAIL_FAST_IF_SERVER_DOWN or not isinstance(error, GatewayTimeoutError):
+        # timeout or server down, next requests will fail too
+        if not self.FAIL_FAST_IF_SERVER_DOWN or not isinstance(error, GSPServerError):
             return
 
         frappe.cache.set_value(

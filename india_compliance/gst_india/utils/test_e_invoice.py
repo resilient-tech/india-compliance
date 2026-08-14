@@ -10,10 +10,7 @@ from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
 from frappe.utils.data import format_date
 from responses import matchers
 
-from india_compliance.gst_india.api_classes.base import (
-    BASE_URL,
-    SERVER_DOWN_CACHE_KEY,
-)
+from india_compliance.gst_india.api_classes.base import BASE_URL, clear_server_down
 from india_compliance.gst_india.constants import SHIP_TO_GSTIN_APPLICABLE_DATE
 from india_compliance.gst_india.overrides.test_transaction import (
     create_refund_transaction,
@@ -65,7 +62,7 @@ class EInvoiceTestMixin:
     def setUp(self):
         super().setUp()
         # server error in one test shouldn't fail fast the next
-        frappe.cache.delete_keys(SERVER_DOWN_CACHE_KEY)
+        clear_server_down("e-Invoice", "e-Waybill")
 
     def _mock_e_invoice_response(self, data, api="ei/api/invoice"):
         """Mock response for e-Invoice API"""
