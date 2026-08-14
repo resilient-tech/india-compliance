@@ -1,13 +1,3 @@
-"""GST controller for transactions that carry estimated taxes rather than an invoice.
-
-Subcontracting Order / Receipt, Stock Entry and Asset Movement compute GST for e-Waybill
-and ITC-04 reporting without posting it to the GL, and share the same bill-from / bill-to
-machinery. Each subclass supplies only what differs, so supporting a new doctype is a
-subclass rather than another `doc.doctype ==` branch.
-
-Subclasses live in their doctype's own `overrides/` module, which stays a thin hook wrapper.
-"""
-
 import frappe
 from frappe import _, bold
 
@@ -76,11 +66,7 @@ def get_field_map(doc):
 class GSTTransactionController:
     DOCTYPE = None
     TAXES_FIELD_MAP = SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
-
-    # GST caps the document number at 16 alphanumeric characters. Only enforced where the
-    # number is actually reported to the portal.
     VALIDATES_TRANSACTION_NAME = False
-
     GST_LOG_DOCTYPES = ("e-Waybill Log", "Integration Request")
 
     def __init__(self, doc):
