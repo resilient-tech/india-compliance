@@ -1112,21 +1112,29 @@ def is_export_without_payment_of_gst(doc):
 class ItemGSTDetails:
     FIELDMAP: ClassVar[dict] = {}
 
-    def __init__(self, doc=None):
+    def __init__(self, doc):
         self.doc = doc
 
     @property
     def item_list(self):
         return self.doc.get(get_items_fieldname(self.doc.doctype)) or []
 
-    def get(self, docs, doctype, company):
+    @classmethod
+    def get(cls, docs, doctype, company):
         """
         Return Item GST Details for a list of documents
-        """
-        self.get_item_defaults()
-        self.set_tax_amount_precisions(doctype)
 
+        Bulk path, used by patches.
+        """
         response = frappe._dict()
+
+        docs = list(docs)
+
+        if not docs:
+            return response
+
+        self = cls(docs[0])
+        self.precision = cls.get_tax_amount_precisions(doctype)
 
         for doc in docs:
             self.doc = doc
@@ -1148,26 +1156,26 @@ class ItemGSTDetails:
         if not self.item_list:
             return
 
-        self.get_item_defaults()
         self.set_item_defaults()
 
         if ignore_gst_validations(self.doc):
             return
 
-        self.set_tax_amount_precisions(self.doc.doctype)
+        self.precision = self.get_tax_amount_precisions(self.doc.doctype)
         self.set_temp_item_wise_tax_detail_object()
 
         self.set_item_name_wise_tax_details()
         self.validate_item_gst_details()
 
-    def get_item_defaults(self):
+    @classmethod
+    def get_item_defaults(cls):
         item_defaults = frappe._dict(count=0)
 
         for row in GST_TAX_TYPES:
             item_defaults[f"{row}_rate"] = 0
             item_defaults[f"{row}_amount"] = 0
 
-        self.item_defaults = item_defaults
+        return item_defaults
 
     def set_item_name_wise_tax_details(self):
         """
@@ -1222,8 +1230,10 @@ class ItemGSTDetails:
                 last_item_with_tax.set(f"{tax_type}_amount", amount)
 
     def set_item_defaults(self):
+        item_defaults = self.get_item_defaults()
+
         for item in self.item_list:
-            item.update(self.item_defaults.copy())
+            item.update(item_defaults.copy())
 
     def get_item_name_wise_tax_details(self):
         """
@@ -1263,7 +1273,7 @@ class ItemGSTDetails:
             item_map[key] = row
 
             if key not in tax_details:
-                tax_details[key] = self.item_defaults.copy()
+                tax_details[key] = self.get_item_defaults()
 
         for row in self.doc.get("item_wise_tax_details") or []:
             tax_row = tax_map.get(row.get("tax_row"))
@@ -1344,12 +1354,13 @@ class ItemGSTDetails:
                 title=_("Incorrect Item GST Details"),
             )
 
-    def set_tax_amount_precisions(self, doctype):
+    @classmethod
+    def get_tax_amount_precisions(cls, doctype):
         item_doctype = frappe.get_meta(doctype).get_field(get_items_fieldname(doctype)).options
 
         meta = frappe.get_meta(item_doctype)
 
-        self.precision = frappe._dict()
+        precisions = frappe._dict()
         default_precision = cint(frappe.db.get_default("float_precision")) or 3
 
         for tax_type in GST_TAX_TYPES:
@@ -1358,7 +1369,9 @@ class ItemGSTDetails:
             if not field:
                 continue
 
-            self.precision[fieldname] = field.precision or default_precision
+            precisions[fieldname] = field.precision or default_precision
+
+        return precisions
 
     def is_gst_tax_row(self, row):
         if not row:
