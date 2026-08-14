@@ -167,10 +167,10 @@ class CustomTaxController:
             item.taxable_value = taxable_value
 
     def set_additional_taxable_value(self):
-        if self.doc.doctype != "Stock Entry" or not self.doc.items:
+        if self.doc.doctype != "Stock Entry" or not self.item_list:
             return
 
-        for item in self.doc.items:
+        for item in self.item_list:
             item.additional_taxable_value = 0
 
         # Imported lazily: subcontracting_transaction imports this module at load time.

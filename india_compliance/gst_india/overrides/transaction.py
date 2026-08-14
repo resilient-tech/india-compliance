@@ -491,7 +491,7 @@ class GSTAccounts:
             )
 
     def validate_missing_accounts_in_item_tax_template(self):
-        for row in self.doc.get("items") or []:
+        for row in self.doc.get(get_items_fieldname(self.doc.doctype)) or []:
             if not row.item_tax_template:
                 continue
 
@@ -660,7 +660,7 @@ def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
     rows_with_missing_hsn = []
     rows_with_invalid_hsn = []
 
-    for item in doc.items:
+    for item in doc.get(get_items_fieldname(doc.doctype)):
         item.gst_hsn_code = (item.gst_hsn_code or "").replace(" ", "")
 
         if not (hsn_code := item.get("gst_hsn_code")):
