@@ -178,9 +178,6 @@ def _generate_e_waybill(doc, throw=True):
                 exc=AlreadyGeneratedError,
             )
 
-        if is_server_down("e-Waybill"):
-            raise GSPServerError
-
         # Via e-Invoice API if not Return or Debit Note
         # Via e-Waybill API if has Non-Taxable items
         # Handles following error when generating e-Waybill using IRN:
@@ -192,9 +189,13 @@ def _generate_e_waybill(doc, throw=True):
             and not (doc.is_return or doc.get("is_debit_note") or is_foreign_doc(doc))
         )
 
+        api = EWaybillAPI if not with_irn else EInvoiceAPI
+
+        if is_server_down(api.API_NAME):
+            raise GSPServerError
+
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
-        api = EWaybillAPI if not with_irn else EInvoiceAPI
         api = api.create(doc)
 
         result = api.generate_e_waybill(data)

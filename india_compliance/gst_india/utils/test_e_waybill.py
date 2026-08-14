@@ -30,6 +30,7 @@ from india_compliance.gst_india.utils import (
     clear_server_down,
     is_server_down,
     load_doc,
+    mark_server_down,
     parse_datetime,
 )
 from india_compliance.gst_india.utils.e_invoice import (
@@ -1282,6 +1283,44 @@ class TestEWaybill(IntegrationTestCase):
         with self.assertRaises(frappe.exceptions.ValidationError) as cm:
             doc = load_doc("Sales Invoice", si.name, "submit")
             _generate_e_waybill(doc)
+
+        self.assertIn("GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception))
+
+    @responses.activate
+    @change_settings("GST Settings", {"use_fallback_for_nic": 1, "enable_e_invoice": 1})
+    def test_generate_e_waybill_with_irn_ignores_e_waybill_outage(self):
+        """e-Waybill with Irn goes to the e-Invoice portal, so an e-Waybill outage shouldn't stop it"""
+
+        test_data = self.e_waybill_test_data.get("ewaybill_gstin_error_3029")
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            qty=1000,
+            transporter="_Test Common Supplier",
+            distance=10,
+            mode_of_transport="Road",
+            irn="12345678901234567",
+        )
+
+        responses.add(
+            responses.POST,
+            BASE_URL + "/test/ei/api/ewaybill",
+            json=test_data.get("error_response_enriched"),
+            status=200,
+        )
+
+        responses.add(
+            responses.GET,
+            BASE_URL + "/test/ei/api/master/syncgstin",
+            match=[matchers.query_param_matcher({"gstin": "29AAACI1195H2ZH"})],
+            json=test_data.get("sync_gstin_response_inactive"),
+            status=200,
+        )
+
+        mark_server_down("e-Waybill")
+
+        # error is from the portal, so the request was sent
+        with self.assertRaises(frappe.exceptions.ValidationError) as cm:
+            _generate_e_waybill(load_doc("Sales Invoice", si.name, "submit"))
 
         self.assertIn("GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception))
 
