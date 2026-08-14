@@ -17,7 +17,7 @@ from frappe.contacts.doctype.address.address import get_default_address
 from frappe.tests import IntegrationTestCase, UnitTestCase, change_settings
 from frappe.utils import add_to_date, flt, getdate, now_datetime
 
-from india_compliance.gst_india.overrides.subcontracting_transaction import (
+from india_compliance.gst_india.overrides.stock_entry import (
     is_e_waybill_applicable,
 )
 from india_compliance.gst_india.utils import get_items_fieldname
