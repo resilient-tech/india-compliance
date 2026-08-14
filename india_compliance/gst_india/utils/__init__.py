@@ -1078,11 +1078,16 @@ def validate_invoice_number(doc, throw=True):
     frappe.msgprint(message, title=title)
 
 
+SERVER_DOWN_MESSAGE = (
+    "Government services are currently slow/down. We apologize for the inconvenience caused."
+)
+
+
 def handle_server_errors(settings, doc, document_type, error):
     if not doc.doctype == "Sales Invoice":
         return
 
-    error_message = "Government services are currently slow/down. We apologize for the inconvenience caused."
+    error_message = SERVER_DOWN_MESSAGE
 
     error_message_title = {
         GatewayTimeoutError: _("Gateway Timeout Error"),

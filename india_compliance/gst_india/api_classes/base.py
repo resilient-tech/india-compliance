@@ -14,7 +14,7 @@ from india_compliance.exceptions import (
     GSPLimitExceededError,
     GSPServerError,
 )
-from india_compliance.gst_india.utils import is_api_enabled
+from india_compliance.gst_india.utils import SERVER_DOWN_MESSAGE, is_api_enabled
 from india_compliance.gst_india.utils.api import enqueue_integration_request
 
 BASE_URL = "https://asp.resilient.tech"
@@ -307,10 +307,12 @@ class BaseAPI:
         if not (self.FAIL_FAST_IF_SERVER_DOWN and is_server_down(self.API_NAME)):
             return
 
+        error_message = f"{SERVER_DOWN_MESSAGE} Please try again after some time."
+
         frappe.throw(
-            msg=GSPServerError.message,
+            msg=_(error_message),
             exc=GSPServerError,
-            title=GSPServerError.title,
+            title=_("GSP/GST Server Down"),
         )
 
     def mark_server_down(self, error):
