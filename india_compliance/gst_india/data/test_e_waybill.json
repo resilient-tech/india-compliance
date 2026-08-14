@@ -1438,12 +1438,7 @@
             "purpose": "Transfer",
             "company": "_Test Indian Registered Company",
             "bill_from_address": "_Test Indian Registered Company-Billing",
-            "bill_to_address": "_Test Registered Supplier-Billing",
-            "assets": [
-                {
-                    "taxable_value": 100
-                }
-            ]
+            "bill_to_address": "_Test Registered Supplier-Billing"
         },
         "values": {
             "distance": 10,
@@ -1475,14 +1470,14 @@
             "toPincode": 380015,
             "toStateCode": 24,
             "actToStateCode": 24,
-            "totalValue": 100.0,
-            "cgstValue": 9.0,
-            "sgstValue": 9.0,
+            "totalValue": 100000.0,
+            "cgstValue": 9000.0,
+            "sgstValue": 9000.0,
             "igstValue": 0.0,
             "cessValue": 0.0,
             "cessNonAdvolValue": 0.0,
             "otherValue": 0.0,
-            "totInvValue": 118.0,
+            "totInvValue": 118000.0,
             "transMode": 1,
             "transDistance": 10,
             "vehicleNo": "GJ07DL9009",
@@ -1494,7 +1489,7 @@
                     "hsnCode": "847130",
                     "qtyUnit": "NOS",
                     "quantity": 1.0,
-                    "taxableAmount": 100.0,
+                    "taxableAmount": 100000.0,
                     "sgstRate": 9.0,
                     "cgstRate": 9.0,
                     "igstRate": 0.0,
