@@ -46,6 +46,7 @@ class AssetMovementController(GSTTransactionController):
             if not row.asset:
                 continue
 
+            row.qty = 1
             row.taxable_value = flt(
                 get_asset_value_after_depreciation(row.asset),
                 row.precision("taxable_value"),
