@@ -53,6 +53,7 @@ from india_compliance.gst_india.overrides.transaction import (
     is_inter_state_supply,
 )
 from india_compliance.gst_india.utils import (
+    get_items_fieldname,
     handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
@@ -192,7 +193,10 @@ def _generate_e_waybill(doc, throw=True, force=False):
 
         with_irn = (
             doc.get("irn")
-            and all(item.gst_treatment in TAXABLE_GST_TREATMENTS for item in doc.items)
+            and all(
+                item.gst_treatment in TAXABLE_GST_TREATMENTS
+                for item in doc.get(get_items_fieldname(doc.doctype))
+            )
             and not (doc.is_return or doc.get("is_debit_note") or is_foreign_doc(doc))
         )
 
@@ -1399,7 +1403,7 @@ class EWaybillData(GSTTransactionData):
 
         # Atleast one item with HSN code of goods is required
         has_atleast_one_goods_item = any(
-            not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX) for item in self.doc.items
+            not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX) for item in self.item_rows
         )
 
         if not has_atleast_one_goods_item:
@@ -1517,7 +1521,7 @@ class EWaybillData(GSTTransactionData):
             frappe.throw(_("e-Waybill can be cancelled only within 24 Hours of its generation"))
 
     def get_all_item_details(self):
-        if len(self.doc.items) <= ITEM_LIMIT:
+        if len(self.item_rows) <= ITEM_LIMIT:
             return super().get_all_item_details()
 
         hsn_wise_items = {}
@@ -1564,7 +1568,7 @@ class EWaybillData(GSTTransactionData):
         # first HSN Code for goods
         doc = self.doc
         main_hsn_code = next(
-            row.gst_hsn_code for row in doc.items if not row.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
+            row.gst_hsn_code for row in self.item_rows if not row.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
         )
 
         self.transaction_details.update(
@@ -1666,7 +1670,7 @@ class EWaybillData(GSTTransactionData):
         if (
             doc.doctype in ("Sales Invoice", "Purchase Invoice")
             and not doc.is_return
-            and all(item.gst_treatment not in TAXABLE_GST_TREATMENTS for item in doc.items)
+            and all(item.gst_treatment not in TAXABLE_GST_TREATMENTS for item in self.item_rows)
         ):
             self.transaction_details.update(document_type="BIL")
 
