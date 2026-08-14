@@ -520,7 +520,6 @@ def validate_items(doc):
     """Validate Items for a GST Compliant Invoice"""
 
     items = doc.get(get_items_fieldname(doc.doctype))
-    # can't use item_list property here because this is not a class
     if not items:
         return
 
@@ -873,6 +872,7 @@ def get_gst_details(
         gst_details.taxes_and_charges = ""
         gst_details.taxes = []
         return gst_details
+
     master_doctype = (
         "Sales Taxes and Charges Template"
         if is_sales_transaction or doctype in SUBCONTRACTING_DOCTYPES or doctype in DOCTYPES_WITH_BILL_FROM_TO
