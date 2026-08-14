@@ -314,7 +314,7 @@ class GSTTransactionData:
                     "non_taxable_amount": 0 if is_taxable else line_value,
                     "hsn_code": row.gst_hsn_code,
                     "item_name": self.sanitize_value(row.item_name, regex=3, max_length=300),
-                    "uom": get_gst_uom(row.get("uom") or row.stock_uom, self.settings),
+                    "uom": get_gst_uom(row.get("uom") or row.get("stock_uom"), self.settings),
                     "gst_treatment": row.gst_treatment,
                 }
             )
