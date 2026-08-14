@@ -18,7 +18,7 @@ from india_compliance.gst_india.constants import DISTANCE_REGEX
 class EWaybillAPI(BaseAPI):
     API_NAME = "e-Waybill"
 
-    # fail fast so a slow govt server can't hold workers; timeouts -> auto-retry
+    # fail fast, slow govt servers shouldn't block workers
     REQUEST_TIMEOUT = (10, 60)
 
     IGNORED_ERROR_CODES: ClassVar[dict] = {

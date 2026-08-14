@@ -26,8 +26,7 @@ class BaseAPI:
     BASE_PATH = ""
     PLACEHOLDER = "*****"
 
-    # (connect, read) secs. read left open so long calls (e.g. downloads) aren't cut short.
-    # e-Invoice/e-Waybill override read to fail fast. Override via `ic_request_timeout` conf.
+    # (connect, read) secs. no read limit, downloads can be slow.
     REQUEST_TIMEOUT = (10, None)
 
     DEFAULT_MASK_MAP: ClassVar[dict] = {
@@ -124,7 +123,7 @@ class BaseAPI:
         return self._make_request("PUT", *args, **kwargs)
 
     def get_request_timeout(self):
-        # `ic_request_timeout` conf (number or [connect, read]) overrides REQUEST_TIMEOUT
+        # site config: secs or [connect, read]
         timeout = frappe.conf.get("ic_request_timeout")
         if timeout is None:
             return self.REQUEST_TIMEOUT
@@ -178,13 +177,12 @@ class BaseAPI:
         try:
             self.before_request(request_args)
 
+            # raise known errors, so auto-retry kicks in
             try:
                 response = requests.request(method, timeout=self.get_request_timeout(), **request_args)
             except requests.exceptions.Timeout as e:
-                # no response in time -> gateway timeout (routes to auto-retry, not a hang)
                 raise GatewayTimeoutError(str(e)) from e
             except requests.exceptions.ConnectionError as e:
-                # unreachable / reset -> GSP down
                 raise GSPServerError(str(e)) from e
 
             if api_request_id := response.headers.get("x-amzn-RequestId"):

@@ -229,8 +229,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
             data = EWaybillData(doc).get_data(with_irn=with_irn)
             result = EWaybillAPI.create(doc).generate_e_waybill(data)
 
-        # 604: already generated at NIC (a prior attempt timed out after generating).
-        # search doc date(s) + today (a delayed retry may run later) and link it.
+        # 604: already generated at NIC. look on doc dates and today, then link it.
         if result.error_code == "604":
             recovery_dates = {
                 getdate(date)
@@ -238,10 +237,9 @@ def _generate_e_waybill(doc, throw=True, force=False):
                 if date
             }
             if not any(link_matching_e_waybill(doc, date) for date in recovery_dates):
-                # exists at NIC but couldn't auto-link; log so it can be reconciled
-                # (the background/auto-retry path swallows the throw below)
+                # log too, background jobs swallow the error below
                 frappe.log_error(
-                    title=_("e-Waybill 604 auto-recovery failed"),
+                    title=_("Failed to Link Existing e-Waybill"),
                     message=f"{doc.doctype} {doc.name}: {result.error_message or '604 already generated'}",
                     reference_doctype=doc.doctype,
                     reference_name=doc.name,
@@ -258,7 +256,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
                 return
 
             frappe.msgprint(
-                _("e-Waybill was already generated for this document; linked the existing one."),
+                _("e-Waybill was already generated. Linked with this document."),
                 indicator="green",
                 alert=True,
             )
@@ -862,11 +860,7 @@ def find_matching_e_waybill(*, doctype: str, docname: str, e_waybill_date: str):
 
 
 def link_matching_e_waybill(doc, e_waybill_date):
-    """Fetch active e-Waybills for the date and link the one matching this doc.
-
-    Returns True if a match was found and linked. Shared by the manual
-    "fetch if already generated" action and 604 auto-recovery.
-    """
+    """Link active e-Waybill of the date to the doc. Returns True if linked."""
     response = EWaybillAPI.create(doc).get_e_waybills_by_date(format_date(e_waybill_date, "dd/mm/yyyy"))
 
     result = {
