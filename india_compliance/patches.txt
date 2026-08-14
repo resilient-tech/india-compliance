@@ -90,4 +90,4 @@ execute:import frappe; frappe.db.set_single_value("GST Settings", "nil_exempt_e_
 india_compliance.patches.post_install.set_india_compliance_default_tax_category #1
 india_compliance.patches.post_install.remove_tax_category_gst_state
 india_compliance.patches.v16.remove_gstr_2a_category_preferences
-india_compliance.patches.v16.update_reconciliation_email_template_dates
+india_compliance.patches.v16.update_reconciliation_email_template_dates #1

@@ -8,12 +8,14 @@ TEMPLATE_FIELDS = ("subject", "response", "response_html")
 
 
 def execute():
+    or_filters = {"name": "Purchase Reconciliation"}
+
+    if frappe.db.has_column("Email Template", "reference_doctype"):
+        or_filters["reference_doctype"] = "Purchase Reconciliation Tool"
+
     templates = frappe.get_all(
         "Email Template",
-        or_filters={
-            "name": "Purchase Reconciliation",
-            "reference_doctype": "Purchase Reconciliation Tool",
-        },
+        or_filters=or_filters,
         fields=("name", *TEMPLATE_FIELDS),
     )
 
