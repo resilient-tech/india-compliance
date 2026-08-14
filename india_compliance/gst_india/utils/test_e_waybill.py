@@ -14,7 +14,10 @@ from frappe.utils.data import format_date
 from frappe.www.printview import get_html_and_style
 from responses import matchers
 
-from india_compliance.gst_india.api_classes.base import BASE_URL
+from india_compliance.gst_india.api_classes.base import (
+    BASE_URL,
+    SERVER_DOWN_CACHE_KEY,
+)
 from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
 from india_compliance.gst_india.constants.e_waybill import (
     E_WAYBILL_CHANGES_APPLICABLE_DATE,
@@ -90,6 +93,11 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         update_dates_for_test_data(cls.e_waybill_test_data)
+
+    def setUp(self):
+        super().setUp()
+        # server error in one test shouldn't fail fast the next
+        frappe.cache.delete_value(SERVER_DOWN_CACHE_KEY)
 
     def test_get_data(self):
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
@@ -1166,6 +1174,8 @@ class TestEWaybill(IntegrationTestCase):
             frappe.get_cached_value("GST Settings", "GST Settings", "is_retry_einv_ewb_generation_pending"),
             1,
         )
+        # next requests fail fast, till the retry run probes again
+        self.assertTrue(frappe.cache.get_value(SERVER_DOWN_CACHE_KEY))
 
         retry_ewb_test_date = self.e_waybill_test_data.goods_item_with_ewaybill
 
@@ -1181,6 +1191,7 @@ class TestEWaybill(IntegrationTestCase):
         retry_e_invoice_e_waybill_generation()
         si = load_doc("Sales Invoice", si.name, "submit")
 
+        self.assertFalse(frappe.cache.get_value(SERVER_DOWN_CACHE_KEY))
         self.assertEqual(si.e_waybill_status, "Generated")
         self.assertEqual(
             si.ewaybill,
@@ -2056,6 +2067,10 @@ class TestSubcontractingInwardEWaybill(IntegrationTestCase):
             "GST Settings",
             {"enable_api": 1, "enable_e_waybill": 1, "enable_e_waybill_for_sc": 1},
         )
+
+    def setUp(self):
+        super().setUp()
+        frappe.cache.delete_value(SERVER_DOWN_CACHE_KEY)
 
     @staticmethod
     def _set_transport_details(stock_entry, sub_supply_desc):

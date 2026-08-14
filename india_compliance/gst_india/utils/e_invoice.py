@@ -20,6 +20,7 @@ from india_compliance.exceptions import (
     GSPServerError,
     NotApplicableError,
 )
+from india_compliance.gst_india.api_classes.base import SERVER_DOWN_CACHE_KEY
 from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_e_invoice import (
@@ -602,6 +603,9 @@ def retry_e_invoice_e_waybill_generation():
         return
 
     settings.db_set("is_retry_einv_ewb_generation_pending", 0, update_modified=False)
+
+    # this run is the probe, let requests through
+    frappe.cache.delete_value(SERVER_DOWN_CACHE_KEY)
 
     generate_pending_e_invoices()
 

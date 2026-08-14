@@ -14,7 +14,8 @@ class EInvoiceAPI(BaseAPI):
     API_NAME = "e-Invoice"
 
     # fail fast, slow govt servers shouldn't block workers
-    REQUEST_TIMEOUT = (10, 60)
+    REQUEST_TIMEOUT = (10, 30)
+    FAIL_FAST_IF_SERVER_DOWN = True
 
     IGNORED_ERROR_CODES: ClassVar[dict] = {
         "1005": "Invalid Token",

@@ -9,7 +9,10 @@ from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
 from frappe.utils.data import format_date
 from responses import matchers
 
-from india_compliance.gst_india.api_classes.base import BASE_URL
+from india_compliance.gst_india.api_classes.base import (
+    BASE_URL,
+    SERVER_DOWN_CACHE_KEY,
+)
 from india_compliance.gst_india.overrides.test_transaction import (
     create_refund_transaction,
 )
@@ -53,6 +56,11 @@ class TestEInvoice(IntegrationTestCase):
             )
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
+
+    def setUp(self):
+        super().setUp()
+        # server error in one test shouldn't fail fast the next
+        frappe.cache.delete_value(SERVER_DOWN_CACHE_KEY)
 
     def test_request_data_for_different_shipping_dispatch_address(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill

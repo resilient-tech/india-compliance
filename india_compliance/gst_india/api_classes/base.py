@@ -20,6 +20,9 @@ from india_compliance.gst_india.utils.api import enqueue_integration_request
 BASE_URL = "https://asp.resilient.tech"
 DEFAULT_SUPPORT_EMAIL = "api-support@indiacompliance.app"
 
+SERVER_DOWN_CACHE_KEY = "gst_server_down"
+SERVER_DOWN_CACHE_TIMEOUT = 120
+
 
 class BaseAPI:
     API_NAME = "GST"
@@ -28,6 +31,9 @@ class BaseAPI:
 
     # (connect, read) secs. no read limit, downloads can be slow.
     REQUEST_TIMEOUT = (10, None)
+
+    # skip request if server was down in the last 2 mins
+    FAIL_FAST_IF_SERVER_DOWN = False
 
     DEFAULT_MASK_MAP: ClassVar[dict] = {
         "headers": [
@@ -122,14 +128,6 @@ class BaseAPI:
     def put(self, *args, **kwargs):
         return self._make_request("PUT", *args, **kwargs)
 
-    def get_request_timeout(self):
-        # site config: secs or [connect, read]
-        timeout = frappe.conf.get("ic_request_timeout")
-        if timeout is None:
-            return self.REQUEST_TIMEOUT
-
-        return tuple(timeout) if isinstance(timeout, list) else timeout
-
     def _make_request(
         self,
         method,
@@ -141,6 +139,8 @@ class BaseAPI:
         method = method.upper()
         if method not in ("GET", "POST", "PUT"):
             frappe.throw(_("Invalid method {0}").format(method))
+
+        self.check_server_status()
 
         request_args = frappe._dict(
             url=self.get_url(endpoint),
@@ -179,7 +179,7 @@ class BaseAPI:
 
             # raise known errors, so auto-retry kicks in
             try:
-                response = requests.request(method, timeout=self.get_request_timeout(), **request_args)
+                response = requests.request(method, timeout=self.REQUEST_TIMEOUT, **request_args)
             except requests.exceptions.Timeout as e:
                 raise GatewayTimeoutError(str(e)) from e
             except requests.exceptions.ConnectionError as e:
@@ -217,6 +217,7 @@ class BaseAPI:
 
         except Exception as e:
             log.error = str(e)
+            self.mark_server_down(e)
             raise e
 
         finally:
@@ -288,6 +289,26 @@ class BaseAPI:
                         exc=exception,
                         title=exception.title,
                     )
+
+    def check_server_status(self):
+        if not (self.FAIL_FAST_IF_SERVER_DOWN and frappe.cache.get_value(SERVER_DOWN_CACHE_KEY)):
+            return
+
+        frappe.throw(
+            msg=GSPServerError.message,
+            exc=GSPServerError,
+            title=GSPServerError.title,
+        )
+
+    def mark_server_down(self, error):
+        if not self.FAIL_FAST_IF_SERVER_DOWN:
+            return
+
+        # limit exceeded is not an outage
+        if not isinstance(error, GSPServerError) or isinstance(error, GSPLimitExceededError):
+            return
+
+        frappe.cache.set_value(SERVER_DOWN_CACHE_KEY, True, expires_in_sec=SERVER_DOWN_CACHE_TIMEOUT)
 
     def is_ignored_error(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw
