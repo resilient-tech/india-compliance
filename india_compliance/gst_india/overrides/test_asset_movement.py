@@ -1,9 +1,12 @@
 import frappe
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
+from frappe.desk.form.load import run_onload
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
 from india_compliance.gst_india.overrides.test_transaction import create_cess_accounts
+from india_compliance.gst_india.overrides.transaction import get_gst_details
+from india_compliance.gst_india.utils import get_place_of_supply
 
 # Fixtures for all of these are declared in india_compliance/tests/test_records.json
 TEST_LOCATION = "_Test Asset Movement Location"
@@ -19,6 +22,7 @@ def get_test_asset(asset_name=TEST_ASSET):
 
 COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
 COMPANY_PARTY_ADDRESS = "_Test Registered Supplier-Billing"
+UNREGISTERED_ADDRESS = "_Test Unregistered Customer-1-Billing"
 
 
 def create_asset_movement(**data):
@@ -98,13 +102,13 @@ class TestAssetMovementGST(IntegrationTestCase):
         )
         frappe.db.set_single_value("GST Settings", settings)
 
-    def test_taxable_value_defaults_to_asset_value_after_depreciation(self):
+    def test_taxable_value_always_follows_the_asset(self):
         doc = create_asset_movement(asset=self.asset)
         self.assertEqual(doc.assets[0].taxable_value, TEST_ASSET_VALUE)
 
-        # a value the user entered is left alone
+        # refetched on every save, so it cannot drift from the Asset
         doc = create_asset_movement(assets=[{"asset": self.asset, "taxable_value": 4200}])
-        self.assertEqual(doc.assets[0].taxable_value, 4200)
+        self.assertEqual(doc.assets[0].taxable_value, TEST_ASSET_VALUE)
 
     def test_gst_validations_skipped_without_taxes_or_addresses(self):
         """An Asset Movement that carries no GST intent must not be validated as one,
@@ -117,7 +121,7 @@ class TestAssetMovementGST(IntegrationTestCase):
 
         self.assertFalse(doc.taxes)
         self.assertFalse(doc.place_of_supply)
-        # taxable_value is only defaulted for GST-relevant movements
+        # the Asset is not even looked up when GST is not in play
         self.assertEqual(doc.assets[0].taxable_value, 0)
 
     def test_taxes_populate_from_template_and_flow_to_asset_rows(self):
@@ -128,13 +132,13 @@ class TestAssetMovementGST(IntegrationTestCase):
                 "In-State",
                 COMPANY_PARTY_ADDRESS,
                 "Output GST In-state - _TIRC",
-                {"cgst_amount": 900, "sgst_amount": 900, "igst_amount": 0},
+                {"cgst_amount": 9000, "sgst_amount": 9000, "igst_amount": 0},
             ),
             (
                 "Out-State",
                 "_Test Registered Supplier-Billing-3",  # Karnataka (29)
                 "Output GST Out-state - _TIRC",
-                {"cgst_amount": 0, "sgst_amount": 0, "igst_amount": 1800},
+                {"cgst_amount": 0, "sgst_amount": 0, "igst_amount": 18000},
             ),
         )
 
@@ -144,7 +148,6 @@ class TestAssetMovementGST(IntegrationTestCase):
                     assets=[
                         {
                             "asset": self.asset,
-                            "taxable_value": 10000,
                             "item_tax_template": "GST 18% - _TIRC",
                         }
                     ],
@@ -161,8 +164,8 @@ class TestAssetMovementGST(IntegrationTestCase):
                 )
                 doc.insert()
 
-                self.assertEqual(doc.total_taxes, 1800)
-                self.assertEqual(doc.base_grand_total, 11800)
+                self.assertEqual(doc.total_taxes, 18000)
+                self.assertEqual(doc.base_grand_total, TEST_ASSET_VALUE + 18000)
 
                 row = doc.assets[0]
                 for fieldname, value in expected.items():
@@ -171,6 +174,62 @@ class TestAssetMovementGST(IntegrationTestCase):
                 # selecting an Asset fetches its Item details into the row
                 self.assertEqual(row.item_code, frappe.db.get_value("Asset", self.asset, "item_code"))
                 self.assertEqual(row.item_name, frappe.db.get_value("Asset", self.asset, "item_name"))
-                self.assertEqual(row.qty, frappe.db.get_value("Asset", self.asset, "asset_quantity"))
                 self.assertEqual(row.gst_hsn_code, "847130")
+                self.assertEqual(row.qty, 1)
                 self.assertEqual(row.uom, "Nos")
+
+    def test_inward_movement_bills_the_company(self):
+        """On a Receipt the company is billed to rather than from, and the e-Waybill is
+        still generated under the company's GSTIN. Nothing else exercises inward."""
+        company_gstin = frappe.db.get_value("Address", COMPANY_ADDRESS, "gstin")
+        party_gstin = frappe.db.get_value("Address", COMPANY_PARTY_ADDRESS, "gstin")
+
+        for purpose, bill_from, bill_to in (
+            ("Transfer", company_gstin, party_gstin),
+            ("Receipt", party_gstin, company_gstin),
+        ):
+            with self.subTest(purpose=purpose):
+                doc = create_asset_movement(asset=self.asset, purpose=purpose)
+                run_onload(doc)
+
+                self.assertEqual(doc.bill_from_gstin, bill_from)
+                self.assertEqual(doc.bill_to_gstin, bill_to)
+
+                # whichever side it sits on, the company generates the e-Waybill
+                self.assertEqual(doc.company_gstin, company_gstin)
+                self.assertEqual(doc.supplier_gstin, party_gstin)
+                self.assertEqual(doc.place_of_supply, "24-Gujarat")
+
+    def test_gst_details_for_asset_movement(self):
+        """Drive the whitelisted entry point the client uses, rather than planting taxes."""
+        gst_details = get_gst_details(
+            party_details=frappe._dict(
+                doctype="Asset Movement",
+                purpose="Transfer",
+                bill_from_address=COMPANY_ADDRESS,
+                bill_to_address=COMPANY_PARTY_ADDRESS,
+                bill_from_gstin=frappe.db.get_value("Address", COMPANY_ADDRESS, "gstin"),
+                bill_to_gstin=frappe.db.get_value("Address", COMPANY_PARTY_ADDRESS, "gstin"),
+            ),
+            doctype="Asset Movement",
+            company="_Test Indian Registered Company",
+            update_place_of_supply=True,
+        )
+
+        self.assertEqual(gst_details.get("place_of_supply"), "24-Gujarat")
+        # Asset Movement charges Output GST, so it must resolve a *Sales* template
+        self.assertTrue(gst_details.get("taxes_and_charges", "").startswith("Output GST"))
+
+    def test_place_of_supply_falls_back_to_unregistered_bill_to_address(self):
+        """A URP consignee has no GSTIN, so the state comes off its address instead."""
+        party_details = frappe._dict(
+            doctype="Asset Movement",
+            bill_from_gstin=frappe.db.get_value("Address", COMPANY_ADDRESS, "gstin"),
+            bill_to_gstin=None,
+            bill_to_address=UNREGISTERED_ADDRESS,
+        )
+
+        expected = "{}-{}".format(
+            *frappe.db.get_value("Address", UNREGISTERED_ADDRESS, ("gst_state_number", "gst_state"))
+        )
+        self.assertEqual(get_place_of_supply(party_details, "Asset Movement"), expected)

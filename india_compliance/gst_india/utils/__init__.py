@@ -568,8 +568,9 @@ def get_place_of_supply(party_details, doctype):
         pos_gstin = customer_gstin or party_details.company_gstin
 
     elif doctype in DOCTYPES_WITH_BILL_FROM_TO:
-        # for unregistered Bill To, since it has no GSTIN to derive the state from.
-        # Bill To is the company itself for inward transactions, hence always registered.
+        # Place of supply for goods is where the movement terminates (s.10(1)(a)), so
+        # read it off the Bill To address whenever that party has no GSTIN to derive it
+        # from - an unregistered consignee, or one billed as URP.
         if not party_details.bill_to_gstin and (bill_to_address := party_details.get("bill_to_address")):
             gst_state_number, gst_state = frappe.db.get_value(
                 "Address",
@@ -1223,22 +1224,24 @@ def is_outward_stock_entry(doc):
         return True
 
 
-## Asset Movement Utils
 def is_inward_transaction(doc):
-    doctype = doc.get("doctype")
+    """True when the goods flow towards the company, ie Bill To is the company's side.
 
-    if doctype == "Asset Movement":
-        # purpose has no is_return equivalent
+    Everywhere else this is `is_return`; Asset Movement has no such field and states the
+    direction through `purpose` instead.
+    """
+    if doc.get("doctype") == "Asset Movement":
         return doc.get("purpose") == "Receipt"
 
-    if doctype == "Stock Entry":
-        return bool(doc.get("is_return"))
-
-    # Sales / Purchase transactions: a return reverses the direction
     return bool(doc.get("is_return"))
 
 
 def is_same_gstin_allowed(doc):
+    """Whether both sides of the transaction may carry the same GSTIN.
+
+    The company is moving its own goods, so no supply takes place between distinct
+    persons and NIC accepts the e-Waybill as Self -> Self ("For Own Use" and friends).
+    """
     return bool(is_outward_stock_entry(doc)) or doc.get("doctype") == "Asset Movement"
 
 

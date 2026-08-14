@@ -80,6 +80,13 @@ def get_property_setters(*, include_defaults=False):
             "property_type": "Data",
             "value": "naming_series:",
         },
+        {
+            "doctype": "Asset Movement",
+            "doctype_or_field": "DocType",
+            "property": "naming_rule",
+            "property_type": "Data",
+            "value": 'By "Naming Series" field',
+        },
         *PURCHASE_RECEIPT_PROPERTIES,
         *SUBCONTRACTING_RECEIPT_PROPERTIES,
         *ADDRESS_ALLOW_ON_SUBMIT_PROPERTIES,
