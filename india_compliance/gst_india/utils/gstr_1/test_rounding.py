@@ -16,10 +16,14 @@ import unittest
 from typing import ClassVar
 
 import frappe
-from frappe.utils import flt
+from frappe.utils import cint, flt
 
+from india_compliance.gst_india.utils.gstr_1 import Category, SubCategory
 from india_compliance.gst_india.utils.gstr_1 import DocField as doc
-from india_compliance.gst_india.utils.gstr_1.gstr_1_books_map import BooksDataMapper
+from india_compliance.gst_india.utils.gstr_1.gstr_1_books_map import (
+    BooksDataMapper,
+    GSTR1BooksData,
+)
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 AMOUNTS = ("taxable_value", "igst_amount", "cgst_amount", "sgst_amount", "total_cess_amount")
@@ -77,6 +81,23 @@ class TestSettleAmounts(unittest.TestCase):
 
         self.assertEqual(flt(by_invoice_and_rate, 2), flt(by_hsn, 2))
 
+    def test_each_nil_bucket_settles_on_its_own(self):
+        """Nil-rated, exempted and non-GST are filed apart, and all three sit at rate zero.
+
+        Settled as one pool, a leftover paisa moves between buckets and each stops matching
+        what its own lines add up to.
+        """
+        rows, _ = settle(
+            [
+                row("A", 0, "1001", taxable_value=100.005, gst_treatment="Nil-Rated"),
+                row("A", 0, "1001", taxable_value=33.335, gst_treatment="Exempted"),
+                row("A", 0, "1001", taxable_value=23.335, gst_treatment="Non-GST"),
+            ]
+        )
+
+        for settled, raw in zip(rows, (100.005, 33.335, 23.335), strict=True):
+            self.assertEqual(settled.taxable_value, flt(raw, 2))
+
     def test_each_rate_of_an_invoice_settles_on_its_own(self):
         rows, _ = settle(
             [
@@ -111,6 +132,35 @@ class TestSettleAmounts(unittest.TestCase):
     def test_nothing_lost_when_the_amounts_already_have_two_decimals(self):
         _, lost = settle([row("A", 18, "1001", cgst_amount=10.00, taxable_value=55.55)])
         self.assertEqual({value for value in lost.values() if value}, set())
+
+    def test_tax_survives_on_a_row_whose_taxable_value_rounds_away(self):
+        """Each amount settles on its own, so a row can keep tax after its taxable value goes.
+
+        The sections used to skip such a row on taxable value alone, which dropped its tax
+        out of the return while HSN -- built before the skip -- still counted it.
+        """
+        rows, _ = settle(
+            [
+                row(
+                    "A",
+                    18,
+                    "1001",
+                    taxable_value=0.005,
+                    cgst_amount=0.00045,  # 9% of it -- the two settle onto different rows
+                    invoice_category=Category.B2B.value,
+                    invoice_sub_category=SubCategory.B2B_REGULAR.value,
+                )
+                for _ in range(100)
+            ]
+        )
+        stranded = [r for r in rows if not r.taxable_value and r.cgst_amount]
+
+        mapper = GSTR1BooksData(frappe._dict())
+        _hsn, by_invoice, *_ = mapper.get_structured_data(rows)
+        kept = [r for group in by_invoice.values() for items in group.values() for r in items]
+
+        self.assertTrue(stranded, "expected the split to leave tax on a zero-taxable row")
+        self.assertEqual(flt(sum(r.cgst_amount for r in kept), 2), flt(sum(r.cgst_amount for r in rows), 2))
 
 
 class TestNoReconciliationLeft(unittest.TestCase):
@@ -151,7 +201,11 @@ class TestRoundingDifferenceReport(unittest.TestCase):
         self.assertEqual(len(self.report(dict.fromkeys(AMOUNTS, 0.0))), len(AMOUNTS))
 
     def test_the_residual_is_carried_through(self):
-        self.assertEqual(self.report({**dict.fromkeys(AMOUNTS, 0.0), "cgst_amount": 0.006})[doc.CGST], 0.006)
+        precision = cint(frappe.db.get_default("currency_precision")) or None
+        reported = self.report({**dict.fromkeys(AMOUNTS, 0.0), "cgst_amount": 0.006})[doc.CGST]
+
+        self.assertEqual(reported, flt(0.006, precision))
+        self.assertTrue(reported)
 
 
 class TestHsnRowsAddUp(unittest.TestCase):

@@ -73,8 +73,6 @@ class BooksDataMapper:
         DocField.CESS: "total_cess_amount",
     }
 
-    PRECISION = 2
-
     def process_data_for_invoice_no_key(self, grouped_data, prepared_data):
         """
         Input:
@@ -298,8 +296,6 @@ class BooksDataMapper:
 
             return party_name_map[eco_gstin]
 
-        data_to_invoice_field_map = self.DATA_TO_INVOICE_FIELD_MAPPING
-        empty_invoice_values = self.get_invoice_values()
         party_name_map = {}
 
         for supply_type, invoice_wise in grouped_data.items():
@@ -313,22 +309,12 @@ class BooksDataMapper:
                         DocField.DOC_TYPE: supply_type,
                         DocField.ECOMMERCE_GSTIN: eco_gstin,
                         DocField.ECOMMERCE_OPERATOR_NAME: get_party_name_for_gstin(eco_gstin, party_name_map),
-                        **empty_invoice_values.copy(),
+                        **self.get_invoice_values(),
                     },
                 )
 
-                invoice_totals = empty_invoice_values.copy()
-                for item in items:
-                    for key, field in data_to_invoice_field_map.items():
-                        invoice_totals[key] += item.get(field, 0)
-
-                for key in data_to_invoice_field_map:
-                    entry[key] += flt(invoice_totals[key], self.PRECISION)
-
-            # Round at operator level
-            for entry in sub_category.values():
-                for key in data_to_invoice_field_map:
-                    entry[key] = flt(entry[key], self.PRECISION)
+                for total, field in self.DATA_TO_INVOICE_FIELD_MAPPING.items():
+                    entry[total] = flt(entry[total] + sum_column(items, field), 2)
 
     def process_data_for_document_issued_summary(self, row, prepared_data):
         key = f"{row['nature_of_document']} - {row['from_serial_no']}"
@@ -480,7 +466,7 @@ class GSTR1BooksData(BooksDataMapper):
                 hsn_key = f"{item.gst_hsn_code} - {item.uom} - {gst_rate}"
                 data_for_hsn[hsn_sub_category][hsn_key].append(item)
 
-            if only_for_hsn or item.get("taxable_value") == 0:
+            if only_for_hsn or not any(item.get(field) for field in GSTR1Invoices.AMOUNT_FIELDS):
                 continue
 
             key = (item.get("invoice_sub_category"), item.get("invoice_no"))

@@ -18,17 +18,17 @@ def split(total, weights, round_fn=round2):
     Share `total` out over `weights` so the pieces add back to it exactly. Signs are irrelevant.
         split(10.00, [3.333, 3.333, 3.334])  ->  [3.33, 3.34, 3.33]   adds to 10.00
     """
-    shared_out = sum(weights)
-    if not shared_out:
-        return [0.0] * len(weights)
-
     pieces = []
+    last = max((index for index, weight in enumerate(weights) if weight), default=-1)
     seen = done = 0.0
 
     for index, weight in enumerate(weights):
+        if index > last:
+            pieces.append(0.0)
+            continue
+
         seen += weight
-        # the last piece takes the remainder
-        upto = total if index == len(weights) - 1 else round_fn(total * seen / shared_out)
+        upto = total if index == last else round_fn(seen)
         pieces.append(round_fn(upto - done))
         done = upto
 

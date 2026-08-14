@@ -4,13 +4,39 @@
 """Pure self-tests for helpers. Site-less. round2 expectations = frappe.flt(x, 2)."""
 
 import unittest
+from collections import Counter
 from datetime import date, datetime
 
 from .helpers import format_date, parse_date, round2, split
 
 
 class TestSplit(unittest.TestCase):
-    """Sharing out a settled total. The pieces must always add back to it."""
+    """Sharing out a settled total.
+
+    The pieces must add back to it, and each must be a share of the weight it came from. Adding up
+    is the weaker half: a hundred pieces of 0.01 and one of -0.49 also add to 0.50, and it is not
+    an allocation. So the shape gets asserted, not just the total.
+    """
+
+    def assert_shares(self, pieces, weights, total):
+        """Every piece is its own weight, rounded -- not someone else's rounding.
+
+        The total is compared rounded, because that is how every reader adds these up: past a
+        million, three exact-paisa pieces still sum to 0.010000000009 in float.
+        """
+        self.assertEqual(round2(sum(pieces)), total)
+        for piece in pieces:
+            self.assertEqual(piece, round2(piece), f"not a settled amount: {pieces}")
+
+        for piece, weight in zip(pieces, weights, strict=True):
+            self.assertLessEqual(abs(piece - weight), 0.01, f"{weights} -> {pieces}")
+
+            if weight > 0:
+                self.assertGreaterEqual(piece, 0.0, f"{weights} -> {pieces}")
+            elif weight < 0:
+                self.assertLessEqual(piece, 0.0, f"{weights} -> {pieces}")
+            else:
+                self.assertEqual(piece, 0.0, f"{weights} -> {pieces}")
 
     def test_pieces_add_back_to_the_total(self):
         self.assertEqual(sum(split(10.00, [3.333, 3.333, 3.334])), 10.00)
@@ -43,9 +69,61 @@ class TestSplit(unittest.TestCase):
         self.assertEqual(sum(split(10.01, [3.333, 3.333, 3.334])), 10.01)
 
     def test_many_pieces_do_not_accumulate_drift(self):
-        weights = [0.005] * 100  # each rounds to 0.01 on its own -> 1.00, a 50% overshoot
+        """Half the rows take a paisa, half take nothing -- that is what 0.005 each comes to.
+
+        Rounding every weight on its own gives 100 x 0.01 = 1.00, twice the total. Putting the
+        excess back on one row gives 99 x 0.01 and a -0.49. Both add to 0.50, so the total alone
+        would accept either; the distribution is what tells them apart.
+        """
+        weights = [0.005] * 100
         pieces = split(0.50, weights)
-        self.assertEqual(sum(pieces), 0.50)
+
+        self.assertEqual(Counter(pieces), Counter({0.01: 50, 0.0: 50}))
+        self.assert_shares(pieces, weights, 0.50)
+
+    def test_credit_note_pieces_keep_their_shape_too(self):
+        weights = [-0.005] * 100
+        pieces = split(-0.50, weights)
+
+        self.assertEqual(Counter(pieces), Counter({-0.01: 50, 0.0: 50}))
+        self.assert_shares(pieces, weights, -0.50)
+
+    def test_no_piece_strays_from_the_weight_it_came_from(self):
+        """Whatever the mix -- signs, magnitudes, empties -- a piece is a share of its own weight."""
+        for weights in (
+            [3.333, 3.333, 3.334],
+            [0.001, 0.004, 100.005, -100.005],
+            [33.335, -1000000.005, 33.335, 0.0],
+            [1000000.005, 0.005, -1000000.005],
+            [0.0, 0.005, 0.0],
+            [100.0, -100.0],
+        ):
+            total = round2(sum(weights))
+            self.assert_shares(split(total, weights), weights, total)
+
+    def test_weights_that_cancel_out_keep_their_own_amounts(self):
+        self.assertEqual(split(0.0, [100.0, -100.0]), [100.0, -100.0])
+
+    def test_a_total_next_to_nothing_does_not_inflate_the_pieces(self):
+        self.assertEqual(split(0.01, [1000.005, -1000.0]), [1000.01, -1000.0])
+
+    def test_an_empty_weight_never_gets_a_piece(self):
+        """The remainder goes on the last real weight, not merely the last one.
+
+        `total` is summed one way and the running total another, so they can land a paisa apart.
+        Whoever takes the remainder absorbs that, and it must not be a line with nothing on it.
+        """
+        weights = [33.335, -1000000.005, 33.335, 0.0]
+        pieces = split(-999933.33, weights)
+
+        self.assertEqual(sum(pieces), -999933.33)
+        for piece, weight in zip(pieces, weights, strict=True):
+            if not weight:
+                self.assertEqual(piece, 0.0)
+
+    def test_nothing_anywhere_gives_nothing_anywhere(self):
+        self.assertEqual(split(0.0, []), [])
+        self.assertEqual(split(0.0, [0.0, 0.0, 0.0]), [0.0, 0.0, 0.0])
 
 
 class TestRound2(unittest.TestCase):

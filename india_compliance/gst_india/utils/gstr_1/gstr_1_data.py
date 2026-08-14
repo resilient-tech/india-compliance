@@ -480,7 +480,11 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         """
         rows_by_rate = {}
         for invoice in invoices:
-            key = (invoice.get("invoice_no"), flt(invoice.get("gst_rate")))
+            key = (
+                invoice.get("invoice_no"),
+                flt(invoice.get("gst_rate")),
+                invoice.get("gst_treatment"),
+            )
             rows_by_rate.setdefault(key, []).append(invoice)
 
         lost = dict.fromkeys(self.AMOUNT_FIELDS, 0.0)
@@ -493,6 +497,12 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
                 for row, share in zip(rows, split(total, weights), strict=True):
                     row[field] = share
+
+        for invoice in invoices:
+            invoice["total_tax"] = sum(
+                invoice.get(field) or 0 for field in self.AMOUNT_FIELDS if field != "taxable_value"
+            )
+            invoice["total_amount"] = (invoice.get("taxable_value") or 0) + invoice["total_tax"]
 
         return lost
 
