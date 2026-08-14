@@ -314,10 +314,10 @@ class AssetMovementEwaybill extends EwaybillApplicability {
         // at least one item is not a service
         is_ewb_applicable = this.has_goods_item(is_ewb_applicable, message_list);
 
-        this.frm._ewb_message = "";
+        this.frm._ewb_message_list = [];
 
         if (show_message) {
-            this.frm._ewb_message = message_list.map((message) => `<li>${message}</li>`).join("");
+            this.frm._ewb_message_list.push(...message_list);
         }
 
         return is_ewb_applicable;
@@ -338,7 +338,7 @@ class AssetMovementEwaybill extends EwaybillApplicability {
         }
 
         if (show_message) {
-            this.frm._ewb_message += message_list.map((message) => `<li>${message}</li>`).join("");
+            this.frm._ewb_message_list.push(...message_list);
         }
 
         return is_ewb_generatable;
