@@ -19,7 +19,7 @@ from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_items_fieldname,
 )
-from india_compliance.gst_india.utils.transaction_controller import GSTTransactionController
+from india_compliance.gst_india.utils.custom_transaction_controller import CustomEwaybillController
 
 
 # Functions to perform operations before and after mapping of transactions
@@ -222,7 +222,7 @@ def onload(doc, method=None):
     SubcontractingReceiptController(doc).set_e_waybill_info()
 
 
-class SubcontractingController(GSTTransactionController):
+class SubcontractingController(CustomEwaybillController):
     """Shared by every doctype behind the "e-Waybill for Subcontracting" switch.
 
     Stock Entry subclasses this too, from `overrides/stock_entry.py`.

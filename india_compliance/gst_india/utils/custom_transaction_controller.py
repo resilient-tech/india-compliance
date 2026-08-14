@@ -63,7 +63,7 @@ def get_field_map(doc):
     )
 
 
-class GSTTransactionController:
+class CustomEwaybillController:
     DOCTYPE = None
     TAXES_FIELD_MAP = SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
     VALIDATES_TRANSACTION_NAME = False
