@@ -110,6 +110,16 @@ class TestAssetMovementGST(IntegrationTestCase):
         doc = create_asset_movement(assets=[{"asset": self.asset, "taxable_value": 4200}])
         self.assertEqual(doc.assets[0].taxable_value, TEST_ASSET_VALUE)
 
+    def test_item_tax_template_is_resolved_from_the_item(self):
+        """The Asset carries no template of its own, so it comes off the Item, exactly as
+        it does for a Stock Entry mapped from a Subcontracting Order."""
+        doc = create_asset_movement(asset=self.asset)
+        self.assertEqual(doc.assets[0].item_tax_template, "GST 18% - _TIRC")
+
+        # a template chosen on the row is never overwritten
+        doc = create_asset_movement(assets=[{"asset": self.asset, "item_tax_template": "GST 12% - _TIRC"}])
+        self.assertEqual(doc.assets[0].item_tax_template, "GST 12% - _TIRC")
+
     def test_gst_validations_skipped_without_taxes_or_addresses(self):
         """An Asset Movement that carries no GST intent must not be validated as one,
         so it stays usable for companies that never generate e-Waybills."""

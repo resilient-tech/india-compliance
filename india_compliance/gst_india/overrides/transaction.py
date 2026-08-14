@@ -1116,7 +1116,7 @@ class ItemGSTDetails:
         self.doc = doc
 
     @property
-    def item_list(self):
+    def item_rows(self):
         return self.doc.get(get_items_fieldname(self.doc.doctype)) or []
 
     @classmethod
@@ -1138,13 +1138,13 @@ class ItemGSTDetails:
 
         for doc in docs:
             self.doc = doc
-            if not self.item_list or not doc.get("taxes"):
+            if not self.item_rows or not doc.get("taxes"):
                 continue
 
             self.build_item_wise_tax_detail_from_data()
             self.get_item_name_wise_tax_details()
 
-            for item in self.item_list:
+            for item in self.item_rows:
                 response[item.name] = self.get_tax_detail_by_item_name(item)
 
         return response
@@ -1153,7 +1153,7 @@ class ItemGSTDetails:
         """
         Update Item GST Details for a single document
         """
-        if not self.item_list:
+        if not self.item_rows:
             return
 
         self.set_item_defaults()
@@ -1232,7 +1232,7 @@ class ItemGSTDetails:
     def set_item_defaults(self):
         item_defaults = self.get_item_defaults()
 
-        for item in self.item_list:
+        for item in self.item_rows:
             item.update(item_defaults.copy())
 
     def get_item_name_wise_tax_details(self):
@@ -1268,7 +1268,7 @@ class ItemGSTDetails:
             tax_differences[tax_type] += flt(row.get(self.tax_amount_field()))
             tax_map[row.name] = row
 
-        for row in self.item_list:
+        for row in self.item_rows:
             key = row.name
             item_map[key] = row
 
@@ -1326,7 +1326,7 @@ class ItemGSTDetails:
     def validate_item_gst_details(self):
         invalid_rows = defaultdict(list)
 
-        for item in self.item_list:
+        for item in self.item_rows:
             for tax in GST_TAX_TYPES:
                 expected_amt = self.get_item_tax_amount(item, item.get(f"{tax}_rate"), tax)
 
@@ -1421,7 +1421,7 @@ class ItemGSTTreatment:
         self.doc = doc
 
     @property
-    def item_list(self):
+    def item_rows(self):
         return self.doc.get(get_items_fieldname(self.doc.doctype)) or []
 
     def set(self):
@@ -1449,22 +1449,22 @@ class ItemGSTTreatment:
         self.set_default_treatment()
 
     def set_for_overseas(self):
-        for item in self.item_list:
+        for item in self.item_rows:
             item.gst_treatment = "Zero-Rated"
 
     def set_for_import_transactions(self):
-        for item in self.item_list:
+        for item in self.item_rows:
             item.gst_treatment = "Taxable"
 
     def set_for_no_taxes(self):
-        for item in self.item_list:
+        for item in self.item_rows:
             if item.gst_treatment not in ("Exempted", "Non-GST"):
                 item.gst_treatment = "Nil-Rated"
 
     def update_gst_treatment_map(self):
         item_templates = set()
 
-        for item in self.item_list:
+        for item in self.item_rows:
             item_templates.add(item.item_tax_template)
 
         self.gst_treatment_map = frappe._dict(
@@ -1479,7 +1479,7 @@ class ItemGSTTreatment:
     def set_default_treatment(self):
         default_treatment = self.get_default_treatment()
 
-        for item in self.item_list:
+        for item in self.item_rows:
             item.gst_treatment = self.gst_treatment_map.get(item.item_tax_template)
 
             if not item.gst_treatment or not item.item_tax_template:
