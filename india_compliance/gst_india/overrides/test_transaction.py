@@ -1821,6 +1821,95 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertNotIn("On MRP", opts)
         self.assertNotIn("On Margin", opts)
 
+    def _margin_scheme_invoice(self, **kwargs):
+        enable_custom_gst_charge_types()
+        self.addCleanup(frappe.clear_cache, doctype="Sales Taxes and Charges")
+
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            rate=300,
+            is_in_state=True,
+            company_address="_Test Indian Registered Company-Billing",
+            do_not_save=True,
+            **kwargs,
+        )
+        doc.items[0].gst_purchase_price = 182
+        doc.items[0].allow_zero_valuation_rate = 1
+
+        for tax in doc.taxes:
+            tax.charge_type = "On Margin"
+            tax.included_in_print_rate = 1
+
+        return doc
+
+    @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0})
+    def test_margin_scheme_return_reverses_gst(self):
+        """A credit note must reverse the GST the sale charged. The margin is only zeroed out
+        for a sale (qty > 0), so a return keeps its negative margin instead of reading as a
+        loss and dropping the reversal."""
+        doc = self._margin_scheme_invoice()
+        doc.insert()
+        doc.submit()
+
+        self.assertEqual(doc.items[0].taxable_value, 100)
+        self.assertEqual(doc.items[0].cgst_amount, 9)
+        self.assertEqual(doc.items[0].sgst_amount, 9)
+
+        return_doc = make_return_doc("Sales Invoice", doc.name)
+        return_doc.insert()
+
+        self.assertEqual(return_doc.items[0].taxable_value, -100)
+        self.assertEqual(return_doc.items[0].cgst_amount, -9)
+        self.assertEqual(return_doc.items[0].sgst_amount, -9)
+
+    @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0})
+    def test_resolver_uses_item_tax_template_rate(self):
+        """The deemed base is grossed down by the rate that is actually charged on the item.
+        An Item Tax Template overrides the tax row rate, so the row rate cannot be used."""
+        enable_custom_gst_charge_types()
+        self.addCleanup(frappe.clear_cache, doctype="Sales Taxes and Charges")
+
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            rate=100,
+            is_in_state=True,
+            company_address="_Test Indian Registered Company-Billing",
+            do_not_save=True,
+        )
+        append_item(doc, frappe._dict(item_tax_template="GST 28% - _TIRC", rate=100))
+
+        doc.items[0].gst_retail_sale_price = 118  # 18% -> deemed 100
+        doc.items[1].gst_retail_sale_price = 128  # 28% -> deemed 100
+
+        for tax in doc.taxes:
+            tax.charge_type = "On MRP"
+
+        doc.insert()
+
+        self.assertAlmostEqual(doc.items[0]._deemed_taxable_value, 100, places=2)
+        self.assertAlmostEqual(doc.items[0].cgst_amount, 9, places=2)
+        self.assertAlmostEqual(doc.items[0].sgst_amount, 9, places=2)
+
+        self.assertAlmostEqual(doc.items[1]._deemed_taxable_value, 100, places=2)
+        self.assertAlmostEqual(doc.items[1].cgst_amount, 14, places=2)
+        self.assertAlmostEqual(doc.items[1].sgst_amount, 14, places=2)
+
+    @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0})
+    def test_on_margin_uses_item_tax_template_rate(self):
+        doc = self._margin_scheme_invoice()  # rate 300
+        doc.items[0].item_tax_template = "GST 28% - _TIRC"
+        doc.items[0].gst_purchase_price = 172  # margin 128 incl 28% -> deemed 100
+        doc.insert()
+
+        item = doc.items[0]
+        self.assertAlmostEqual(item.taxable_value, 100, places=2)
+        self.assertAlmostEqual(item.cgst_amount, 14, places=2)
+        self.assertAlmostEqual(item.sgst_amount, 14, places=2)
+        self.assertAlmostEqual(item.net_amount, 272, places=2)  # 300 - 28
+
+        # inclusive: the printed price still holds
+        self.assertAlmostEqual(doc.grand_total, 300, places=2)
+
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
         dn = create_transaction(doctype="Delivery Note", vehicle_no="GJ01AA1111")

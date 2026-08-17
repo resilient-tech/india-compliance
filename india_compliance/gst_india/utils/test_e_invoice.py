@@ -806,9 +806,9 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         self.assertEqual(total_item_val + val["OthChrg"], val["TotInvVal"])
 
     def test_request_data_for_margin_scheme_return(self):
-        """Margin scheme credit note (qty -ve): margin is negative, so Rule 32(5) levies no
-        GST. The whole value rides the document-level OthChrg; the e-Invoice reconciles
-        (AssVal 0, no tax)."""
+        """Margin scheme credit note (qty -ve): the margin is only zeroed out for a sale, so
+        the return mirrors the sale it reverses — the same deemed margin (100) and the same
+        CGST/SGST of 9 each, now as a credit. The cost still rides doc-level OthChrg."""
         si = create_sales_invoice(
             rate=300,
             is_in_state=True,
@@ -830,12 +830,18 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         item = request_data["ItemList"][0]
         val = request_data["ValDtls"]
 
-        self.assertEqual(item["AssAmt"], 0)
-        self.assertEqual(item["CgstAmt"], 0)
-        self.assertEqual(item["SgstAmt"], 0)
-        self.assertEqual(item["OthChrg"], 0)  # whole value rides doc-level OthChrg
-        self.assertEqual(val["AssVal"], 0)
-        self.assertEqual(val["OthChrg"], 300)
+        # the sale charged 9 + 9 on a deemed margin of 100 — the credit note reverses it
+        self.assertEqual(cn.items[0].cgst_amount, -9)
+        self.assertEqual(cn.items[0].sgst_amount, -9)
+        self.assertEqual(cn.items[0].taxable_value, -100)
+
+        self.assertEqual(item["AssAmt"], 100)
+        self.assertEqual(item["CgstAmt"], 9)
+        self.assertEqual(item["SgstAmt"], 9)
+        self.assertEqual(item["OthChrg"], 0)  # cost rides doc-level OthChrg
+        self.assertEqual(item["TotItemVal"], 118)
+        self.assertEqual(val["AssVal"], 100)
+        self.assertEqual(val["OthChrg"], 182)
         self.assertEqual(val["TotInvVal"], 300)
         total_item_val = sum(i["TotItemVal"] for i in request_data["ItemList"])
         self.assertEqual(total_item_val + val["OthChrg"], val["TotInvVal"])

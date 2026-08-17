@@ -47,11 +47,19 @@ def get_item_taxable_value(doc, item, default):
     return default
 
 
-def _inclusive_rate(doc, tax):
-    """Total ad-valorem rate the base is inclusive of. CGST+SGST split into two rows is one
-    base inclusive of their sum, so add up rates across rows sharing this charge_type."""
-    rates = [flt(t.rate) for t in doc.get("taxes") or [] if t.charge_type == tax.charge_type]
-    return sum(rates) or flt(tax.rate)
+def _item_rate(item, tax):
+    "Item specific tax rate"
+    item_tax_rate = frappe.parse_json(item.get("item_tax_rate")) or {}
+
+    if tax.get("account_head") in item_tax_rate:
+        return flt(item_tax_rate[tax.account_head])
+
+    return flt(tax.get("rate"))
+
+
+def _inclusive_rate(doc, item, tax):
+    rates = [_item_rate(item, t) for t in doc.get("taxes") or [] if t.charge_type == tax.charge_type]
+    return sum(rates) or _item_rate(item, tax)
 
 
 def on_mrp(calc, item, tax):
@@ -61,7 +69,7 @@ def on_mrp(calc, item, tax):
 
     RSP from the user-entered `gst_retail_sale_price`; no fallback.
     """
-    rate = _inclusive_rate(calc.doc, tax)
+    rate = _inclusive_rate(calc.doc, item, tax)
     rsp = flt(item.get("gst_retail_sale_price")) * flt(item.qty)
     deemed = rsp * 100 / (100 + rate) if rate else rsp
 
@@ -76,12 +84,14 @@ def on_margin(calc, item, tax):
     (selling - cost) is taxable; deemed = margin*100/(100+rate), reported as taxable value
     (tax == rate*taxable holds). Negative margin -> 0 (no GST).
 
+    When returning qty < 0, then negative margin is allowed
+
     Cost from the user-entered `gst_purchase_price`; no fallback.
     """
-    rate = _inclusive_rate(calc.doc, tax)
+    rate = _inclusive_rate(calc.doc, item, tax)
     cost = flt(item.get("gst_purchase_price")) * flt(item.qty)
     margin = flt(item.amount) - cost
-    if margin < 0:
+    if margin < 0 and item.qty > 0:
         margin = 0
 
     return margin * 100 / (100 + rate) if rate else margin
