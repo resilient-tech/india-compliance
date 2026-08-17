@@ -12,6 +12,7 @@ Needs a site (rounding reads site settings) but no test records:
     bench --site <site> run-tests --module india_compliance.gst_india.utils.gstr_1.test_rounding
 """
 
+import math
 import unittest
 from typing import ClassVar
 
@@ -25,6 +26,7 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_books_map import (
     GSTR1BooksData,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
+from india_compliance.gst_india.utils.gstr_1.sections._shared import sum_column
 
 AMOUNTS = ("taxable_value", "igst_amount", "cgst_amount", "sgst_amount", "total_cess_amount")
 
@@ -163,6 +165,24 @@ class TestSettleAmounts(unittest.TestCase):
         self.assertEqual(flt(sum(r.cgst_amount for r in kept), 2), flt(sum(r.cgst_amount for r in rows), 2))
 
 
+class TestTotalsStayExact(unittest.TestCase):
+    """Adding up must not walk back the accuracy settling bought."""
+
+    AMOUNTS: ClassVar[tuple] = (600100.005, 600033.335, 600000.005)
+
+    def rows(self):
+        return [row("A", 18, "1001", taxable_value=amount) for amount in self.AMOUNTS]
+
+    def test_totalling_rows_is_exact(self):
+        self.assertEqual(sum_column(self.rows(), "taxable_value"), flt(math.fsum(self.AMOUNTS), 2))
+
+    def test_settling_rows_is_exact(self):
+        settled, _ = settle(self.rows())
+        total = flt(sum(settled_row.taxable_value for settled_row in settled), 2)
+
+        self.assertEqual(total, flt(math.fsum(self.AMOUNTS), 2))
+
+
 class TestNoReconciliationLeft(unittest.TestCase):
     def test_the_hsn_adjustment_is_gone(self):
         # it existed only to force HSN totals onto the document totals
@@ -201,11 +221,17 @@ class TestRoundingDifferenceReport(unittest.TestCase):
         self.assertEqual(len(self.report(dict.fromkeys(AMOUNTS, 0.0))), len(AMOUNTS))
 
     def test_the_residual_is_carried_through(self):
-        precision = cint(frappe.db.get_default("currency_precision")) or None
+        precision = cint(frappe.db.get_default("currency_precision")) or 2
         reported = self.report({**dict.fromkeys(AMOUNTS, 0.0), "cgst_amount": 0.006})[doc.CGST]
 
         self.assertEqual(reported, flt(0.006, precision))
         self.assertTrue(reported)
+
+    def test_float_dust_is_not_a_residual(self):
+        """Adding thousands of amounts leaves dust well below a paisa."""
+        reported = self.report({**dict.fromkeys(AMOUNTS, 0.0), "cgst_amount": 1.09e-11})
+
+        self.assertFalse(any(reported.values()), reported)
 
 
 class TestHsnRowsAddUp(unittest.TestCase):

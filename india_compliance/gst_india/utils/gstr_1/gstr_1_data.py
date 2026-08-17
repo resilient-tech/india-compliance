@@ -499,10 +499,10 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                     row[field] = share
 
         for invoice in invoices:
-            invoice["total_tax"] = sum(
-                invoice.get(field) or 0 for field in self.AMOUNT_FIELDS if field != "taxable_value"
+            invoice["total_tax"] = flt(
+                sum(invoice.get(field) or 0 for field in self.AMOUNT_FIELDS if field != "taxable_value"), 2
             )
-            invoice["total_amount"] = (invoice.get("taxable_value") or 0) + invoice["total_tax"]
+            invoice["total_amount"] = flt((invoice.get("taxable_value") or 0) + invoice["total_tax"], 2)
 
         return lost
 

@@ -24,7 +24,7 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_data import (
     GSTR1Invoices,
     GSTR11A11BData,
 )
-from india_compliance.gst_india.utils.gstr_1.sections._shared import sum_column
+from india_compliance.gst_india.utils.gstr_1.sections._shared import sum_column, sum_money
 
 # gst_treatment -> the nil-rated amount it belongs to
 NIL_RATED_AMOUNTS = {
@@ -271,7 +271,7 @@ class BooksDataMapper:
                 for total, field in data_to_invoice_field_map.items():
                     invoice[total] = sum_column(items, field)
 
-                invoice[DocField.DOC_VALUE] = flt(sum(invoice.get(field, 0) for field in tax_fields), 2)
+                invoice[DocField.DOC_VALUE] = sum_money(invoice, tax_fields)
 
     def process_data_for_supecom(self, grouped_data, prepared_data):
         """
@@ -382,7 +382,7 @@ class BooksDataMapper:
         Reported under the invoice total names, because the page offers to post a journal entry
         from these figures -- that is how the residual gets back into the ledger.
         """
-        precision = cint(frappe.db.get_default("currency_precision")) or None
+        precision = cint(frappe.db.get_default("currency_precision")) or 2
         reported_as = {column: total for total, column in self.DATA_TO_INVOICE_FIELD_MAPPING.items()}
 
         difference = {
