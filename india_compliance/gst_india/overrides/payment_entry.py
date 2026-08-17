@@ -4,6 +4,7 @@ from erpnext.accounts.utils import create_payment_ledger_entry
 from erpnext.controllers.accounts_controller import get_advance_payment_entries
 from frappe import _
 from frappe.contacts.doctype.address.address import get_default_address
+from frappe.model.meta import get_field_precision
 from frappe.query_builder.functions import Sum
 from frappe.utils import flt, getdate
 
@@ -364,12 +365,28 @@ def get_advance_payment_entries_for_regional(
     if not taxes:
         return payment_entries
 
+    precision = get_field_precision(frappe.get_meta("Sales Invoice").get_field("outstanding_amount"))
+
+    rows_of_payment = {}
     for pe in payment_entries:
-        tax_row = taxes.get(pe.reference_name)
-        if not tax_row or not tax_row.taxable_amount:
+        rows_of_payment.setdefault(pe.reference_name, []).append(pe)
+
+    for payment_entry, rows in rows_of_payment.items():
+        tax_row = taxes.get(payment_entry)
+        total_amount = sum(row.amount for row in rows)
+
+        if not tax_row or not total_amount:
             continue
 
-        pe.amount += flt(pe.amount * tax_row.tax_amount / tax_row.taxable_amount, 2)
+        pending_taxes = tax_row.tax_amount - tax_row.tax_amount_reversed
+        running_amount = 0
+        running_share = 0
+
+        for row in rows:
+            running_amount += row.amount
+            share = flt(pending_taxes * running_amount / total_amount, precision)
+            row.amount += share - running_share
+            running_share = share
 
     return payment_entries
 
