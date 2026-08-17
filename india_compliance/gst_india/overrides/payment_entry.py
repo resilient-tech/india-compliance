@@ -365,11 +365,11 @@ def get_advance_payment_entries_for_regional(
         return payment_entries
 
     for pe in payment_entries:
-        tax_row = taxes.get(
-            pe.reference_name,
-            frappe._dict(paid_amount=1, tax_amount=0, tax_amount_reversed=0),
-        )
-        pe.amount += tax_row.tax_amount - tax_row.tax_amount_reversed
+        tax_row = taxes.get(pe.reference_name)
+        if not tax_row or not tax_row.taxable_amount:
+            continue
+
+        pe.amount += flt(pe.amount * tax_row.tax_amount / tax_row.taxable_amount, 2)
 
     return payment_entries
 
