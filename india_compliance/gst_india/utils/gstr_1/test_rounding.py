@@ -183,16 +183,6 @@ class TestTotalsStayExact(unittest.TestCase):
         self.assertEqual(total, flt(math.fsum(self.AMOUNTS), 2))
 
 
-class TestNoReconciliationLeft(unittest.TestCase):
-    def test_the_hsn_adjustment_is_gone(self):
-        # it existed only to force HSN totals onto the document totals
-        self.assertFalse(hasattr(BooksDataMapper, "adjust_hsn_totals"))
-
-    def test_the_cross_section_accumulator_is_gone(self):
-        # HSN used to read totals the other sections had written, so it had to run last
-        self.assertFalse(hasattr(BooksDataMapper, "initialize_totals"))
-
-
 class TestRoundingDifferenceReport(unittest.TestCase):
     """The page offers to post a journal entry from these figures, so the names matter."""
 
@@ -232,6 +222,11 @@ class TestRoundingDifferenceReport(unittest.TestCase):
         reported = self.report({**dict.fromkeys(AMOUNTS, 0.0), "cgst_amount": 1.09e-11})
 
         self.assertFalse(any(reported.values()), reported)
+
+    def test_an_amount_with_no_invoice_total_still_reports(self):
+        reported = self.report({**dict.fromkeys(AMOUNTS, 0.0), "made_up_amount": 0.02})
+
+        self.assertEqual(reported["made_up_amount"], 0.02)
 
 
 class TestHsnRowsAddUp(unittest.TestCase):

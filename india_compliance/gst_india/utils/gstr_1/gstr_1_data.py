@@ -492,10 +492,12 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         for rows in rows_by_rate.values():
             for field in self.AMOUNT_FIELDS:
                 weights = [row.get(field) or 0 for row in rows]
-                total = flt(sum(weights), 2)
-                lost[field] += sum(weights) - total
+                raw_total = sum(weights)
+                total = flt(raw_total, 2)
+                lost[field] += raw_total - total
 
-                for row, share in zip(rows, split(total, weights), strict=True):
+                shares = split(total, weights, lambda value: flt(value, 2))
+                for row, share in zip(rows, shares, strict=True):
                     row[field] = share
 
         for invoice in invoices:

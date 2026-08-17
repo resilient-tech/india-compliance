@@ -386,7 +386,8 @@ class BooksDataMapper:
         reported_as = {column: total for total, column in self.DATA_TO_INVOICE_FIELD_MAPPING.items()}
 
         difference = {
-            reported_as[column]: flt(value, precision) for column, value in lost_to_rounding.items()
+            reported_as.get(column, column): flt(value, precision)
+            for column, value in lost_to_rounding.items()
         }
 
         # saved as object -> it's normalized

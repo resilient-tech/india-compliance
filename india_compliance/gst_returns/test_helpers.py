@@ -125,6 +125,11 @@ class TestSplit(unittest.TestCase):
         self.assertEqual(split(0.0, []), [])
         self.assertEqual(split(0.0, [0.0, 0.0, 0.0]), [0.0, 0.0, 0.0])
 
+    def test_a_total_with_nothing_to_weigh_is_not_dropped(self):
+        """No weight says where it belongs, but losing it silently is worse than parking it."""
+        self.assertEqual(sum(split(10.00, [0.0, 0.0, 0.0])), 10.00)
+        self.assertEqual(sum(split(-0.05, [0.0])), -0.05)
+
 
 class TestRound2(unittest.TestCase):
     def test_none_and_zero(self):

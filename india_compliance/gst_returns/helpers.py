@@ -19,7 +19,7 @@ def split(total, weights, round_fn=round2):
         split(10.00, [3.333, 3.333, 3.334])  ->  [3.33, 3.34, 3.33]   adds to 10.00
     """
     pieces = []
-    last = max((index for index, weight in enumerate(weights) if weight), default=-1)
+    last = max((index for index, weight in enumerate(weights) if weight), default=len(weights) - 1)
     seen = done = 0.0
 
     for index, weight in enumerate(weights):
