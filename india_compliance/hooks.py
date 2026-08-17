@@ -367,7 +367,7 @@ regional_overrides = {
         "erpnext.accounts.services.base_gl_composer.update_gl_dict_with_regional_fields": (
             "india_compliance.gst_india.overrides.gl_entry.update_gl_dict_with_regional_fields"
         ),
-        "erpnext.controllers.accounts_controller.get_advance_payment_entries_for_regional": (
+        "erpnext.accounts.services.advances.get_advance_payment_entries_for_regional": (
             "india_compliance.gst_india.overrides.payment_entry.get_advance_payment_entries_for_regional"
         ),
         "erpnext.controllers.buying_controller.update_regional_item_valuation_rate": (

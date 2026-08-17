@@ -539,7 +539,7 @@ class TestRegionalOverrides(TestAdvancePaymentEntry):
         payment_doc = self._create_payment_entry()
         invoice_doc = self._create_sales_invoice(payment_doc)
 
-        conditions = frappe._dict({"company": invoice_doc.get("company")})
+        conditions = frappe._dict({"company": invoice_doc.get("company"), "name": payment_doc.name})
 
         payment_entry = get_advance_payment_entries_for_regional(
             party_type="Customer",
@@ -552,7 +552,7 @@ class TestRegionalOverrides(TestAdvancePaymentEntry):
         )
 
         payment_entry_amount = payment_entry[0].get("amount")
-        self.assertNotEqual(400, payment_entry_amount)
+        self.assertEqual(472, payment_entry_amount)
 
     def test_get_advance_payment_entries_for_regional_with_gst_accounts_in_deduction_table(
         self,
@@ -740,6 +740,36 @@ class TestPaymentReconciliationMatrix(IntegrationTestCase):
             self.assertEqual(len(refs), 1)
             self.assertEqual(flt(refs[0].allocated_amount, 2), 100.0)
 
+    # ---- one advance fully consumed by several invoices ----
+
+    def test_three_invoices_against_one_advance(self):
+        payment_doc = self._matrix_payment(base=300)
+        self.assertEqual(flt(payment_doc.total_taxes_and_charges, 2), 54.0)
+        self.assertEqual(flt(payment_doc.unallocated_amount, 2), 300.0)
+
+        invoices = [self._matrix_invoice() for _ in range(3)]
+        for invoice_doc in invoices:
+            make_payment_reconciliation(payment_doc, invoice_doc, invoice_doc.grand_total)
+
+        payment_doc.reload()
+        self.assertEqual(flt(payment_doc.unallocated_amount, 2), 0.0, "advance should be exactly consumed")
+
+        references = {row.reference_name: row for row in payment_doc.references}
+        for invoice_doc in invoices:
+            self.assertEqual(
+                flt(frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount"), 2), 0.0
+            )
+            self.assertEqual(flt(references[invoice_doc.name].allocated_amount, 2), 100.0)
+
+        self.assertEqual(
+            self._gl_net_by_account(payment_doc),
+            {"Cash - _TIRC": 354.0, "Debtors - _TIRC": -354.0},
+        )
+        self.assertEqual(
+            self._pl_net_by_voucher(payment_doc),
+            {invoice_doc.name: -118.0 for invoice_doc in invoices},
+        )
+
     # ---- shared workflow ----
 
     def _run_cell(
@@ -814,8 +844,8 @@ class TestPaymentReconciliationMatrix(IntegrationTestCase):
 
     # ---- builders ----
 
-    def _matrix_payment(self, inclusive=False):
-        paid_amount = 590 if inclusive else 500
+    def _matrix_payment(self, inclusive=False, base=500):
+        paid_amount = flt(base * 1.18, 2) if inclusive else base
         payment_doc = create_transaction(
             doctype="Payment Entry",
             payment_type="Receive",
