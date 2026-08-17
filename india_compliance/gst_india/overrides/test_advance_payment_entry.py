@@ -52,6 +52,11 @@ def toggle_seperate_advance_accounting():
 
 
 class TestAdvancePaymentEntry(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.addClassCleanup(frappe.db.rollback)
+
     EXPECTED_GL: ClassVar[list[dict]] = [
         {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
         {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
