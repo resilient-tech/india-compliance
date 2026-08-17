@@ -587,6 +587,38 @@ class TestRegionalOverrides(TestAdvancePaymentEntry):
         # Remaining Unallocated = 590 - 100 (sales invoice amount)
         self.assertEqual(490, payment_entry_amount)
 
+    def test_get_advance_payment_entries_for_regional_grosses_up_once_per_payment(self):
+        """An advance partly earmarked against a Sales Order comes back as two rows -- one for the
+        order reference, one for the unallocated balance.Reversal should be proportionate"""
+        sales_order = create_transaction(doctype="Sales Order", is_in_state=1)
+        payment_doc = self._create_payment_entry(do_not_submit=True)
+        payment_doc.append(
+            "references",
+            {
+                "reference_doctype": sales_order.doctype,
+                "reference_name": sales_order.name,
+                "total_amount": sales_order.grand_total,
+                "outstanding_amount": sales_order.grand_total,
+                "allocated_amount": 100,
+            },
+        )
+        payment_doc.save()
+        payment_doc.submit()
+
+        payment_entries = get_advance_payment_entries_for_regional(
+            party_type="Customer",
+            party=payment_doc.party,
+            party_account=[payment_doc.paid_from],
+            order_list=[],
+            order_doctype="Sales Order",
+            include_unallocated=True,
+            against_all_orders=True,
+            condition=frappe._dict({"company": payment_doc.company, "name": payment_doc.name}),
+        )
+
+        self.assertEqual(len(payment_entries), 2)
+        self.assertEqual(sum(row.amount for row in payment_entries), 590.0)
+
     def test_adjust_allocations_for_taxes(self):
         payment_doc = self._create_payment_entry()
         invoice_doc = self._create_sales_invoice()
