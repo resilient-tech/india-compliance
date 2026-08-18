@@ -52,10 +52,13 @@ from india_compliance.gst_india.utils.tests import (
     append_item,
     create_purchase_invoice,
     create_sales_invoice,
+    create_subcontracting_inward_order,
     create_transaction,
     make_subcontracting_inward_delivery,
     make_subcontracting_inward_rm_return,
     make_subcontracting_stock_entry,
+    manufacture_for_subcontracting_inward,
+    receive_customer_materials,
 )
 
 DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
@@ -2133,10 +2136,12 @@ class TestEWaybillThreshold(IntegrationTestCase):
 
 
 class TestSubcontractingInwardEWaybill(IntegrationTestCase):
-    """e-Waybill data for Subcontracting Delivery and Return Raw Material to Customer.
+    """e-Waybill data for the four Subcontracting Inward (job worker) legs.
 
-    Both are outward movements (company to customer) on a Delivery Challan with
-    sub supply type "Others" plus a description, and the taxable value includes
+    Outward legs (Subcontracting Delivery, Return Raw Material to Customer): company
+    to customer. Inward legs (Receive from Customer, Subcontracting Return): customer
+    to company, where the company self-generates the e-Waybill. All move on a Delivery
+    Challan with sub supply type "Others" + description, and the taxable value carries
     the customer-provided material value.
     """
 
@@ -2225,3 +2230,53 @@ class TestSubcontractingInwardEWaybill(IntegrationTestCase):
             ewb_taxable,
             sum(flt(item.taxable_value) for item in rm_return.items),
         )
+
+    def _assert_inward_from_customer(self, data, sub_supply_desc, stock_entry):
+        self.assertEqual(data["supplyType"], "I")
+        self.assertEqual(data["subSupplyType"], SUB_SUPPLY_TYPES["Others"])
+        self.assertEqual(data["subSupplyDesc"], sub_supply_desc)
+        self.assertEqual(data["docType"], "CHL")
+        # The company self-generates the e-Waybill, so its GSTIN is on the "to" side and
+        # equals userGstin (regression: sandbox GSTIN table + trade-name swap flip inward).
+        self.assertEqual(data["toGstin"], data["userGstin"])
+        self.assertNotEqual(data["fromGstin"], data["toGstin"])
+        customer_name = frappe.db.get_value(
+            "Subcontracting Inward Order", stock_entry.subcontracting_inward_order, "customer_name"
+        )
+        self.assertEqual(data["fromTrdName"], customer_name)
+        self.assertEqual(data["toTrdName"], stock_entry.company)
+
+    def test_e_waybill_data_for_receive_from_customer(self):
+        scio = create_subcontracting_inward_order()
+        receipt = receive_customer_materials(scio)
+        self._set_transport_details(receipt, "Job Work")
+
+        data = EWaybillData(receipt).get_data()
+
+        self._assert_inward_from_customer(data, "Job Work", receipt)
+
+        # Value is the customer's declared value of the received materials.
+        ewb_taxable = sum(flt(item["taxableAmount"]) for item in data["itemList"])
+        self.assertGreater(ewb_taxable, 0)
+        self.assertEqual(ewb_taxable, sum(flt(item.taxable_value) for item in receipt.items))
+
+    def test_e_waybill_data_for_subcontracting_return(self):
+        scio = create_subcontracting_inward_order()
+        receive_customer_materials(scio)
+        manufacture_for_subcontracting_inward(scio)
+        make_subcontracting_inward_delivery(scio=scio)
+
+        scio.reload()
+        sc_return = frappe.new_doc("Stock Entry").update(scio.make_subcontracting_return())
+        sc_return.save()
+        self._set_transport_details(sc_return, "Return of Finished Goods")
+
+        data = EWaybillData(sc_return).get_data()
+
+        self._assert_inward_from_customer(data, "Return of Finished Goods", sc_return)
+
+        # Returned finished goods carry the customer-material value (Rule 138), so the
+        # e-Waybill total is non-zero even though the FG are zero-valued in own books.
+        ewb_taxable = sum(flt(item["taxableAmount"]) for item in data["itemList"])
+        self.assertGreater(ewb_taxable, 0)
+        self.assertEqual(ewb_taxable, sum(flt(item.taxable_value) for item in sc_return.items))

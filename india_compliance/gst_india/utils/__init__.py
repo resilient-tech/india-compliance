@@ -40,6 +40,8 @@ from india_compliance.gst_india.constants import (
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
+    INTERNAL_STOCK_TRANSFER_PURPOSES,
+    JOB_WORKER_INWARD_PURPOSES,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
@@ -1165,13 +1167,24 @@ def get_periods_between_dates(
     return periods
 
 
-def is_outward_stock_entry(doc):
-    if (
-        doc.doctype == "Stock Entry"
-        and doc.purpose in ["Material Transfer", "Material Issue"]
-        and not doc.is_return
-    ):
-        return True
+def is_internal_stock_transfer(doc):
+    return (
+        doc.doctype == "Stock Entry" and doc.purpose in INTERNAL_STOCK_TRANSFER_PURPOSES and not doc.is_return
+    )
+
+
+def is_job_worker_inward_entry(doc):
+    """True when the company (as job worker) receives goods from the customer and
+    self-generates the e-Waybill."""
+    return doc.doctype == "Stock Entry" and doc.purpose in JOB_WORKER_INWARD_PURPOSES
+
+
+def company_is_bill_to(doc):
+    """True when the company's address/GSTIN is on the bill_to side of a Stock Entry
+    (the counterparty being on bill_from): returns and job-worker inward receipts.
+    Purely positional -- makes no claim about goods direction, since a return can be
+    inward (sales/transfer) or outward (purchase). Stock Entry only."""
+    return doc.doctype == "Stock Entry" and (bool(doc.get("is_return")) or is_job_worker_inward_entry(doc))
 
 
 def create_notification(message_content, document_type, document_name=None, request_id=None):

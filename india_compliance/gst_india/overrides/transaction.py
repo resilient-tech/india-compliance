@@ -28,6 +28,7 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
 )
 from india_compliance.gst_india.doctype.gstin.gstin import get_and_validate_gstin_status
 from india_compliance.gst_india.utils import (
+    company_is_bill_to,
     get_all_gst_accounts,
     get_changed_fields,
     get_gst_account_by_item_tax_template,
@@ -576,7 +577,9 @@ def validate_place_of_supply(doc):
 
 def is_inter_state_supply(doc):
     if doc.doctype == "Stock Entry":
-        party_gst_category = doc.bill_from_gst_category if doc.is_return else doc.bill_to_gst_category
+        party_gst_category = (
+            doc.bill_from_gst_category if company_is_bill_to(doc) else doc.bill_to_gst_category
+        )
 
     else:
         party_gst_category = doc.gst_category

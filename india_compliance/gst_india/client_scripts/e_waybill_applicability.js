@@ -215,21 +215,21 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
         let is_ewb_applicable = true;
         let message_list = [];
-        const is_return = this.frm.doc.is_return;
+        const company_is_bill_to = india_compliance.company_is_bill_to(this.frm.doc);
 
-        if (is_return && !this.frm.doc.bill_to_gstin) {
+        if (company_is_bill_to && !this.frm.doc.bill_to_gstin) {
             is_ewb_applicable = false;
             message_list.push(__("Bill To GSTIN is not set. Ensure it's set in Bill To Address."));
         }
 
-        if (!is_return && !this.frm.doc.bill_from_gstin) {
+        if (!company_is_bill_to && !this.frm.doc.bill_from_gstin) {
             is_ewb_applicable = false;
             message_list.push(__("Bill From GSTIN is not set. Ensure it's set in Bill From Address."));
         }
 
         const same_gstin = this.frm.doc.bill_from_gstin === this.frm.doc.bill_to_gstin;
         const applicable_for_same_gstin = !(
-            is_return || india_compliance.SUBCONTRACTING_PURPOSES.includes(this.frm.doc.purpose)
+            this.frm.doc.is_return || india_compliance.SUBCONTRACTING_PURPOSES.includes(this.frm.doc.purpose)
         );
 
         if (same_gstin && !applicable_for_same_gstin) {
@@ -257,7 +257,16 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
         let message_list = [];
 
-        if (!this.frm.doc.bill_to_address) {
+        if (india_compliance.is_job_worker_inward_entry(this.frm.doc)) {
+            if (!this.frm.doc.bill_from_address) {
+                is_ewb_generatable = false;
+                message_list.push("Bill From address is mandatory to generate e-Waybill.");
+            }
+            if (!this.frm.doc.bill_to_address) {
+                is_ewb_generatable = false;
+                message_list.push("Bill To address is mandatory to generate e-Waybill.");
+            }
+        } else if (!this.frm.doc.bill_to_address) {
             is_ewb_generatable = false;
             message_list.push(__("Bill To address is mandatory to generate e-Waybill."));
         }

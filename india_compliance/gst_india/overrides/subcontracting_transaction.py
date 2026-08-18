@@ -31,9 +31,11 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_place_of_supply,
 )
 from india_compliance.gst_india.utils import (
+    company_is_bill_to,
     get_gst_accounts_by_type,
     is_api_enabled,
-    is_outward_stock_entry,
+    is_internal_stock_transfer,
+    is_job_worker_inward_entry,
 )
 from india_compliance.gst_india.utils import (
     validate_invoice_number as validate_transaction_name,
@@ -123,12 +125,26 @@ def update_address_fields(doc, source_doc):
 
 
 def set_address_for_subcontracting_inward(doc, source_doc):
-    """Set company (bill_from) -> customer (bill_to) addresses for Subcontracting Inward Stock Entries."""
+    """Set bill_from/bill_to addresses for Subcontracting Inward Order Stock Entries.
+
+    Outbound legs (Subcontracting Delivery, Return Raw Material to Customer): the company
+    ships to the customer -> bill_from = company, bill_to = customer.
+    Inbound legs (Receive from Customer, Subcontracting Return): the customer ships to the
+    company -> bill_from = customer, bill_to = company.
+    """
+    company_address = get_default_address("Company", source_doc.company)
+    customer_address = get_default_address("Customer", source_doc.customer)
+
+    if is_job_worker_inward_entry(doc):
+        bill_from_address, bill_to_address = customer_address, company_address
+    else:
+        bill_from_address, bill_to_address = company_address, customer_address
+
     if not doc.bill_from_address:
-        doc.bill_from_address = get_default_address("Company", source_doc.company)
+        doc.bill_from_address = bill_from_address
 
     if not doc.bill_to_address:
-        doc.bill_to_address = get_default_address("Customer", source_doc.customer)
+        doc.bill_to_address = bill_to_address
 
     set_address_display(doc)
 
@@ -255,10 +271,15 @@ def onload(doc, method=None):
     if doc.doctype == "Stock Entry":
         set_address_display(doc)
 
-        # For e-Waybill data mapping
-        doc.company_gstin = doc.bill_from_gstin
-        doc.supplier_gstin = doc.bill_to_gstin
-        doc.gst_category = doc.bill_to_gst_category
+        # Map company/party GSTINs for the e-Waybill builder. Company is on the bill_to
+        if company_is_bill_to(doc):
+            doc.company_gstin = doc.bill_to_gstin
+            doc.supplier_gstin = doc.bill_from_gstin
+            doc.gst_category = doc.bill_from_gst_category
+        else:
+            doc.company_gstin = doc.bill_from_gstin
+            doc.supplier_gstin = doc.bill_to_gstin
+            doc.gst_category = doc.bill_to_gst_category
 
     if not doc.get("ewaybill"):
         return
@@ -349,7 +370,7 @@ def get_doctype_field_map(doc):
     )
 
     if doc.doctype == "Stock Entry":
-        if not doc.is_return:
+        if not company_is_bill_to(doc):
             doctype_field_map.update(
                 {
                     "company_gstin_field": "bill_from_gstin",
@@ -450,7 +471,7 @@ class SubcontractingGSTAccounts(GSTAccounts):
         self.validate_for_charge_type()
 
     def validate_for_same_party_gstin(self):
-        if is_outward_stock_entry(self.doc):
+        if is_internal_stock_transfer(self.doc):
             return
 
         doctype_field_map = get_doctype_field_map(self.doc)
@@ -618,8 +639,8 @@ def is_e_waybill_applicable(doc):
     if doc.doctype != "Stock Entry":
         return True
 
-    # Inward purposes (Delivery, RM Return) carry only an e-Waybill; the
-    # principal reports them in ITC-04 / GSTR-1, not the company (job worker).
+    # Purposes not in the eligible set (e.g. Manufacture, Repack — same-premises,
+    # no movement of goods between locations) carry no e-Waybill.
     if doc.purpose not in E_WAYBILL_STOCK_ENTRY_PURPOSES:
         return False
 
@@ -634,24 +655,28 @@ def ignore_gst_validations_for_subcontracting(doc):
         return False
 
     # ignore if company address is not set
-    if is_outward_stock_entry(doc) and not doc.bill_from_address:
+    if is_internal_stock_transfer(doc) and not doc.bill_from_address:
         return True
 
-    if doc.is_return and not doc.bill_to_address:
+    if company_is_bill_to(doc) and not doc.bill_to_address:
         return True
 
 
 def set_subcontracting_inward_taxable_value(doc):
     """Add the value of customer-provided materials to the e-Waybill taxable value
-    of Subcontracting Inward Stock Entries."""
-    if doc.purpose == "Subcontracting Delivery":
-        _set_subcontracting_delivery_additional_value(doc)
+    of Subcontracting Inward Stock Entries.
+
+    Subcontracting Return reverses a Subcontracting Delivery (customer sends the
+    finished goods back), so the returned goods carry the same per-unit value.
+    """
+    if doc.purpose in ("Subcontracting Delivery", "Subcontracting Return"):
+        _set_finished_goods_additional_value(doc)
     elif doc.purpose == "Return Raw Material to Customer":
         _set_return_raw_material_additional_value(doc)
 
 
-def _set_subcontracting_delivery_additional_value(doc):
-    """Add the value of consumed customer materials to the delivered finished goods.
+def _set_finished_goods_additional_value(doc):
+    """Add the value of consumed customer materials to the delivered / returned finished goods.
 
     additional = SUM(order_rate * consumed_qty) / produced_qty * delivered transfer_qty.
     Quantities are all in stock UOM (consumed_qty, produced_qty, transfer_qty), so
