@@ -5,8 +5,9 @@ from erpnext.controllers.accounts_controller import get_advance_payment_entries
 from frappe import _
 from frappe.contacts.doctype.address.address import get_default_address
 from frappe.model.meta import get_field_precision
-from frappe.query_builder.functions import Sum
+from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import flt, getdate
+from pypika.terms import Case
 
 from india_compliance.gst_india.constants import TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import (
@@ -187,6 +188,11 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row, via_reconcili
 
     total_amount = sum(taxes.values())
 
+    exchange_rate = flt(payment_entry.get_exchange_rate()) or 1
+    total_amount_in_account_currency = flt(
+        total_amount / exchange_rate, reference_row.precision("allocated_amount")
+    )
+
     args = {
         "posting_date": posting_date,
         "voucher_detail_no": reference_row.name,
@@ -199,7 +205,7 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row, via_reconcili
         {
             "account": reference_row.account,
             "credit": total_amount,
-            "credit_in_account_currency": total_amount,
+            "credit_in_account_currency": total_amount_in_account_currency,
             "party_type": payment_entry.party_type,
             "party": payment_entry.party,
             "against_voucher_type": reference_row.reference_doctype,
@@ -224,15 +230,20 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row, via_reconcili
         # add back allocated_amount to outstanding_amount for comparison
         outstanding_amount += reference_row.allocated_amount
 
-    total_allocation = total_amount + reference_row.allocated_amount
-    excess_allocation = total_allocation - outstanding_amount
+    base_outstanding_amount = flt(
+        outstanding_amount * exchange_rate, payment_entry.precision("base_paid_amount")
+    )
+    total_allocation = total_amount + payment_entry.calculate_base_allocated_amount_for_reference(
+        reference_row
+    )
+    excess_allocation = total_allocation - base_outstanding_amount
 
     if excess_allocation > 1:
         frappe.throw(
             _(
                 "Outstanding amount {0} is less than the total allocated amount with taxes {1} for {2} {3}"
             ).format(
-                outstanding_amount,
+                base_outstanding_amount,
                 total_allocation,
                 reference_row.reference_doctype,
                 reference_row.reference_name,
@@ -418,7 +429,10 @@ def adjust_allocations_for_taxes_in_payment_reconciliation(doc):
         row.update(
             {
                 "amount": tax_row.unallocated_amount,
-                "allocated_amount": flt(row.get("allocated_amount", 0) * tax_row.paid_proportion, 2),
+                "allocated_amount": flt(
+                    row.get("allocated_amount", 0) * tax_row.paid_proportion,
+                    row.precision("allocated_amount"),
+                ),
                 "unreconciled_amount": tax_row.unallocated_amount,
             }
         )
@@ -470,8 +484,14 @@ def get_taxes_summary(company, payment_entries):
             Sum(gl_entry.credit_in_account_currency).as_("tax_amount"),
             Sum(gl_entry.debit_in_account_currency).as_("tax_amount_reversed"),
             pe.name.as_("payment_entry"),
-            pe.paid_amount,
+            pe.base_paid_amount.as_("paid_amount"),
             pe.unallocated_amount,
+            IfNull(
+                Case()
+                .when(pe.payment_type == "Receive", pe.source_exchange_rate)
+                .else_(pe.target_exchange_rate),
+                1,
+            ).as_("exchange_rate"),
         )
         .where(gl_entry.is_cancelled == 0)
         .where(gl_entry.voucher_type == "Payment Entry")

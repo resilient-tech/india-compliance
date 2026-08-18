@@ -355,10 +355,13 @@ def set_and_validate_advances_with_gst(doc):
         allocated_amount_with_taxes += _tax_amount
         allocated_amount_with_taxes += advance.allocated_amount
 
-    excess_allocation = flt(
-        flt(allocated_amount_with_taxes, 2) - (doc.base_rounded_total or doc.base_grand_total),
-        2,
-    )
+    if doc.get("party_account_currency") == doc.company_currency:
+        total = doc.get("base_rounded_total") or doc.base_grand_total
+    else:
+        total = doc.get("rounded_total") or doc.grand_total
+
+    precision = doc.precision("grand_total")
+    excess_allocation = flt(flt(allocated_amount_with_taxes, precision) - total, precision)
     if excess_allocation > 0:
         message = _(
             "Allocated amount with taxes (GST) in advances table cannot be greater than"

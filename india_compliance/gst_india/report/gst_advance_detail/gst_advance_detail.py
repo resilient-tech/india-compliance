@@ -167,7 +167,10 @@ class GSTAdvanceDetail:
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
             .select(
                 # Max(): grouped by voucher_no / voucher_detail_no, not the pe_ref PK
-                Max(self.pe_ref.allocated_amount).as_("allocated_amount"),
+                # allocated_amount is in the party account currency; the column is company currency
+                Max(self.pe_ref.allocated_amount * IfNull(self.pe.source_exchange_rate, 1)).as_(
+                    "allocated_amount"
+                ),
                 Max(self.pe_ref.reference_doctype).as_("against_voucher_type"),
                 Max(self.pe_ref.reference_name).as_("against_voucher"),
             )
@@ -200,7 +203,9 @@ class GSTAdvanceDetail:
                 Max(self.pe.party).as_("customer"),
                 Max(self.pe.party_name).as_("customer_name"),
                 Max(
-                    Case().when(self.gl_entry.credit_in_account_currency > 0, self.pe.paid_amount).else_(0)
+                    Case()
+                    .when(self.gl_entry.credit_in_account_currency > 0, self.pe.base_paid_amount)
+                    .else_(0)
                 ).as_("paid_amount"),
                 Sum(self.gl_entry.credit_in_account_currency).as_("gst_paid"),
                 Sum(self.gl_entry.debit_in_account_currency).as_("gst_allocated"),
