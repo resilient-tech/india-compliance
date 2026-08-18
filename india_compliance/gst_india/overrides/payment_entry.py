@@ -5,7 +5,7 @@ from erpnext.controllers.accounts_controller import get_advance_payment_entries
 from frappe import _
 from frappe.contacts.doctype.address.address import get_default_address
 from frappe.model.meta import get_field_precision
-from frappe.query_builder.functions import IfNull, NullIf, Sum
+from frappe.query_builder.functions import Sum
 from frappe.utils import flt, getdate
 from pypika.terms import Case
 
@@ -462,6 +462,14 @@ def get_included_taxes_query(gst_accounts, payment_entries=None):
     return query
 
 
+def get_payment_exchange_rate(pe):
+    """
+    Party-side exchange rate of a Payment Entry, as a query expression.
+    Mirrors PaymentEntry.get_exchange_rate()
+    """
+    return Case().when(pe.payment_type == "Receive", pe.source_exchange_rate).else_(pe.target_exchange_rate)
+
+
 def get_taxes_summary(company, payment_entries):
     gst_accounts = get_all_gst_accounts(company)
     if not gst_accounts:
@@ -486,16 +494,7 @@ def get_taxes_summary(company, payment_entries):
             pe.name.as_("payment_entry"),
             pe.base_paid_amount.as_("paid_amount"),
             pe.unallocated_amount,
-            # ERPNext allows a zero exchange rate to be saved, so guard zero as well as null
-            IfNull(
-                NullIf(
-                    Case()
-                    .when(pe.payment_type == "Receive", pe.source_exchange_rate)
-                    .else_(pe.target_exchange_rate),
-                    0,
-                ),
-                1,
-            ).as_("exchange_rate"),
+            get_payment_exchange_rate(pe).as_("exchange_rate"),
         )
         .where(gl_entry.is_cancelled == 0)
         .where(gl_entry.voucher_type == "Payment Entry")
