@@ -58,12 +58,10 @@ class GSTTransactionData:
         self.party_name = self.doc.get(self.party_name_field)
 
     def set_transaction_details(self):
-        rounding_adjustment = self.doc.get("base_rounding_adjustment") or 0
+        rounding_adjustment = self.rounded(self.doc.get("base_rounding_adjustment") or 0)
 
         if self.doc.get("is_return"):
             rounding_adjustment = -rounding_adjustment
-
-        rounding_adjustment = self.rounded(rounding_adjustment)
 
         grand_total_fieldname = (
             "base_grand_total" if self.doc.get("disable_rounded_total", 1) else "base_rounded_total"
@@ -103,18 +101,18 @@ class GSTTransactionData:
                     or frappe.db.get_value(self.doc.doctype, self.party_name, self.party_name_field)
                 ),
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
-                "total": self.rounded(abs(total)),
-                "total_taxable_value": self.rounded(abs(total_taxable_value)),
-                "total_non_taxable_value": self.rounded(abs(total - total_taxable_value)),
+                "total": abs(self.rounded(total)),
+                "total_taxable_value": abs(self.rounded(total_taxable_value)),
+                "total_non_taxable_value": abs(self.rounded(total - total_taxable_value)),
                 "rounding_adjustment": rounding_adjustment,
-                "grand_total": self.rounded(abs(self.doc.get(grand_total_fieldname))),
+                "grand_total": abs(self.rounded(self.doc.get(grand_total_fieldname))),
                 "grand_total_in_foreign_currency": (
-                    self.rounded(abs(self.doc.grand_total))
+                    abs(self.rounded(self.doc.grand_total))
                     if self.doc.get("currency", "INR") != "INR"
                     else ""
                 ),
                 "discount_amount": (
-                    self.rounded(abs(self.doc.base_discount_amount))
+                    abs(self.rounded(self.doc.base_discount_amount))
                     if self.doc.get("is_cash_or_non_trade_discount")
                     else 0
                 ),
@@ -285,13 +283,13 @@ class GSTTransactionData:
         for row in items:
             # Note: `row.taxable_value` is the ERPNext column = full line value
             # `taxable_amount` (taxable portion) and `non_taxable_amount` (nil/exempt/non-gst portion).
-            line_value = self.rounded(abs(row.taxable_value))
+            line_value = abs(self.rounded(row.taxable_value))
             is_taxable = row.gst_treatment in TAXABLE_GST_TREATMENTS
 
             item_details = frappe._dict(
                 {
                     "item_no": row.idx,
-                    "qty": self.rounded(abs(row.qty), 3),
+                    "qty": abs(self.rounded(row.qty, 3)),
                     "taxable_amount": line_value if is_taxable else 0,
                     "non_taxable_amount": 0 if is_taxable else line_value,
                     "hsn_code": row.gst_hsn_code,
@@ -506,7 +504,9 @@ class GSTTransactionData:
 
     @staticmethod
     def rounded(value, precision=2):
-        return rounded(value, precision)
+        # round the size, then put sign back. frappe rounds half up, so -1.005 != -(1.005)
+        result = rounded(abs(value), precision)
+        return -result if value < 0 and result else result
 
     @staticmethod
     def sanitize_value(
