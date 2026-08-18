@@ -103,11 +103,6 @@ div[data-page-route="GST Invoice Management System"] .dropdown-divider {
     padding: 0;
 }
 
-.modal-dialog div[data-fieldname="detail_table"] .table > tbody > tr > td {
-    text-align: center;
-    width: 30%;
-}
-
 div[data-page-route="GST Invoice Management System"] .action-summary {
     text-decoration: none;
 }

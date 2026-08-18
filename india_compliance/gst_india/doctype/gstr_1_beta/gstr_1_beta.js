@@ -106,7 +106,7 @@ const GSTR1_DataField = {
 
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
-        await frappe.require("gstr1.bundle.js");
+        await frappe.require(["gstr1.bundle.js", "india_compliance.bundle.css"]);
         frm.gstr1 = new GSTR1(frm);
 
         // Set Default Values

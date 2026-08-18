@@ -63,7 +63,7 @@ frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
         patch_set_active_tab(frm);
 
-        await frappe.require("purchase_reconciliation_tool.bundle.js");
+        await frappe.require(["purchase_reconciliation_tool.bundle.js", "india_compliance.bundle.css"]);
 
         frm.doc.company = frappe.defaults.get_user_default("Company");
         frm.trigger("company");

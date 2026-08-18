@@ -1,0 +1,4 @@
+// Shared desk styles. One file per component in public/js/components.
+// Tools load the built css with frappe.require("india_compliance.bundle.css").
+
+@use "components/detail_view";
