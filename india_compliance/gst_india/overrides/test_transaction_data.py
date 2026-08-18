@@ -341,6 +341,19 @@ class TestTransactionData(FrappeTestCase):
             ],
         )
 
+    @change_settings("System Settings", {"rounding_method": "Banker's Rounding (legacy)"})
+    def test_rounded_is_symmetric_about_zero(self):
+        """-x must round to the same size as x."""
+        for value in (1.005, 2.675, 0.125, 1234.565):
+            for precision in (2, 3):
+                self.assertEqual(
+                    GSTTransactionData.rounded(-value, precision),
+                    -GSTTransactionData.rounded(value, precision),
+                )
+
+        # no -0.0 in the payload
+        self.assertEqual(repr(GSTTransactionData.rounded(-0.001)), "0.0")
+
     @change_settings("System Settings", {"currency_precision": 3})
     def test_transaction_total_equals_sum_of_rounded_item_values(self):
         """transaction_details.total must equal Σ rounded(item.taxable_value).
