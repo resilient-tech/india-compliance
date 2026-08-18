@@ -57,10 +57,8 @@ class TestAdvancePaymentEntry(FrappeTestCase):
         super().setUpClass()
         cls.addClassCleanup(frappe.db.rollback)
 
-    EXPECTED_GL: ClassVar[list[dict]] = [
-        {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
-        {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
-        {"account": "Cash - _TIRC", "debit": 500.0, "credit": 0.0},
+    EXPECTED_GL: ClassVar[list] = [
+        {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
         {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},
         {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
         {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
