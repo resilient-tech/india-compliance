@@ -354,6 +354,9 @@ def set_and_validate_advances_with_gst(doc):
         allocated_amount_with_taxes += _tax_amount
         allocated_amount_with_taxes += advance.allocated_amount
 
+    # allocated_amount is in the party account currency, which is not always the invoice
+    # currency (a USD invoice can be booked to an INR receivable), so the ceiling follows
+    # the receivable. Same branch as erpnext's set_advances.
     if doc.get("party_account_currency") == doc.company_currency:
         total = doc.get("base_rounded_total") or doc.base_grand_total
     else:

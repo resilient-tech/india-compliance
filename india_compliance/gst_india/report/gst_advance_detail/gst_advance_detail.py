@@ -9,6 +9,7 @@ from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import flt, getdate
 from pypika.terms import Case
 
+from india_compliance.gst_india.overrides.payment_entry import get_payment_exchange_rate
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
@@ -173,7 +174,7 @@ class GSTAdvanceDetail:
 =======
                 # Max(): grouped by voucher_no / voucher_detail_no, not the pe_ref PK
                 # allocated_amount is in the party account currency; the column is company currency
-                Max(self.pe_ref.allocated_amount * IfNull(self.pe.source_exchange_rate, 1)).as_(
+                Max(self.pe_ref.allocated_amount * get_payment_exchange_rate(self.pe)).as_(
                     "allocated_amount"
                 ),
                 Max(self.pe_ref.reference_doctype).as_("against_voucher_type"),
