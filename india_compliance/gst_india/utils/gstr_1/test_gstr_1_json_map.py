@@ -32,6 +32,27 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     get_category_wise_data,
     summarize_retsum_data,
 )
+<<<<<<< HEAD
+=======
+from india_compliance.gst_india.utils.gstr_1.sections import (
+    advances,
+    b2b,
+    b2cl,
+    b2cs,
+    cdnr,
+    cdnur,
+    doc_issue,
+    exports,
+    hsn,
+    nil_rated,
+    summary,
+    supecom,
+)
+from india_compliance.gst_india.utils.gstr_1.sections._shared import strip_empty
+
+# Delhi, a state no fixture below supplies to, so every row stays inter-state
+COMPANY_GSTIN = "07AAUPV7468F1ZW"
+>>>>>>> 99b97c5 (fix: rounding simplifcation in gstr books (#4755))
 
 
 def get_party_for_gstin(gstin):
