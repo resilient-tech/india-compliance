@@ -51,9 +51,22 @@ def toggle_seperate_advance_accounting():
         )
 
 
+<<<<<<< HEAD
 class TestAdvancePaymentEntry(FrappeTestCase):
     EXPECTED_GL: ClassVar[list] = [
         {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
+=======
+class TestAdvancePaymentEntry(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.addClassCleanup(frappe.db.rollback)
+
+    EXPECTED_GL: ClassVar[list[dict]] = [
+        {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+        {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+        {"account": "Cash - _TIRC", "debit": 500.0, "credit": 0.0},
+>>>>>>> 634b12cc (fix: correct tax reversal for duplicate reference (#4771))
         {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},
         {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
         {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
@@ -338,6 +351,35 @@ class TestAdvancePaymentEntry(FrappeTestCase):
                 {"amount": -440.68, "against_voucher_no": payment_doc.name},
             ],
         )
+
+    def test_single_invoice_reconciled_in_parts(self):
+        payment_doc = self._create_payment_entry()  # 500 + 90 GST
+        invoice_doc = create_transaction(doctype="Sales Invoice", is_in_state=1, rate=500)
+        self.assertEqual(flt(invoice_doc.grand_total, 2), 590.0)
+
+        make_payment_reconciliation(payment_doc, invoice_doc, 300)
+        make_payment_reconciliation(payment_doc, invoice_doc, 290)
+
+        payment_doc.reload()
+        self.assertEqual(flt(payment_doc.unallocated_amount, 2), 0.0, "advance fully consumed")
+        self.assertEqual([flt(row.allocated_amount, 2) for row in payment_doc.references], [254.24, 245.76])
+        self.assertEqual(
+            flt(frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount"), 2), 0.0
+        )
+
+        # 45.76 reversed with the first part and 44.24 with the second: all 90 comes back, so the
+        # GST accounts net to nothing and the receivable carries the whole 590
+        net = {}
+        for row in frappe.get_all(
+            "GL Entry",
+            filters={"voucher_no": payment_doc.name, "is_cancelled": 0},
+            fields=["account", "debit", "credit"],
+        ):
+            net[row.account] = flt(net.get(row.account, 0) + row.debit - row.credit, 2)
+
+        self.assertEqual(net["Debtors - _TIRC"], -590.0)
+        self.assertEqual(net["Output Tax CGST - _TIRC"], 0.0)
+        self.assertEqual(net["Output Tax SGST - _TIRC"], 0.0)
 
     def test_payment_entry_allocation_with_inclusive_tax_invoice(self):
         """
