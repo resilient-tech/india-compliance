@@ -1136,6 +1136,68 @@ class TestMultiCurrencyReconciliation(LedgerNetMixin, IntegrationTestCase):
             invoice_doc.submit,
         )
 
+    def test_fx_invoice_booked_at_a_different_rate(self):
+        """An advance received at one rate, adjusted against an invoice raised at another.
+        erpnext books the exchange difference onto the reference row, and once it does it stops
+        refreshing that row's reference details -- leaving outstanding_amount unset."""
+        payment_doc = self._fx_payment()  # 5 USD @ 100 -> base 500 + 90 GST
+        invoice_doc = self._fx_invoice(conversion_rate=90)  # 1.18 USD @ 90 -> base 106.20
+
+        make_payment_reconciliation(payment_doc, invoice_doc, invoice_doc.grand_total)
+
+        self.assertEqual(
+            flt(frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount"), 2), 0.0
+        )
+
+        # the liability was booked at 100, so it has to be cleared at 100 -- not at the
+        # invoice's rate, which would strand a stub in the GST accounts forever
+        reversal = frappe.get_all(
+            "GL Entry",
+            filters={
+                "voucher_no": payment_doc.name,
+                "account": USD_DEBTORS,
+                "against_voucher": invoice_doc.name,
+                "remarks": ["like", "Reversal for GST%"],
+                "is_cancelled": 0,
+            },
+            fields=["credit", "credit_in_account_currency"],
+        )
+        self.assertEqual(len(reversal), 1)
+        self.assertEqual(flt(reversal[0].credit, 2), 18.0)
+        self.assertEqual(flt(reversal[0].credit_in_account_currency, 2), 0.18)
+
+        # 11B reports the adjustment at the advance's rate, so the rate bucket stays 18%
+        self._assert_advance_report(payment_doc, received=500.0, adjusted=-100.0)
+
+        self._assert_gst_difference_left_in_receivable(payment_doc, invoice_doc, -401.8)
+
+    def test_fx_invoice_at_a_different_rate_via_advance_in_invoice(self):
+        """The same two rates through the advances table instead of the reconciliation tool.
+        This flow never hit the crash, so it must come out exactly as the reconcile-tool one."""
+        payment_doc = self._fx_payment()
+        invoice_doc = self._fx_invoice(advance_payment=payment_doc, conversion_rate=90)
+
+        self.assertEqual(
+            flt(frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount"), 2), 0.0
+        )
+        self.assertEqual(self._gst_reversal(payment_doc, invoice_doc), (18.0, 0.18))
+        self._assert_gst_difference_left_in_receivable(payment_doc, invoice_doc, -401.8)
+
+    def test_fx_invoice_at_a_higher_rate(self):
+        """Rate moves the other way: erpnext books a loss on the goods, and the GST slice's
+        difference lands with the opposite sign -- still in the receivable."""
+        payment_doc = self._fx_payment()
+        invoice_doc = self._fx_invoice(conversion_rate=110)  # 1.18 USD @ 110 -> base 129.80
+
+        make_payment_reconciliation(payment_doc, invoice_doc, invoice_doc.grand_total)
+
+        # cleared at the advance's rate regardless of which way the rate moved
+        self.assertEqual(self._gst_reversal(payment_doc, invoice_doc), (18.0, 0.18))
+        # -500 + 129.80 - 18 - 10 (erpnext's loss) = -398.20, i.e. 1.80 the other way
+        self._assert_gst_difference_left_in_receivable(
+            payment_doc, invoice_doc, -398.2, exchange_gain_loss=-10.0
+        )
+
     def test_fx_three_invoices_against_one_advance(self):
         """The multi-invoice repro on a USD advance: the reconciliation tool's gross-up has to
         be converted to the party account currency before it is added to the offered amount."""
@@ -1236,6 +1298,23 @@ class TestMultiCurrencyReconciliation(LedgerNetMixin, IntegrationTestCase):
         # GSTR-1 reports base (INR) taxable values regardless of transaction currency
         self._assert_advance_report(payment_doc, received=500.0, adjusted=-100.0)
 
+        # both documents are at the same rate here, so nothing is left over: the receivable
+        # carries exactly the rate it was received at, and no exchange gain/loss arises
+        rows = frappe.get_all(
+            "GL Entry",
+            filters={
+                "account": USD_DEBTORS,
+                "voucher_no": ["in", (payment_doc.name, invoice_doc.name)],
+                "is_cancelled": 0,
+            },
+            fields=["debit", "credit", "debit_in_account_currency", "credit_in_account_currency"],
+        )
+        base = flt(sum(row.debit - row.credit for row in rows), 2)
+        account_currency = flt(
+            sum(row.debit_in_account_currency - row.credit_in_account_currency for row in rows), 2
+        )
+        self.assertEqual(base, flt(account_currency * FX_RATE, 2))
+
         # GST Advance Detail declares its amount columns as company currency, so the USD
         # paid / allocated amounts must be converted too, not left sitting beside INR tax
         row = self._advance_detail_summary(payment_doc)
@@ -1246,6 +1325,67 @@ class TestMultiCurrencyReconciliation(LedgerNetMixin, IntegrationTestCase):
         self.assertEqual(flt(row["gst_allocated"], 2), 18.0)
 
     # ---- builders ----
+
+    def _gst_reversal(self, payment_doc, invoice_doc):
+        """(company currency, account currency) of the GST reversal against this invoice"""
+        rows = frappe.get_all(
+            "GL Entry",
+            filters={
+                "voucher_no": payment_doc.name,
+                "account": USD_DEBTORS,
+                "against_voucher": invoice_doc.name,
+                "remarks": ["like", "Reversal for GST%"],
+                "is_cancelled": 0,
+            },
+            fields=["credit", "credit_in_account_currency"],
+        )
+        self.assertEqual(len(rows), 1)
+        return flt(rows[0].credit, 2), flt(rows[0].credit_in_account_currency, 2)
+
+    def _assert_gst_difference_left_in_receivable(
+        self, payment_doc, invoice_doc, expected_base, exchange_gain_loss=10.0
+    ):
+        """GST is a pass-through: the 18.00 was remitted at the advance's rate, so the slice the
+        invoice under-recovers stays collectable in the receivable rather than going to P&L.
+        erpnext books the goods portion's difference itself; nothing extra is posted for the tax."""
+        # the exchange difference erpnext books lands in its own journal, so the balance has to be
+        # read across all three vouchers -- and only those, since the class rolls back once at the end
+        vouchers = [
+            payment_doc.name,
+            invoice_doc.name,
+            *frappe.get_all(
+                "Journal Entry Account",
+                filters={"reference_type": "Payment Entry", "reference_name": payment_doc.name},
+                pluck="parent",
+            ),
+        ]
+        rows = frappe.get_all(
+            "GL Entry",
+            filters={"account": USD_DEBTORS, "voucher_no": ["in", vouchers], "is_cancelled": 0},
+            fields=["debit", "credit", "debit_in_account_currency", "credit_in_account_currency"],
+        )
+        base = flt(sum(row.debit - row.credit for row in rows), 2)
+        account_currency = flt(
+            sum(row.debit_in_account_currency - row.credit_in_account_currency for row in rows), 2
+        )
+
+        self.assertEqual(account_currency, -4.0, "1.18 USD of a 5 USD advance consumed")
+        self.assertEqual(base, expected_base)
+        self.assertNotEqual(
+            base, flt(account_currency * FX_RATE, 2), "the difference is deliberately left here"
+        )
+
+        booked = frappe.get_all(
+            "GL Entry",
+            filters={
+                "account": ["like", "Exchange%"],
+                "voucher_no": ["in", vouchers],
+                "is_cancelled": 0,
+            },
+            fields=["debit", "credit"],
+        )
+        self.assertEqual(len(booked), 1, "only erpnext's own, none for the GST slice")
+        self.assertEqual(flt(booked[0].credit - booked[0].debit, 2), exchange_gain_loss)
 
     def _fx_payment(self, inclusive=False):
         # paid 5 USD (inclusive: 5.9 USD) @ FX_RATE -> base 500 + 90 GST INR.
@@ -1278,13 +1418,13 @@ class TestMultiCurrencyReconciliation(LedgerNetMixin, IntegrationTestCase):
 
         return payment_doc
 
-    def _fx_invoice(self, advance_payment=None):
+    def _fx_invoice(self, advance_payment=None, conversion_rate=FX_RATE):
         # net 1 USD @ FX_RATE -> base 100 INR + 18% GST, booked on the USD receivable
         invoice_doc = create_transaction(
             doctype="Sales Invoice",
             customer=self._usd_customer(),
             currency="USD",
-            conversion_rate=FX_RATE,
+            conversion_rate=conversion_rate,
             debit_to=self._usd_debtors(),
             is_in_state=1,
             rate=1,

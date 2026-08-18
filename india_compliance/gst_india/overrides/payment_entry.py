@@ -226,7 +226,21 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row, via_reconcili
         return gl_dicts
 
     outstanding_amount = reference_row.outstanding_amount
-    if via_reconciliation:
+    if outstanding_amount is None:
+        # erpnext stops refreshing the row's reference details once exchange_gain_loss is set on
+        # it, so resolve them the way it would have. Journal Entry has no outstanding_amount
+        # field, hence get_reference_details rather than a direct read. Not reduced by this
+        # allocation yet, so it needs no adding back.
+        from erpnext.accounts.doctype.payment_entry.payment_entry import get_reference_details
+
+        outstanding_amount = get_reference_details(
+            reference_row.reference_doctype,
+            reference_row.reference_name,
+            payment_entry.party_account_currency,
+            payment_entry.party_type,
+            payment_entry.party,
+        ).outstanding_amount
+    elif via_reconciliation:
         # add back allocated_amount to outstanding_amount for comparison
         outstanding_amount += reference_row.allocated_amount
 
