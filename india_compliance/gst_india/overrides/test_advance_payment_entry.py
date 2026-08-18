@@ -51,12 +51,7 @@ def toggle_seperate_advance_accounting():
         )
 
 
-<<<<<<< HEAD
 class TestAdvancePaymentEntry(FrappeTestCase):
-    EXPECTED_GL: ClassVar[list] = [
-        {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
-=======
-class TestAdvancePaymentEntry(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -66,7 +61,6 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
         {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
         {"account": "Cash - _TIRC", "debit": 500.0, "credit": 0.0},
->>>>>>> 634b12cc (fix: correct tax reversal for duplicate reference (#4771))
         {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},
         {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
         {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
