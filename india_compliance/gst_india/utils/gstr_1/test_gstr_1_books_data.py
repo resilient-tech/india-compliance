@@ -280,6 +280,10 @@ class TestGSTR1BooksData(IntegrationTestCase):
             {
                 "rounding_difference": {
                     "total_taxable_value": -0.022,
+                    "total_igst_amount": 0.0,
+                    "total_cgst_amount": 0.0,
+                    "total_sgst_amount": 0.0,
+                    "total_cess_amount": 0.0,
                 }
             },
             data["rounding_difference"],

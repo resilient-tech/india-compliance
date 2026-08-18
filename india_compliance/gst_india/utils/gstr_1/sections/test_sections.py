@@ -838,5 +838,84 @@ class TestSummary(unittest.TestCase):
         self.assertEqual(overview[-1][doc.TAXABLE_VALUE], 250)
 
 
+class TestSplit(unittest.TestCase):
+    def assert_shares(self, pieces, weights, total):
+        self.assertEqual(s.money(sum(pieces)), total)
+        for piece in pieces:
+            self.assertEqual(piece, s.money(piece), f"not a settled amount: {pieces}")
+
+        for piece, weight in zip(pieces, weights, strict=True):
+            self.assertLessEqual(abs(piece - weight), 0.0101, f"{weights} -> {pieces}")
+
+            if weight > 0:
+                self.assertGreaterEqual(piece, 0.0, f"{weights} -> {pieces}")
+            elif weight < 0:
+                self.assertLessEqual(piece, 0.0, f"{weights} -> {pieces}")
+            else:
+                self.assertEqual(piece, 0.0, f"{weights} -> {pieces}")
+
+    def test_pieces_add_back_to_the_total(self):
+        self.assertEqual(sum(s.split(10.00, [3.333, 3.333, 3.334])), 10.00)
+
+    def test_no_piece_carries_everyone_elses_rounding(self):
+        self.assertEqual(s.split(10.00, [3.333, 3.333, 3.334]), [3.33, 3.34, 3.33])
+
+    def test_one_piece_takes_the_whole_total(self):
+        self.assertEqual(s.split(20.01, [20.01]), [20.01])
+
+    def test_credit_notes_share_out_a_negative_total(self):
+        pieces = s.split(-10.00, [-3.333, -3.333, -3.334])
+        self.assertEqual(sum(pieces), -10.00)
+        self.assertTrue(all(piece < 0 for piece in pieces))
+
+    def test_a_zero_weight_gets_nothing_and_the_total_still_holds(self):
+        pieces = s.split(10.00, [5.00, 0.0, 5.00])
+        self.assertEqual(pieces[1], 0.0)
+        self.assertEqual(sum(pieces), 10.00)
+
+    def test_total_is_honoured_even_when_it_disagrees_with_the_weights(self):
+        self.assertEqual(sum(s.split(10.01, [3.333, 3.333, 3.334])), 10.01)
+
+    def test_many_half_paisa_pieces_do_not_accumulate_drift(self):
+        weights = [0.005] * 100
+        self.assert_shares(s.split(s.money(sum(weights)), weights), weights, s.money(sum(weights)))
+
+    def test_no_piece_strays_from_the_weight_it_came_from(self):
+        for weights in (
+            [3.333, 3.333, 3.334],
+            [0.001, 0.004, 100.005, -100.005],
+            [33.335, -1000000.005, 33.335, 0.0],
+            [1000000.005, 0.005, -1000000.005],
+            [0.0, 0.005, 0.0],
+            [100.0, -100.0],
+            [-0.005] * 100,
+        ):
+            total = s.money(sum(weights))
+            self.assert_shares(s.split(total, weights), weights, total)
+
+    def test_weights_that_cancel_out_keep_their_own_amounts(self):
+        self.assertEqual(s.split(0.0, [100.0, -100.0]), [100.0, -100.0])
+
+    def test_a_total_next_to_nothing_does_not_inflate_the_pieces(self):
+        self.assert_shares(s.split(0.01, [1000.005, -1000.0]), [1000.005, -1000.0], 0.01)
+
+    def test_an_empty_weight_never_gets_a_piece(self):
+        # the remainder rides the last real weight, not merely the last row
+        weights = [33.335, -1000000.005, 33.335, 0.0]
+        total = s.money(sum(weights))
+        pieces = s.split(total, weights)
+
+        self.assertEqual(pieces[3], 0.0)
+        self.assertEqual(s.money(sum(pieces)), total)
+
+    def test_a_total_with_nothing_to_weigh_is_not_dropped(self):
+        self.assertEqual(sum(s.split(10.00, [0.0, 0.0, 0.0])), 10.00)
+        self.assertEqual(sum(s.split(-0.05, [0.0])), -0.05)
+
+    def test_nothing_anywhere_gives_nothing_anywhere(self):
+        self.assertEqual(s.split(0.0, []), [])
+        self.assertEqual(s.split(0.0, [0.0, 0.0, 0.0]), [0.0, 0.0, 0.0])
+
+
 if __name__ == "__main__":
     unittest.main()
