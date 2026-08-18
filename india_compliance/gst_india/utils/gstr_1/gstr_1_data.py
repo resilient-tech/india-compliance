@@ -1003,7 +1003,15 @@ class GSTR11A11BData:
             self.get_query("Adjustment")
             .join(self.pe_ref)
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
+<<<<<<< HEAD
             .select(self.pe_ref.allocated_amount.as_("taxable_value"))
+=======
+            .select(
+                Max(self.pe_ref.allocated_amount * IfNull(self.pe.source_exchange_rate, 1)).as_(
+                    "taxable_value"
+                )
+            )
+>>>>>>> ea7bf786 (fix: handle multi-currency in GST on advance payment)
             .groupby(self.gl_entry.voucher_detail_no)
         )
 
