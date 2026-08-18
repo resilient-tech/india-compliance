@@ -389,7 +389,11 @@ def get_advance_payment_entries_for_regional(
         if not tax_row or not total_amount:
             continue
 
-        pending_taxes = tax_row.tax_amount - tax_row.tax_amount_reversed
+        # pending GST is company currency, row.amount is the party account currency
+        pending_taxes = flt(
+            (tax_row.tax_amount - tax_row.tax_amount_reversed) / flt(tax_row.exchange_rate),
+            precision,
+        )
         running_amount = 0
         running_share = 0
 
