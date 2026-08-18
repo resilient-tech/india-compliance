@@ -314,7 +314,7 @@ def balance_taxes(payment_entry, reference_row, taxes):
     base_amount = get_taxable_base_amount(payment_entry)
     for account, amount in taxes.items():
         for allocation_row in payment_entry.references:
-            if allocation_row.reference_name == reference_row.reference_name:
+            if allocation_row.name == reference_row.name:
                 continue
 
             taxes[account] = taxes[account] - get_proportionate_tax(
