@@ -230,20 +230,17 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row, via_reconcili
         # add back allocated_amount to outstanding_amount for comparison
         outstanding_amount += reference_row.allocated_amount
 
-    base_outstanding_amount = flt(
-        outstanding_amount * exchange_rate, payment_entry.precision("base_paid_amount")
-    )
-    total_allocation = total_amount + payment_entry.calculate_base_allocated_amount_for_reference(
-        reference_row
-    )
-    excess_allocation = total_allocation - base_outstanding_amount
+    total_allocation = total_amount_in_account_currency + reference_row.allocated_amount
+    excess_allocation = total_allocation - outstanding_amount
 
     if excess_allocation > 1:
         frappe.throw(
             _(
-                "Outstanding amount {0} is less than the total allocated amount with taxes {1} for {2} {3}"
+                "Outstanding amount {0} {1} is less than the total allocated amount with taxes {2} {1}"
+                " for {3} {4}"
             ).format(
-                base_outstanding_amount,
+                outstanding_amount,
+                payment_entry.party_account_currency,
                 total_allocation,
                 reference_row.reference_doctype,
                 reference_row.reference_name,
