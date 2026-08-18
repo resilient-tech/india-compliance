@@ -247,7 +247,7 @@ class TestAdvancePaymentEntry(FrappeTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(
-                r"^(Outstanding amount 118.0 is less than the total allocated amount with taxes 139.24.*)$"
+                r"^(Outstanding amount 118.0 INR is less than the total allocated amount with taxes 139.24 INR.*)$"
             ),
             payment_doc.submit,
         )
