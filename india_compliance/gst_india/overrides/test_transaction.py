@@ -2373,6 +2373,7 @@ class TestPlaceOfSupply(FrappeTestCase):
         self.assertEqual(dn.place_of_supply, "29-Karnataka")
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+<<<<<<< HEAD
     def test_make_sales_invoice_from_sales_order_with_non_gst_items(self):
         """
         make_sales_invoice_from_so must not raise when a Sales Order for a SEZ
@@ -2413,3 +2414,23 @@ class TestPlaceOfSupply(FrappeTestCase):
 
         self.assertIsNotNone(si)
         self.assertEqual(si.doctype, "Sales Invoice")
+=======
+    def test_pos_payment_entry_for_overseas_customer(self):
+        # Payment Entry has no shipping address field, so the overseas branch must not
+        # assume one. An advance from an overseas customer is 96-Other Countries.
+        doc = create_transaction(
+            doctype="Payment Entry",
+            payment_type="Receive",
+            mode_of_payment="Cash",
+            company_address="_Test Indian Registered Company-Billing",
+            party_type="Customer",
+            party="_Test Foreign Customer",
+            customer_address="_Test Foreign Customer-Billing",
+            paid_to="Cash - _TIRC",
+            paid_amount=500,
+            received_amount=500,
+            is_out_state=1,
+        )
+
+        self.assertEqual(doc.place_of_supply, "96-Other Countries")
+>>>>>>> b4e74ba5 (fix: update overseas transaction handling in payment entry and place of supply logic)
