@@ -58,10 +58,12 @@ class _Filter extends frappe.ui.Filter {
             (condition) => india_compliance.FILTER_OPERATORS[condition && condition[0]],
         );
 
+        const like_conditions = ["like", "not like"];
+
         // keep like / not like conditions
         for (const [fieldtype, invalid] of Object.entries(this.invalid_condition_map))
             this.invalid_condition_map[fieldtype] = invalid.filter(
-                (condition) => !this.like_conditions.includes(condition),
+                (condition) => !like_conditions.includes(condition),
             );
     }
 }
