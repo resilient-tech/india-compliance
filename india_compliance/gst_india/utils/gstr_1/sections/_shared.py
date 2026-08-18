@@ -185,6 +185,28 @@ def sum_column(rows, field):
     return flt(sum(row.get(field) or 0 for row in rows), 2)
 
 
+def split(total, weights):
+    """
+    Share `total` out over `weights` so the pieces add back to it exactly. Signs are irrelevant.
+        split(10.00, [3.333, 3.333, 3.334])  ->  [3.33, 3.34, 3.33]   adds to 10.00
+    """
+    pieces = []
+    last = max((index for index, weight in enumerate(weights) if weight), default=len(weights) - 1)
+    seen = done = 0.0
+
+    for index, weight in enumerate(weights):
+        if index > last:
+            pieces.append(0.0)
+            continue
+
+        seen += weight
+        upto = total if index == last else money(seen)
+        pieces.append(money(upto - done))
+        done = upto
+
+    return pieces
+
+
 def add_item_totals(row, items, totals):
     """Item amounts into the invoice totals. Adds up, so call once per invoice."""
     for line in items or []:

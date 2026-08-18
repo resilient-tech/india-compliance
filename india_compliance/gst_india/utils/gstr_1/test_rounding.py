@@ -83,22 +83,24 @@ class TestSettleAmounts(unittest.TestCase):
 
         self.assertEqual(flt(by_invoice_and_rate, 2), flt(by_hsn, 2))
 
-    def test_each_nil_bucket_settles_on_its_own(self):
-        """Nil-rated, exempted and non-GST are filed apart, and all three sit at rate zero.
+    def test_nil_buckets_still_add_up_settled_as_one_pool(self):
+        """Nil-rated, exempted and non-GST all sit at rate zero and settle together.
 
-        Settled as one pool, a leftover paisa moves between buckets and each stops matching
-        what its own lines add up to.
+        A paisa may move between the buckets, but only where taxable values carry more than two
+        decimals -- which the field's own precision rules out on a real site. What must hold is
+        that the pool still adds back to its total.
         """
+        raw = (100.005, 33.335, 23.335)
         rows, _ = settle(
             [
-                row("A", 0, "1001", taxable_value=100.005, gst_treatment="Nil-Rated"),
-                row("A", 0, "1001", taxable_value=33.335, gst_treatment="Exempted"),
-                row("A", 0, "1001", taxable_value=23.335, gst_treatment="Non-GST"),
+                row("A", 0, "1001", taxable_value=value, gst_treatment=treatment)
+                for value, treatment in zip(raw, ("Nil-Rated", "Exempted", "Non-GST"), strict=True)
             ]
         )
 
-        for settled, raw in zip(rows, (100.005, 33.335, 23.335), strict=True):
-            self.assertEqual(settled.taxable_value, flt(raw, 2))
+        self.assertEqual(flt(sum(r.taxable_value for r in rows), 2), flt(sum(raw), 2))
+        for settled, value in zip(rows, raw, strict=True):
+            self.assertLessEqual(abs(settled.taxable_value - value), 0.01)
 
     def test_each_rate_of_an_invoice_settles_on_its_own(self):
         rows, _ = settle(

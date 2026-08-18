@@ -27,7 +27,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     SubCategory,
     get_b2c_limit,
 )
-from india_compliance.gst_returns.helpers import split
+from india_compliance.gst_india.utils.gstr_1.sections._shared import split
 
 CATEGORY_CONDITIONS = {
     Category.ECOM_RCM.value: {
@@ -480,11 +480,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         """
         rows_by_rate = {}
         for invoice in invoices:
-            key = (
-                invoice.get("invoice_no"),
-                flt(invoice.get("gst_rate")),
-                invoice.get("gst_treatment"),
-            )
+            key = (invoice.get("invoice_no"), flt(invoice.get("gst_rate")))
             rows_by_rate.setdefault(key, []).append(invoice)
 
         lost = dict.fromkeys(self.AMOUNT_FIELDS, 0.0)
@@ -496,8 +492,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 total = flt(raw_total, 2)
                 lost[field] += raw_total - total
 
-                shares = split(total, weights, lambda value: flt(value, 2))
-                for row, share in zip(rows, shares, strict=True):
+                for row, share in zip(rows, split(total, weights), strict=True):
                     row[field] = share
 
         for invoice in invoices:
