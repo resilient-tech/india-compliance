@@ -56,6 +56,11 @@ setup_wizard_stages = "india_compliance.setup_wizard.get_setup_wizard_stages"
 
 app_include_js = "india_compliance.bundle.js"
 
+erpnext_taxable_base_resolvers = {
+    "On MRP": "india_compliance.gst_india.overrides.taxable_value.on_mrp",
+    "On Margin": "india_compliance.gst_india.overrides.taxable_value.on_margin",
+}
+
 doctype_js = {
     "Address": [
         "gst_india/client_scripts/party.js",

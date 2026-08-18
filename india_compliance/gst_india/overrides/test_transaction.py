@@ -24,11 +24,13 @@ from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_days, add_to_date, flt, getdate, now_datetime, today
 from parameterized import parameterized_class
 
-from india_compliance.gst_india.constants import (
-    GST_TAX_TYPES,
-    SALES_DOCTYPES,
-)
+from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_FIELDS
+from india_compliance.gst_india.overrides.taxable_value import (
+    get_item_taxable_value,
+    on_margin,
+    on_mrp,
+)
 from india_compliance.gst_india.overrides.transaction import (
     ADDRESS_DEPENDENT_FIELDS,
     DOCTYPES_WITH_GST_DETAIL,
@@ -51,6 +53,7 @@ from india_compliance.gst_india.utils.tests import (
     append_item,
     create_purchase_invoice,
     create_transaction,
+    enable_custom_gst_charge_types,
 )
 
 
@@ -1678,6 +1681,234 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertFalse(_is_multicurrency_doc({"conversion_rate": 0}))
         self.assertFalse(_is_multicurrency_doc({}))
         self.assertFalse(_is_multicurrency_doc('{"conversion_rate": 1}'))
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    @change_settings(
+        "Accounts Settings",
+        {"allow_multi_currency_invoices_against_single_party_account": 1},
+    )
+    def test_multicurrency_taxable_value_on_mrp(self):
+        """Tobacco RSP ("On MRP") on a USD export invoice. The reported taxable value is the
+        net sale value (company currency), while IGST is computed on the RSP-deemed base —
+        decoupled, and validated against the deemed base (else update_gst_details throws)."""
+        _create_currency_exchange("USD", "INR", 80)
+
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            customer="_Test Foreign Customer",
+            party_name="_Test Foreign Customer",
+            currency="USD",
+            is_export_with_gst=1,
+            is_out_state=1,
+            rate=100,
+            do_not_save=True,
+        )
+        enable_custom_gst_charge_types()
+        self.addCleanup(frappe.clear_cache, doctype="Sales Taxes and Charges")
+        doc.items[0].gst_retail_sale_price = 120
+        for tax in doc.taxes:
+            tax.charge_type = "On MRP"
+
+        doc.insert()
+
+        item = doc.items[0]
+        self.assertEqual(flt(doc.conversion_rate), 80)
+        self.assertEqual(item.taxable_value, flt(item.base_net_amount))
+        self.assertTrue(getattr(item, "_deemed_taxable_value", None))
+        self.assertAlmostEqual(item.igst_amount, flt(item._deemed_taxable_value) * 18 / 100, delta=1)
+        self.assertGreater(item.igst_amount, flt(item.taxable_value * 18 / 100))
+
+    def test_on_mrp_resolver_rsp_deemed_value_and_flags(self):
+        # RSP 500 @ 40% (inclusive): tax = 500*40/140 = 142.86, deemed = 500*100/140 = 357.14.
+        calc = frappe._dict(doc=frappe._dict(conversion_rate=1))
+        tax = frappe._dict(charge_type="On MRP", rate=40)
+        item = frappe._dict(gst_retail_sale_price=500, qty=1)
+
+        self.assertAlmostEqual(on_mrp(calc, item, tax), 500 * 100 / 140, places=4)
+        # resolver flags: report net (not the deemed base), and hand validation the deemed base
+        self.assertTrue(item._dont_update_taxable_value)
+        self.assertAlmostEqual(item._deemed_taxable_value, 500 * 100 / 140, places=4)
+
+    def test_get_item_tax_amount_preserves_zero_deemed_base(self):
+        # RSP not entered -> deemed base is an explicit 0; tax must be 0, not fall back
+        # to the reported (net) taxable_value.
+        calc = ItemGSTDetails()
+        calc.precision = frappe._dict(igst_amount=2)
+
+        zero_deemed = frappe._dict(_deemed_taxable_value=0, taxable_value=10000, qty=1)
+        self.assertEqual(calc.get_item_tax_amount(zero_deemed, 18, "igst"), 0)
+
+        # no deemed base set -> tax is on taxable_value as usual
+        plain = frappe._dict(taxable_value=10000, qty=1)
+        self.assertEqual(calc.get_item_tax_amount(plain, 18, "igst"), 1800)
+
+    def test_on_margin_resolver_inclusive_deemed_margin(self):
+        calc = frappe._dict(doc=frappe._dict(conversion_rate=1))
+        tax = frappe._dict(charge_type="On Margin", rate=18)
+
+        # margin 50000 (300000 - 250000) inclusive of 18% -> deemed = 50000*100/118
+        item = frappe._dict(amount=300000, gst_purchase_price=250000, qty=1)
+        self.assertAlmostEqual(on_margin(calc, item, tax), 50000 * 100 / 118, places=4)
+
+        # negative margin is ignored
+        loss = frappe._dict(amount=100000, gst_purchase_price=250000, qty=1)
+        self.assertEqual(on_margin(calc, loss, tax), 0)
+
+    def test_get_item_taxable_value_respects_dont_update_flag(self):
+        # RSP resolver sets _dont_update_taxable_value -> reported value is the default (net).
+        tax = frappe._dict(gst_tax_type="igst", charge_type="On MRP", rate=18)
+        item = frappe._dict(gst_retail_sale_price=120, qty=1)
+        doc = frappe._dict(conversion_rate=80, taxes=[tax])
+
+        self.assertEqual(get_item_taxable_value(doc, item, 8000), 8000)
+        self.assertTrue(item._dont_update_taxable_value)
+        self.assertAlmostEqual(item._deemed_taxable_value, 120 * 100 / 118 * 80, places=4)
+
+        # Margin resolver has no flag -> reported value is the resolved (deemed margin) base.
+        margin_tax = frappe._dict(gst_tax_type="igst", charge_type="On Margin", rate=18)
+        margin_item = frappe._dict(amount=300000, gst_purchase_price=250000, qty=1)
+        margin_doc = frappe._dict(conversion_rate=1, taxes=[margin_tax])
+        self.assertAlmostEqual(
+            get_item_taxable_value(margin_doc, margin_item, 0), 50000 * 100 / 118, places=4
+        )
+
+        # No resolver charge_type -> default
+        plain = frappe._dict(
+            conversion_rate=80, taxes=[frappe._dict(gst_tax_type="igst", charge_type="On Net Total")]
+        )
+        self.assertEqual(
+            get_item_taxable_value(plain, frappe._dict(gst_retail_sale_price=120, qty=1), 555), 555
+        )
+
+    def test_charge_type_options_gated_by_settings(self):
+        """On MRP / On Margin appear as charge_type options only when their GST Setting is on."""
+        from india_compliance.gst_india.setup.property_setters import toggle_charge_type_options
+
+        # This test repeatedly clears and repopulates the meta-cache with uncommitted
+        # options; clear it once more after rollback so the next test isn't left stale.
+        self.addCleanup(frappe.clear_cache, doctype="Sales Taxes and Charges")
+
+        def options():
+            frappe.clear_cache(doctype="Sales Taxes and Charges")
+            return frappe.get_meta("Sales Taxes and Charges").get_options("charge_type").split("\n")
+
+        toggle_charge_type_options(frappe._dict())
+        self.assertNotIn("On MRP", options())
+        self.assertNotIn("On Margin", options())
+
+        toggle_charge_type_options(frappe._dict(enable_taxes_on_mrp=1))
+        self.assertIn("On MRP", options())
+        self.assertNotIn("On Margin", options())
+
+        toggle_charge_type_options(frappe._dict(enable_taxes_on_mrp=1, enable_margin_scheme=1))
+        self.assertIn("On MRP", options())
+        self.assertIn("On Margin", options())
+
+        # a user/other-app custom charge type must survive disabling our settings
+        frappe.make_property_setter(
+            {
+                "doctype": "Sales Taxes and Charges",
+                "fieldname": "charge_type",
+                "property": "options",
+                "value": "\n".join([*options(), "On Custom"]),
+            },
+            validate_fields_for_doctype=False,
+            is_system_generated=True,
+        )
+        toggle_charge_type_options(frappe._dict())  # disable both IC settings
+        opts = options()
+        self.assertIn("On Custom", opts)  # preserved
+        self.assertNotIn("On MRP", opts)
+        self.assertNotIn("On Margin", opts)
+
+    def _margin_scheme_invoice(self, **kwargs):
+        enable_custom_gst_charge_types()
+        self.addCleanup(frappe.clear_cache, doctype="Sales Taxes and Charges")
+
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            rate=300,
+            is_in_state=True,
+            company_address="_Test Indian Registered Company-Billing",
+            do_not_save=True,
+            **kwargs,
+        )
+        doc.items[0].gst_purchase_price = 182
+        doc.items[0].allow_zero_valuation_rate = 1
+
+        for tax in doc.taxes:
+            tax.charge_type = "On Margin"
+            tax.included_in_print_rate = 1
+
+        return doc
+
+    @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0})
+    def test_margin_scheme_return_reverses_gst(self):
+        """A credit note must reverse the GST the sale charged. The margin is only zeroed out
+        for a sale (qty > 0), so a return keeps its negative margin instead of reading as a
+        loss and dropping the reversal."""
+        doc = self._margin_scheme_invoice()
+        doc.insert()
+        doc.submit()
+
+        self.assertEqual(doc.items[0].taxable_value, 100)
+        self.assertEqual(doc.items[0].cgst_amount, 9)
+        self.assertEqual(doc.items[0].sgst_amount, 9)
+
+        return_doc = make_return_doc("Sales Invoice", doc.name)
+        return_doc.insert()
+
+        self.assertEqual(return_doc.items[0].taxable_value, -100)
+        self.assertEqual(return_doc.items[0].cgst_amount, -9)
+        self.assertEqual(return_doc.items[0].sgst_amount, -9)
+
+    @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0})
+    def test_resolver_uses_item_tax_template_rate(self):
+        """The deemed base is grossed down by the rate that is actually charged on the item.
+        An Item Tax Template overrides the tax row rate, so the row rate cannot be used."""
+        enable_custom_gst_charge_types()
+        self.addCleanup(frappe.clear_cache, doctype="Sales Taxes and Charges")
+
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            rate=100,
+            is_in_state=True,
+            company_address="_Test Indian Registered Company-Billing",
+            do_not_save=True,
+        )
+        append_item(doc, frappe._dict(item_tax_template="GST 28% - _TIRC", rate=100))
+
+        doc.items[0].gst_retail_sale_price = 118  # 18% -> deemed 100
+        doc.items[1].gst_retail_sale_price = 128  # 28% -> deemed 100
+
+        for tax in doc.taxes:
+            tax.charge_type = "On MRP"
+
+        doc.insert()
+
+        self.assertAlmostEqual(doc.items[0]._deemed_taxable_value, 100, places=2)
+        self.assertAlmostEqual(doc.items[0].cgst_amount, 9, places=2)
+        self.assertAlmostEqual(doc.items[0].sgst_amount, 9, places=2)
+
+        self.assertAlmostEqual(doc.items[1]._deemed_taxable_value, 100, places=2)
+        self.assertAlmostEqual(doc.items[1].cgst_amount, 14, places=2)
+        self.assertAlmostEqual(doc.items[1].sgst_amount, 14, places=2)
+
+    @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0})
+    def test_on_margin_uses_item_tax_template_rate(self):
+        doc = self._margin_scheme_invoice()  # rate 300
+        doc.items[0].item_tax_template = "GST 28% - _TIRC"
+        doc.items[0].gst_purchase_price = 172  # margin 128 incl 28% -> deemed 100
+        doc.insert()
+
+        item = doc.items[0]
+        self.assertAlmostEqual(item.taxable_value, 100, places=2)
+        self.assertAlmostEqual(item.cgst_amount, 14, places=2)
+        self.assertAlmostEqual(item.sgst_amount, 14, places=2)
+        self.assertAlmostEqual(item.net_amount, 272, places=2)  # 300 - 28
+
+        # inclusive: the printed price still holds
+        self.assertAlmostEqual(doc.grand_total, 300, places=2)
 
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"

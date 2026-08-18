@@ -29,6 +29,7 @@ from india_compliance.gst_india.utils.e_waybill import EWaybillData
 from india_compliance.gst_india.utils.tests import (
     append_item,
     create_sales_invoice,
+    enable_custom_gst_charge_types,
 )
 
 
@@ -58,6 +59,8 @@ class EInvoiceTestMixin:
             )
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
+        enable_custom_gst_charge_types()
+        cls.addClassCleanup(frappe.clear_cache, doctype="Sales Taxes and Charges")
 
     def _mock_e_invoice_response(self, data, api="ei/api/invoice"):
         """Mock response for e-Invoice API"""
@@ -730,6 +733,146 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         self.assertEqual(110, request_data["ValDtls"]["AssVal"])
         self.assertEqual(0, request_data["ValDtls"]["OthChrg"])
         self.assertEqual(111, request_data["ValDtls"]["TotInvVal"])
+
+    def test_request_data_for_rsp_on_mrp(self):
+        """Tobacco RSP ("On MRP"): tax is computed on the RSP-deemed value, but AssAmt is the
+        net sale value (not the RSP), with no other charges. RSP 118 inclusive of 18% (9+9)
+        on a net sale of 90 -> deemed 100, CGST/SGST 9 each, AssAmt 90, TotItemVal 108."""
+        si = create_sales_invoice(
+            rate=90,
+            is_in_state=True,
+            company_address="_Test Indian Registered Company-Billing",
+            do_not_save=True,
+        )
+        si.items[0].gst_retail_sale_price = 118
+        for tax in si.taxes:
+            tax.charge_type = "On MRP"
+        si.insert()
+
+        request_data = EInvoiceData(si).get_data()
+        item = request_data["ItemList"][0]
+
+        self.assertEqual(item["AssAmt"], 90)
+        self.assertEqual(item["GstRt"], 18.0)
+        self.assertEqual(item["CgstAmt"], 9)
+        self.assertEqual(item["SgstAmt"], 9)
+        self.assertEqual(item["OthChrg"], 0)
+        self.assertEqual(item["TotItemVal"], 108)
+
+        val = request_data["ValDtls"]
+        self.assertEqual(val["AssVal"], 90)
+        self.assertEqual(val["OthChrg"], 0)
+        self.assertEqual(val["TotInvVal"], 108)
+        # NIC: TotInvVal = sum(item TotItemVal) + doc OthChrg
+        total_item_val = sum(i["TotItemVal"] for i in request_data["ItemList"])
+        self.assertEqual(total_item_val + val["OthChrg"], val["TotInvVal"])
+
+    def test_request_data_for_margin_scheme(self):
+        """Margin scheme ("On Margin"), GST inclusive in the margin: only the margin is
+        taxable, the purchase cost surfaces as document-level OthChrg via the existing plug
+        (grand_total - taxable - tax), so taxable + tax < invoice value. Sale 300, cost 182
+        -> margin 118 incl 18% -> deemed 100, CGST/SGST 9 each. Item AssAmt 100, OthChrg 0,
+        TotItemVal 118; doc OthChrg 182, TotInvVal 300."""
+        si = create_sales_invoice(
+            rate=300,
+            is_in_state=True,
+            company_address="_Test Indian Registered Company-Billing",
+            do_not_save=True,
+        )
+        si.items[0].gst_purchase_price = 182
+        si.items[0].allow_zero_valuation_rate = 1
+        for tax in si.taxes:
+            tax.charge_type = "On Margin"
+            tax.included_in_print_rate = 1
+        si.insert()
+
+        request_data = EInvoiceData(si).get_data()
+        item = request_data["ItemList"][0]
+
+        self.assertEqual(item["AssAmt"], 100)
+        self.assertEqual(item["GstRt"], 18.0)
+        self.assertEqual(item["CgstAmt"], 9)
+        self.assertEqual(item["SgstAmt"], 9)
+        self.assertEqual(item["OthChrg"], 0)  # cost is reported at doc level, not the item
+        self.assertEqual(item["TotItemVal"], 118)  # margin + tax
+
+        val = request_data["ValDtls"]
+        self.assertEqual(val["AssVal"], 100)
+        self.assertEqual(val["OthChrg"], 182)  # purchase cost balance
+        self.assertEqual(val["TotInvVal"], 300)
+        self.assertLess(val["AssVal"] + val["CgstVal"] + val["SgstVal"], val["TotInvVal"])
+        # NIC: TotInvVal = sum(item TotItemVal) + doc OthChrg (no double counting -> no error 2189)
+        total_item_val = sum(i["TotItemVal"] for i in request_data["ItemList"])
+        self.assertEqual(total_item_val + val["OthChrg"], val["TotInvVal"])
+
+    def test_request_data_for_margin_scheme_return(self):
+        """Margin scheme credit note (qty -ve): the margin is only zeroed out for a sale, so
+        the return mirrors the sale it reverses — the same deemed margin (100) and the same
+        CGST/SGST of 9 each, now as a credit. The cost still rides doc-level OthChrg."""
+        si = create_sales_invoice(
+            rate=300,
+            is_in_state=True,
+            company_address="_Test Indian Registered Company-Billing",
+            do_not_save=True,
+        )
+        si.items[0].gst_purchase_price = 182
+        si.items[0].allow_zero_valuation_rate = 1
+        for tax in si.taxes:
+            tax.charge_type = "On Margin"
+            tax.included_in_print_rate = 1
+        si.insert()
+        si.submit()
+
+        cn = make_return_doc("Sales Invoice", si.name)
+        cn.insert()
+
+        request_data = EInvoiceData(cn).get_data()
+        item = request_data["ItemList"][0]
+        val = request_data["ValDtls"]
+
+        # the sale charged 9 + 9 on a deemed margin of 100 — the credit note reverses it
+        self.assertEqual(cn.items[0].cgst_amount, -9)
+        self.assertEqual(cn.items[0].sgst_amount, -9)
+        self.assertEqual(cn.items[0].taxable_value, -100)
+
+        self.assertEqual(item["AssAmt"], 100)
+        self.assertEqual(item["CgstAmt"], 9)
+        self.assertEqual(item["SgstAmt"], 9)
+        self.assertEqual(item["OthChrg"], 0)  # cost rides doc-level OthChrg
+        self.assertEqual(item["TotItemVal"], 118)
+        self.assertEqual(val["AssVal"], 100)
+        self.assertEqual(val["OthChrg"], 182)
+        self.assertEqual(val["TotInvVal"], 300)
+        total_item_val = sum(i["TotItemVal"] for i in request_data["ItemList"])
+        self.assertEqual(total_item_val + val["OthChrg"], val["TotInvVal"])
+
+    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Taxable Values"})
+    def test_margin_scheme_not_folded_by_nil_as_taxable(self):
+        """The 'Generate with Taxable Values' option folds nil/exempt supplies into taxable.
+        A margin line's cost rides the document-level OthChrg (not item non_taxable), so the
+        fold has nothing to grab — AssVal stays the margin (100), not 100 + 182."""
+        si = create_sales_invoice(
+            rate=300,
+            is_in_state=True,
+            company_address="_Test Indian Registered Company-Billing",
+            do_not_save=True,
+        )
+        si.items[0].gst_purchase_price = 182
+        si.items[0].allow_zero_valuation_rate = 1
+        for tax in si.taxes:
+            tax.charge_type = "On Margin"
+            tax.included_in_print_rate = 1
+        si.insert()
+
+        request_data = EInvoiceData(si).get_data()
+        item = request_data["ItemList"][0]
+        val = request_data["ValDtls"]
+
+        self.assertEqual(item["AssAmt"], 100)
+        self.assertEqual(item["OthChrg"], 0)
+        self.assertEqual(val["AssVal"], 100)  # margin only, NOT 100 + 182
+        self.assertEqual(val["OthChrg"], 182)
+        self.assertEqual(val["TotInvVal"], 300)
 
     @responses.activate
     def test_credit_note_e_invoice_with_goods_item(self):

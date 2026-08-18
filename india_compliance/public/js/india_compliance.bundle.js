@@ -1,4 +1,5 @@
 import "./utils";
+import "./taxable_base_resolvers";
 import "./gst_api_handler";
 import "./quick_entry";
 import "./transaction";
