@@ -588,7 +588,8 @@ def get_overseas_place_of_supply(party_details):
     """
     place_of_supply = "96-Other Countries"
 
-    if not party_details.shipping_address_name:
+    # Payment Entry has no shipping address field
+    if not party_details.get("shipping_address_name"):
         return place_of_supply
 
     shipping_address_details = frappe.get_value(
