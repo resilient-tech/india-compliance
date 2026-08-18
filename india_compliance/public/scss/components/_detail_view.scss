@@ -8,7 +8,7 @@
 // row where books and the portal do not agree. on the cells, a row tint hides behind them
 tr.not-matched > th,
 tr.not-matched > td {
-    background-color: color-mix(in srgb, var(--surface-red-2) 50%, transparent);
+    background-color: color-mix(in srgb, var(--red-500) 12%, transparent);
 }
 
 // gstr-1 marks cells, not rows
