@@ -513,7 +513,9 @@ class GSTTransactionData:
 
     @staticmethod
     def rounded(value, precision=2):
-        return rounded(value, precision)
+        # round the size, then put sign back. frappe rounds half up, so -1.005 != -(1.005)
+        result = rounded(abs(value), precision)
+        return -result if value < 0 and result else result
 
     @staticmethod
     def sanitize_value(
