@@ -5,8 +5,10 @@ from frappe import _
 from frappe.utils import flt
 
 from india_compliance.gst_india.overrides.subcontracting_transaction import set_address_display
-from india_compliance.gst_india.utils import is_inward_transaction
-from india_compliance.gst_india.utils.custom_transaction_controller import CustomEwaybillController
+from india_compliance.gst_india.utils.custom_transaction_controller import (
+    CustomEwaybillController,
+    set_gstin_fields_for_e_waybill,
+)
 
 ASSET_MOVEMENT_FIELD_MAP = {"amount": "taxable_value"}
 
@@ -83,13 +85,7 @@ def onload(doc, method=None):
 
     # e-Waybill data generation reads these; they are only set here, so they are
     # available after run_onload (load_doc) and not on a bare frappe.get_doc.
-    # company_gstin is the GSTIN generating the e-Waybill.
-    if is_inward_transaction(doc):
-        doc.company_gstin, doc.supplier_gstin = doc.bill_to_gstin, doc.bill_from_gstin
-        doc.gst_category = doc.bill_from_gst_category
-    else:
-        doc.company_gstin, doc.supplier_gstin = doc.bill_from_gstin, doc.bill_to_gstin
-        doc.gst_category = doc.bill_to_gst_category
+    set_gstin_fields_for_e_waybill(doc)
 
     AssetMovementController(doc).set_e_waybill_info()
 

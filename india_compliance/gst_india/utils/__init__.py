@@ -1232,10 +1232,14 @@ def is_inward_transaction(doc):
     """True when the goods flow towards the company, ie Bill To is the company's side.
 
     Everywhere else this is `is_return`; Asset Movement has no such field and states the
-    direction through `purpose` instead.
+    direction through `purpose` instead. A Stock Entry needs both: only the "Material
+    Transfer" return (inputs coming back from the subcontractor) reverses the sides.
     """
     if doc.get("doctype") == "Asset Movement":
         return doc.get("purpose") == "Receipt"
+
+    if doc.get("doctype") == "Stock Entry":
+        return doc.get("purpose") == "Material Transfer" and bool(doc.get("is_return"))
 
     return bool(doc.get("is_return"))
 
