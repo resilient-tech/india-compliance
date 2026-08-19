@@ -10,7 +10,7 @@ india_compliance.taxes_controller = class TaxesController {
     }
 
     get_items() {
-        return this.frm.doc[this.items_field] || [];
+        return india_compliance.get_items(this.frm.doc);
     }
 
     setup() {

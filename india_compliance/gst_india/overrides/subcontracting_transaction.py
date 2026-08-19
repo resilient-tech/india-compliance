@@ -17,7 +17,7 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
-    get_items_fieldname,
+    get_items,
 )
 from india_compliance.gst_india.utils.custom_transaction_controller import CustomEwaybillController
 
@@ -38,7 +38,7 @@ def after_mapping_subcontracting_order(doc, method, source_doc):
 
 
 def update_item_tax_template(doc, source_doc):
-    items = doc.get(get_items_fieldname(doc.doctype))
+    items = get_items(doc)
     if not items:
         return
 

@@ -4,10 +4,7 @@ from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
 from frappe.utils import flt
 
 from india_compliance.gst_india.overrides.subcontracting_transaction import set_address_display
-from india_compliance.gst_india.utils import (
-    is_api_enabled,
-    is_inward_transaction,
-)
+from india_compliance.gst_india.utils import is_inward_transaction
 from india_compliance.gst_india.utils.custom_transaction_controller import CustomEwaybillController
 
 ASSET_MOVEMENT_FIELD_MAP = {"amount": "taxable_value"}
@@ -21,11 +18,7 @@ class AssetMovementController(CustomEwaybillController):
     def is_e_waybill_applicable(self):
         gst_settings = frappe.get_cached_doc("GST Settings")
 
-        return (
-            super().is_e_waybill_applicable()
-            and is_api_enabled(gst_settings)
-            and bool(gst_settings.enable_e_waybill_from_asset_movement)
-        )
+        return super().is_e_waybill_applicable() and bool(gst_settings.enable_e_waybill_from_asset_movement)
 
     @classmethod
     def get_dashboard_data(cls, data):
