@@ -750,7 +750,7 @@ class LedgerNetMixin:
 
     def _assert_advance_row(self, prepared, payment_name, taxable_value):
         row = next(
-            (r for rows in prepared.values() for r in rows if r[doc.DOC_NUMBER] == payment_name),
+            (r for rows in prepared.values() for r in rows if r[inv_f.DOC_NUMBER] == payment_name),
             None,
         )
 
@@ -759,13 +759,13 @@ class LedgerNetMixin:
             return
 
         self.assertIsNotNone(row, f"advance row expected for {payment_name}")
-        self.assertEqual(row[doc.TAX_RATE], 18)
-        self.assertEqual(flt(row[doc.TAXABLE_VALUE], 2), taxable_value)
+        self.assertEqual(row[inv_f.TAX_RATE], 18)
+        self.assertEqual(flt(row[inv_f.TAXABLE_VALUE], 2), taxable_value)
         # intra-state @ 18% => CGST 9% + SGST 9%, no IGST/cess
-        self.assertEqual(flt(row[doc.CGST], 2), flt(taxable_value * 0.09, 2))
-        self.assertEqual(flt(row[doc.SGST], 2), flt(taxable_value * 0.09, 2))
-        self.assertEqual(flt(row[doc.IGST], 2), 0.0)
-        self.assertEqual(flt(row[doc.CESS], 2), 0.0)
+        self.assertEqual(flt(row[inv_f.CGST], 2), flt(taxable_value * 0.09, 2))
+        self.assertEqual(flt(row[inv_f.SGST], 2), flt(taxable_value * 0.09, 2))
+        self.assertEqual(flt(row[inv_f.IGST], 2), 0.0)
+        self.assertEqual(flt(row[inv_f.CESS], 2), 0.0)
 
     # ---- ledger helpers (net per account / per against-voucher, drops zero nets) ----
 
@@ -1199,31 +1199,6 @@ class TestMultiCurrencyReconciliation(LedgerNetMixin, IntegrationTestCase):
         self.assertEqual(len(refs), 1, "expected exactly one PE reference to the invoice")
         self.assertEqual(flt(refs[0].allocated_amount, 2), 1.0, "net allocated should be 1 USD (base 100)")
 
-<<<<<<< HEAD
-    def _assert_advance_row(self, prepared, payment_name, taxable_value):
-        row = next(
-            (r for rows in prepared.values() for r in rows if r[inv_f.DOC_NUMBER] == payment_name),
-            None,
-        )
-
-        if taxable_value is None:
-            self.assertIsNone(row, f"no advance row expected for {payment_name}")
-            return
-
-        self.assertIsNotNone(row, f"advance row expected for {payment_name}")
-        self.assertEqual(row[inv_f.TAX_RATE], 18)
-        self.assertEqual(flt(row[inv_f.TAXABLE_VALUE], 2), taxable_value)
-        # intra-state @ 18% => CGST 9% + SGST 9%, no IGST/cess
-        self.assertEqual(flt(row[inv_f.CGST], 2), flt(taxable_value * 0.09, 2))
-        self.assertEqual(flt(row[inv_f.SGST], 2), flt(taxable_value * 0.09, 2))
-        self.assertEqual(flt(row[inv_f.IGST], 2), 0.0)
-        self.assertEqual(flt(row[inv_f.CESS], 2), 0.0)
-
-    # ---- ledger helpers (net per account / per against-voucher, drops zero nets) ----
-
-    def _gl_net_by_account(self, payment_doc):
-        rows = frappe.get_all(
-=======
         # base (INR) ledgers identical to the single-currency matrix, USD accounts aside
         self.assertEqual(self._gl_net_by_account(payment_doc), FX_RECONCILED_GL)
 
@@ -1231,7 +1206,6 @@ class TestMultiCurrencyReconciliation(LedgerNetMixin, IntegrationTestCase):
         # (filtered by the reversal remark so the separate-account reclass leg on the same
         # receivable/invoice is excluded.)
         reversal = frappe.get_all(
->>>>>>> ea7bf786 (fix: handle multi-currency in GST on advance payment)
             "GL Entry",
             filters={
                 "voucher_no": payment_doc.name,
