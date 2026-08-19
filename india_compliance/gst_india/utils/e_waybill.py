@@ -53,10 +53,12 @@ from india_compliance.gst_india.overrides.transaction import (
     is_inter_state_supply,
 )
 from india_compliance.gst_india.utils import (
+    get_items,
     handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
-    is_outward_stock_entry,
+    is_inward_transaction,
+    is_same_gstin_allowed,
     is_ship_to_gstin_applicable,
     load_doc,
     parse_datetime,
@@ -191,7 +193,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
 
         with_irn = (
             doc.get("irn")
-            and all(item.gst_treatment in TAXABLE_GST_TREATMENTS for item in doc.items)
+            and all(item.gst_treatment in TAXABLE_GST_TREATMENTS for item in get_items(doc))
             and not (doc.is_return or doc.get("is_debit_note") or is_foreign_doc(doc))
         )
 
@@ -1153,9 +1155,9 @@ def update_transaction(doc, values):
 
     doc.db_set(data)
 
-    if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
+    if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt", "Asset Movement"):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
-    if doc.doctype in ("Delivery Note", "Stock Entry"):
+    if doc.doctype in ("Delivery Note", "Stock Entry", "Asset Movement"):
         doc._sub_supply_desc = values.sub_supply_desc
 
 
@@ -1223,7 +1225,9 @@ def get_billing_shipping_address_map(doc):
     """
     address = get_address_map(doc)
 
-    address.ship_to = doc.port_address if (is_foreign_doc(doc) and doc.port_address) else address.ship_to
+    address.ship_to = (
+        doc.get("port_address") if (is_foreign_doc(doc) and doc.get("port_address")) else address.ship_to
+    )
 
     if doc.get("is_return"):
         address.bill_from, address.bill_to = address.bill_to, address.bill_from
@@ -1396,7 +1400,7 @@ class EWaybillData(GSTTransactionData):
 
         # Atleast one item with HSN code of goods is required
         has_atleast_one_goods_item = any(
-            not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX) for item in self.doc.items
+            not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX) for item in self._items
         )
 
         if not has_atleast_one_goods_item:
@@ -1409,7 +1413,7 @@ class EWaybillData(GSTTransactionData):
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
-        if not is_outward_stock_entry(self.doc):
+        if not is_same_gstin_allowed(self.doc):
             self.validate_same_gstin()
 
     def validate_same_gstin(self):
@@ -1514,7 +1518,7 @@ class EWaybillData(GSTTransactionData):
             frappe.throw(_("e-Waybill can be cancelled only within 24 Hours of its generation"))
 
     def get_all_item_details(self):
-        if len(self.doc.items) <= ITEM_LIMIT:
+        if len(self._items) <= ITEM_LIMIT:
             return super().get_all_item_details()
 
         hsn_wise_items = {}
@@ -1561,7 +1565,7 @@ class EWaybillData(GSTTransactionData):
         # first HSN Code for goods
         doc = self.doc
         main_hsn_code = next(
-            row.gst_hsn_code for row in doc.items if not row.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
+            row.gst_hsn_code for row in self._items if not row.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
         )
 
         self.transaction_details.update(
@@ -1636,10 +1640,23 @@ class EWaybillData(GSTTransactionData):
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "document_type": "CHL",
             },
+            ("Asset Movement", 0): {
+                "supply_type": "O",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "sub_supply_desc": doc.get("_sub_supply_desc", ""),
+                "document_type": "CHL",
+            },
+            # purpose == "Receipt"
+            ("Asset Movement", 1): {
+                "supply_type": "I",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "sub_supply_desc": doc.get("_sub_supply_desc", ""),
+                "document_type": "CHL",
+            },
         }
 
         self.transaction_details.update(
-            default_supply_types.get((doc.doctype, doc.get("is_return") or 0), {})
+            default_supply_types.get((doc.doctype, int(is_inward_transaction(doc))), {})
         )
 
         if is_foreign_doc(self.doc):
@@ -1650,7 +1667,7 @@ class EWaybillData(GSTTransactionData):
         if (
             doc.doctype in ("Sales Invoice", "Purchase Invoice")
             and not doc.is_return
-            and all(item.gst_treatment not in TAXABLE_GST_TREATMENTS for item in doc.items)
+            and all(item.gst_treatment not in TAXABLE_GST_TREATMENTS for item in self._items)
         ):
             self.transaction_details.update(document_type="BIL")
 
@@ -1708,7 +1725,7 @@ class EWaybillData(GSTTransactionData):
         if self.doc.doctype in BUYING_DOCTYPES:
             to_party, from_party = from_party, to_party
 
-        if self.doc.get("is_return"):
+        if is_inward_transaction(self.doc):
             to_party, from_party = from_party, to_party
 
         self.bill_to.legal_name = to_party or self.bill_to.address_title
@@ -1778,6 +1795,8 @@ class EWaybillData(GSTTransactionData):
                 ("Stock Entry", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
                 ("Subcontracting Receipt", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
                 ("Subcontracting Receipt", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Asset Movement", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Asset Movement", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
             }
 
             if self.bill_from.gstin == self.bill_to.gstin:
@@ -1786,6 +1805,8 @@ class EWaybillData(GSTTransactionData):
                         ("Delivery Note", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
                         ("Delivery Note", 1): (REGISTERED_GSTIN, REGISTERED_GSTIN),
                         ("Stock Entry", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+                        ("Asset Movement", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+                        ("Asset Movement", 1): (REGISTERED_GSTIN, REGISTERED_GSTIN),
                     }
                 )
 
@@ -1793,7 +1814,7 @@ class EWaybillData(GSTTransactionData):
                 if address.gstin == "URP":
                     return address.gstin
 
-                gstin = sandbox_gstin.get((self.doc.doctype, self.doc.get("is_return") or 0))[key]
+                gstin = sandbox_gstin.get((self.doc.doctype, int(is_inward_transaction(self.doc))))[key]
 
                 # SEZ party (non-company side) needs a different GSTIN
                 if address.gst_category == "SEZ" and gstin == OTHER_GSTIN:

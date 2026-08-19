@@ -3,6 +3,10 @@ class EwaybillApplicability {
         this.frm = frm;
     }
 
+    get_company_gstin() {
+        return this.frm.doc.company_gstin;
+    }
+
     is_e_waybill_applicable(show_message = false) {
         this.frm._ewb_message_list = [];
 
@@ -11,7 +15,7 @@ class EwaybillApplicability {
         let is_ewb_applicable = true;
         let message_list = [];
 
-        if (!this.frm.doc.company_gstin) {
+        if (!this.get_company_gstin()) {
             is_ewb_applicable = false;
             message_list.push(__("Company GSTIN is not set. Ensure it's set in Company Address."));
         }
@@ -31,9 +35,13 @@ class EwaybillApplicability {
         return is_ewb_applicable;
     }
 
+    get_items() {
+        return india_compliance.get_items(this.frm.doc);
+    }
+
     has_goods_item(is_ewb_applicable, message_list) {
         let has_goods_item = false;
-        for (const item of this.frm.doc.items) {
+        for (const item of this.get_items()) {
             if (item.gst_hsn_code && !item.gst_hsn_code.startsWith("99") && item.qty !== 0) {
                 has_goods_item = true;
                 break;
@@ -275,6 +283,69 @@ class StockEntryEwaybill extends EwaybillApplicability {
             super.is_e_waybill_api_enabled() &&
             gst_settings.enable_e_waybill_for_sc
         );
+    }
+}
+
+class AssetMovementEwaybill extends EwaybillApplicability {
+    is_inward() {
+        return this.frm.doc.purpose === "Receipt";
+    }
+
+    get_company_gstin() {
+        return this.is_inward() ? this.frm.doc.bill_to_gstin : this.frm.doc.bill_from_gstin;
+    }
+
+    is_e_waybill_applicable(show_message = false) {
+        if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_from_asset_movement)
+            return false;
+
+        let is_ewb_applicable = true;
+        let message_list = [];
+
+        const [gstin_label, address_label] = this.is_inward()
+            ? ["Bill To GSTIN", "Bill To Address"]
+            : ["Bill From GSTIN", "Bill From Address"];
+
+        if (!this.get_company_gstin()) {
+            is_ewb_applicable = false;
+            message_list.push(`${gstin_label} is not set. Ensure its set in ${address_label}.`);
+        }
+
+        // at least one item is not a service
+        is_ewb_applicable = this.has_goods_item(is_ewb_applicable, message_list);
+
+        this.frm._ewb_message_list = [];
+
+        if (show_message) {
+            this.frm._ewb_message_list.push(...message_list);
+        }
+
+        return is_ewb_applicable;
+    }
+
+    is_e_waybill_generatable(show_message = false) {
+        // Do we have everything needed to generate e-Waybill for asset movement
+        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+
+        let message_list = [];
+        const [party_field, party_label] = this.is_inward()
+            ? ["bill_from_address", "Bill From"]
+            : ["bill_to_address", "Bill To"];
+
+        if (!this.frm.doc[party_field]) {
+            is_ewb_generatable = false;
+            message_list.push(`${party_label} address is mandatory to generate e-Waybill.`);
+        }
+
+        if (show_message) {
+            this.frm._ewb_message_list.push(...message_list);
+        }
+
+        return is_ewb_generatable;
+    }
+
+    is_e_waybill_api_enabled() {
+        return super.is_e_waybill_api_enabled() && gst_settings.enable_e_waybill_from_asset_movement;
     }
 }
 

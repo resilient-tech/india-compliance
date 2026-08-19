@@ -1490,6 +1490,8 @@ SUBCONTRACTING_DOCTYPES = (
     "Stock Entry",
 )
 
+CUSTOM_ADDRESS_FIELDS_DOCTYPES = ("Stock Entry", "Asset Movement")
+
 BUG_REPORT_URL = "https://github.com/resilient-tech/india-compliance/issues/new"
 
 ORIGINAL_VS_AMENDED = (
