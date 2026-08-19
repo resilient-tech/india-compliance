@@ -217,6 +217,13 @@ class GSTSettings(Document):
         if self.has_value_changed("enable_reverse_charge_in_sales"):
             toggle_custom_fields(SALES_REVERSE_CHARGE_FIELDS, self.enable_reverse_charge_in_sales)
 
+        if self.has_value_changed("enable_e_waybill_from_asset_movement") and (
+            self.enable_e_waybill_from_asset_movement
+        ):
+            from india_compliance.gst_india.overrides.asset_movement import set_naming_for_e_waybill
+
+            set_naming_for_e_waybill()
+
     def validate_e_invoice_applicability_date(self):
         if not self.enable_api or not self.enable_e_invoice:
             return
