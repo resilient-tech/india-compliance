@@ -167,19 +167,10 @@ class GSTAdvanceDetail:
             .join(self.pe_ref)
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
             .select(
-<<<<<<< HEAD
-                self.pe_ref.allocated_amount,
+                # allocated_amount is in the party account currency; the column is company currency
+                (self.pe_ref.allocated_amount * get_payment_exchange_rate(self.pe)).as_("allocated_amount"),
                 self.pe_ref.reference_doctype.as_("against_voucher_type"),
                 self.pe_ref.reference_name.as_("against_voucher"),
-=======
-                # Max(): grouped by voucher_no / voucher_detail_no, not the pe_ref PK
-                # allocated_amount is in the party account currency; the column is company currency
-                Max(self.pe_ref.allocated_amount * get_payment_exchange_rate(self.pe)).as_(
-                    "allocated_amount"
-                ),
-                Max(self.pe_ref.reference_doctype).as_("against_voucher_type"),
-                Max(self.pe_ref.reference_name).as_("against_voucher"),
->>>>>>> ea7bf786 (fix: handle multi-currency in GST on advance payment)
             )
             .where(self.gl_entry.debit_in_account_currency > 0)
         )
@@ -198,30 +189,15 @@ class GSTAdvanceDetail:
             .join(self.pe)
             .on(self.pe.name == self.gl_entry.voucher_no)
             .select(
-<<<<<<< HEAD
                 self.gl_entry.voucher_no,
                 self.gl_entry.posting_date,
                 self.pe.name.as_("payment_entry"),
                 self.pe.party.as_("customer"),
                 self.pe.party_name.as_("customer_name"),
                 Case()
-                .when(self.gl_entry.credit_in_account_currency > 0, self.pe.paid_amount)
+                .when(self.gl_entry.credit_in_account_currency > 0, self.pe.base_paid_amount)
                 .else_(0)
                 .as_("paid_amount"),
-=======
-                # Max(): grouped by voucher_no / voucher_detail_no (not a PK), so every
-                # non-aggregate is wrapped; each is single-valued per group (MariaDB output unchanged).
-                Max(self.gl_entry.voucher_no).as_("voucher_no"),
-                Max(self.gl_entry.posting_date).as_("posting_date"),
-                Max(self.pe.name).as_("payment_entry"),
-                Max(self.pe.party).as_("customer"),
-                Max(self.pe.party_name).as_("customer_name"),
-                Max(
-                    Case()
-                    .when(self.gl_entry.credit_in_account_currency > 0, self.pe.base_paid_amount)
-                    .else_(0)
-                ).as_("paid_amount"),
->>>>>>> ea7bf786 (fix: handle multi-currency in GST on advance payment)
                 Sum(self.gl_entry.credit_in_account_currency).as_("gst_paid"),
                 Sum(self.gl_entry.debit_in_account_currency).as_("gst_allocated"),
                 self.pe.place_of_supply,
