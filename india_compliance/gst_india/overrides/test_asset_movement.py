@@ -1,12 +1,13 @@
 import frappe
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from frappe.desk.form.load import run_onload
-from frappe.tests import IntegrationTestCase
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import now_datetime
 
 from india_compliance.gst_india.overrides.test_transaction import create_cess_accounts
 from india_compliance.gst_india.overrides.transaction import get_gst_details
 from india_compliance.gst_india.utils import get_place_of_supply
+from india_compliance.gst_india.utils.jinja import get_gst_breakup
 
 # Fixtures for all of these are declared in india_compliance/tests/test_records.json
 TEST_LOCATION = "_Test Asset Movement Location"
@@ -187,6 +188,25 @@ class TestAssetMovementGST(IntegrationTestCase):
                 self.assertEqual(row.gst_hsn_code, "847130")
                 self.assertEqual(row.qty, 1)
                 self.assertEqual(row.uom, "Nos")
+
+    @change_settings("GST Settings", {"hsn_wise_tax_breakup": 1})
+    def test_hsn_wise_gst_breakup(self):
+        taxes_and_charges = "Output GST In-state - _TIRC"
+        doc = create_asset_movement(
+            assets=[{"asset": self.asset, "item_tax_template": "GST 18% - _TIRC"}],
+            extra_fields={"tax_category": "In-State", "taxes_and_charges": taxes_and_charges},
+            do_not_save=True,
+        )
+        doc.set("taxes", get_taxes_and_charges("Sales Taxes and Charges Template", taxes_and_charges))
+        doc.insert()
+
+        breakup = get_gst_breakup(doc)
+
+        self.assertEqual(len(breakup), 1)
+        self.assertEqual(breakup[0].get("HSN/SAC"), "847130")
+        self.assertEqual(breakup[0].get("Taxable Amount"), TEST_ASSET_VALUE)
+        self.assertEqual(breakup[0].get("CGST"), {"tax_rate": 9, "tax_amount": 9000})
+        self.assertEqual(breakup[0].get("SGST"), {"tax_rate": 9, "tax_amount": 9000})
 
     def test_inward_movement_bills_the_company(self):
         """On a Receipt the company is billed to rather than from, and the e-Waybill is
