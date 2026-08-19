@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from typing import ClassVar
 
 import frappe
+from erpnext.accounts.doctype.account.test_account import create_account
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
     get_outstanding_reference_documents,
 )
@@ -23,7 +24,6 @@ from frappe.utils import flt, getdate
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
 from india_compliance.gst_india.utils.tests import create_transaction
-from india_compliance.tests.erpnext_test_utils import create_account
 
 
 @contextmanager
