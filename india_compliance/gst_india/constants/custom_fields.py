@@ -234,17 +234,6 @@ CUSTOM_FIELDS = {
     ],
     "Asset Movement": [
         {
-            "fieldname": "naming_series",
-            "label": "Series",
-            "fieldtype": "Select",
-            "insert_after": "company",
-            "options": "ASM-.YY.-\nACC-ASM-.YYYY.-",
-            "default": "ASM-.YY.-",
-            "no_copy": 1,
-            "print_hide": 1,
-            "set_only_once": 1,
-        },
-        {
             "fieldname": "section_break_taxes",
             "label": "Taxes",
             "fieldtype": "Section Break",
