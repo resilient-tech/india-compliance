@@ -101,7 +101,7 @@ class CustomEwaybillController:
     def is_e_waybill_applicable(self):
         gst_settings = frappe.get_cached_doc("GST Settings")
 
-        return bool(gst_settings.enable_e_waybill)
+        return bool(gst_settings.enable_api and gst_settings.enable_e_waybill)
 
     def ignore_gst_validations(self):
         return bool(ignore_gst_validations(self.doc))
