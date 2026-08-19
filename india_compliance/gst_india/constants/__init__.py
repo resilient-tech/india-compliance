@@ -1490,9 +1490,7 @@ SUBCONTRACTING_DOCTYPES = (
     "Stock Entry",
 )
 
-ITEMS_FIELDNAME_OVERRIDES = {"Asset Movement": "assets"}
-
-DOCTYPES_WITH_BILL_FROM_TO = ("Stock Entry", "Asset Movement")
+CUSTOM_ADDRESS_FIELDS_DOCTYPES = ("Stock Entry", "Asset Movement")
 
 BUG_REPORT_URL = "https://github.com/resilient-tech/india-compliance/issues/new"
 
