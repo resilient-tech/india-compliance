@@ -4,6 +4,9 @@ from india_compliance.gst_india.overrides.subcontracting_transaction import (
     set_address_display,
 )
 from india_compliance.gst_india.utils import is_outward_stock_entry
+from india_compliance.gst_india.utils.custom_transaction_controller import (
+    set_gstin_fields_for_e_waybill,
+)
 
 STOCK_ENTRY_FIELD_MAP = {"total_taxable_value": "total_taxable_value"}
 
@@ -46,9 +49,7 @@ def onload(doc, method=None):
 
     # e-Waybill data generation reads these; they are only set here, so they are
     # available after run_onload (load_doc) and not on a bare frappe.get_doc.
-    doc.company_gstin = doc.bill_from_gstin
-    doc.supplier_gstin = doc.bill_to_gstin
-    doc.gst_category = doc.bill_to_gst_category
+    set_gstin_fields_for_e_waybill(doc)
 
     StockEntryController(doc).set_e_waybill_info()
 

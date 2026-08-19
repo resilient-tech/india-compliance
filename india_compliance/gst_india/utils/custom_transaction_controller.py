@@ -63,6 +63,14 @@ def get_field_map(doc):
     )
 
 
+def set_gstin_fields_for_e_waybill(doc):
+    field_map = get_field_map(doc)
+
+    doc.company_gstin = doc.get(field_map.company_gstin_field)
+    doc.supplier_gstin = doc.get(field_map.party_gstin_field)
+    doc.gst_category = doc.get(field_map.gst_category_field)
+
+
 class CustomEwaybillController:
     DOCTYPE = None
     TAXES_FIELD_MAP = SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
