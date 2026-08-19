@@ -6,6 +6,7 @@ Adjustments are the same shape, sign flipped.
 
 from frappe.utils import flt
 
+from india_compliance.gst_india.constants import GST_TAX_RATES
 from india_compliance.gst_returns.fields.gstr1 import DocField as doc
 from india_compliance.gst_returns.fields.gstr1 import ItemField as item
 from india_compliance.gst_returns.fields.gstr1 import RawField as raw
@@ -15,6 +16,8 @@ from . import _shared as s
 
 RECEIVED = 1
 ADJUSTED = -1
+
+NOTIFIED_RATES = sorted(GST_TAX_RATES)
 
 KEYS = {
     raw.FLAG: doc.FLAG,
@@ -105,7 +108,7 @@ def from_books(rows, multiplier=RECEIVED):
     output = {}
 
     for entry in rows:
-        rate = round((entry["tax_amount"] / entry["taxable_value"]) * 100)
+        rate = nearest_notified_rate((entry["tax_amount"] / entry["taxable_value"]) * 100)
         intra_state = entry["place_of_supply"][:2] == entry["company_gstin"][:2]
 
         row = {
@@ -127,17 +130,14 @@ def from_books(rows, multiplier=RECEIVED):
         row[doc.SGST] = half if intra_state else 0
         row[doc.IGST] = 0 if intra_state else entry["tax_amount"] * multiplier
 
-        output.setdefault(f"{entry['place_of_supply']} - {flt(rate)}", []).append(row)
+        output.setdefault(group_key(row), []).append(row)
 
     return output
 
 
-def received_from_books(rows):
-    return from_books(rows, RECEIVED)
-
-
-def adjusted_from_books(rows):
-    return from_books(rows, ADJUSTED)
+def nearest_notified_rate(derived):
+    """18.05 -> 18.0, 0.24 -> 0.25."""
+    return min(NOTIFIED_RATES, key=lambda rate: abs(rate - derived))
 
 
 def received_to_canonical(gov_data):
