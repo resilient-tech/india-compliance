@@ -1,6 +1,7 @@
 import frappe
 from erpnext.assets.doctype.asset.asset import get_asset_value_after_depreciation
 from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
+from frappe import _
 from frappe.utils import flt
 
 from india_compliance.gst_india.overrides.subcontracting_transaction import set_address_display
@@ -8,6 +9,16 @@ from india_compliance.gst_india.utils import is_inward_transaction
 from india_compliance.gst_india.utils.custom_transaction_controller import CustomEwaybillController
 
 ASSET_MOVEMENT_FIELD_MAP = {"amount": "taxable_value"}
+
+ERPNEXT_NAMING = {"autoname": "format:ACC-ASM-{YYYY}-{#####}", "naming_rule": "Expression"}
+
+ASSET_MOVEMENT_NAMING_PROPERTY = {
+    "doctype": "Asset Movement",
+    "doctype_or_field": "DocType",
+    "property": "autoname",
+    "property_type": "Data",
+    "value": "format:ASM-{YY}-{#####}",
+}
 
 
 class AssetMovementController(CustomEwaybillController):
@@ -85,3 +96,35 @@ def onload(doc, method=None):
 
 def get_dashboard_data(data):
     return AssetMovementController.get_dashboard_data(data)
+
+
+def set_naming_for_e_waybill():
+    """Shorten Asset Movement naming when its number cannot be reported on an e-Waybill.
+
+    A series the site has already shortened is left alone, and existing documents keep
+    their names.
+    """
+    if frappe.db.exists(
+        "Property Setter",
+        {"doc_type": "Asset Movement", "property": ("in", tuple(ERPNEXT_NAMING))},
+    ):
+        return
+
+    meta = frappe.get_meta("Asset Movement")
+
+    if any(meta.get(field) != value for field, value in ERPNEXT_NAMING.items()):
+        return
+
+    frappe.make_property_setter(
+        ASSET_MOVEMENT_NAMING_PROPERTY,
+        validate_fields_for_doctype=False,
+        is_system_generated=True,
+    )
+
+    frappe.msgprint(
+        _("Asset Movement naming changed to {0} for GST Compliance.").format(
+            frappe.bold(ASSET_MOVEMENT_NAMING_PROPERTY["value"].split(":", 1)[1])
+        ),
+        title=_("Naming Series Updated"),
+        indicator="orange",
+    )
