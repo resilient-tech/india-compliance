@@ -1346,6 +1346,20 @@ class TestGSTR1BooksData(IntegrationTestCase):
             data[SubCategory.HSN.value][key],
         )
 
+    def test_hsn_descriptions_are_asked_for_only_the_codes_in_the_return(self):
+        """The master runs to tens of thousands of rows; a return names a handful."""
+        rows = {
+            SubCategory.HSN.value: {
+                "73044900 - NOS-NUMBERS - 18.0": [frappe._dict({"gst_hsn_code": "73044900"})]
+            }
+        }
+        descriptions = GSTR1BooksData(frappe._dict()).hsn_descriptions(rows)
+
+        self.assertEqual(set(descriptions), {"73044900"})
+
+    def test_hsn_descriptions_asks_nothing_when_there_are_no_rows(self):
+        self.assertEqual(GSTR1BooksData(frappe._dict()).hsn_descriptions({}), {})
+
 
 def setup_cess_account(company="_Test Indian Registered Company"):
     # create cess account
