@@ -23,6 +23,7 @@ from india_compliance.gst_india.utils import (
     get_validated_country_code,
     is_api_enabled,
     is_foreign_doc,
+    update_dashboard_with_gst_logs,
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (
@@ -287,33 +288,6 @@ def get_dashboard_data(data):
     return update_dashboard_with_gst_logs(
         "Sales Invoice", data, "e-Waybill Log", "e-Invoice Log", "Integration Request"
     )
-
-
-def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
-    if not is_api_enabled():
-        return data
-
-    data.setdefault("non_standard_fieldnames", {}).update(
-        {
-            "e-Waybill Log": "reference_name",
-            "Integration Request": "reference_docname",
-            "GST Inward Supply": "link_name",
-            "e-Invoice Log": "reference_name",
-        }
-    )
-
-    data.setdefault("dynamic_links", {}).update(
-        reference_docname=[doctype, "reference_doctype"],
-        reference_name=[doctype, "reference_doctype"],
-    )
-
-    transactions = data.setdefault("transactions", [])
-
-    # GST Logs section looks best at the 3rd position
-    # If there are less than 2 transactions, insert will be equivalent to append
-    transactions.insert(2, {"label": _("GST Logs"), "items": log_doctypes})
-
-    return data
 
 
 def set_e_waybill_status(doc, gst_settings=None):
