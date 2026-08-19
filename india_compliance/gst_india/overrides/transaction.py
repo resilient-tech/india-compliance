@@ -10,7 +10,7 @@ from frappe.model.utils import get_fetch_values
 from frappe.utils import cint, flt, format_date
 
 from india_compliance.gst_india.constants import (
-    DOCTYPES_WITH_BILL_FROM_TO,
+    CUSTOM_ADDRESS_FIELDS_DOCTYPES,
     GST_RCM_TAX_TYPES,
     GST_REFUND_TAX_TYPES,
     GST_TAX_TYPES,
@@ -35,6 +35,7 @@ from india_compliance.gst_india.utils import (
     get_gst_account_gst_tax_type_map,
     get_gst_accounts_by_type,
     get_hsn_settings,
+    get_items,
     get_items_fieldname,
     get_place_of_supply,
     get_place_of_supply_options,
@@ -288,6 +289,13 @@ class GSTAccounts:
     def __init__(self, doc):
         self.doc = doc
 
+    @property
+    def _company_address_field(self):
+        if self.doc.doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
+            return "bill_to_address" if is_inward_transaction(self.doc) else "bill_from_address"
+
+        return "company_address" if self.is_sales_transaction else "billing_address"
+
     def validate(self, is_sales_transaction=False):
         self.is_sales_transaction = is_sales_transaction
 
@@ -400,12 +408,6 @@ class GSTAccounts:
                 )
             )
 
-    def get_company_address_field(self):
-        if self.doc.doctype in DOCTYPES_WITH_BILL_FROM_TO:
-            return "bill_to_address" if is_inward_transaction(self.doc) else "bill_from_address"
-
-        return "company_address" if self.is_sales_transaction else "billing_address"
-
     def validate_for_invalid_account_type(self):
         """
         - SEZ / Inter-State supplies should not have CGST or SGST account
@@ -413,7 +415,7 @@ class GSTAccounts:
         - If Intra-State, ensure both CGST and SGST accounts are used
         """
         company_gst_category = frappe.db.get_value(
-            "Address", self.doc.get(self.get_company_address_field()), "gst_category"
+            "Address", self.doc.get(self._company_address_field), "gst_category"
         )
 
         if company_gst_category == "SEZ":
@@ -491,7 +493,7 @@ class GSTAccounts:
             )
 
     def validate_missing_accounts_in_item_tax_template(self):
-        for row in self.doc.get(get_items_fieldname(self.doc.doctype)) or []:
+        for row in get_items(self.doc):
             if not row.item_tax_template:
                 continue
 
@@ -519,7 +521,7 @@ class GSTAccounts:
 def validate_items(doc):
     """Validate Items for a GST Compliant Invoice"""
 
-    items = doc.get(get_items_fieldname(doc.doctype))
+    items = get_items(doc)
     if not items:
         return
 
@@ -581,7 +583,7 @@ def validate_place_of_supply(doc):
 
 
 def is_inter_state_supply(doc):
-    if doc.doctype in DOCTYPES_WITH_BILL_FROM_TO:
+    if doc.doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
         party_gst_category = (
             doc.bill_from_gst_category if is_inward_transaction(doc) else doc.bill_to_gst_category
         )
@@ -607,7 +609,7 @@ def get_source_state_code(doc):
     if doc.doctype in SALES_DOCTYPES or doc.doctype == "Payment Entry":
         return doc.company_gstin[:2]
 
-    if doc.doctype in DOCTYPES_WITH_BILL_FROM_TO:
+    if doc.doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
         if doc.bill_from_gst_category == "Unregistered" and doc.bill_from_address:
             return frappe.db.get_value(
                 "Address",
@@ -659,7 +661,7 @@ def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
     rows_with_missing_hsn = []
     rows_with_invalid_hsn = []
 
-    for item in doc.get(get_items_fieldname(doc.doctype)):
+    for item in get_items(doc):
         item.gst_hsn_code = (item.gst_hsn_code or "").replace(" ", "")
 
         if not (hsn_code := item.get("gst_hsn_code")):
@@ -875,7 +877,9 @@ def get_gst_details(
 
     master_doctype = (
         "Sales Taxes and Charges Template"
-        if is_sales_transaction or doctype in SUBCONTRACTING_DOCTYPES or doctype in DOCTYPES_WITH_BILL_FROM_TO
+        if is_sales_transaction
+        or doctype in SUBCONTRACTING_DOCTYPES
+        or doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES
         else "Purchase Taxes and Charges Template"
     )
 
@@ -921,7 +925,7 @@ def _get_address_fields(doctype, party_details=None):
             gst_category_field="gst_category",
         )
 
-    elif doctype in DOCTYPES_WITH_BILL_FROM_TO:
+    elif doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
         if party_details and is_inward_transaction(frappe._dict(party_details, doctype=doctype)):
             address_fields.update(
                 company_gstin_field="bill_to_gstin",
@@ -1116,8 +1120,8 @@ class ItemGSTDetails:
         self.doc = doc
 
     @property
-    def item_rows(self):
-        return self.doc.get(get_items_fieldname(self.doc.doctype)) or []
+    def _items(self):
+        return get_items(self.doc)
 
     @classmethod
     def get(cls, docs, doctype, company):
@@ -1138,13 +1142,13 @@ class ItemGSTDetails:
 
         for doc in docs:
             self.doc = doc
-            if not self.item_rows or not doc.get("taxes"):
+            if not self._items or not doc.get("taxes"):
                 continue
 
             self.build_item_wise_tax_detail_from_data()
             self.get_item_name_wise_tax_details()
 
-            for item in self.item_rows:
+            for item in self._items:
                 response[item.name] = self.get_tax_detail_by_item_name(item)
 
         return response
@@ -1153,7 +1157,7 @@ class ItemGSTDetails:
         """
         Update Item GST Details for a single document
         """
-        if not self.item_rows:
+        if not self._items:
             return
 
         self.set_item_defaults()
@@ -1232,7 +1236,7 @@ class ItemGSTDetails:
     def set_item_defaults(self):
         item_defaults = self.get_item_defaults()
 
-        for item in self.item_rows:
+        for item in self._items:
             item.update(item_defaults.copy())
 
     def get_item_name_wise_tax_details(self):
@@ -1268,7 +1272,7 @@ class ItemGSTDetails:
             tax_differences[tax_type] += flt(row.get(self.tax_amount_field()))
             tax_map[row.name] = row
 
-        for row in self.item_rows:
+        for row in self._items:
             key = row.name
             item_map[key] = row
 
@@ -1326,7 +1330,7 @@ class ItemGSTDetails:
     def validate_item_gst_details(self):
         invalid_rows = defaultdict(list)
 
-        for item in self.item_rows:
+        for item in self._items:
             for tax in GST_TAX_TYPES:
                 expected_amt = self.get_item_tax_amount(item, item.get(f"{tax}_rate"), tax)
 
@@ -1421,8 +1425,8 @@ class ItemGSTTreatment:
         self.doc = doc
 
     @property
-    def item_rows(self):
-        return self.doc.get(get_items_fieldname(self.doc.doctype)) or []
+    def _items(self):
+        return get_items(self.doc)
 
     def set(self):
         is_sales_transaction = self.doc.doctype in SALES_DOCTYPES
@@ -1449,22 +1453,22 @@ class ItemGSTTreatment:
         self.set_default_treatment()
 
     def set_for_overseas(self):
-        for item in self.item_rows:
+        for item in self._items:
             item.gst_treatment = "Zero-Rated"
 
     def set_for_import_transactions(self):
-        for item in self.item_rows:
+        for item in self._items:
             item.gst_treatment = "Taxable"
 
     def set_for_no_taxes(self):
-        for item in self.item_rows:
+        for item in self._items:
             if item.gst_treatment not in ("Exempted", "Non-GST"):
                 item.gst_treatment = "Nil-Rated"
 
     def update_gst_treatment_map(self):
         item_templates = set()
 
-        for item in self.item_rows:
+        for item in self._items:
             item_templates.add(item.item_tax_template)
 
         self.gst_treatment_map = frappe._dict(
@@ -1479,7 +1483,7 @@ class ItemGSTTreatment:
     def set_default_treatment(self):
         default_treatment = self.get_default_treatment()
 
-        for item in self.item_rows:
+        for item in self._items:
             item.gst_treatment = self.gst_treatment_map.get(item.item_tax_template)
 
             if not item.gst_treatment or not item.item_tax_template:

@@ -34,14 +34,13 @@ from titlecase import titlecase as _titlecase
 from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
-    DOCTYPES_WITH_BILL_FROM_TO,
+    CUSTOM_ADDRESS_FIELDS_DOCTYPES,
     E_INVOICE_MASTER_CODES_URL,
     GST_ACCOUNT_FIELDS,
     GST_INVOICE_NUMBER_FORMAT,
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
-    ITEMS_FIELDNAME_OVERRIDES,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
@@ -567,7 +566,7 @@ def get_place_of_supply(party_details, doctype):
         # for registered
         pos_gstin = customer_gstin or party_details.company_gstin
 
-    elif doctype in DOCTYPES_WITH_BILL_FROM_TO:
+    elif doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
         # Place of supply for goods is where the movement terminates (s.10(1)(a)), so
         # read it off the Bill To address whenever that party has no GSTIN to derive it
         # from - an unregistered consignee, or one billed as URP.
@@ -1212,7 +1211,12 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
 
 
 def get_items_fieldname(doctype):
-    return ITEMS_FIELDNAME_OVERRIDES.get(doctype, "items")
+    return "assets" if doctype == "Asset Movement" else "items"
+
+
+def get_items(doc):
+    """Rows of the doctype's item table, which isn't always called `items`."""
+    return doc.get(get_items_fieldname(doc.doctype)) or []
 
 
 def is_outward_stock_entry(doc):

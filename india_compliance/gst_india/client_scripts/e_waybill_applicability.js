@@ -36,7 +36,7 @@ class EwaybillApplicability {
     }
 
     get_items() {
-        return this.frm.doc[india_compliance.get_items_fieldname(this.frm.doctype)] || [];
+        return india_compliance.get_items(this.frm.doc);
     }
 
     has_goods_item(is_ewb_applicable, message_list) {

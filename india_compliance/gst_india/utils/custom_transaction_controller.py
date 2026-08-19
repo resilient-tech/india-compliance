@@ -1,7 +1,7 @@
 import frappe
 from frappe import _, bold
 
-from india_compliance.gst_india.constants import DOCTYPES_WITH_BILL_FROM_TO
+from india_compliance.gst_india.constants import CUSTOM_ADDRESS_FIELDS_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
     GSTAccounts,
     ignore_gst_validations,
@@ -39,7 +39,7 @@ def get_field_map(doc):
     Doctypes with bill_from / bill_to swap sides by direction; the rest bill the supplier
     from a fixed set of fields.
     """
-    if doc.doctype not in DOCTYPES_WITH_BILL_FROM_TO:
+    if doc.doctype not in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
         return frappe._dict(
             company_gstin_field="company_gstin",
             party_gstin_field="supplier_gstin",
@@ -67,14 +67,17 @@ class CustomEwaybillController:
     DOCTYPE = None
     TAXES_FIELD_MAP = SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
     VALIDATES_TRANSACTION_NAME = False
-    GST_LOG_DOCTYPES = ("e-Waybill Log", "Integration Request")
 
     def __init__(self, doc):
         self.doc = doc
 
+    @property
+    def _field_map(self):
+        return get_field_map(self.doc)
+
     @classmethod
     def get_dashboard_data(cls, data):
-        return update_dashboard_with_gst_logs(cls.DOCTYPE, data, *cls.GST_LOG_DOCTYPES)
+        return update_dashboard_with_gst_logs(cls.DOCTYPE, data, "e-Waybill Log", "Integration Request")
 
     def set_e_waybill_info(self):
         if not self.doc.get("ewaybill"):
@@ -98,14 +101,10 @@ class CustomEwaybillController:
     def is_e_waybill_applicable(self):
         gst_settings = frappe.get_cached_doc("GST Settings")
 
-        return bool(gst_settings.enable_api and gst_settings.enable_e_waybill)
+        return bool(gst_settings.enable_e_waybill)
 
     def ignore_gst_validations(self):
         return bool(ignore_gst_validations(self.doc))
-
-    @property
-    def field_map(self):
-        return get_field_map(self.doc)
 
     def set_fields(self):
         """Set any doc field values that are needed for GST validation."""
@@ -154,7 +153,7 @@ class CustomEwaybillController:
         doc = self.doc
         validate_items(doc)
 
-        field_map = self.field_map
+        field_map = self._field_map
         company_gstin_field = field_map.company_gstin_field
         party_gstin_field = field_map.party_gstin_field
         company_address_field = field_map.company_address_field
@@ -193,7 +192,7 @@ class CustomEwaybillController:
         validate_gst_transporter_id(doc)
         validate_gst_category(doc.get(gst_category_field), gstin)
 
-        CustomGSTAccounts(doc, self.field_map).validate(True)
+        CustomGSTAccounts(doc, self._field_map).validate(True)
 
     def validate_company_address_field(self, company_address_field):
         if (
@@ -212,7 +211,7 @@ class CustomEwaybillController:
 class CustomGSTAccounts(GSTAccounts):
     def __init__(self, doc, field_map=None):
         super().__init__(doc)
-        self.field_map = field_map or get_field_map(doc)
+        self._field_map = field_map or get_field_map(doc)
 
     def validate(self, is_sales_transaction=False):
         self.is_sales_transaction = is_sales_transaction
@@ -234,8 +233,8 @@ class CustomGSTAccounts(GSTAccounts):
         if is_same_gstin_allowed(self.doc):
             return
 
-        company_gstin = self.doc.get(self.field_map.company_gstin_field)
-        party_gstin = self.doc.get(self.field_map.party_gstin_field)
+        company_gstin = self.doc.get(self._field_map.company_gstin_field)
+        party_gstin = self.doc.get(self._field_map.party_gstin_field)
 
         if not party_gstin or company_gstin != party_gstin:
             return

@@ -61,9 +61,6 @@ Object.assign(india_compliance, {
         "Return Raw Material to Customer",
     ],
 
-    // Child table holding the item rows, where it isn't `items`.
-    ITEMS_FIELDNAME_OVERRIDES: { "Asset Movement": "assets" },
-
     // Stock Entry purposes eligible for e-Waybill
     E_WAYBILL_STOCK_ENTRY_PURPOSES: [
         "Material Transfer",
@@ -615,7 +612,6 @@ Object.assign(india_compliance, {
         if (
             !(
                 india_compliance.is_indian_registered_company(doc.company) &&
-                gst_settings.enable_api &&
                 gst_settings.enable_e_waybill &&
                 gst_settings.enable_e_waybill_for_sc
             )
@@ -641,7 +637,6 @@ Object.assign(india_compliance, {
     is_e_waybill_applicable_for_asset_movement(doc) {
         return !!(
             india_compliance.is_indian_registered_company(doc.company) &&
-            india_compliance.is_api_enabled() &&
             gst_settings.enable_e_waybill &&
             gst_settings.enable_e_waybill_from_asset_movement
         );
@@ -669,6 +664,10 @@ Object.assign(india_compliance, {
         }
 
         return "items";
+    },
+
+    get_items(doc) {
+        return doc[this.get_items_fieldname(doc.doctype)] || [];
     },
 
     get_inward_subcategory_options(sub_section) {
