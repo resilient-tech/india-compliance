@@ -1,3 +1,5 @@
+from unittest import mock
+
 import frappe
 from erpnext.accounts.doctype.sales_invoice.mapper import make_sales_return
 from frappe.tests import IntegrationTestCase, change_settings
@@ -1362,7 +1364,10 @@ class TestGSTR1BooksData(IntegrationTestCase):
         self.assertEqual(descriptions[code], "Test HSN")
 
     def test_hsn_descriptions_asks_nothing_when_there_are_no_rows(self):
-        self.assertEqual(GSTR1BooksData(frappe._dict()).hsn_descriptions({}), {})
+        with mock.patch.object(frappe, "get_all") as get_all:
+            self.assertEqual(GSTR1BooksData(frappe._dict()).hsn_descriptions({}), {})
+
+        get_all.assert_not_called()
 
 
 def setup_cess_account(company="_Test Indian Registered Company"):

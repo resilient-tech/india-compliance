@@ -107,6 +107,9 @@ class GSTR1BooksData:
         """Descriptions for the product codes this return reports, and no others."""
         codes = {row.gst_hsn_code for by_key in hsn_rows.values() for rows in by_key.values() for row in rows}
 
+        if not codes:
+            return frappe._dict()
+
         return frappe._dict(
             frappe.get_all(
                 "GST HSN Code",
