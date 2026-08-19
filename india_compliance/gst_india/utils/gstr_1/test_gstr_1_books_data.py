@@ -1348,14 +1348,18 @@ class TestGSTR1BooksData(IntegrationTestCase):
 
     def test_hsn_descriptions_are_asked_for_only_the_codes_in_the_return(self):
         """The master runs to tens of thousands of rows; a return names a handful."""
+        code = "99999999"
+        frappe.get_doc({"doctype": "GST HSN Code", "hsn_code": code, "description": "Test HSN"}).insert(
+            ignore_if_duplicate=True
+        )
+
         rows = {
-            SubCategory.HSN.value: {
-                "73044900 - NOS-NUMBERS - 18.0": [frappe._dict({"gst_hsn_code": "73044900"})]
-            }
+            SubCategory.HSN.value: {f"{code} - NOS-NUMBERS - 18.0": [frappe._dict({"gst_hsn_code": code})]}
         }
         descriptions = GSTR1BooksData(frappe._dict()).hsn_descriptions(rows)
 
-        self.assertEqual(set(descriptions), {"73044900"})
+        self.assertEqual(set(descriptions), {code})
+        self.assertEqual(descriptions[code], "Test HSN")
 
     def test_hsn_descriptions_asks_nothing_when_there_are_no_rows(self):
         self.assertEqual(GSTR1BooksData(frappe._dict()).hsn_descriptions({}), {})
