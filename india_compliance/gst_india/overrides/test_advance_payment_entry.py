@@ -20,7 +20,7 @@ from erpnext.controllers.stock_controller import show_accounting_ledger_preview
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, getdate
 
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
+from india_compliance.gst_india.utils.gstr_1 import DocField as doc
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
 from india_compliance.gst_india.utils.tests import create_transaction
 
@@ -52,6 +52,11 @@ def toggle_seperate_advance_accounting():
 
 
 class TestAdvancePaymentEntry(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.addClassCleanup(frappe.db.rollback)
+
     EXPECTED_GL: ClassVar[list[dict]] = [
         {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
         {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
@@ -359,6 +364,19 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         invoice_doc = self._create_sales_invoice()
 
         make_payment_reconciliation(payment_doc, invoice_doc, 50)
+
+        payment_entries = get_advance_payment_entries_for_regional(
+            party_type="Customer",
+            party=payment_doc.party,
+            party_account=[payment_doc.paid_from],
+            order_list=[],
+            order_doctype="Sales Order",
+            include_unallocated=True,
+            condition=frappe._dict({"company": payment_doc.company, "name": payment_doc.name}),
+        )
+
+        self.assertEqual(flt(payment_entries[0].amount, 2), 540.01)
+
         make_payment_reconciliation(payment_doc, invoice_doc, 20)
 
         # Verify outstanding amount
@@ -395,6 +413,35 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
                 {"amount": -440.68, "against_voucher_no": payment_doc.name},
             ],
         )
+
+    def test_single_invoice_reconciled_in_parts(self):
+        payment_doc = self._create_payment_entry()  # 500 + 90 GST
+        invoice_doc = create_transaction(doctype="Sales Invoice", is_in_state=1, rate=500)
+        self.assertEqual(flt(invoice_doc.grand_total, 2), 590.0)
+
+        make_payment_reconciliation(payment_doc, invoice_doc, 300)
+        make_payment_reconciliation(payment_doc, invoice_doc, 290)
+
+        payment_doc.reload()
+        self.assertEqual(flt(payment_doc.unallocated_amount, 2), 0.0, "advance fully consumed")
+        self.assertEqual([flt(row.allocated_amount, 2) for row in payment_doc.references], [254.24, 245.76])
+        self.assertEqual(
+            flt(frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount"), 2), 0.0
+        )
+
+        # 45.76 reversed with the first part and 44.24 with the second: all 90 comes back, so the
+        # GST accounts net to nothing and the receivable carries the whole 590
+        net = {}
+        for row in frappe.get_all(
+            "GL Entry",
+            filters={"voucher_no": payment_doc.name, "is_cancelled": 0},
+            fields=["account", "debit", "credit"],
+        ):
+            net[row.account] = flt(net.get(row.account, 0) + row.debit - row.credit, 2)
+
+        self.assertEqual(net["Debtors - _TIRC"], -590.0)
+        self.assertEqual(net["Output Tax CGST - _TIRC"], 0.0)
+        self.assertEqual(net["Output Tax SGST - _TIRC"], 0.0)
 
     def test_payment_entry_allocation_with_inclusive_tax_invoice(self):
         """
@@ -539,7 +586,7 @@ class TestRegionalOverrides(TestAdvancePaymentEntry):
         payment_doc = self._create_payment_entry()
         invoice_doc = self._create_sales_invoice(payment_doc)
 
-        conditions = frappe._dict({"company": invoice_doc.get("company")})
+        conditions = frappe._dict({"company": invoice_doc.get("company"), "name": payment_doc.name})
 
         payment_entry = get_advance_payment_entries_for_regional(
             party_type="Customer",
@@ -552,7 +599,7 @@ class TestRegionalOverrides(TestAdvancePaymentEntry):
         )
 
         payment_entry_amount = payment_entry[0].get("amount")
-        self.assertNotEqual(400, payment_entry_amount)
+        self.assertEqual(472, payment_entry_amount)
 
     def test_get_advance_payment_entries_for_regional_with_gst_accounts_in_deduction_table(
         self,
@@ -595,6 +642,37 @@ class TestRegionalOverrides(TestAdvancePaymentEntry):
         # Total Unallocated = 500+90 =>590
         # Remaining Unallocated = 590 - 100 (sales invoice amount)
         self.assertEqual(490, payment_entry_amount)
+
+    def test_get_advance_payment_entries_for_regional_grosses_up_once_per_payment(self):
+        """An advance partly earmarked against a Sales Order comes back as two rows -- one for the
+        order reference, one for the unallocated balance.Reversal should be proportionate"""
+        sales_order = create_transaction(doctype="Sales Order", is_in_state=1)
+        payment_doc = self._create_payment_entry(do_not_submit=True)
+        payment_doc.append(
+            "references",
+            {
+                "reference_doctype": sales_order.doctype,
+                "reference_name": sales_order.name,
+                "total_amount": sales_order.grand_total,
+                "outstanding_amount": sales_order.grand_total,
+                "allocated_amount": 100,
+            },
+        )
+        payment_doc.save()
+        payment_doc.submit()
+
+        payment_entries = get_advance_payment_entries_for_regional(
+            party_type="Customer",
+            party=payment_doc.party,
+            party_account=[payment_doc.paid_from],
+            order_list=[],
+            order_doctype="Sales Order",
+            include_unallocated=True,
+            against_all_orders=True,
+            condition=frappe._dict({"company": payment_doc.company, "name": payment_doc.name}),
+        )
+
+        self.assertEqual([row.amount for row in payment_entries], [118.0, 472.0])
 
     def test_adjust_allocations_for_taxes(self):
         payment_doc = self._create_payment_entry()
@@ -740,6 +818,36 @@ class TestPaymentReconciliationMatrix(IntegrationTestCase):
             self.assertEqual(len(refs), 1)
             self.assertEqual(flt(refs[0].allocated_amount, 2), 100.0)
 
+    # ---- one advance fully consumed by several invoices ----
+
+    def test_three_invoices_against_one_advance(self):
+        payment_doc = self._matrix_payment(base=300)
+        self.assertEqual(flt(payment_doc.total_taxes_and_charges, 2), 54.0)
+        self.assertEqual(flt(payment_doc.unallocated_amount, 2), 300.0)
+
+        invoices = [self._matrix_invoice() for _ in range(3)]
+        for invoice_doc in invoices:
+            make_payment_reconciliation(payment_doc, invoice_doc, invoice_doc.grand_total)
+
+        payment_doc.reload()
+        self.assertEqual(flt(payment_doc.unallocated_amount, 2), 0.0, "advance should be exactly consumed")
+
+        references = {row.reference_name: row for row in payment_doc.references}
+        for invoice_doc in invoices:
+            self.assertEqual(
+                flt(frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount"), 2), 0.0
+            )
+            self.assertEqual(flt(references[invoice_doc.name].allocated_amount, 2), 100.0)
+
+        self.assertEqual(
+            self._gl_net_by_account(payment_doc),
+            {"Cash - _TIRC": 354.0, "Debtors - _TIRC": -354.0},
+        )
+        self.assertEqual(
+            self._pl_net_by_voucher(payment_doc),
+            {invoice_doc.name: -118.0 for invoice_doc in invoices},
+        )
+
     # ---- shared workflow ----
 
     def _run_cell(
@@ -814,8 +922,8 @@ class TestPaymentReconciliationMatrix(IntegrationTestCase):
 
     # ---- builders ----
 
-    def _matrix_payment(self, inclusive=False):
-        paid_amount = 590 if inclusive else 500
+    def _matrix_payment(self, inclusive=False, base=500):
+        paid_amount = flt(base * 1.18, 2) if inclusive else base
         payment_doc = create_transaction(
             doctype="Payment Entry",
             payment_type="Receive",
@@ -902,7 +1010,7 @@ class TestPaymentReconciliationMatrix(IntegrationTestCase):
 
     def _assert_advance_row(self, prepared, payment_name, taxable_value):
         row = next(
-            (r for rows in prepared.values() for r in rows if r[inv_f.DOC_NUMBER] == payment_name),
+            (r for rows in prepared.values() for r in rows if r[doc.DOC_NUMBER] == payment_name),
             None,
         )
 
@@ -911,13 +1019,13 @@ class TestPaymentReconciliationMatrix(IntegrationTestCase):
             return
 
         self.assertIsNotNone(row, f"advance row expected for {payment_name}")
-        self.assertEqual(row[inv_f.TAX_RATE], 18)
-        self.assertEqual(flt(row[inv_f.TAXABLE_VALUE], 2), taxable_value)
+        self.assertEqual(row[doc.TAX_RATE], 18)
+        self.assertEqual(flt(row[doc.TAXABLE_VALUE], 2), taxable_value)
         # intra-state @ 18% => CGST 9% + SGST 9%, no IGST/cess
-        self.assertEqual(flt(row[inv_f.CGST], 2), flt(taxable_value * 0.09, 2))
-        self.assertEqual(flt(row[inv_f.SGST], 2), flt(taxable_value * 0.09, 2))
-        self.assertEqual(flt(row[inv_f.IGST], 2), 0.0)
-        self.assertEqual(flt(row[inv_f.CESS], 2), 0.0)
+        self.assertEqual(flt(row[doc.CGST], 2), flt(taxable_value * 0.09, 2))
+        self.assertEqual(flt(row[doc.SGST], 2), flt(taxable_value * 0.09, 2))
+        self.assertEqual(flt(row[doc.IGST], 2), 0.0)
+        self.assertEqual(flt(row[doc.CESS], 2), 0.0)
 
     # ---- ledger helpers (net per account / per against-voucher, drops zero nets) ----
 

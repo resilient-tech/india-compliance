@@ -8,38 +8,21 @@ from india_compliance.gst_returns.fields.gstr1 import (  # noqa: F401
     SUB_CATEGORY_GOV_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
-    SUPECOM,
+    B2BInvoiceType,
+    Category,
+    DocField,
+    ExcelLabel,
     HSNKey,
-)
-from india_compliance.gst_returns.fields.gstr1 import (  # noqa: F401
-    B2BInvoiceType as GSTR1_B2B_InvoiceType,
-)
-from india_compliance.gst_returns.fields.gstr1 import (  # noqa: F401
-    Category as GSTR1_Category,
-)
-from india_compliance.gst_returns.fields.gstr1 import (  # noqa: F401
-    DocField as GSTR1_DataField,
-)
-from india_compliance.gst_returns.fields.gstr1 import (  # noqa: F401
-    ExcelLabel as GovExcelField,
-)
-from india_compliance.gst_returns.fields.gstr1 import (  # noqa: F401
-    ItemField as GSTR1_ItemField,
-)
-from india_compliance.gst_returns.fields.gstr1 import (  # noqa: F401
-    JsonKey as GovJsonKey,
-)
-from india_compliance.gst_returns.fields.gstr1 import (  # noqa: F401
-    RawField as GovDataField,
-)
-from india_compliance.gst_returns.fields.gstr1 import (  # noqa: F401
-    SheetName as GovExcelSheetName,
-)
-from india_compliance.gst_returns.fields.gstr1 import (  # noqa: F401
-    SubCategory as GSTR1_SubCategory,
+    ItemField,
+    JsonKey,
+    RawField,
+    SheetName,
+    SubCategory,
 )
 
 HSN_BIFURCATION_FROM = getdate("2025-05-01")
+
+HSN_DESCRIPTION_LIMIT = 30
 
 B2C_LIMIT = [
     ("2024-07-31", 2_50_000),
@@ -56,3 +39,7 @@ def get_b2c_limit(date):
             return limit
 
     return B2C_LIMIT[-1][1]
+
+
+def truncate_hsn_description(description):
+    return description.strip()[:HSN_DESCRIPTION_LIMIT].rstrip()

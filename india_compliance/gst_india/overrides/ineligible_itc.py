@@ -23,6 +23,7 @@ class IneligibleITC:
         self.company = frappe.get_cached_doc("Company", doc.company)
         self.is_perpetual = self.company.enable_perpetual_inventory
         self.cost_center = doc.cost_center or self.company.cost_center
+        self.conversion_rate = doc.get("conversion_rate") or 1
 
         self.dr_or_cr = "credit" if doc.get("is_return") else "debit"
         self.cr_or_dr = "debit" if doc.get("is_return") else "credit"
@@ -115,6 +116,9 @@ class IneligibleITC:
                     "account": self.company.default_gst_expense_account,
                     self.dr_or_cr: ineligible_item_tax_amount,
                     f"{self.dr_or_cr}_in_account_currency": ineligible_item_tax_amount,
+                    f"{self.dr_or_cr}_in_transaction_currency": flt(
+                        ineligible_item_tax_amount / self.conversion_rate
+                    ),
                     "cost_center": self.cost_center,
                 }
             )
@@ -127,6 +131,7 @@ class IneligibleITC:
                         "account": account,
                         self.cr_or_dr: amount,
                         f"{self.cr_or_dr}_in_account_currency": amount,
+                        f"{self.cr_or_dr}_in_transaction_currency": flt(amount / self.conversion_rate),
                         "cost_center": self.cost_center,
                     }
                 )
@@ -148,6 +153,9 @@ class IneligibleITC:
                     "account": self.company.default_gst_expense_account,
                     self.cr_or_dr: ineligible_item_tax_amount,
                     f"{self.cr_or_dr}_in_account_currency": ineligible_item_tax_amount,
+                    f"{self.cr_or_dr}_in_transaction_currency": flt(
+                        ineligible_item_tax_amount / self.conversion_rate
+                    ),
                     "cost_center": self.cost_center,
                 }
             )
@@ -169,6 +177,9 @@ class IneligibleITC:
                     "account": expense_account,
                     self.dr_or_cr: ineligible_item_tax_amount,
                     f"{self.dr_or_cr}_in_account_currency": ineligible_item_tax_amount,
+                    f"{self.dr_or_cr}_in_transaction_currency": flt(
+                        ineligible_item_tax_amount / self.conversion_rate
+                    ),
                     "cost_center": item.cost_center or self.cost_center,
                     "against": against_account,
                     "remarks": remarks,
@@ -202,6 +213,9 @@ class IneligibleITC:
 
             entry[self.dr_or_cr] -= ineligible_item_tax_amount
             entry[f"{self.dr_or_cr}_in_account_currency"] -= ineligible_item_tax_amount
+            entry[f"{self.dr_or_cr}_in_transaction_currency"] -= flt(
+                ineligible_item_tax_amount / self.conversion_rate
+            )
             break
 
         else:
@@ -212,6 +226,9 @@ class IneligibleITC:
                         "account": stock_account,
                         self.cr_or_dr: ineligible_item_tax_amount,
                         f"{self.cr_or_dr}_in_account_currency": ineligible_item_tax_amount,
+                        f"{self.cr_or_dr}_in_transaction_currency": flt(
+                            ineligible_item_tax_amount / self.conversion_rate
+                        ),
                         "cost_center": item.cost_center or self.cost_center,
                         "remarks": item.get("_remarks"),
                     }
@@ -224,6 +241,9 @@ class IneligibleITC:
 
             entry[self.dr_or_cr] += ineligible_item_tax_amount
             entry[f"{self.dr_or_cr}_in_account_currency"] += ineligible_item_tax_amount
+            entry[f"{self.dr_or_cr}_in_transaction_currency"] += flt(
+                ineligible_item_tax_amount / self.conversion_rate
+            )
             break
 
         else:
@@ -234,6 +254,9 @@ class IneligibleITC:
                         "account": cogs_account,
                         self.dr_or_cr: ineligible_item_tax_amount,
                         f"{self.dr_or_cr}_in_account_currency": ineligible_item_tax_amount,
+                        f"{self.dr_or_cr}_in_transaction_currency": flt(
+                            ineligible_item_tax_amount / self.conversion_rate
+                        ),
                         "cost_center": item.cost_center or self.cost_center,
                         "against": stock_account,
                         "remarks": item.get("_remarks"),
@@ -359,7 +382,11 @@ class PurchaseInvoice(IneligibleITC):
 
     def is_debit_entry_required(self, item):
         # For Stock Entry / Fixed Asset in PI, Additional Debit is accounted automatically from valuation rates
-        return self.is_expense_item(item)
+        return not (
+            self.doc.update_stock
+            and self.is_perpetual
+            and (item.get("_is_stock_item") or item.get("is_fixed_asset"))
+        )
 
     def is_expense_item(self, item):
         """
