@@ -23,17 +23,18 @@ from frappe.utils import flt, getdate
 from india_compliance.gst_india.utils.gstr_1 import DocField as doc
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
 from india_compliance.gst_india.utils.tests import create_transaction
+from india_compliance.tests.erpnext_test_utils import create_account
 
 
 @contextmanager
-def toggle_seperate_advance_accounting():
+def toggle_seperate_advance_accounting(advance_account="Creditors - _TIRC"):
     # Enable Provisional Expense
     frappe.db.set_value(
         "Company",
         "_Test Indian Registered Company",
         {
             "book_advance_payments_in_separate_party_account": 1,
-            "default_advance_received_account": "Creditors - _TIRC",
+            "default_advance_received_account": advance_account,
         },
     )
 
@@ -256,7 +257,7 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(
-                r"^(Outstanding amount 118.0 is less than the total allocated amount with taxes 139.24.*)$"
+                r"^(Outstanding amount 118.0 INR is less than the total allocated amount with taxes 139.24 INR.*)$"
             ),
             payment_doc.submit,
         )
@@ -738,7 +739,103 @@ MATRIX_RECONCILED_GL_SEPARATE: dict = {
 }
 
 
-class TestPaymentReconciliationMatrix(IntegrationTestCase):
+class LedgerNetMixin:
+    """Net ledger / GSTR-1 advance assertions shared by the single- and multi-currency suites."""
+
+    def _advance_detail_summary(self, payment_doc):
+        from india_compliance.gst_india.report.gst_advance_detail.gst_advance_detail import (
+            execute as advance_detail,
+        )
+
+        _columns, data = advance_detail(
+            frappe._dict(
+                company=payment_doc.company,
+                company_gstin=payment_doc.company_gstin,
+                from_date=getdate(),
+                to_date=getdate(),
+                show_for_period=1,
+                show_summary=1,
+            )
+        )
+        return next(row for row in data if row.get("payment_entry") == payment_doc.name)
+
+    def _unreconcile(self, payment_doc, invoice_doc):
+        create_unreconcile_doc_for_selection(
+            frappe.as_json(
+                [
+                    {
+                        "company": payment_doc.company,
+                        "voucher_type": payment_doc.doctype,
+                        "voucher_no": payment_doc.name,
+                        "against_voucher_type": invoice_doc.doctype,
+                        "against_voucher_no": invoice_doc.name,
+                    }
+                ]
+            )
+        )
+
+    # ---- GSTR-1 advance reporting helpers (11A received / 11B adjusted) ----
+
+    def _assert_advance_report(self, payment_doc, received, adjusted):
+        books = GSTR1BooksData(
+            filters=frappe._dict(
+                company=payment_doc.company,
+                company_gstin=payment_doc.company_gstin,
+                from_date=getdate(),
+                to_date=getdate(),
+            )
+        )
+
+        # 11A Advances Received: full advance base, reported net of GST
+        self._assert_advance_row(books.prepare_advances_recevied_data(), payment_doc.name, received)
+        # 11B Advances Adjusted: net adjusted base, reported negative
+        self._assert_advance_row(books.prepare_advances_adjusted_data(), payment_doc.name, adjusted)
+
+    def _assert_advance_row(self, prepared, payment_name, taxable_value):
+        row = next(
+            (r for rows in prepared.values() for r in rows if r[doc.DOC_NUMBER] == payment_name),
+            None,
+        )
+
+        if taxable_value is None:
+            self.assertIsNone(row, f"no advance row expected for {payment_name}")
+            return
+
+        self.assertIsNotNone(row, f"advance row expected for {payment_name}")
+        self.assertEqual(row[doc.TAX_RATE], 18)
+        self.assertEqual(flt(row[doc.TAXABLE_VALUE], 2), taxable_value)
+        # intra-state @ 18% => CGST 9% + SGST 9%, no IGST/cess
+        self.assertEqual(flt(row[doc.CGST], 2), flt(taxable_value * 0.09, 2))
+        self.assertEqual(flt(row[doc.SGST], 2), flt(taxable_value * 0.09, 2))
+        self.assertEqual(flt(row[doc.IGST], 2), 0.0)
+        self.assertEqual(flt(row[doc.CESS], 2), 0.0)
+
+    # ---- ledger helpers (net per account / per against-voucher, drops zero nets) ----
+
+    def _gl_net_by_account(self, payment_doc):
+        rows = frappe.get_all(
+            "GL Entry",
+            filters={"voucher_no": payment_doc.name, "is_cancelled": 0},
+            fields=["account", "debit", "credit"],
+        )
+        net = {}
+        for row in rows:
+            net[row.account] = flt(net.get(row.account, 0) + row.debit - row.credit, 2)
+        return {account: amount for account, amount in net.items() if amount}
+
+    def _pl_net_by_voucher(self, payment_doc):
+        rows = frappe.get_all(
+            "Payment Ledger Entry",
+            filters={"voucher_type": payment_doc.doctype, "voucher_no": payment_doc.name, "delinked": 0},
+            fields=["against_voucher_no", "amount"],
+        )
+        net = {}
+        for row in rows:
+            net[row.against_voucher_no] = flt(net.get(row.against_voucher_no, 0) + row.amount, 2)
+        return {voucher: amount for voucher, amount in net.items() if amount}
+
+
+class TestPaymentReconciliationMatrix(LedgerNetMixin, IntegrationTestCase):
     # ---- the 8 core cells (no separate party account) ----
 
     def test_excl_payment_excl_invoice_via_reconcile_tool(self):
@@ -976,77 +1073,418 @@ class TestPaymentReconciliationMatrix(IntegrationTestCase):
 
         return invoice_doc
 
-    def _unreconcile(self, payment_doc, invoice_doc):
-        create_unreconcile_doc_for_selection(
-            frappe.as_json(
-                [
-                    {
-                        "company": payment_doc.company,
-                        "voucher_type": payment_doc.doctype,
-                        "voucher_no": payment_doc.name,
-                        "against_voucher_type": invoice_doc.doctype,
-                        "against_voucher_no": invoice_doc.name,
-                    }
-                ]
+
+# Multi-currency: the same economic event as the matrix above, transacted in USD on a
+# USD receivable at a round rate. Base (INR) ledgers must be identical; only the
+# account-currency amounts differ. Advance: 5 USD (base 500) + 90 GST INR.
+# Invoice: net 1 USD (base 100) + 18% => 1.18 USD grand. Reversal: 18 INR / 0.18 USD.
+# ---------------------------------------------------------------------------
+
+FX_RATE = 100
+USD_DEBTORS = "Debtors USD - _TIRC"
+
+# identical to MATRIX_RECONCILED_GL except the receivable is the USD account
+FX_RECONCILED_GL: dict = {
+    "Cash - _TIRC": 590.0,  # full cash received: 500 base + 90 GST (INR)
+    USD_DEBTORS: -518.0,  # 500 advance + 18 GST reversal (both credits)
+    "Output Tax CGST - _TIRC": -36.0,  # 45 charged on advance - 9 reversed
+    "Output Tax SGST - _TIRC": -36.0,
+}
+
+
+class TestMultiCurrencyReconciliation(LedgerNetMixin, IntegrationTestCase):
+    def test_fx_excl_payment_via_reconcile_tool(self):
+        self._assert_fx_cell(payment_inclusive=False, flow="reconcile_tool")
+
+    def test_fx_incl_payment_via_reconcile_tool(self):
+        self._assert_fx_cell(payment_inclusive=True, flow="reconcile_tool")
+
+    def test_fx_excl_payment_via_advance_in_invoice(self):
+        self._assert_fx_cell(payment_inclusive=False, flow="advance_in_invoice")
+
+    def test_fx_incl_payment_via_advance_in_invoice(self):
+        self._assert_fx_cell(payment_inclusive=True, flow="advance_in_invoice")
+
+    def test_fx_over_allocated_advance_payment_raises(self):
+        """The advances-table guard must compare like with like: allocated_amount is in the party
+        account currency, so a foreign-currency invoice has to be checked against its own grand
+        total, not the base one (against which nothing ever looks over-allocated)."""
+        payment_doc = self._fx_payment()
+
+        invoice_doc = create_transaction(
+            doctype="Sales Invoice",
+            customer=self._usd_customer(),
+            currency="USD",
+            conversion_rate=FX_RATE,
+            debit_to=self._usd_debtors(),
+            is_in_state=1,
+            rate=1,
+            do_not_save=True,
+        )
+        invoice_doc.save()
+        self.assertEqual(flt(invoice_doc.grand_total, 2), 1.18)
+
+        invoice_doc.set_advances()
+        for row in invoice_doc.advances:
+            # ERPNext allows allocating the full grand total; it is the GST reversal on top
+            # (1.18 + 0.21 = 1.39 > 1.18 USD) that over-allocates, which is IC's guard to catch
+            row.allocated_amount = invoice_doc.grand_total if row.reference_name == payment_doc.name else 0
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "Allocated amount with taxes",
+            invoice_doc.submit,
+        )
+
+    def test_fx_invoice_booked_at_a_different_rate(self):
+        """An advance received at one rate, adjusted against an invoice raised at another.
+        erpnext books the exchange difference onto the reference row, and once it does it stops
+        refreshing that row's reference details -- leaving outstanding_amount unset."""
+        payment_doc = self._fx_payment()  # 5 USD @ 100 -> base 500 + 90 GST
+        invoice_doc = self._fx_invoice(conversion_rate=90)  # 1.18 USD @ 90 -> base 106.20
+
+        make_payment_reconciliation(payment_doc, invoice_doc, invoice_doc.grand_total)
+
+        self.assertEqual(
+            flt(frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount"), 2), 0.0
+        )
+
+        # the liability was booked at 100, so it has to be cleared at 100 -- not at the
+        # invoice's rate, which would strand a stub in the GST accounts forever
+        reversal = frappe.get_all(
+            "GL Entry",
+            filters={
+                "voucher_no": payment_doc.name,
+                "account": USD_DEBTORS,
+                "against_voucher": invoice_doc.name,
+                "remarks": ["like", "Reversal for GST%"],
+                "is_cancelled": 0,
+            },
+            fields=["credit", "credit_in_account_currency"],
+        )
+        self.assertEqual(len(reversal), 1)
+        self.assertEqual(flt(reversal[0].credit, 2), 18.0)
+        self.assertEqual(flt(reversal[0].credit_in_account_currency, 2), 0.18)
+
+        # 11B reports the adjustment at the advance's rate, so the rate bucket stays 18%
+        self._assert_advance_report(payment_doc, received=500.0, adjusted=-100.0)
+
+        self._assert_gst_difference_left_in_receivable(payment_doc, invoice_doc, -401.8)
+
+    def test_fx_invoice_at_a_different_rate_via_advance_in_invoice(self):
+        """The same two rates through the advances table instead of the reconciliation tool.
+        This flow never hit the crash, so it must come out exactly as the reconcile-tool one."""
+        payment_doc = self._fx_payment()
+        invoice_doc = self._fx_invoice(advance_payment=payment_doc, conversion_rate=90)
+
+        self.assertEqual(
+            flt(frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount"), 2), 0.0
+        )
+        self.assertEqual(self._gst_reversal(payment_doc, invoice_doc), (18.0, 0.18))
+        self._assert_gst_difference_left_in_receivable(payment_doc, invoice_doc, -401.8)
+
+    def test_fx_invoice_at_a_higher_rate(self):
+        """Rate moves the other way: erpnext books a loss on the goods, and the GST slice's
+        difference lands with the opposite sign -- still in the receivable."""
+        payment_doc = self._fx_payment()
+        invoice_doc = self._fx_invoice(conversion_rate=110)  # 1.18 USD @ 110 -> base 129.80
+
+        make_payment_reconciliation(payment_doc, invoice_doc, invoice_doc.grand_total)
+
+        # cleared at the advance's rate regardless of which way the rate moved
+        self.assertEqual(self._gst_reversal(payment_doc, invoice_doc), (18.0, 0.18))
+        # -500 + 129.80 - 18 - 10 (erpnext's loss) = -398.20, i.e. 1.80 the other way
+        self._assert_gst_difference_left_in_receivable(
+            payment_doc, invoice_doc, -398.2, exchange_gain_loss=-10.0
+        )
+
+    def test_fx_three_invoices_against_one_advance(self):
+        """The multi-invoice repro on a USD advance: the reconciliation tool's gross-up has to
+        be converted to the party account currency before it is added to the offered amount."""
+        payment_doc = self._fx_payment()
+
+        # the balance the tool offers must be the advance grossed up by its pending GST,
+        # converted to the party account currency: 5 USD + 90 INR / 100 = 5.90 USD
+        offered = get_advance_payment_entries_for_regional(
+            party_type="Customer",
+            party=payment_doc.party,
+            party_account=[payment_doc.paid_from],
+            order_list=[],
+            order_doctype="Sales Order",
+            include_unallocated=True,
+            condition=frappe._dict({"company": payment_doc.company, "name": payment_doc.name}),
+        )
+        self.assertEqual([flt(row.amount, 2) for row in offered], [5.9])
+
+        invoices = [self._fx_invoice() for _ in range(5)]
+
+        for invoice_doc in invoices:
+            make_payment_reconciliation(payment_doc, invoice_doc, invoice_doc.grand_total)
+
+        payment_doc.reload()
+        self.assertEqual(flt(payment_doc.unallocated_amount, 2), 0.0, "advance should be exactly consumed")
+
+        references = {row.reference_name: row for row in payment_doc.references}
+        for invoice_doc in invoices:
+            self.assertEqual(
+                flt(frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount"), 2),
+                0.0,
+                f"{invoice_doc.name} should be fully settled",
             )
+            self.assertEqual(flt(references[invoice_doc.name].allocated_amount, 2), 1.0)
+
+        # 90 GST charged, all reversed 18 at a time -> GST accounts net to zero and drop out
+        self.assertEqual(
+            self._gl_net_by_account(payment_doc),
+            {"Cash - _TIRC": 590.0, USD_DEBTORS: -590.0},
         )
 
-    # ---- GSTR-1 advance reporting helpers (11A received / 11B adjusted) ----
+    # ---- shared workflow ----
 
-    def _assert_advance_report(self, payment_doc, received, adjusted):
-        books = GSTR1BooksData(
-            filters=frappe._dict(
-                company=payment_doc.company,
-                company_gstin=payment_doc.company_gstin,
-                from_date=getdate(),
-                to_date=getdate(),
-            )
+    def _assert_fx_cell(self, payment_inclusive, flow):
+        payment_doc = self._fx_payment(inclusive=payment_inclusive)
+        # economic setup in base currency: net taxable 500 + 90 GST, transacted in USD.
+        # net base is 500 for both inclusive (590 gross - 90 embedded) and exclusive (500).
+        self.assertEqual(payment_doc.paid_from_account_currency, "USD")
+        self.assertEqual(flt(payment_doc.base_total_taxes_and_charges, 2), 90.0, "advance GST is 90 INR")
+
+        if flow == "advance_in_invoice":
+            invoice_doc = self._fx_invoice(advance_payment=payment_doc)
+        else:
+            invoice_doc = self._fx_invoice()
+            make_payment_reconciliation(payment_doc, invoice_doc, invoice_doc.grand_total)
+
+        self.assertEqual(flt(invoice_doc.base_net_total, 2), 100.0, "invoice net should be 100 INR")
+        self.assertEqual(flt(invoice_doc.grand_total, 2), 1.18, "invoice grand total should be 1.18 USD")
+
+        # --- fully reconciled state ---
+        self.assertEqual(
+            flt(frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount"), 2),
+            0.0,
+            "invoice should be fully reconciled",
         )
 
-        # 11A Advances Received: full advance base, reported net of GST
-        self._assert_advance_row(books.prepare_advances_recevied_data(), payment_doc.name, received)
-        # 11B Advances Adjusted: net adjusted base, reported negative
-        self._assert_advance_row(books.prepare_advances_adjusted_data(), payment_doc.name, adjusted)
+        refs = [
+            r
+            for r in frappe.get_doc("Payment Entry", payment_doc.name).references
+            if r.reference_name == invoice_doc.name
+        ]
+        self.assertEqual(len(refs), 1, "expected exactly one PE reference to the invoice")
+        self.assertEqual(flt(refs[0].allocated_amount, 2), 1.0, "net allocated should be 1 USD (base 100)")
 
-    def _assert_advance_row(self, prepared, payment_name, taxable_value):
-        row = next(
-            (r for rows in prepared.values() for r in rows if r[doc.DOC_NUMBER] == payment_name),
-            None,
+        # base (INR) ledgers identical to the single-currency matrix, USD accounts aside
+        self.assertEqual(self._gl_net_by_account(payment_doc), FX_RECONCILED_GL)
+
+        # the receivable reversal is posted in the account's own currency: 18 INR / 0.18 USD.
+        # (filtered by the reversal remark so the separate-account reclass leg on the same
+        # receivable/invoice is excluded.)
+        reversal = frappe.get_all(
+            "GL Entry",
+            filters={
+                "voucher_no": payment_doc.name,
+                "account": USD_DEBTORS,
+                "against_voucher": invoice_doc.name,
+                "remarks": ["like", "Reversal for GST%"],
+                "is_cancelled": 0,
+            },
+            fields=["credit", "credit_in_account_currency"],
+        )
+        self.assertEqual(len(reversal), 1)
+        self.assertEqual(flt(reversal[0].credit, 2), 18.0, "reversal base credit should be 18 INR")
+        self.assertEqual(
+            flt(reversal[0].credit_in_account_currency, 2), 0.18, "reversal should be 0.18 in USD"
         )
 
-        if taxable_value is None:
-            self.assertIsNone(row, f"no advance row expected for {payment_name}")
-            return
+        # GSTR-1 reports base (INR) taxable values regardless of transaction currency
+        self._assert_advance_report(payment_doc, received=500.0, adjusted=-100.0)
 
-        self.assertIsNotNone(row, f"advance row expected for {payment_name}")
-        self.assertEqual(row[doc.TAX_RATE], 18)
-        self.assertEqual(flt(row[doc.TAXABLE_VALUE], 2), taxable_value)
-        # intra-state @ 18% => CGST 9% + SGST 9%, no IGST/cess
-        self.assertEqual(flt(row[doc.CGST], 2), flt(taxable_value * 0.09, 2))
-        self.assertEqual(flt(row[doc.SGST], 2), flt(taxable_value * 0.09, 2))
-        self.assertEqual(flt(row[doc.IGST], 2), 0.0)
-        self.assertEqual(flt(row[doc.CESS], 2), 0.0)
-
-    # ---- ledger helpers (net per account / per against-voucher, drops zero nets) ----
-
-    def _gl_net_by_account(self, payment_doc):
+        # both documents are at the same rate here, so nothing is left over: the receivable
+        # carries exactly the rate it was received at, and no exchange gain/loss arises
         rows = frappe.get_all(
             "GL Entry",
-            filters={"voucher_no": payment_doc.name, "is_cancelled": 0},
-            fields=["account", "debit", "credit"],
+            filters={
+                "account": USD_DEBTORS,
+                "voucher_no": ["in", (payment_doc.name, invoice_doc.name)],
+                "is_cancelled": 0,
+            },
+            fields=["debit", "credit", "debit_in_account_currency", "credit_in_account_currency"],
         )
-        net = {}
-        for row in rows:
-            net[row.account] = flt(net.get(row.account, 0) + row.debit - row.credit, 2)
-        return {account: amount for account, amount in net.items() if amount}
+        base = flt(sum(row.debit - row.credit for row in rows), 2)
+        account_currency = flt(
+            sum(row.debit_in_account_currency - row.credit_in_account_currency for row in rows), 2
+        )
+        self.assertEqual(base, flt(account_currency * FX_RATE, 2))
 
-    def _pl_net_by_voucher(self, payment_doc):
+        # GST Advance Detail declares its amount columns as company currency, so the USD
+        # paid / allocated amounts must be converted too, not left sitting beside INR tax
+        row = self._advance_detail_summary(payment_doc)
+        # inclusive advances are paid gross, so Paid Amount carries the tax; exclusive do not
+        self.assertEqual(flt(row["paid_amount"], 2), 590.0 if payment_inclusive else 500.0)
+        self.assertEqual(flt(row["gst_paid"], 2), 90.0)
+        self.assertEqual(flt(row["allocated_amount"], 2), 100.0)
+        self.assertEqual(flt(row["gst_allocated"], 2), 18.0)
+
+    # ---- builders ----
+
+    def _gst_reversal(self, payment_doc, invoice_doc):
+        """(company currency, account currency) of the GST reversal against this invoice"""
         rows = frappe.get_all(
-            "Payment Ledger Entry",
-            filters={"voucher_type": payment_doc.doctype, "voucher_no": payment_doc.name, "delinked": 0},
-            fields=["against_voucher_no", "amount"],
+            "GL Entry",
+            filters={
+                "voucher_no": payment_doc.name,
+                "account": USD_DEBTORS,
+                "against_voucher": invoice_doc.name,
+                "remarks": ["like", "Reversal for GST%"],
+                "is_cancelled": 0,
+            },
+            fields=["credit", "credit_in_account_currency"],
         )
-        net = {}
-        for row in rows:
-            net[row.against_voucher_no] = flt(net.get(row.against_voucher_no, 0) + row.amount, 2)
-        return {voucher: amount for voucher, amount in net.items() if amount}
+        self.assertEqual(len(rows), 1)
+        return flt(rows[0].credit, 2), flt(rows[0].credit_in_account_currency, 2)
+
+    def _assert_gst_difference_left_in_receivable(
+        self, payment_doc, invoice_doc, expected_base, exchange_gain_loss=10.0
+    ):
+        """GST is a pass-through: the 18.00 was remitted at the advance's rate, so the slice the
+        invoice under-recovers stays collectable in the receivable rather than going to P&L.
+        erpnext books the goods portion's difference itself; nothing extra is posted for the tax."""
+        # the exchange difference erpnext books lands in its own journal, so the balance has to be
+        # read across all three vouchers -- and only those, since the class rolls back once at the end
+        vouchers = [
+            payment_doc.name,
+            invoice_doc.name,
+            *frappe.get_all(
+                "Journal Entry Account",
+                filters={"reference_type": "Payment Entry", "reference_name": payment_doc.name},
+                pluck="parent",
+            ),
+        ]
+        rows = frappe.get_all(
+            "GL Entry",
+            filters={"account": USD_DEBTORS, "voucher_no": ["in", vouchers], "is_cancelled": 0},
+            fields=["debit", "credit", "debit_in_account_currency", "credit_in_account_currency"],
+        )
+        base = flt(sum(row.debit - row.credit for row in rows), 2)
+        account_currency = flt(
+            sum(row.debit_in_account_currency - row.credit_in_account_currency for row in rows), 2
+        )
+
+        self.assertEqual(account_currency, -4.0, "1.18 USD of a 5 USD advance consumed")
+        self.assertEqual(base, expected_base)
+        self.assertNotEqual(
+            base, flt(account_currency * FX_RATE, 2), "the difference is deliberately left here"
+        )
+
+        booked = frappe.get_all(
+            "GL Entry",
+            filters={
+                "account": ["like", "Exchange%"],
+                "voucher_no": ["in", vouchers],
+                "is_cancelled": 0,
+            },
+            fields=["debit", "credit"],
+        )
+        self.assertEqual(len(booked), 1, "only erpnext's own, none for the GST slice")
+        self.assertEqual(flt(booked[0].credit - booked[0].debit, 2), exchange_gain_loss)
+
+    def _fx_payment(self, inclusive=False):
+        # paid 5 USD (inclusive: 5.9 USD) @ FX_RATE -> base 500 + 90 GST INR.
+        payment_doc = create_transaction(
+            doctype="Payment Entry",
+            payment_type="Receive",
+            mode_of_payment="Cash",
+            company_address="_Test Indian Registered Company-Billing",
+            party_type="Customer",
+            party=self._usd_customer(),
+            customer_address=f"{self._usd_customer()}-Billing",
+            paid_from=self._usd_debtors(),  # USD account -> transaction currency USD
+            paid_to="Cash - _TIRC",  # INR (company currency)
+            paid_amount=5.9 if inclusive else 5,
+            is_in_state=1,
+            do_not_save=True,
+        )
+        if inclusive:
+            for tax in payment_doc.taxes:
+                tax.included_in_paid_amount = 1
+
+        payment_doc.setup_party_account_field()
+        payment_doc.set_missing_values()  # fills paid_from_account_currency = USD
+        payment_doc.source_exchange_rate = FX_RATE  # set before set_exchange_rate so it is kept
+        payment_doc.set_exchange_rate()  # target rate -> 1 (paid_to is INR)
+        # base_paid_amount is only computed during validate; derive received (INR) directly
+        payment_doc.received_amount = payment_doc.paid_amount * FX_RATE
+        payment_doc.save()
+        payment_doc.submit()
+
+        return payment_doc
+
+    def _fx_invoice(self, advance_payment=None, conversion_rate=FX_RATE):
+        # net 1 USD @ FX_RATE -> base 100 INR + 18% GST, booked on the USD receivable
+        invoice_doc = create_transaction(
+            doctype="Sales Invoice",
+            customer=self._usd_customer(),
+            currency="USD",
+            conversion_rate=conversion_rate,
+            debit_to=self._usd_debtors(),
+            is_in_state=1,
+            rate=1,
+            do_not_save=True,
+        )
+        invoice_doc.save()
+
+        if advance_payment:
+            invoice_doc.set_advances()
+            for row in invoice_doc.advances:
+                row.allocated_amount = (
+                    invoice_doc.net_total if row.reference_name == advance_payment.name else 0
+                )
+
+        invoice_doc.submit()
+
+        return invoice_doc
+
+    # ---- fixtures (USD receivable + a USD-currency registered customer) ----
+
+    def _usd_debtors(self):
+        return create_account(
+            account_name="Debtors USD",
+            account_type="Receivable",
+            parent_account="Accounts Receivable - _TIRC",
+            company="_Test Indian Registered Company",
+            account_currency="USD",
+        )
+
+    def _usd_customer(self):
+        name = "_Test Registered Customer FX"
+        if not frappe.db.exists("Customer", name):
+            frappe.get_doc(
+                {
+                    "doctype": "Customer",
+                    "customer_name": name,
+                    "customer_type": "Company",
+                    "gstin": "24AANCA4892J1Z8",
+                    "gst_category": "Registered Regular",
+                    "default_currency": "USD",
+                }
+            ).insert()
+
+        address = f"{name}-Billing"
+        if not frappe.db.exists("Address", address):
+            frappe.get_doc(
+                {
+                    "doctype": "Address",
+                    "address_title": name,
+                    "address_type": "Billing",
+                    "address_line1": "Test Address - FX",
+                    "city": "Test City",
+                    "state": "Gujarat",
+                    "pincode": "380015",
+                    "country": "India",
+                    "gstin": "24AANCA4892J1Z8",
+                    "gst_category": "Registered Regular",
+                    "is_primary_address": 1,
+                    "links": [{"link_doctype": "Customer", "link_name": name}],
+                }
+            ).insert()
+
+        return name
