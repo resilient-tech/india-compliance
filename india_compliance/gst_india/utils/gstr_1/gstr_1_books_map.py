@@ -87,7 +87,7 @@ class GSTR1BooksData:
             Category.AT.value: self.prepare_advances_recevied_data(),
             Category.TXP.value: self.prepare_advances_adjusted_data(),
             Category.DOC_ISSUE.value: self.prepare_document_issued_data(),
-            **hsn.from_books(hsn_rows, self.describe_hsn),
+            **hsn.from_books(hsn_rows, self.hsn_descriptions(hsn_rows).get),
         }.items():
             if rows:
                 prepared_data[category] = rows
@@ -101,16 +101,20 @@ class GSTR1BooksData:
     def prepare_hsn_data(self, invoices):
         hsn_rows, *_ = self.get_structured_data(invoices, only_for_hsn=True)
 
-        return hsn.from_books(hsn_rows, self.describe_hsn)
+        return hsn.from_books(hsn_rows, self.hsn_descriptions(hsn_rows).get)
 
-    def describe_hsn(self, hsn_code):
-        """Description held against a product code. Cached, so one query serves the whole return."""
-        if not hasattr(self, "_hsn_descriptions"):
-            self._hsn_descriptions = frappe._dict(
-                frappe.get_all("GST HSN Code", fields=["name", "description"], as_list=True)
+    def hsn_descriptions(self, hsn_rows):
+        """Descriptions for the product codes this return reports, and no others."""
+        codes = {row.gst_hsn_code for by_key in hsn_rows.values() for rows in by_key.values() for row in rows}
+
+        return frappe._dict(
+            frappe.get_all(
+                "GST HSN Code",
+                fields=["name", "description"],
+                filters={"name": ("in", list(codes))},
+                as_list=True,
             )
-
-        return self._hsn_descriptions.get(hsn_code)
+        )
 
     def operator_name(self, gstin):
         """Supplier behind an e-commerce GSTIN, looked up once per return."""
