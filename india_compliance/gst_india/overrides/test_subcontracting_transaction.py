@@ -20,6 +20,9 @@ from frappe.utils import add_to_date, flt, getdate, now_datetime
 from india_compliance.gst_india.overrides.stock_entry import (
     is_e_waybill_applicable,
 )
+from india_compliance.gst_india.overrides.stock_entry import (
+    onload as run_stock_entry_onload,
+)
 from india_compliance.gst_india.utils import get_items_fieldname
 from india_compliance.gst_india.utils.e_waybill import mark_e_waybill_as_generated
 from india_compliance.gst_india.utils.taxes_controller import (
@@ -547,8 +550,9 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertEqual(se.ship_from_address, sco.shipping_address)
         self.assertIsNone(se.ship_to_address)
 
-    def test_sco_to_se_material_transfer_return(self):
-        sco = make_sco()
+    @staticmethod
+    def _make_material_transfer_return(sco):
+        """Return of inputs from the subcontractor: SE "Material Transfer" with is_return."""
         rm_items = get_rm_items(sco.supplied_items)
 
         # Materials must reach the supplier warehouse before they can be returned.
@@ -565,9 +569,14 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
             order_doctype=sco.doctype,
         )
         try:
-            return_se = get_materials_from_supplier(sco.name)
+            return get_materials_from_supplier(sco.name)
         finally:
             frappe.flags.args = None
+
+    def test_sco_to_se_material_transfer_return(self):
+        sco = make_sco()
+
+        return_se = self._make_material_transfer_return(sco)
 
         self.assertEqual(return_se.purpose, "Material Transfer")
         self.assertTrue(return_se.is_return)
@@ -579,6 +588,36 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         # SCO has no dispatch_address; ship_from stays empty, ship_to=shipping_address (not reversed)
         self.assertIsNone(return_se.ship_from_address)
         self.assertEqual(return_se.ship_to_address, sco.shipping_address)
+
+    def test_onload_gstins_for_material_transfer_return(self):
+        """A return Stock Entry is inward: the company is Bill To, so the e-Waybill is
+        generated on bill_to_gstin. Setting bill_from_gstin here would send NIC the
+        subcontractor's GSTIN as userGstin."""
+        sco = make_sco()
+        return_se = self._make_material_transfer_return(sco)
+
+        return_se.run_method("onload")
+
+        self.assertTrue(return_se.bill_from_gstin)
+        self.assertTrue(return_se.bill_to_gstin)
+        self.assertNotEqual(return_se.bill_from_gstin, return_se.bill_to_gstin)
+
+        self.assertEqual(return_se.company_gstin, return_se.bill_to_gstin)
+        self.assertEqual(return_se.supplier_gstin, return_se.bill_from_gstin)
+        self.assertEqual(return_se.gst_category, return_se.bill_from_gst_category)
+
+    def test_onload_gstins_for_send_to_subcontractor(self):
+        """The outward counterpart: company is Bill From."""
+        sco = make_sco()
+        se = make_rm_stock_entry(sco.name, get_rm_items(sco.supplied_items))
+
+        # Call the hook directly: erpnext's own onload reads bin details, which the
+        # mapped Stock Entry only carries once saved.
+        run_stock_entry_onload(se)
+
+        self.assertEqual(se.company_gstin, se.bill_from_gstin)
+        self.assertEqual(se.supplier_gstin, se.bill_to_gstin)
+        self.assertEqual(se.gst_category, se.bill_to_gst_category)
 
     def test_pr_to_se_material_transfer(self):
         pr = create_transaction(doctype="Purchase Receipt")
