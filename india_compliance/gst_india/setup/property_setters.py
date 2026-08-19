@@ -73,13 +73,6 @@ def get_property_setters(*, include_defaults=False):
             "property": "mandatory_depends_on",
             "value": "eval: gst_settings.require_supplier_invoice_no === 1 && doc.company_gstin",
         },
-        {
-            "doctype": "Asset Movement",
-            "doctype_or_field": "DocType",
-            "property": "autoname",
-            "property_type": "Data",
-            "value": "format:ASM-{YY}-{#####}",
-        },
         *PURCHASE_RECEIPT_PROPERTIES,
         *SUBCONTRACTING_RECEIPT_PROPERTIES,
         *ADDRESS_ALLOW_ON_SUBMIT_PROPERTIES,
