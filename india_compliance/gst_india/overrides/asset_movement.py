@@ -122,9 +122,9 @@ def set_naming_for_e_waybill():
     )
 
     frappe.msgprint(
-        _("Asset Movement naming changed to {0} for GST Compliance.").format(
-            frappe.bold(ASSET_MOVEMENT_NAMING_PROPERTY["value"].split(":", 1)[1])
+        _("Naming for {0} DocType has been changed to {1}, to meet GST requirements.").format(
+            frappe.bold(_("Asset Movement")),
+            frappe.bold(ASSET_MOVEMENT_NAMING_PROPERTY["value"].split(":", 1)[1]),
         ),
-        title=_("Naming Series Updated"),
         indicator="orange",
     )
