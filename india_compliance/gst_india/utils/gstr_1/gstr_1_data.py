@@ -999,11 +999,15 @@ class GSTR11A11BData:
         )
 
     def get_11B_query(self):
+        from india_compliance.gst_india.overrides.payment_entry import (
+            get_payment_exchange_rate,
+        )
+
         return (
             self.get_query("Adjustment")
             .join(self.pe_ref)
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
-            .select(self.pe_ref.allocated_amount.as_("taxable_value"))
+            .select((self.pe_ref.allocated_amount * get_payment_exchange_rate(self.pe)).as_("taxable_value"))
             .groupby(self.gl_entry.voucher_detail_no)
         )
 

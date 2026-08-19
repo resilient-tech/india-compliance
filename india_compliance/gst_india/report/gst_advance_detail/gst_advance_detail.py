@@ -9,6 +9,7 @@ from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import flt, getdate
 from pypika.terms import Case
 
+from india_compliance.gst_india.overrides.payment_entry import get_payment_exchange_rate
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
@@ -166,7 +167,8 @@ class GSTAdvanceDetail:
             .join(self.pe_ref)
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
             .select(
-                self.pe_ref.allocated_amount,
+                # allocated_amount is in the party account currency; the column is company currency
+                (self.pe_ref.allocated_amount * get_payment_exchange_rate(self.pe)).as_("allocated_amount"),
                 self.pe_ref.reference_doctype.as_("against_voucher_type"),
                 self.pe_ref.reference_name.as_("against_voucher"),
             )
@@ -193,7 +195,7 @@ class GSTAdvanceDetail:
                 self.pe.party.as_("customer"),
                 self.pe.party_name.as_("customer_name"),
                 Case()
-                .when(self.gl_entry.credit_in_account_currency > 0, self.pe.paid_amount)
+                .when(self.gl_entry.credit_in_account_currency > 0, self.pe.base_paid_amount)
                 .else_(0)
                 .as_("paid_amount"),
                 Sum(self.gl_entry.credit_in_account_currency).as_("gst_paid"),
