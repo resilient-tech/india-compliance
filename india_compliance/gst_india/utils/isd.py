@@ -82,7 +82,7 @@ def get_distribution_ratio(doc):
     return sign * flt(doc.branch_turnover) / total_turnover
 
 
-def should_distribute_expense():
+def distribute_expense_with_isd_credit():
     return cint(frappe.get_cached_value("GST Settings", "GST Settings", "distribute_expense_with_isd_credit"))
 
 
@@ -105,7 +105,7 @@ def get_row_itc(row, is_distribution, precision, ratio=None):
 def calculate_distribution(doc):
     ratio = get_distribution_ratio(doc)
     inter_state = is_inter_state_distribution(doc)
-    distribute_expense = should_distribute_expense()
+    distribute_expense = distribute_expense_with_isd_credit()
 
     meta = frappe.get_meta("ISD Source Item")
     precision = get_field_precision(meta.get_field("distributed_igst"))

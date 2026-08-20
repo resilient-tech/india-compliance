@@ -15,12 +15,12 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES, ISD_GST_CATEGORY
 from india_compliance.gst_india.overrides.transaction import validate_gstin_status
 from india_compliance.gst_india.utils import get_gst_account_gst_tax_type_map
 from india_compliance.gst_india.utils.isd import (
+    distribute_expense_with_isd_credit,
     get_distribution_ratio,
     get_input_gst_accounts,
     get_place_of_supply_for_address,
     get_row_itc,
     is_inter_state_distribution,
-    should_distribute_expense,
     sum_row_tax_by_type,
     throw_invalid_rows,
     throw_row_table,
@@ -242,7 +242,7 @@ class ISDController(Document):
             )
 
     def validate_expense_heads(self):
-        if not should_distribute_expense():
+        if not distribute_expense_with_isd_credit():
             return
 
         invalid_rows = []
@@ -385,7 +385,7 @@ class ISDController(Document):
         totals = {"eligible": 0, "ineligible": 0}
 
         # expense is only distributed when enabled;
-        distribute_expense = should_distribute_expense()
+        distribute_expense = distribute_expense_with_isd_credit()
 
         for row in self.source_items:
             if not distribute_expense:
@@ -478,7 +478,7 @@ class ISDController(Document):
     def get_gl_entries(self):
         self.setup_precision()
 
-        self._book_expenses = should_distribute_expense()
+        self._distribute_expense_with_isd_credit = distribute_expense_with_isd_credit()
 
         # distribution side: move itc and expense from tax account to isd provisional account.
         self.itc_side = "credit" if self.is_distribution_side() else "debit"
@@ -586,7 +586,7 @@ class ISDController(Document):
 
     def add_distributed_expense_gl_entries(self, gl_entries):
         """Distribute the pro-rata expense to each item's expense head, when enabled in GST Settings"""
-        if not self._book_expenses:
+        if not self._distribute_expense_with_isd_credit:
             return
 
         for row in self.source_items:
@@ -618,7 +618,9 @@ class ISDController(Document):
 
         tax_accounts = {tax.gst_tax_type: tax.account_head for tax in self.taxes}
         distributed_as_igst = self.is_distribution_side() and is_inter_state_distribution(self)
-        gst_expense_account = self.get_gst_expense_account() if self._book_expenses else None
+        gst_expense_account = (
+            self.get_gst_expense_account() if self._distribute_expense_with_isd_credit else None
+        )
 
         for row in ineligible_rows:
             amounts = {
@@ -646,7 +648,7 @@ class ISDController(Document):
 
             against = ", ".join(dict.fromkeys(accounts))
 
-            if not self._book_expenses:
+            if not self._distribute_expense_with_isd_credit:
                 # -> provisional account
                 self.add_provisional_gl_entry(
                     gl_entries, row_reversal_total, self.itc_side, row=row, against=against

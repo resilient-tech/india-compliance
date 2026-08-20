@@ -8,13 +8,14 @@ import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import Coalesce, Sum
-from frappe.utils import cint, flt, get_link_to_form, getdate
+from frappe.utils import flt, get_link_to_form, getdate
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, ISD_GST_CATEGORY
 from india_compliance.gst_india.utils import validate_invoice_number
 from india_compliance.gst_india.utils.isd import (
     calculate_distribution,
-    should_distribute_expense,
+    distribute_expense_with_isd_credit,
+    get_purchase_doc,
     sum_row_tax_by_type,
     throw_invalid_rows,
     throw_row_table,
@@ -32,19 +33,12 @@ class ISDDistributionInvoice(ISDController):
         self.validate_addresses()
         self.validate_turnover_and_ratio()
         self.validate_purchase_invoice()
+        self.validate_total_turnover()
         self.validate_source_items()
         calculate_distribution(self)  # override js calculations
         self.validate_accounts()
         self.set_taxes_and_totals()
         self.clamp_to_distribution_limits()
-
-    def build_for_bulk(self):
-        """used by bulk_create_isd_distribution_invoices"""
-        self.setup_precision()
-        self.setup_party_fields()
-        self.set_pos_from_address()
-        calculate_distribution(self)
-        self.set_taxes_and_totals()
 
     def on_submit(self):
         self.make_gl_entries()
@@ -62,7 +56,7 @@ class ISDDistributionInvoice(ISDController):
         if not self.is_against_party and frappe.db.get_single_value(
             "GST Settings", "auto_create_isd_recipient_invoice"
         ):
-            create_isd_recipient_invoice(self.name, submit_on_creation=1)
+            _create_isd_recipient_invoice(self.name)
 
     # on_cancel (reversing the GL entries) is inherited from ISDController
     def on_cancel(self):
@@ -105,23 +99,8 @@ class ISDDistributionInvoice(ISDController):
         )
 
     def validate_purchase_invoice(self):
-        if not self.purchase_invoice:
-            frappe.throw(_("Purchase Invoice is required."))
-
-        pi = frappe.db.get_value(
-            "Purchase Invoice",
-            self.purchase_invoice,
-            ["docstatus", "is_isd_applicable", "posting_date", "company", "company_gstin"],
-            as_dict=True,
-        )
-
+        pi = get_purchase_doc(self.purchase_invoice)
         pi_link = get_link_to_form("Purchase Invoice", self.purchase_invoice)
-
-        if not pi or pi.docstatus != 1:
-            frappe.throw(_("Purchase Invoice {0} is not submitted.").format(pi_link))
-
-        if not pi.is_isd_applicable:
-            frappe.throw(_("Purchase Invoice {0} is not ISD applicable.").format(pi_link))
 
         # Posting Date should be on or after the Purchase Invoice (GSTR-6 Rule 39)
         if getdate(pi.posting_date) > getdate(self.posting_date):
@@ -138,6 +117,24 @@ class ISDDistributionInvoice(ISDController):
             frappe.throw(
                 _("Purchase Invoice {0} is booked under a different Distribution GSTIN.").format(pi_link)
             )
+
+    def validate_total_turnover(self):
+        precision = self.precision("total_turnover")
+        distributed_total = frappe.db.get_value(
+            "ISD Distribution Invoice",
+            {"purchase_invoice": self.purchase_invoice, "docstatus": 1, "name": ("!=", self.name)},
+            "total_turnover",
+        )
+        if not distributed_total or flt(distributed_total, precision) == flt(self.total_turnover, precision):
+            return
+
+        frappe.throw(
+            _("Total Turnover must be {0}, as used by the earlier distributions of {1}.").format(
+                frappe.bold(flt(distributed_total, precision)),
+                get_link_to_form("Purchase Invoice", self.purchase_invoice),
+            ),
+            title=_("Total Turnover Changed"),
+        )
 
     def validate_source_items(self):
         """One to One mapping of purchase invoice items and source items"""
@@ -240,7 +237,6 @@ class ISDDistributionInvoice(ISDController):
             self._notify_adjustment(itc_surplus + expense_surplus)
 
     def get_distribution_surplus(self):
-
         current_itc = sum(sum_row_tax_by_type(row, "distributed") for row in self.source_items)
         current_expense = sum(flt(row.distributed_expense) for row in self.source_items)
         already = self.get_distributed_for_purchase_invoice()
@@ -438,7 +434,7 @@ def apply_against_party_overrides(source, recipient):
     for row in recipient.source_items:
         row.update(
             {
-                "expense_head": default_expense_account if should_distribute_expense() else None,
+                "expense_head": default_expense_account if distribute_expense_with_isd_credit() else None,
                 "cost_center": default_cost_center,
                 "project": None,
             }
@@ -468,12 +464,14 @@ def set_missing_values(source, target):
 
 
 @frappe.whitelist()
-def create_isd_recipient_invoice(source_name: str, submit_on_creation: bool | None = None):
-    """creating a isd recipient invoice from a isd distrubiion invocie"""
-    # submit on creation -> None, assume open_mapped_doc called it
-    frappe.has_permission("ISD Distribution Invoice", "read", throw=True)
-    frappe.has_permission("ISD Recipient Invoice", "write", throw=True)
+def create_isd_recipient_invoice(source_name: str):
+    frappe.has_permission("ISD Distribution Invoice", "read", doc=source_name, throw=True)
+    frappe.has_permission("ISD Recipient Invoice", "create", throw=True)
 
+    return _map_isd_recipient_invoice(source_name)
+
+
+def _map_isd_recipient_invoice(source_name: str):
     if frappe.db.exists(
         "ISD Recipient Invoice", {"isd_distribution_invoice_reference": source_name, "docstatus": ["<", 2]}
     ):
@@ -483,7 +481,7 @@ def create_isd_recipient_invoice(source_name: str, submit_on_creation: bool | No
             )
         )
 
-    recipient = get_mapped_doc(
+    doc = get_mapped_doc(
         "ISD Distribution Invoice",
         source_name,
         {
@@ -505,23 +503,20 @@ def create_isd_recipient_invoice(source_name: str, submit_on_creation: bool | No
         postprocess=set_missing_values,
     )
 
-    # when using open_mapped_doc must return the draft document without running validations
-    if submit_on_creation is not None:
-        recipient.insert(ignore_permissions=True)
+    return doc
 
-        if cint(submit_on_creation):
-            recipient.submit()
-            status = _("created and submitted")
-        else:
-            status = _("saved as a draft")
 
-        frappe.msgprint(
-            _("ISD Recipient Invoice {0} {1}.").format(
-                get_link_to_form("ISD Recipient Invoice", recipient.name), status
-            ),
-            alert=True,
-            indicator="green",
-        )
+def _create_isd_recipient_invoice(source_name: str):
+    recipient = _map_isd_recipient_invoice(source_name)
+    recipient.insert()
+    recipient.submit()
+
+    frappe.msgprint(
+        _("ISD Recipient Invoice {0} created").format(
+            get_link_to_form("ISD Recipient Invoice", recipient.name)
+        ),
+        alert=True,
+    )
 
     return recipient
 
