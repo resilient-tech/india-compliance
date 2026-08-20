@@ -348,6 +348,27 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         self.assertAlmostEqual(sum(row.credit for row in provisional_rows), tax_received, places=2)
         self.assertAlmostEqual(sum(row.debit for row in provisional_rows), 0, places=2)
 
+    def test_manual_credit_note_must_reverse_credit(self):
+        """A recipient invoice typed in against an external ISD skips the reference reconciliation,
+        so nothing else checks the sign. Positive amounts on a credit note debit the input GST
+        accounts again -- claiming the credit a second time instead of giving it back, and
+        inflating 4(A)(4) of GSTR-3B rather than reducing it."""
+        doc = self._recipient(
+            is_credit_note=1,
+            external_isd_invoice_number="ISD-EXT-CN-001",
+            source_items=make_source_item(self.pi, ratio=0.25),
+        )
+        self.assertRaisesRegex(frappe.ValidationError, "must be negative in credit note", doc.insert)
+
+        # entered as a reversal, it saves
+        doc = self._recipient(
+            is_credit_note=1,
+            external_isd_invoice_number="ISD-EXT-CN-002",
+            source_items=make_source_item(self.pi, ratio=0.25, is_credit_note=1),
+        )
+        doc.insert()
+        self.assertLess(sum(sum_row_tax_by_type(row, "distributed") for row in doc.source_items), 0)
+
     def test_recipient_ineligible_gl_entries(self):
         # ineligible ITC on the recipient side is reversed through the GST Expense account, then
         # transferred to the item's expense head (cost of goods)

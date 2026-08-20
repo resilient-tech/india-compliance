@@ -32,6 +32,7 @@ class ISDRecipientInvoice(ISDController):
         self.setup_precision()
         self.setup_party_fields()
         self.validate_addresses()
+        self.validate_credit_note_direction()
         self.validate_reference_distribution_invoice()
         self.validate_accounts()
         self.set_taxes_and_totals()
@@ -61,6 +62,18 @@ class ISDRecipientInvoice(ISDController):
                 "action": "No Action",
             },
         )
+
+    def validate_credit_note_direction(self):
+        for gst_tax_type in (*GST_TAX_TYPES, "expense"):
+            fieldname = f"distributed_{gst_tax_type}"
+            amount = sum(flt(row.get(fieldname)) for row in self.source_items)
+            label = fieldname.replace("_", " ").title()
+
+            if self.is_credit_note and amount > 0:
+                frappe.throw(_("{0} must be negative in credit note").format(label))
+
+            if not self.is_credit_note and amount < 0:
+                frappe.throw(_("{0} must be positive in distribution document").format(label))
 
     def validate_reference_distribution_invoice(self):
         """When linked to an on-site ISD Distribution Invoice, reconcile against it. Skipped for pure
