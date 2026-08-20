@@ -44,7 +44,7 @@ class ISDRecipientInvoice(ISDController):
         validate_itc_claim_period_on_update_after_submit(self)
 
     def on_submit(self):
-        self.make_document_gl_entries()
+        self.make_gl_entries()
 
     # on_trash (deleting the GL entries) is inherited from ISDController
     def on_cancel(self):

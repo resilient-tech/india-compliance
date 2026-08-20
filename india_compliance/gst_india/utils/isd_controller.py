@@ -2,7 +2,8 @@
 # For license information, please see license.txt
 
 import frappe
-from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
+from erpnext.accounts.general_ledger import make_gl_entries as _make_gl_entries
+from erpnext.accounts.general_ledger import make_reverse_gl_entries
 from erpnext.accounts.party import get_party_account
 from erpnext.controllers.accounts_controller import AccountsController
 from frappe import _
@@ -33,6 +34,8 @@ class ISDController(Document):
     get_value_in_transaction_currency = AccountsController.get_value_in_transaction_currency
     get_voucher_subtype = AccountsController.get_voucher_subtype
     company_currency = AccountsController.company_currency
+    _remove_references_in_repost_doctypes = AccountsController._remove_references_in_repost_doctypes
+    _remove_references_in_unreconcile = AccountsController._remove_references_in_unreconcile
 
     @property
     def grand_total(self):
@@ -456,26 +459,30 @@ class ISDController(Document):
 
     # Code adapted from AccountsController.on_trash
     def on_trash(self):
-        if not frappe.db.get_single_value("Accounts Settings", "delete_linked_ledger_entries"):
+        self._remove_references_in_repost_doctypes()
+        self._remove_references_in_unreconcile()
+
+        if not frappe.get_single_value("Accounts Settings", "delete_linked_ledger_entries"):
             return
 
-        frappe.db.delete("GL Entry", {"voucher_type": self.doctype, "voucher_no": self.name})
+        for doctype in ("GL Entry", "Payment Ledger Entry"):
+            frappe.db.delete(doctype, {"voucher_type": self.doctype, "voucher_no": self.name})
 
-    def make_document_gl_entries(self):
+    def make_gl_entries(self):
         gl_entries = self.get_gl_entries()
         if not gl_entries:
             return
 
-        make_gl_entries(gl_entries, merge_entries=False)
+        _make_gl_entries(gl_entries, merge_entries=False)
 
     def get_gl_entries(self):
         self.setup_precision()
 
         self._book_expenses = should_distribute_expense()
 
-        # distribution side: move itc and expense from tax account to isd provisional account
-        self.cr_or_dr = "credit" if self.is_distribution_side() else "debit"
-        self.dr_or_cr = "debit" if self.is_distribution_side() else "credit"
+        # distribution side: move itc and expense from tax account to isd provisional account.
+        self.itc_side = "credit" if self.is_distribution_side() else "debit"
+        self.provisional_side = "debit" if self.is_distribution_side() else "credit"
 
         gl_entries = []
         self.add_tax_gl_entries(gl_entries)
@@ -484,8 +491,19 @@ class ISDController(Document):
 
         return gl_entries
 
-    def add_gl_entry(self, gl_entries, account, amount, side, *, row=None, party_type=None, party=None):
-        """Append a single-sided GL entry."""
+    def add_gl_entry(
+        self,
+        gl_entries,
+        account,
+        amount,
+        side,
+        *,
+        row=None,
+        party_type=None,
+        party=None,
+        against=None,
+    ):
+        """Append a single-sided GL entry, rounded to tax precision and skipped when it is zero."""
         amount = flt(amount, self._tax_precision)
         if not amount:
             return
@@ -501,7 +519,8 @@ class ISDController(Document):
                     "voucher_detail_no": row and row.get("name"),
                     "party_type": party_type,
                     "party": party,
-                    "remarks": _("ISD Credit Distribution"),
+                    "against": against,
+                    "remarks": self.get("remarks") or _("ISD Credit Distribution"),
                 },
                 item=row,
             )
@@ -518,7 +537,7 @@ class ISDController(Document):
             )
         return account
 
-    def add_provisional_gl_entry(self, gl_entries, amount, side, *, row=None):
+    def add_provisional_gl_entry(self, gl_entries, amount, side, *, row=None, against=None):
         """Offset entry to the ISD provisional (clearing) account, carrying the party when applicable"""
         self.add_gl_entry(
             gl_entries,
@@ -528,48 +547,69 @@ class ISDController(Document):
             row=row,
             party_type=self.party_type if self.is_against_party else None,
             party=self.party if self.is_against_party else None,
+            against=against,
         )
 
     def add_tax_gl_entries(self, gl_entries):
         """Tax entries from/to the ISD provisional account.
 
-        An unregistered recipient goes to gst expense or provisional account
+        An unregistered recipient cannot take the credit at all, so its tax is expensed.
         """
-        total = 0
         if self.is_recipient_side_and_unregistered():
+            expense_account = self.get_gst_expense_account()
             total = flt(self.total_eligible + self.total_ineligible)
-            book_expense_account = (
-                self.get_gst_expense_account() if self._book_expenses else self.isd_provisional_account
+            self.add_gl_entry(
+                gl_entries,
+                expense_account,
+                total,
+                self.itc_side,
+                against=self.isd_provisional_account,
             )
-            self.add_gl_entry(gl_entries, book_expense_account, total, self.cr_or_dr)
+            self.add_provisional_gl_entry(gl_entries, total, self.provisional_side, against=expense_account)
         else:
+            total = 0
+            accounts = []
             for tax in self.taxes:
-                self.add_gl_entry(gl_entries, tax.account_head, tax.tax_amount, self.cr_or_dr)
-                total += flt(tax.tax_amount)
+                total += flt(tax.tax_amount, self._tax_precision)
+                accounts.append(tax.account_head)
+                self.add_gl_entry(
+                    gl_entries,
+                    tax.account_head,
+                    tax.tax_amount,
+                    self.itc_side,
+                    against=self.isd_provisional_account,
+                )
 
-        self.add_provisional_gl_entry(
-            gl_entries, total, self.dr_or_cr
-        )  # remove the transferred amount from provisional
+            self.add_provisional_gl_entry(
+                gl_entries, total, self.provisional_side, against=", ".join(dict.fromkeys(accounts))
+            )
 
     def add_distributed_expense_gl_entries(self, gl_entries):
         """Distribute the pro-rata expense to each item's expense head, when enabled in GST Settings"""
         if not self._book_expenses:
             return
 
-        total = 0
         for row in self.source_items:
             amount = flt(row.distributed_expense)
-            self.add_gl_entry(gl_entries, row.expense_head, amount, self.cr_or_dr, row=row)
-            total += amount
-
-        self.add_provisional_gl_entry(
-            gl_entries, total, self.dr_or_cr, row={"project": self.project, "cost_center": self.cost_center}
-        )
+            self.add_gl_entry(
+                gl_entries,
+                row.expense_head,
+                amount,
+                self.itc_side,
+                row=row,
+                against=self.isd_provisional_account,
+            )
+            self.add_provisional_gl_entry(
+                gl_entries,
+                amount,
+                self.provisional_side,
+                row={"project": self.project, "cost_center": self.cost_center},
+                against=row.expense_head,
+            )
 
     def add_ineligible_itc_gl_entries(self, gl_entries):
         """Correct the over-credit of ineligible ITC"""
         if self.is_recipient_side_and_unregistered():
-            # values are already in the gst expense account, no reversal needed
             return
 
         ineligible_rows = [row for row in self.source_items if row.is_ineligible_for_itc]
@@ -577,41 +617,66 @@ class ISDController(Document):
             return
 
         tax_accounts = {tax.gst_tax_type: tax.account_head for tax in self.taxes}
-        ratio = get_distribution_ratio(self)
+        distributed_as_igst = self.is_distribution_side() and is_inter_state_distribution(self)
+        gst_expense_account = self.get_gst_expense_account() if self._book_expenses else None
 
         for row in ineligible_rows:
-            # the distributor reverses its source heads
-            if self.is_distribution_side():
-                amounts = {
-                    gst_tax_type: flt(row.get(f"total_{gst_tax_type}") * ratio, self._source_item_precision)
-                    for gst_tax_type in GST_TAX_TYPES
-                }
-            else:
-                amounts = {
-                    gst_tax_type: flt(row.get(f"distributed_{gst_tax_type}"), self._source_item_precision)
-                    for gst_tax_type in GST_TAX_TYPES
-                }
+            amounts = {
+                gst_tax_type: flt(row.get(f"distributed_{gst_tax_type}"), self._source_item_precision)
+                for gst_tax_type in GST_TAX_TYPES
+            }
 
-            row_reversal_total = sum(amount for amount in amounts.values() if amount)
+            if distributed_as_igst and (flt(row.total_cgst) or flt(row.total_sgst)):
+                cgst = flt(amounts["igst"] / 2, self._source_item_precision)
+                amounts["sgst"] = flt(amounts["igst"] - cgst, self._source_item_precision)
+                amounts["cgst"] = cgst
+                amounts["igst"] = 0.0
 
             # input GST accounts -> expense accounts/provisional account
+            row_reversal_total = 0
+            accounts = []
             for gst_tax_type, amount in amounts.items():
                 if not amount:
                     continue
-                self.add_gl_entry(gl_entries, tax_accounts[gst_tax_type], amount, self.dr_or_cr, row=row)
+
+                account = tax_accounts[gst_tax_type]
+                row_reversal_total += amount
+                accounts.append(account)
+                self.add_gl_entry(gl_entries, account, amount, self.provisional_side, row=row)
+
+            against = ", ".join(dict.fromkeys(accounts))
 
             if not self._book_expenses:
                 # -> provisional account
-                self.add_provisional_gl_entry(gl_entries, row_reversal_total, self.cr_or_dr, row=row)
+                self.add_provisional_gl_entry(
+                    gl_entries, row_reversal_total, self.itc_side, row=row, against=against
+                )
                 continue
 
             # -> expense head
             self.add_gl_entry(
-                gl_entries, self.get_gst_expense_account(), row_reversal_total, self.cr_or_dr, row=row
+                gl_entries,
+                gst_expense_account,
+                row_reversal_total,
+                self.itc_side,
+                row=row,
+                against=against,
             )
 
             # GST Expense -> expense head
-            self.add_gl_entry(gl_entries, row.expense_head, row_reversal_total, self.cr_or_dr, row=row)
             self.add_gl_entry(
-                gl_entries, self.get_gst_expense_account(), row_reversal_total, self.dr_or_cr, row=row
+                gl_entries,
+                row.expense_head,
+                row_reversal_total,
+                self.itc_side,
+                row=row,
+                against=gst_expense_account,
+            )
+            self.add_gl_entry(
+                gl_entries,
+                gst_expense_account,
+                row_reversal_total,
+                self.provisional_side,
+                row=row,
+                against=row.expense_head,
             )

@@ -47,7 +47,7 @@ class ISDDistributionInvoice(ISDController):
         self.set_taxes_and_totals()
 
     def on_submit(self):
-        self.make_document_gl_entries()
+        self.make_gl_entries()
         self.sync_distribution_percentage()
 
         gstin, gst_state = frappe.get_cached_value("Address", self.party_address, ["gstin", "gst_state"])
