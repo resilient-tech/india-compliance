@@ -229,6 +229,11 @@ def create_recipient_invoice(**data):
     `do_not_save` / `do_not_submit` stop before insert / submit; every other key is set on the
     document.
     """
+    # a manual invoice must carry the number its ISD issued, the way create_purchase_invoice
+    # defaults bill_no -- pass one explicitly to test the number itself
+    if not data.get("isd_distribution_invoice_reference"):
+        data.setdefault("external_isd_invoice_number", frappe.generate_hash(length=8))
+
     return _create_isd_doc("ISD Recipient Invoice", **data)
 
 

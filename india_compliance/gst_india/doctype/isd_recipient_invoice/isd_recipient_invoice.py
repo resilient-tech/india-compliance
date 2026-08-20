@@ -33,7 +33,9 @@ class ISDRecipientInvoice(ISDController):
         self.setup_party_fields()
         self.validate_addresses()
         self.validate_credit_note_direction()
+        self.validate_credit_note_against()
         self.validate_reference_distribution_invoice()
+        self.validate_external_isd_invoice_number()
         self.validate_accounts()
         self.set_taxes_and_totals()
 
@@ -74,6 +76,63 @@ class ISDRecipientInvoice(ISDController):
 
             if not self.is_credit_note and amount < 0:
                 frappe.throw(_("{0} must be positive in distribution document").format(label))
+
+    def validate_credit_note_against(self):
+        if not self.credit_note_against:
+            return
+
+        if not self.is_credit_note:
+            frappe.throw(_("Only a credit note can be issued against another distribution."))
+
+        if self.credit_note_against == self.name:
+            frappe.throw(_("A credit note cannot be issued against itself."))
+
+        against = frappe.db.get_value(
+            "ISD Recipient Invoice",
+            self.credit_note_against,
+            ["docstatus", "is_credit_note", "party_gstin", "company_gstin"],
+            as_dict=True,
+        )
+        against_link = get_link_to_form("ISD Recipient Invoice", self.credit_note_against)
+
+        if not against or against.docstatus != 1:
+            frappe.throw(_("ISD Recipient Invoice {0} is not submitted.").format(against_link))
+
+        if against.is_credit_note:
+            frappe.throw(_("ISD Recipient Invoice {0} is itself a credit note.").format(against_link))
+
+        if (against.company_gstin, against.party_gstin) != (self.company_gstin, self.party_gstin):
+            frappe.throw(
+                _("ISD Recipient Invoice {0} is between a different pair of GSTINs.").format(against_link)
+            )
+
+    def validate_external_isd_invoice_number(self):
+        """The number the distributing ISD gave this document. mandatory_depends_on only binds the
+        form, so validate it here -- reconciliation matches 2A/2B on this number, and an invoice
+        without one can never match."""
+        if self.isd_distribution_invoice_reference:
+            return
+
+        if not self.external_isd_invoice_number:
+            frappe.throw(_("ISD Invoice Number is required when no ISD Distribution Invoice is linked."))
+
+        duplicate = frappe.db.exists(
+            "ISD Recipient Invoice",
+            {
+                "party_gstin": self.party_gstin,
+                "external_isd_invoice_number": self.external_isd_invoice_number,
+                "is_credit_note": self.is_credit_note,
+                "docstatus": ("!=", 2),
+                "name": ("!=", self.name),
+            },
+        )
+        if duplicate:
+            frappe.throw(
+                _("ISD Invoice Number {0} has already been entered in {1}.").format(
+                    frappe.bold(self.external_isd_invoice_number),
+                    get_link_to_form("ISD Recipient Invoice", duplicate),
+                )
+            )
 
     def validate_reference_distribution_invoice(self):
         """When linked to an on-site ISD Distribution Invoice, reconcile against it. Skipped for pure

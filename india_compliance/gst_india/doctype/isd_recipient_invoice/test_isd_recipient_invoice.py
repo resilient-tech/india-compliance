@@ -543,3 +543,64 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
 
         doc.cancel()
         self.assertFalse(get_gl_rows(doc))  # originals and reversals are both cancelled
+
+    def test_credit_note_against_is_validated(self):
+        """mandatory_depends_on is a client-side control -- frappe only enforces reqd server-side
+        (base_document._get_missing_mandatory_fields) -- so nothing checked what this pointed at."""
+        items = make_source_item(self.pi, ratio=0.25)
+        original = self._recipient(
+            external_isd_invoice_number=frappe.generate_hash(length=8), source_items=items
+        )
+        original.insert()
+
+        def credit_note(against, **overrides):
+            return self._recipient(
+                is_credit_note=1,
+                credit_note_against=against,
+                external_isd_invoice_number=frappe.generate_hash(length=8),
+                source_items=make_source_item(self.pi, ratio=0.25, is_credit_note=1),
+                **overrides,
+            )
+
+        # a draft carries no credit to reverse
+        self.assertRaisesRegex(VALIDATION_ERROR, "is not submitted", credit_note(original.name).insert)
+
+        original.submit()
+
+        # reversing a reversal would restore the credit instead of giving it back
+        reversal = credit_note(original.name)
+        reversal.insert()
+        reversal.submit()
+        self.assertRaisesRegex(VALIDATION_ERROR, "is itself a credit note", credit_note(reversal.name).insert)
+
+        # a plain distribution document is not a reversal of anything
+        plain = self._recipient(
+            credit_note_against=original.name,
+            external_isd_invoice_number=frappe.generate_hash(length=8),
+            source_items=make_source_item(self.pi, ratio=0.25),
+        )
+        self.assertRaisesRegex(VALIDATION_ERROR, "Only a credit note", plain.insert)
+
+        # and the reversal must return credit to the branch that received it
+        other_branch = credit_note(original.name, company_address=self.recipient_address_ka.name)
+        self.assertRaisesRegex(VALIDATION_ERROR, "different pair of GSTINs", other_branch.insert)
+
+    def test_external_isd_invoice_number_identifies_a_manual_invoice(self):
+        """With no distribution invoice to reference, this number is the document's only identity:
+        reconciliation matches 2A/2B on it, so a blank or reused one cannot be told apart."""
+        items = make_source_item(self.pi, ratio=0.25)
+        no_number = self._recipient(external_isd_invoice_number=None, source_items=items)
+        self.assertRaisesRegex(VALIDATION_ERROR, "ISD Invoice Number is required", no_number.insert)
+
+        number = frappe.generate_hash(length=8)
+        self._recipient(external_isd_invoice_number=number, source_items=items).insert()
+
+        duplicate = self._recipient(external_isd_invoice_number=number, source_items=items)
+        self.assertRaisesRegex(VALIDATION_ERROR, "already been entered", duplicate.insert)
+
+        # the same number as a credit note is a different document from the same ISD
+        self._recipient(
+            is_credit_note=1,
+            external_isd_invoice_number=number,
+            source_items=make_source_item(self.pi, ratio=0.25, is_credit_note=1),
+        ).insert()
