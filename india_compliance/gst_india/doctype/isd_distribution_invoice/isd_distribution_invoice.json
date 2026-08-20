@@ -78,7 +78,7 @@
    "in_list_view": 1,
    "label": "Series",
    "no_copy": 1,
-   "options": "ISDD-.YY.-",
+   "options": "ISDD-.YYYY.-",
    "print_hide": 1,
    "reqd": 1,
    "set_only_once": 1
