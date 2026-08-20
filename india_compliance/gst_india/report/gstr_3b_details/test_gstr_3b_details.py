@@ -3,8 +3,14 @@
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import get_first_day, get_last_day, get_month, getdate
+from frappe.utils import flt, get_first_day, get_last_day, get_month, getdate
 
+from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
+    create_recipient_invoice,
+    make_isd_pi,
+    make_source_item,
+    setup_isd_fixtures,
+)
 from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
     execute as run_purchase_register,
 )
@@ -18,6 +24,13 @@ from india_compliance.gst_india.utils.tests import (
 
 
 class TestGSTR3BDetails(IntegrationTestCase):
+    COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_isd_fixtures(cls)
+
     def setUp(self):
         frappe.set_user("Administrator")
         filters = {"company": "_Test Indian Registered Company"}
@@ -157,3 +170,22 @@ class TestGSTR3BDetails(IntegrationTestCase):
                 }
             )
         )
+
+    def test_itc_details_report_includes_isd_recipient_invoices(self):
+        """4(A)(4) is the only 3B row an ISD Recipient Invoice reaches, so if the drill-down misses
+        it the summary reports credit the details cannot account for."""
+        doc = create_recipient_invoice(
+            company_address=self.COMPANY_ADDRESS,
+            party_address=self.isd_address.name,
+            external_isd_invoice_number=frappe.generate_hash(length=8),
+            source_items=make_source_item(make_isd_pi(self.isd_address.name)),
+        )
+        source_row = doc.source_items[0]
+
+        _, data = self.get_details("4")
+        row = next((item for item in data if item["voucher_no"] == doc.name), None)
+
+        self.assertIsNotNone(row)
+        self.assertEqual(row["invoice_sub_category"], "Input Service Distributor")
+        self.assertEqual(row["cgst_amount"], flt(source_row.distributed_cgst, 2))
+        self.assertEqual(row["sgst_amount"], flt(source_row.distributed_sgst, 2))
