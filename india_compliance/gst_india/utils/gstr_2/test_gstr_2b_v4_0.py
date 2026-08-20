@@ -230,9 +230,8 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
             doc,
         )
 
-    # for ISD, itc eligibility is now tracked per item (itcelg), not on the header
     def test_gstr2b_isd(self):
-        doc = self.get_doc(GSTRCategory.ISD)
+        doc = self.get_doc(GSTRCategory.ISD, supplier_gstin="16DEFPS8555D1Z7")
         self.assertDocumentEqual(
             {
                 "return_period_2b": "032020",
@@ -244,21 +243,12 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 "doc_type": "ISD Invoice",
                 "bill_no": "S0080",
                 "bill_date": date(2016, 3, 3),
-                "itc_availability": "",
+                "itc_availability": "Yes",
                 "document_value": 400,
                 "igst": 0,
                 "cgst": 200,
                 "sgst": 200,
                 "cess": 0,
-                "items": [
-                    {
-                        "igst": 0,
-                        "cgst": 200,
-                        "sgst": 200,
-                        "cess": 0,
-                        "itcelg": "Y",
-                    }
-                ],
                 "is_downloaded_from_2b": 1,
                 "is_supplier_return_filed": 1,
             },
@@ -266,7 +256,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         )
 
     def test_gstr2b_isda(self):
-        doc = self.get_doc(GSTRCategory.ISDA)
+        doc = self.get_doc(GSTRCategory.ISDA, supplier_gstin="16DEFPS8555D1Z7")
         self.assertDocumentEqual(
             {
                 "return_period_2b": "032020",
@@ -281,26 +271,53 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 "doc_type": "ISD Invoice",
                 "bill_no": "S0080",
                 "bill_date": date(2016, 3, 3),
-                "itc_availability": "",
+                "itc_availability": "Yes",
                 "document_value": 400,
                 "igst": 0,
                 "cgst": 200,
                 "sgst": 200,
                 "cess": 0,
-                "items": [
-                    {
-                        "igst": 0,
-                        "cgst": 200,
-                        "sgst": 200,
-                        "cess": 0,
-                        "itcelg": "Y",
-                    }
-                ],
                 "is_downloaded_from_2b": 1,
                 "is_supplier_return_filed": 1,
             },
             doc,
         )
+
+    def test_gstr2b_isd_groups_by_document_not_by_number(self):
+        """Supplier 27AABCE2207R1Z5 reports three rows, all numbered S9001: an invoice split into
+        its eligible and ineligible halves per Rule 39(1)(b), and a credit note from the same
+        series. The halves belong to one invoice and have to fold together; the credit note is a
+        different document and has to stay apart."""
+        stored = {
+            doc.doc_type: doc
+            for doc in frappe.get_all(
+                self.doctype,
+                filters={
+                    "company_gstin": self.gstin,
+                    "classification": GSTRCategory.ISD.value,
+                    "supplier_gstin": "27AABCE2207R1Z5",
+                },
+                fields=["name", "doc_type", "bill_no", "cgst", "sgst", "itc_availability"],
+            )
+        }
+
+        self.assertEqual(set(stored), {"ISD Invoice", "ISD Credit Note"})
+
+        invoice = frappe.get_doc(self.doctype, stored["ISD Invoice"].name)
+        self.assertEqual(invoice.bill_no, "S9001")
+        # both halves survive as rows, and the totals are their sum
+        self.assertEqual(len(invoice.items), 2)
+        self.assertEqual({item.itcelg for item in invoice.items}, {"Y", "N"})
+        self.assertEqual(invoice.cgst, 300)
+        self.assertEqual(invoice.sgst, 300)
+        self.assertEqual(invoice.document_value, 600)
+        # any eligible row makes the document's credit available
+        self.assertEqual(invoice.itc_availability, "Yes")
+
+        credit_note = stored["ISD Credit Note"]
+        self.assertEqual(credit_note.bill_no, "S9001")
+        self.assertEqual(credit_note.cgst, 50)
+        self.assertEqual(credit_note.sgst, 50)
 
     def test_gstr2b_impg(self):
         doc = self.get_doc(GSTRCategory.IMPG)

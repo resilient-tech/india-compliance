@@ -68,15 +68,20 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
     def setUpClass(cls):
         super().setUpClass()
 
-        # create 2023-2024 fiscal year
-        fiscal_year = frappe.new_doc("Fiscal Year")
-        fiscal_year.update(
-            {
-                "year_start_date": "2023-04-01",
-                "year_end_date": "2024-03-31",
-                "year": "2023-2024",
-            }
-        ).insert(ignore_if_duplicate=True)
+        # create 2023-2024 fiscal year. ignore_if_duplicate only covers a clash on the name, and
+        # Fiscal Year rejects any overlap: a site carrying ERPNext's calendar-year fixtures
+        # already covers these dates, so there is nothing to create.
+        if not frappe.db.exists(
+            "Fiscal Year",
+            {"year_start_date": ("<=", "2024-03-31"), "year_end_date": (">=", "2023-04-01")},
+        ):
+            frappe.new_doc("Fiscal Year").update(
+                {
+                    "year_start_date": "2023-04-01",
+                    "year_end_date": "2024-03-31",
+                    "year": "2023-2024",
+                }
+            ).insert()
 
         cls.test_data = frappe.get_file_json(
             frappe.get_app_path(
@@ -696,7 +701,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
     POSTING_DATE = "2023-08-11"
 
-    def create_recipient_invoice(self, external_isd_invoice_number):
+    def create_recipient_invoice(self, external_isd_invoice_number, is_credit_note=0):
         pi = make_isd_pi(self.isd_address.name, posting_date=self.POSTING_DATE, set_posting_time=1)
 
         return create_recipient_invoice(
@@ -704,7 +709,8 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             party_address=self.isd_address.name,
             posting_date=self.POSTING_DATE,
             external_isd_invoice_number=external_isd_invoice_number,
-            source_items=make_source_item(pi),
+            is_credit_note=is_credit_note,
+            source_items=make_source_item(pi, is_credit_note=is_credit_note),
         )
 
     def reconcile(self):
@@ -780,6 +786,49 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             frappe.db.get_value("ISD Recipient Invoice", doc.name, "reconciliation_status"),
             "Match Found",
         )
+
+    def _create_isd_2b_row(self, bill_no, doc_type, cgst, sgst):
+        create_gst_inward_supply(
+            classification="ISD",
+            doc_type=doc_type,
+            bill_no=bill_no,
+            bill_date=self.POSTING_DATE,
+            supplier_gstin=self.isd_address.gstin,
+            supplier_name="_Test ISD Distribution Address",
+            place_of_supply="",
+            itc_availability="",
+            items=[{"taxable_value": 0, "cgst": cgst, "sgst": sgst}],
+            document_value=cgst + sgst,
+            return_period_2b="082023",
+            gen_date_2b=self.POSTING_DATE,
+        )
+
+    def test_isd_credit_note_matching(self):
+        """distributed_* is stored negative on a credit note while 2B reports the magnitude, so the
+        comparison has to be on magnitudes -- otherwise no ISD credit note ever matches. And since
+        distributors number invoices and credit notes from one series, the two document types must
+        not match each other."""
+        credit_note = self.create_recipient_invoice("ISD-CN-001", is_credit_note=1)
+        cn_row = credit_note.source_items[0]
+        self._create_isd_2b_row(
+            "ISD-CN-001", "ISD Credit Note", abs(cn_row.distributed_cgst), abs(cn_row.distributed_sgst)
+        )
+
+        # a book invoice whose number a 2B credit note also carries
+        invoice = self.create_recipient_invoice("ISD-SHARED-001")
+        inv_row = invoice.source_items[0]
+        self._create_isd_2b_row(
+            "ISD-SHARED-001", "ISD Credit Note", inv_row.distributed_cgst, inv_row.distributed_sgst
+        )
+
+        _, rows = self.reconcile()
+
+        matched = self.isd_row(rows, credit_note)
+        self.assertEqual(matched.match_status, "Exact Match")
+        self.assertEqual(matched.tax_difference, 0)
+
+        # the invoice stays unmatched rather than absorbing the credit note
+        self.assertEqual(self.isd_row(rows, invoice).match_status, "Only in Books")
 
     def test_isd_invoice_manual_link_and_unlink(self):
         """Manually linking an ISD Recipient Invoice writes the status back onto the document, and

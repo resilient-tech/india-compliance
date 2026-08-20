@@ -964,6 +964,44 @@
 							"itcelg": "Y"
 						}
 					]
+				},
+				{
+					"ctin": "27AABCE2207R1Z5",
+					"trdnm": "GSTN Mixed Eligibility",
+					"supprd": "022020",
+					"supfildt": "02-03-2020",
+					"doclist": [
+						{
+							"doctyp": "ISDI",
+							"docnum": "S9001",
+							"docdt": "03-03-2016",
+							"igst": 0,
+							"cgst": 200,
+							"sgst": 200,
+							"cess": 0,
+							"itcelg": "Y"
+						},
+						{
+							"doctyp": "ISDI",
+							"docnum": "S9001",
+							"docdt": "03-03-2016",
+							"igst": 0,
+							"cgst": 100,
+							"sgst": 100,
+							"cess": 0,
+							"itcelg": "N"
+						},
+						{
+							"doctyp": "ISDC",
+							"docnum": "S9001",
+							"docdt": "03-03-2016",
+							"igst": 0,
+							"cgst": 50,
+							"sgst": 50,
+							"cess": 0,
+							"itcelg": "Y"
+						}
+					]
 				}
 			],
 			"isda": [
