@@ -19,6 +19,7 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES, TAXABLE_GST_TREA
 from india_compliance.gst_india.utils import get_gstin_list, get_party_for_gstin, get_periods_between_dates
 from india_compliance.gst_india.utils.gstr_2 import (
     IMPORT_CATEGORY,
+    ISD_CATEGORY,
     NON_RECONCILE_CATEGORY,
     ReturnType,
 )
@@ -82,8 +83,14 @@ class MatchStatus(Enum):
 #     {"Mismatch":       ["E", "N", "E", "N", "E", "E", 1, 1, 1]},
 # ]
 
-# CDNR covers both note types: (inward supply doc_type, purchase is_return)
+# categories covering more than one document type: (inward supply doc_type, purchase is_return)
 CDNR_DOC_TYPES = (("Debit Note", 0), ("Credit Note", 1))
+ISD_DOC_TYPES = (("ISD Invoice", 0), ("ISD Credit Note", 1))
+
+DOC_TYPES_BY_CATEGORY = {
+    "CDNR": CDNR_DOC_TYPES,
+    **dict.fromkeys(ISD_CATEGORY, ISD_DOC_TYPES),
+}
 
 GSTIN_RULES = (
     {
@@ -422,7 +429,7 @@ class PurchaseInvoice:
         for doc in data:
             doc.fy = BaseUtil.get_fy(doc.bill_date or doc.posting_date)
 
-        return BaseUtil.get_dict_for_key("supplier_gstin", data)
+        return data
 
     def get_query(self, additional_fields=None, is_return=False):
         fields = self.get_fields(additional_fields, is_return)
@@ -563,7 +570,7 @@ class BillOfEntry:
         for doc in data:
             doc.fy = BaseUtil.get_fy(doc.bill_date or doc.posting_date)
 
-        return BaseUtil.get_dict_for_key("supplier_gstin", data)
+        return data
 
     def get_query(self, additional_fields=None):
         fields = self.get_fields(additional_fields)
@@ -685,10 +692,11 @@ class ISDInvoice:
 
         return query.run(as_dict=True)
 
-    def get_unmatched(self):
+    def get_unmatched(self, is_return=0):
         query = (
             self.get_query()
             .where(self.ISD.posting_date[self.from_date : self.to_date])
+            .where(self.ISD.is_credit_note == cint(is_return))
             .where(self.ISD.name.notin(ISDInvoice.query_match_isd_invoices(self.from_date, self.to_date)))
         )
 
@@ -697,7 +705,7 @@ class ISDInvoice:
         for doc in data:
             doc.fy = BaseUtil.get_fy(doc.bill_date or doc.posting_date)
 
-        return BaseUtil.get_dict_for_key("supplier_gstin", data)
+        return data
 
     def get_query(self, additional_fields=None):
         fields = self.get_fields(additional_fields)
@@ -728,13 +736,16 @@ class ISDInvoice:
         return query
 
     def get_fields(self, additional_fields=None):
+        tax_fields = [
+            self.query_tax_amount(f"distributed_{tax_type}").as_(tax_type) for tax_type in GST_TAX_TYPES
+        ]
 
         # gstr2a does not provide place of supply for ISD Invoices
         fields = [
             self.ISD.name,
             Case()
             .when(
-                (self.ISD.isd_distribution_invoice_reference.isnotnull()),
+                IfNull(self.ISD.isd_distribution_invoice_reference, "") != "",
                 self.ISD.isd_distribution_invoice_reference,
             )
             .else_(self.ISD.external_isd_invoice_number)
@@ -746,10 +757,7 @@ class ISDInvoice:
             LiteralValue("NULL").as_("place_of_supply"),
             LiteralValue(0).as_("taxable_value"),
             LiteralValue(0).as_("is_reverse_charge"),
-            self.query_tax_amount("cgst").as_("cgst"),
-            self.query_tax_amount("sgst").as_("sgst"),
-            self.query_tax_amount("igst").as_("igst"),
-            (Sum(self.ISD_ITEM.distributed_cess) + Sum(self.ISD_ITEM.distributed_cess_non_advol)).as_("cess"),
+            *tax_fields,
         ]
 
         # Add only ISD Recipient Invoice fields
@@ -762,7 +770,7 @@ class ISDInvoice:
         return fields
 
     def query_tax_amount(self, field):
-        return Sum(getattr(self.ISD_ITEM, f"distributed_{field}"))
+        return Abs(Sum(getattr(self.ISD_ITEM, field)))
 
     @staticmethod
     def query_match_isd_invoices(from_date=None, to_date=None):
@@ -877,14 +885,14 @@ class BaseReconciliation:
             include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
 
-    def get_unmatched_isd_invoice(self):
+    def get_unmatched_isd_invoice(self, is_return=0):
         return ISDInvoice(
             company=self.company,
             company_gstin=self.company_gstin,
             from_date=self.purchase_from_date,
             to_date=self.to_date,
             include_ignored=self.include_ignored,
-        ).get_unmatched()
+        ).get_unmatched(is_return)
 
     def query_isd_invoice(self, additional_fields=None):
         return ISDInvoice(
@@ -897,13 +905,16 @@ class BaseReconciliation:
         """
         Returns dict of unmatched purchase, bill of entry or ISD Recipient Invoice data.
         """
-        if category in ("ISD", "ISDA"):
-            return self.get_unmatched_isd_invoice()
+        if category in ISD_CATEGORY:
+            data = self.get_unmatched_isd_invoice(is_return) + self.get_unmatched_purchase(
+                category, is_return
+            )
+        elif category in IMPORT_CATEGORY:
+            data = self.get_unmatched_bill_of_entry(category)
+        else:
+            data = self.get_unmatched_purchase(category, is_return)
 
-        if category in IMPORT_CATEGORY:
-            return self.get_unmatched_bill_of_entry(category)
-
-        return self.get_unmatched_purchase(category, is_return)
+        return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
 
 class Reconciler(BaseReconciliation):
@@ -913,15 +924,17 @@ class Reconciler(BaseReconciliation):
         """
         self.category = category
 
-        for doc_type, is_return in CDNR_DOC_TYPES if category == "CDNR" else ((None, 0),):
+        for doc_type, is_return in DOC_TYPES_BY_CATEGORY.get(category, ((None, 0),)):
             # GSTIN Level matching
             purchases = self.get_unmatched_purchase_or_bill_of_entry(category, is_return)
             inward_supplies = self.get_unmatched_inward_supply(category, amended_category, doc_type)
             self.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies)
 
-            # In case of IMPG GST in not available in 2A. So skip PAN level matching.
-            if category == "IMPG":
-                return
+            # GST is not reported in 2A for IMPG, and for ISD both sides are same-PAN by
+            # definition, so PAN matching would only cross-link one ISD registration's credit
+            # onto another's
+            if category in ("IMPG", *ISD_CATEGORY):
+                continue
 
             # PAN Level matching
             purchases = self.get_pan_level_data(purchases)

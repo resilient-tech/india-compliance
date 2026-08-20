@@ -53,6 +53,7 @@ from india_compliance.gst_india.utils.gstin_info import (
 )
 from india_compliance.gst_india.utils.gstr_2 import (
     IMPORT_CATEGORY,
+    ISD_CATEGORY,
     ReturnType,
     download_gstr_2a,
     download_gstr_2b,
@@ -373,11 +374,11 @@ class PurchaseReconciliationTool(Document):
         )
 
         if filters.get("purchase_doctype") == "Purchase Invoice":
-            query = query.where(GSTR2.classification.notin((*IMPORT_CATEGORY, "ISD", "ISDA")))
+            query = query.where(GSTR2.classification.notin(IMPORT_CATEGORY))
         elif filters.get("purchase_doctype") == "Bill of Entry":
             query = query.where(GSTR2.classification.isin(IMPORT_CATEGORY))
         elif filters.get("purchase_doctype") == "ISD Recipient Invoice":
-            query = query.where(GSTR2.classification.isin(("ISD", "ISDA")))
+            query = query.where(GSTR2.classification.isin(ISD_CATEGORY))
 
         if not filters.show_matched:
             query = query.where(IfNull(GSTR2.link_name, "") == "")
@@ -400,7 +401,7 @@ class PurchaseReconciliationTool(Document):
         query = (
             self.ReconciledData.query_isd_invoice()
             .where(IfNull(ISD.party_gstin, "").like(f"%{filters.supplier_gstin}%"))
-            .where(ISD.posting_date[filters.bill_from_date : filters.bill_to_date])
+            .where(ISD.posting_date[filters.from_date : filters.to_date])
         )
 
         if not filters.show_matched:
