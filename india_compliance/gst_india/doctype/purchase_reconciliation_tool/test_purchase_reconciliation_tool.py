@@ -787,6 +787,38 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             "Match Found",
         )
 
+    def test_legacy_isd_credit_booked_as_a_purchase_invoice_still_matches(self):
+        """Before the ISD doctypes existed the credit was booked as a Purchase Invoice against the
+        distributor. Those are submitted, so they keep that shape forever -- the ISD categories have
+        to offer them as candidates alongside ISD Recipient Invoices, or upgraded sites stop
+        reconciling every ISD document they already had."""
+        pinv = create_purchase_invoice(
+            supplier="_Test ISD Distributor Supplier",
+            bill_no="ISD-LEGACY-001",
+            bill_date=self.POSTING_DATE,
+            posting_date=self.POSTING_DATE,
+        )
+
+        gst_is = create_gst_inward_supply(
+            classification="ISD",
+            doc_type="ISD Invoice",
+            bill_no="ISD-LEGACY-001",
+            bill_date=self.POSTING_DATE,
+            supplier_gstin="24AAQCA8719H2ZB",
+            supplier_name="_Test ISD Distributor Supplier",
+            place_of_supply="",
+            itc_availability="",
+            return_period_2b="082023",
+            gen_date_2b=self.POSTING_DATE,
+        )
+
+        self.reconcile()
+
+        self.assertEqual(
+            frappe.db.get_value("GST Inward Supply", gst_is.name, ["link_doctype", "link_name"]),
+            ("Purchase Invoice", pinv.name),
+        )
+
     def _create_isd_2b_row(self, bill_no, doc_type, cgst, sgst):
         create_gst_inward_supply(
             classification="ISD",
