@@ -53,18 +53,12 @@ class TestTurnoverRecord(IntegrationTestCase):
         self.assertFalse(self.without_gstin.gstin)
         self.assertEqual(self.without_gstin.gst_state, "Karnataka")
 
-    def test_duplicate_record_for_same_state_and_period(self):
+    def test_record_validations(self):
+        # one record per state per period
         self.assertRaisesRegex(
-            frappe.ValidationError,
-            "already exists",
-            make_turnover_record,
-            "Gujarat",
-            100000,
+            frappe.ValidationError, "already exists", make_turnover_record, "Gujarat", 100000
         )
 
-    def test_overlapping_period_for_same_state_is_rejected(self):
-        # the duplicate check is an overlap test, not an equality test: a half year inside an
-        # existing full year is still a second turnover figure for the same state
         self.assertRaisesRegex(
             frappe.ValidationError,
             "already exists",
@@ -75,11 +69,11 @@ class TestTurnoverRecord(IntegrationTestCase):
             to_date="2024-09-30",
         )
 
-    def test_non_overlapping_period_for_same_state_is_allowed(self):
+        # ... while a period that does not overlap is a separate, legitimate record
         record = make_turnover_record("Gujarat", 100000, from_date="2023-04-01", to_date="2024-03-31")
         self.assertEqual(record.gst_state, "Gujarat")
 
-    def test_gstin_state_mismatch_is_rejected(self):
+        # a GSTIN belongs to the state its first two digits encode
         self.assertRaisesRegex(
             frappe.ValidationError,
             "does not match",
