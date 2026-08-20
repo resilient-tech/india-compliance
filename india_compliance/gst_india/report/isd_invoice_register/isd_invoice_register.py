@@ -137,6 +137,7 @@ def get_distribution_invoice_data(filters):
         .on((src.parent == dist.name) & (src.parenttype == DISTRIBUTION_DOCTYPE))
         .select(
             dist.name.as_("isd_distribution_invoice"),
+            dist.purchase_invoice,
             dist.posting_date,
             dist.company_gstin,
             dist.party_gstin,
@@ -310,6 +311,13 @@ def _get_distribution_invoice_columns(company_currency):
             "options": DISTRIBUTION_DOCTYPE,
             "width": 200,
             "sticky": True,
+        },
+        {
+            "fieldname": "purchase_invoice",
+            "label": _("Purchase Invoice"),
+            "fieldtype": "Link",
+            "options": "Purchase Invoice",
+            "width": 180,
         },
         {"fieldname": "posting_date", "label": _("Date"), "fieldtype": "Date", "width": 110},
         {"fieldname": "is_credit_note", "label": _("Is Credit Note"), "fieldtype": "Check", "width": 100},

@@ -9,7 +9,6 @@ const AMOUNT_FIELDS = [
     "cgst_amount",
     "sgst_amount",
     "cess_amount",
-    "cess_non_advol_amount",
     // ISD Distribution Invoice view — source (available) + distributed
     "total_igst",
     "total_cgst",
@@ -162,7 +161,8 @@ function custom_report_column_total(...args) {
     const indices = this.datamanager.getFilteredRowIndices();
 
     // base_grand_total repeats across the per-rate rows of an invoice; count it once per invoice.
-    if (column_field === "total_invoice_value" || column_field == "taxable_value") {
+    // taxable_value is per invoice and rate, so it does not repeat and is summed plainly below.
+    if (column_field === "total_invoice_value") {
         const seen = new Set();
         return indices.reduce((total, index) => {
             const row = data[index];
@@ -172,7 +172,16 @@ function custom_report_column_total(...args) {
         }, 0);
     }
 
-    if (!AMOUNT_FIELDS.includes(column_field)) return "";
+    if (["total_igst", "total_cgst", "total_sgst", "total_cess", "total_expense"].includes(column_field)) {
+        const counted_for = {};
+        return indices.reduce((total, index) => {
+            const row = data[index];
+            counted_for[row.purchase_invoice] ??= row.isd_distribution_invoice;
+            if (counted_for[row.purchase_invoice] !== row.isd_distribution_invoice) return total;
+
+            return total + flt(row[column_field]);
+        }, 0);
+    }
 
     return indices.reduce((total, index) => total + flt(data[index][column_field]), 0);
 }
