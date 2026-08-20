@@ -84,13 +84,6 @@ class ISDDistributionInvoice(ISDController):
         if distribution_percentage == flt(100, _p) and (net_distributed_itc != total_itc_available):
             distribution_percentage = flt(100 - 10**-_p, _p)
 
-        if distribution_percentage > 100:
-            frappe.throw(
-                _("Distributed ITC ({0}%) exceeds the available ITC on Purchase Invoice {1}.").format(
-                    distribution_percentage, get_link_to_form("Purchase Invoice", self.purchase_invoice)
-                )
-            )
-
         frappe.db.set_value(
             "Purchase Invoice",
             self.purchase_invoice,
