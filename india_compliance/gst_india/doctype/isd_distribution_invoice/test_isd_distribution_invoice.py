@@ -864,6 +864,62 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         reversed_itc = sum(sum_row_tax_by_type(row, "distributed") for row in exact.source_items)
         self.assertAlmostEqual(reversed_itc, -distributed, places=2)
 
+    def test_clamp_reduces_the_source_heads_whichever_way_the_credit_converts(self):
+        """The taxes table holds the source heads while the rows hold the converted ones, so an
+        intra-state purchase distributed inter-state is IGST on the rows and CGST + SGST here.
+        Neither the rows nor the taxes may be left holding the surplus."""
+        for label, party_address in (
+            ("intra-state", self.recipient_address.name),
+            ("inter-state", self.recipient_address_ka.name),
+        ):
+            with self.subTest(label):
+                pi = make_isd_pi(self.isd_address.name)
+                doc = self._full_distribution(pi=pi, party_address=party_address)
+                doc.insert()
+
+                before = {tax.gst_tax_type: tax.tax_amount for tax in doc.taxes}
+                distributed_before = sum(sum_row_tax_by_type(row, "distributed") for row in doc.source_items)
+
+                doc.setup_precision()
+                doc.setup_tax_amounts()
+                doc.clamp_itc_surplus(0.02)
+                doc.set_tax_totals()
+
+                after = {tax.gst_tax_type: tax.tax_amount for tax in doc.taxes}
+                # the source heads survive: an empty head here is rejected by set_tax_totals
+                self.assertEqual(set(after), set(before))
+                self.assertTrue(all(after.values()))
+
+                # and both sides give up the surplus, not just the rows
+                distributed_after = sum(sum_row_tax_by_type(row, "distributed") for row in doc.source_items)
+                self.assertAlmostEqual(distributed_before - distributed_after, 0.02, places=2)
+                self.assertAlmostEqual(sum(before.values()) - sum(after.values()), 0.02, places=2)
+
+    @change_settings("GST Settings", {"distribute_expense_with_isd_credit": 1})
+    def test_expense_clamp_spreads_across_rows(self):
+        item = {
+            "item_code": "_Test Service Item",
+            "qty": 1,
+            "rate": 10000,
+            "gst_hsn_code": "999900",
+            "cost_center": "Main - _TIRC",
+        }
+        pi = make_isd_pi(self.isd_address.name, items=[dict(item), dict(item)])
+        doc = self._full_distribution(pi=pi)
+        doc.insert()
+
+        before = [flt(row.distributed_expense) for row in doc.source_items]
+        self.assertEqual(len(before), 2)
+        self.assertTrue(all(before))
+
+        doc.setup_precision()
+        doc.clamp_expense_surplus(0.02)
+
+        after = [flt(row.distributed_expense) for row in doc.source_items]
+        # taken off every row that carries expense, and adding back to exactly the surplus
+        self.assertAlmostEqual(sum(before) - sum(after), 0.02, places=2)
+        self.assertTrue(all(a < b for a, b in zip(after, before, strict=True)))
+
     # ------------------------------------------------------------------ GL entries
     @change_settings("GST Settings", {"auto_create_isd_recipient_invoice": 1})
     def test_eligible_distribution_gl_entries(self):

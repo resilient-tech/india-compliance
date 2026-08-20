@@ -35,6 +35,7 @@ class ISDDistributionInvoice(ISDController):
         self.validate_turnover_and_ratio()
         self.validate_purchase_invoice()
         self.validate_total_turnover()
+        self.validate_credit_note_against()
         self.validate_source_items()
         calculate_distribution(self)  # override js calculations
         self.validate_accounts()
@@ -129,6 +130,42 @@ class ISDDistributionInvoice(ISDController):
             ),
             title=_("Total Turnover Changed"),
         )
+
+    def validate_credit_note_against(self):
+        if not self.credit_note_against:
+            return
+
+        if not self.is_credit_note:
+            frappe.throw(_("Only a credit note can be issued against another distribution."))
+
+        if self.credit_note_against == self.name:
+            frappe.throw(_("A credit note cannot be issued against itself."))
+
+        against = frappe.db.get_value(
+            "ISD Distribution Invoice",
+            self.credit_note_against,
+            ["docstatus", "is_credit_note", "purchase_invoice", "party_gstin", "company_gstin"],
+            as_dict=True,
+        )
+        against_link = get_link_to_form("ISD Distribution Invoice", self.credit_note_against)
+
+        if not against or against.docstatus != 1:
+            frappe.throw(_("ISD Distribution Invoice {0} is not submitted.").format(against_link))
+
+        if against.is_credit_note:
+            frappe.throw(_("ISD Distribution Invoice {0} is itself a credit note.").format(against_link))
+
+        if against.purchase_invoice != self.purchase_invoice:
+            frappe.throw(
+                _("ISD Distribution Invoice {0} distributes a different Purchase Invoice.").format(
+                    against_link
+                )
+            )
+
+        if (against.company_gstin, against.party_gstin) != (self.company_gstin, self.party_gstin):
+            frappe.throw(
+                _("ISD Distribution Invoice {0} is between a different pair of GSTINs.").format(against_link)
+            )
 
     def validate_source_items(self):
         """One to One mapping of purchase invoice items and source items"""
