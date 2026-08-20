@@ -1,8 +1,11 @@
+from typing import ClassVar
+
 import frappe
 
 from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2.gstr import (
     GSTR,
+    ISDSection,
     get_mapped_value,
     get_unique_key,
 )
@@ -164,32 +167,18 @@ class GSTR2bCDNRA(GSTR2bCDNR):
         return invoice_details
 
 
-class GSTR2bISD(GSTR2b):
+class GSTR2bISD(ISDSection, GSTR2b):
+    ITEM_FIELDS: ClassVar[dict] = {
+        "igst": "igst",
+        "cgst": "cgst",
+        "sgst": "sgst",
+        "cess": "cess",
+        "itcelg": "itcelg",
+    }
+
     def setup(self):
         super().setup()
         self.set_key("invoice_key", "doclist")
-
-    def get_supplier_transactions(self, supplier):
-        transactions = super().get_supplier_transactions(supplier)
-        return self.group_transactions_by_docnum(transactions)
-
-    def group_transactions_by_docnum(self, transactions):
-        grouped = {}
-        for transaction in transactions:
-            existing = grouped.get(transaction.bill_no)
-            if not existing:
-                grouped[transaction.bill_no] = transaction
-                continue
-
-            existing["items"].extend(transaction["items"])
-
-        for transaction in grouped.values():
-            self.update_totals(transaction)
-            transaction.document_value = (
-                transaction.igst + transaction.cgst + transaction.sgst + transaction.cess
-            )
-
-        return list(grouped.values())
 
     def get_invoice_details(self, invoice):
         return {
@@ -203,17 +192,6 @@ class GSTR2bISD(GSTR2b):
             "cess": invoice.cess,
             "document_value": invoice.igst + invoice.cgst + invoice.sgst + invoice.cess,
         }
-
-    def get_transaction_items(self, invoice):
-        return [
-            {
-                "igst": invoice.igst,
-                "cgst": invoice.cgst,
-                "sgst": invoice.sgst,
-                "cess": invoice.cess,
-                "itcelg": invoice.itcelg,
-            }
-        ]
 
 
 class GSTR2bISDA(GSTR2bISD):

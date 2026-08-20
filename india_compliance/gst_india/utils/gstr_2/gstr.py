@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import frappe
 
 from india_compliance.gst_india.constants import GST_CATEGORY_MAP, STATE_NUMBERS
@@ -149,3 +151,47 @@ class GSTR:
 
     def update_gstins(self):
         pass
+
+
+class ISDSection:
+    """
+    Shared handling for the ISD sections of GSTR-2A and GSTR-2B.
+    """
+
+    # child fieldname -> the name this format reports it under
+    ITEM_FIELDS: ClassVar[dict] = {}
+
+    def get_transaction_items(self, invoice):
+        # no rate-wise breakup is reported, so the document's own amounts become its single row,
+        # carrying the eligibility that decides how the rows of one document fold together
+        return [{field: invoice.get(source) for field, source in self.ITEM_FIELDS.items()}]
+
+    def get_supplier_transactions(self, supplier):
+        transactions = super().get_supplier_transactions(supplier)
+        return self.group_transactions_by_document(transactions)
+
+    def get_group_key(self, transaction):
+        return (transaction.bill_no, transaction.doc_type, transaction.bill_date)
+
+    def group_transactions_by_document(self, transactions):
+        grouped = {}
+        for transaction in transactions:
+            key = self.get_group_key(transaction)
+            existing = grouped.get(key)
+            if not existing:
+                grouped[key] = transaction
+                continue
+
+            existing["items"].extend(transaction["items"])
+
+        for transaction in grouped.values():
+            self.update_totals(transaction)
+            transaction.document_value = (
+                transaction.igst + transaction.cgst + transaction.sgst + transaction.cess
+            )
+            # the rows carry the eligibility; the reconciliation tool reads it off the document
+            transaction.itc_availability = (
+                "Yes" if any(item.get("itcelg") == "Y" for item in transaction["items"]) else "No"
+            )
+
+        return list(grouped.values())

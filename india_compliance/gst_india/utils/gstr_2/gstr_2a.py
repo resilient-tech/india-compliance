@@ -1,10 +1,12 @@
 from datetime import datetime
+from typing import ClassVar
 
 import frappe
 
 from india_compliance.gst_india.utils import get_datetime, parse_datetime
 from india_compliance.gst_india.utils.gstr_2.gstr import (
     GSTR,
+    ISDSection,
     get_mapped_value,
     get_unique_key,
 )
@@ -184,7 +186,15 @@ class GSTR2aCDNRA(GSTR2aCDNR):
         return invoice_details
 
 
-class GSTR2aISD(GSTR2a):
+class GSTR2aISD(ISDSection, GSTR2a):
+    ITEM_FIELDS: ClassVar[dict] = {
+        "igst": "iamt",
+        "cgst": "camt",
+        "sgst": "samt",
+        "cess": "cess",
+        "itcelg": "itc_elg",
+    }
+
     def setup(self):
         super().setup()
         self.set_key("invoice_key", "doclist")
@@ -204,10 +214,6 @@ class GSTR2aISD(GSTR2a):
             "cess": invoice.cess,
             "document_value": invoice.iamt + invoice.camt + invoice.samt + invoice.cess,
         }
-
-    # item details are not available
-    def get_transaction_items(self, invoice):
-        pass
 
 
 class GSTR2aISDA(GSTR2aISD):
