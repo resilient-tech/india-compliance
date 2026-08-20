@@ -28,12 +28,7 @@ def execute():
         state.amount += amount
 
     for gst_state, turnover in turnover_by_state.items():
-        upsert_turnover_record(
-            gstin=turnover.gstin,
-            gst_state=gst_state,
-            amount=turnover.amount,
-            period=(from_date, to_date),
-        )
+        upsert_turnover_record(gstin=turnover.gstin, gst_state=gst_state, amount=turnover.amount)
 
 
 def get_company_addresses(isd):

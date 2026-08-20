@@ -201,7 +201,12 @@ class IMS:
         inward_supply = frappe.qb.DocType("GST Inward Supply")
         existing_transactions = (
             frappe.qb.from_(inward_supply)
-            .select(inward_supply.name, inward_supply.supplier_gstin, inward_supply.bill_no)
+            .select(
+                inward_supply.name,
+                inward_supply.supplier_gstin,
+                inward_supply.bill_no,
+                inward_supply.doc_type,
+            )
             .where(inward_supply.is_downloaded_from_2b == 0)
             .where(inward_supply.is_downloaded_from_2a == 0)
             .where(inward_supply.is_downloaded_from_ims == 1)

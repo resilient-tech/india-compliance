@@ -41,6 +41,7 @@ from india_compliance.gst_india.constants import (
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
+    ISD_GST_CATEGORY,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
@@ -124,7 +125,7 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
     }
 
     if exclude_isd:
-        filters.update({"gst_category": ["!=", "Input Service Distributor"]})
+        filters.update({"gst_category": ["!=", ISD_GST_CATEGORY]})
 
     gstin_list = frappe.get_all(
         "Address",
@@ -134,8 +135,23 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
     )
 
     default_gstin = frappe.db.get_value(party_type, party, "gstin")
-    if default_gstin and default_gstin not in gstin_list:
-        gstin_list.insert(0, default_gstin)
+    if not default_gstin or default_gstin in gstin_list:
+        return gstin_list
+
+    # the default GSTIN bypasses the filters above, and a company's default can be its own ISD
+    # registration
+    if exclude_isd and frappe.db.exists(
+        "Address",
+        {
+            "link_doctype": party_type,
+            "link_name": party,
+            "gstin": default_gstin,
+            "gst_category": ISD_GST_CATEGORY,
+        },
+    ):
+        return gstin_list
+
+    gstin_list.insert(0, default_gstin)
 
     return gstin_list
 

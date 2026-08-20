@@ -13,11 +13,11 @@ def get_mapped_value(value, mapping):
 
 
 def get_unique_key(transaction):
-    # Build the supplier_gstin-bill_no key used to match existing inward supplies.
     supplier_gstin = transaction.get("supplier_gstin") or ""
     bill_no = transaction.get("bill_no") or ""
+    doc_type = transaction.get("doc_type") or ""
 
-    return f"{supplier_gstin}-{bill_no}"
+    return f"{supplier_gstin}-{bill_no}-{doc_type}"
 
 
 class GSTR:

@@ -382,11 +382,20 @@ class TestGetUniqueKey(IntegrationTestCase):
         existing = frappe._dict(supplier_gstin=None, bill_no="2566282")
         incoming = frappe._dict(bill_no="2566282")
         self.assertEqual(get_unique_key(existing), get_unique_key(incoming))
-        self.assertEqual(get_unique_key(existing), "-2566282")
+        self.assertEqual(get_unique_key(existing), "-2566282-")
 
     def test_normal_gstin(self):
         t = frappe._dict(supplier_gstin="01AABCE2207R1Z5", bill_no="INV-1")
-        self.assertEqual(get_unique_key(t), "01AABCE2207R1Z5-INV-1")
+        self.assertEqual(get_unique_key(t), "01AABCE2207R1Z5-INV-1-")
+
+    def test_doc_type_separates_an_isd_invoice_from_its_credit_note(self):
+        """create_inward_supply keys on doc_type, so the existing-transaction map has to as well:
+        an ISD numbers both from one series, and a collision leaves the stale row behind."""
+        gstin, bill_no = "01AABCE2207R1Z5", "ISD-1"
+        invoice = frappe._dict(supplier_gstin=gstin, bill_no=bill_no, doc_type="ISD Invoice")
+        credit_note = frappe._dict(supplier_gstin=gstin, bill_no=bill_no, doc_type="ISD Credit Note")
+
+        self.assertNotEqual(get_unique_key(invoice), get_unique_key(credit_note))
 
 
 class TestMultiFileRawMerge(IntegrationTestCase):

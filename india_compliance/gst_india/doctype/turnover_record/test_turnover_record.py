@@ -89,4 +89,6 @@ class TestTurnoverRecord(IntegrationTestCase):
         self.assertEqual(get_turnover_amount("Maharashtra", today()), 750000)
 
         # ... and a record filed for the distribution's own year is not picked up
+        record = make_turnover_record("Goa", 900000, from_date=fy_start, to_date=fy_end)
+        self.addCleanup(frappe.delete_doc, "Turnover Record", record.name, force=True)
         self.assertIsNone(get_turnover_amount("Goa", today()))
