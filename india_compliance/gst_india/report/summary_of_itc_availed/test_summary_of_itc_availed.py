@@ -139,6 +139,26 @@ class TestSummaryOfITCAvailed(IntegrationTestCase):
 
         self.assertEqual(self.domestic_total(), before)
 
+    def test_isd_registrations_own_purchase_is_not_reported_as_availed(self):
+        """The ISD never avails the credit it receives -- it passes it on, and each recipient
+        reports its share as ITC from ISD. Counting the ISD's own purchase here as well would
+        report the same tax twice on a company-wide run (company_gstin is an optional filter)."""
+        before = self.domestic_total()
+
+        pi = make_isd_pi(self.isd_address.name)
+        self.assertEqual(pi.is_isd_applicable, 1)
+
+        filters = _filters(getdate())
+        filters.pop("company_gstin")
+        _, data = execute(filters)
+
+        domestic = sum(
+            row.get("cgst_amount") or 0
+            for row in data
+            if row.get("indent") == 1 and row.get("details") in ("Inputs", "Input Services")
+        )
+        self.assertEqual(domestic, before)
+
     def domestic_total(self):
         _, data = execute(_filters(getdate()))
 
