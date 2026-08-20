@@ -14,7 +14,7 @@ import frappe
 from frappe import _
 from frappe.model.meta import get_field_precision
 from frappe.query_builder.functions import Coalesce, IfNull, Sum
-from frappe.utils import cint, flt, getdate
+from frappe.utils import cint, flt, get_link_to_form, getdate
 
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
@@ -45,13 +45,17 @@ def throw_row_table(title, header, rows):
 
 
 def throw_invalid_rows(message, rows):
-    """Raise a ValidationError under a descriptive heading, listing the offending row number first
-    then the value, e.g. 'Following purchase invoices are not submitted:<br>Row #1: PINV-0001'."""
+    """Raise a ValidationError listing the offending rows under a descriptive title, e.g.
+    'Following source items do not belong to Purchase Invoice PINV-0001' over 'Row #1: ITEM-A'."""
     if not rows:
         return
 
-    listed = "<br>".join(f"Row #{idx}: {frappe.bold(value)}" for idx, value in rows)
-    frappe.throw(_("{0}:<br>{1}").format(message, listed))
+    frappe.msgprint(
+        [_("Row #{0}: {1}").format(idx, frappe.bold(value)) for idx, value in rows],
+        title=message,
+        as_list=True,
+        raise_exception=frappe.ValidationError,
+    )
 
 
 def is_inter_state_distribution(doc):
@@ -63,17 +67,19 @@ def is_inter_state_distribution(doc):
     if party_gst_category in IMPORT_GST_CATEGORIES:
         return True
 
-    # the comparison is symmetric, so it holds whichever side the company is on
-    if doc.company_pos and doc.party_pos:
-        return doc.company_pos != doc.party_pos
-
-    return False
+    return doc.company_pos != doc.party_pos
 
 
 def get_distribution_ratio(doc):
-    """Signed turnover ratio (credit notes reverse credit, so they carry a negative sign)."""
+    """
+    Signed turnover ratio (credit notes reverse credit, so they carry a negative sign).
+    """
+    total_turnover = flt(doc.total_turnover)
+    if not total_turnover:
+        return 0
+
     sign = -1 if doc.is_credit_note else 1
-    return sign * flt(doc.branch_turnover / doc.total_turnover)
+    return sign * flt(doc.branch_turnover) / total_turnover
 
 
 def should_distribute_expense():
@@ -130,57 +136,66 @@ def calculate_distribution(doc):
 
 @frappe.whitelist()
 def get_source_items_from_purchase_invoice(purchase_invoice: str):
-
     if not purchase_invoice:
         return []
 
     frappe.has_permission("Purchase Invoice", "read", doc=purchase_invoice, throw=True)
 
-    pi_items = frappe.get_all(
+    # selected under the ISD Source Item fieldnames, so the rows drop straight into the child table
+    source_items = frappe.get_all(
         "Purchase Invoice Item",
         filters={"parent": purchase_invoice},
         fields=[
-            "name",
+            "name as purchase_invoice_item",
             "item_code",
             "item_name",
             "gst_hsn_code",
             "is_ineligible_for_itc",
             "cost_center",
             "project",
-            "expense_account",
-            "base_net_amount",
-            "igst_amount",
-            "cgst_amount",
-            "sgst_amount",
-            "cess_amount",
-            "cess_non_advol_amount",
+            "expense_account as expense_head",
+            "base_net_amount as total_expense",
+            "igst_amount as total_igst",
+            "cgst_amount as total_cgst",
+            "sgst_amount as total_sgst",
+            "cess_amount as total_cess",
+            "cess_non_advol_amount as total_cess_non_advol",
         ],
         order_by="idx",
     )
 
-    source_items = []
-    distribute_expense = should_distribute_expense()
-    for item in pi_items:
-        source_items.append(
-            {
-                "item_code": item.item_code,
-                "item_name": item.item_name,
-                "gst_hsn_code": item.gst_hsn_code,
-                "purchase_invoice_item": item.name,
-                "is_ineligible_for_itc": item.is_ineligible_for_itc,
-                "cost_center": item.cost_center,
-                "project": item.project,
-                "expense_head": item.expense_account if distribute_expense else None,
-                "total_expense": item.base_net_amount,
-                "total_igst": item.igst_amount,
-                "total_cgst": item.cgst_amount,
-                "total_sgst": item.sgst_amount,
-                "total_cess": item.cess_amount,
-                "total_cess_non_advol": item.cess_non_advol_amount,
-            }
-        )
-
     return source_items
+
+
+def get_purchase_doc(purchase_invoice: str):
+    if not purchase_invoice:
+        frappe.throw(_("Purchase Invoice is required."))
+
+    doc = frappe.db.get_value(
+        "Purchase Invoice",
+        purchase_invoice,
+        [
+            "name",
+            "company",
+            "company_gstin",
+            "posting_date",
+            "billing_address",
+            "docstatus",
+            "is_isd_applicable",
+        ],
+        as_dict=True,
+    )
+
+    pi_link = get_link_to_form("Purchase Invoice", purchase_invoice)
+    if not doc or doc.docstatus != 1:
+        frappe.throw(_("Purchase Invoice {0} is not submitted.").format(pi_link))
+
+    if not doc.is_isd_applicable:
+        frappe.throw(_("Purchase Invoice {0} is not ISD applicable.").format(pi_link))
+
+    doc.source_items = get_source_items_from_purchase_invoice(purchase_invoice)
+
+    return doc
 
 
 def get_place_of_supply_for_address(address):
@@ -312,27 +327,27 @@ def get_isd_autofill_values(doctype: str, changed_field: str, doc: str | dict):
     if doc.company:
         frappe.has_permission("Company", doc=doc.company, throw=True)
 
+    values = frappe._dict()
+
     if changed_field in _PARTY_CHAIN:
         downstream = _PARTY_CHAIN[_PARTY_CHAIN.index(changed_field) + 1 :]
         if "party_type" in downstream:
-            doc.party_type = _resolve_isd_party_type(doc, is_distribution_side)
+            values.party_type = doc.party_type = _resolve_isd_party_type(doc, is_distribution_side)
         if "party" in downstream:
-            doc.party = _resolve_isd_party(doc)
+            values.party = doc.party = _resolve_isd_party(doc)
 
-        doc.isd_provisional_account = _resolve_isd_provisional_account(doc)
+        values.isd_provisional_account = _resolve_isd_provisional_account(doc)
         company_address, party_address = _resolve_isd_addresses(doc, is_distribution_side)
 
-        doc.party_address = party_address
+        values.party_address = doc.party_address = party_address
         # the company-owned address only changes when the company itself changes
         if changed_field == "company":
-            doc.company_address = company_address
+            values.company_address = doc.company_address = company_address
 
     if is_distribution_side:
-        doc.branch_turnover = (
-            _resolve_recipient_branch_turnover(doc) or doc.branch_turnover
-        )  # if no turnover is found don't override
+        values.branch_turnover = _resolve_recipient_branch_turnover(doc)
 
-    return doc
+    return values
 
 
 # ---------------------------------------------------------------------------- bulk distribution dialog
@@ -379,9 +394,7 @@ def get_distribution_addresses(party_type: str, party: str, pi_posting_date: str
     if address:
         query = query.where(addr.name == address)
 
-    data = query.run(as_dict=True)
-
-    return data
+    return {"addresses": query.run(as_dict=True), "relevant_period": [fy_from, fy_to]}
 
 
 @frappe.whitelist()
@@ -436,7 +449,7 @@ def bulk_create_isd_distribution_invoices(
     purchase_invoice: str,
     distribution_table: list | str,
     posting_date: str,
-    total_turnover: float | str | None = None,
+    total_turnover: float | str,
 ):
     frappe.has_permission("ISD Distribution Invoice", "create", throw=True)
     frappe.has_permission("Purchase Invoice", "read", doc=purchase_invoice, throw=True)
@@ -445,20 +458,17 @@ def bulk_create_isd_distribution_invoices(
         distribution_table = frappe.parse_json(distribution_table)
     posting_date = getdate(posting_date)
 
-    # only rows with turnover distribute any credit
     distribution_table = [row for row in distribution_table if flt(row.get("turnover_amount"))]
     if not distribution_table:
         frappe.throw(_("No rows with turnover to distribute."))
 
-    total_turnover = flt(total_turnover) or sum(flt(row["turnover_amount"]) for row in distribution_table)
+    total_turnover = flt(total_turnover)
+    if total_turnover <= 0:
+        frappe.throw(_("Total Turnover must be greater than zero."))
 
-    company, pi_posting_date = frappe.db.get_value(
-        "Purchase Invoice", purchase_invoice, ["company", "posting_date"]
-    )
-    company_address = frappe.get_value("Purchase Invoice", purchase_invoice, "billing_address")
-    source_items = get_source_items_from_purchase_invoice(purchase_invoice)
+    pi = get_purchase_doc(purchase_invoice)
 
-    invoices, invalid = [], []
+    invoices, failed = [], []
     turnover_data = []
     for row in distribution_table:
         party_type = row.get("party_type")
@@ -468,10 +478,10 @@ def bulk_create_isd_distribution_invoices(
         doc = frappe.new_doc("ISD Distribution Invoice")
         doc.update(
             {
-                "company": company,
+                "company": pi.company,
                 "posting_date": posting_date,
-                "purchase_invoice": purchase_invoice,
-                "company_address": company_address,
+                "purchase_invoice": pi.name,
+                "company_address": pi.billing_address,
                 "party_address": row.get("address"),
                 "is_against_party": is_against_party,
                 "party_type": party_type if is_against_party else None,
@@ -481,26 +491,23 @@ def bulk_create_isd_distribution_invoices(
                 "distribution_ratio": flt(turnover / total_turnover * 100) if total_turnover else 0,
             }
         )
-        doc.extend("source_items", [dict(item) for item in source_items])
-        doc.build_for_bulk()
+        doc.extend("source_items", [dict(item) for item in pi.source_items])
 
-        is_invalid = False
-        messages_before = len(frappe.message_log)
+        turnover_data.append((row.get("gstin"), row.get("gst_state"), turnover, pi.posting_date))
+
+        frappe.db.savepoint("isd_bulk")
         try:
-            doc.validate_addresses()
-            doc.validate_purchase_invoice()
-        except frappe.ValidationError:
-            del frappe.message_log[messages_before:]
-            is_invalid = True
-
-        doc.flags.ignore_validate = True
-        doc.insert()
-
-        turnover_data.append((row.get("gstin"), row.get("gst_state"), turnover, pi_posting_date))
+            doc.insert()
+        except Exception:
+            # one unsavable row must not take the invoices already created down with it
+            frappe.db.rollback(save_point="isd_bulk")
+            frappe.log_error(
+                title=_("Bulk ISD Distribution Invoice creation failed for {0}").format(row.get("address"))
+            )
+            failed.append(row.get("address"))
+            continue
 
         invoices.append(doc.name)
-        if is_invalid:
-            invalid.append(doc.name)
 
     frappe.enqueue(
         "india_compliance.gst_india.utils.isd._upsert_turnover_records",
@@ -508,7 +515,7 @@ def bulk_create_isd_distribution_invoices(
         enqueue_after_commit=True,
     )
 
-    return invoices, invalid
+    return {"invoices": invoices, "failed": failed}
 
 
 def _upsert_turnover_records(data):

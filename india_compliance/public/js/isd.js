@@ -50,6 +50,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                 fieldname: "total_turnover",
                 label: __("Total Turnover"),
                 default: 0,
+                reqd: 1,
                 options: "Company:company:default_currency",
                 change() {
                     calculate_distribution_ratios();
@@ -201,25 +202,32 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                 freeze: true,
                 freeze_message: __("Creating ISD Distribution Invoices..."),
                 callback(r) {
-                    if (!r.message) return;
-                    const [invoices, invalid] = r.message;
-                    if (!invoices.length) return;
+                    const { invoices = [], failed = [] } = r.message || {};
+                    if (!invoices.length && !failed.length) return;
+
+                    const msg = [];
+                    if (invoices.length)
+                        msg.push(__("{0} ISD Distribution Invoices created as drafts.", [invoices.length]));
+                    if (failed.length)
+                        msg.push(
+                            __("Could not create an invoice for {0}. Check the Error Logs for details", [
+                                failed.join(", "),
+                            ]),
+                        );
 
                     frappe.msgprint({
                         title: __("ISD Distribution Invoices Created"),
-                        message: invalid.length
-                            ? __("Some invoices failed validation. Check {0} for details.", [
-                                  invalid.join(", "),
-                              ])
-                            : __("{0} ISD Distribution Invoices created as drafts.", [invoices.length]),
-                        indicator: invalid.length ? "orange" : "green",
-                        primary_action_label: __("View Invoices"),
-                        primary_action: {
-                            action() {
-                                frappe.route_options = { name: ["in", invoices] };
-                                frappe.set_route("List", "ISD Distribution Invoice");
-                            },
-                        },
+                        message: msg.join("<br>"),
+                        indicator: failed.length ? "orange" : "green",
+                        primary_action_label: invoices.length ? __("View Invoices") : null,
+                        primary_action: invoices.length
+                            ? {
+                                  action() {
+                                      frappe.route_options = { name: ["in", invoices] };
+                                      frappe.set_route("List", "ISD Distribution Invoice");
+                                  },
+                              }
+                            : null,
                     });
                 },
             });
