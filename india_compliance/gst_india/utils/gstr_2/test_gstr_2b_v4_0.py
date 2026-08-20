@@ -255,6 +255,48 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
             doc,
         )
 
+    def test_rejecting_one_isd_document_leaves_the_other(self):
+        """A rejected document is deleted by bill no, date, classification and supplier -- which one
+        ISD numbering series can carry twice, once as an invoice and once as a credit note. Without
+        the document type the wrong one goes."""
+        filters = {"supplier_gstin": "27AABCE2207R1Z5", "bill_no": "S9001"}
+        invoice = self.get_doc(GSTRCategory.ISD, **filters, doc_type="ISD Invoice")
+        credit_note = self.get_doc(GSTRCategory.ISD, **filters, doc_type="ISD Credit Note")
+
+        rejected = frappe._dict(
+            data=frappe._dict(
+                gstin=self.gstin,
+                gendt=self.test_data["data"]["gendt"],
+                docdata={},
+                docRejdata={
+                    "isd": [
+                        {
+                            "ctin": "27AABCE2207R1Z5",
+                            "trdnm": "GSTN Mixed Eligibility",
+                            "supprd": "022020",
+                            "supfildt": "02-03-2020",
+                            "doclist": [
+                                {
+                                    "doctyp": "ISDC",
+                                    "docnum": "S9001",
+                                    "docdt": "03-03-2016",
+                                    "igst": 0,
+                                    "cgst": 50,
+                                    "sgst": 50,
+                                    "cess": 0,
+                                    "itcelg": "Y",
+                                }
+                            ],
+                        }
+                    ]
+                },
+            )
+        )
+        save_gstr_2b(self.gstin, self.return_period, rejected, store_raw=False)
+
+        self.assertFalse(frappe.db.exists(self.doctype, credit_note.name))
+        self.assertTrue(frappe.db.exists(self.doctype, invoice.name))
+
     def test_gstr2b_isda(self):
         doc = self.get_doc(GSTRCategory.ISDA, supplier_gstin="16DEFPS8555D1Z7")
         self.assertDocumentEqual(

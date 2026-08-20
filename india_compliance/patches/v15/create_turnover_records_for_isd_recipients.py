@@ -11,35 +11,35 @@ from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
 def execute():
     """Backfill Turnover Records for the recipients of every ISD registered company"""
 
-    companies = {row.company for row in get_company_addresses(isd=True).run(as_dict=True)}
-    if not companies:
+    isd_pans = {}
+    for address in get_company_addresses(isd=True).run(as_dict=True):
+        if address.gstin:
+            isd_pans.setdefault(address.company, set()).add(address.gstin[2:12])
+
+    if not isd_pans:
         return
 
     from_date, to_date = get_relevant_period()
 
-    for company in companies:
-        for gst_state, turnover in get_turnover_by_state(company, from_date, to_date).items():
-            upsert_turnover_record(
-                company=company,
-                gstin=turnover.gstin,
-                gst_state=gst_state,
-                amount=turnover.amount,
-            )
+    for company, pans in isd_pans.items():
+        for gstin, amount in get_turnover_by_gstin(company, pans, from_date, to_date).items():
+            upsert_turnover_record(company=company, gstin=gstin, gst_state=None, amount=amount)
 
 
-def get_turnover_by_state(company, from_date, to_date):
-    """Turnover Record holds one amount per state per period, so aggregate every GSTIN of a state"""
-    turnover_by_state = {}
+def get_turnover_by_gstin(company, isd_pans, from_date, to_date):
+    """Credit only ever reaches the ISD's own legal entity, so skip unregistered company addresses
+    -- job worker sites and the like -- along with any registration on a different PAN."""
+    turnover = {}
 
-    for address in get_recipient_addresses([company]):
-        amount = get_turnover_from_sales_invoices(address.gstin, from_date, to_date, address.company)
-        if not amount:
+    for gstin in {address.gstin for address in get_recipient_addresses([company])}:
+        if not gstin or gstin[2:12] not in isd_pans:
             continue
 
-        state = turnover_by_state.setdefault(address.gst_state, frappe._dict(gstin=address.gstin, amount=0))
-        state.amount += amount
+        amount = get_turnover_from_sales_invoices(gstin, from_date, to_date, company)
+        if amount:
+            turnover[gstin] = amount
 
-    return turnover_by_state
+    return turnover
 
 
 def get_company_addresses(isd):

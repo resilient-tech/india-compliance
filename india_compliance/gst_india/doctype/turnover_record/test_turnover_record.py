@@ -1,6 +1,8 @@
 # Copyright (c) 2026, Resilient Tech and contributors
 # See license.txt
 
+from unittest.mock import patch
+
 import frappe
 from erpnext.accounts.utils import get_fiscal_year
 from frappe.tests import IntegrationTestCase
@@ -11,12 +13,14 @@ from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
     get_turnover_amount,
     upsert_turnover_record,
 )
+from india_compliance.patches.v15 import create_turnover_records_for_isd_recipients
 
 FROM_DATE = "2024-04-01"
 TO_DATE = "2025-03-31"
 GUJARAT_GSTIN = "24AAQCA8719H1ZC"  # the Gujarat GSTIN of _Test Indian Registered Company
 COMPANY = "_Test Indian Registered Company"
 OTHER_COMPANY = "_Test ISD Branch Company"
+ISD_PAN = "AAQCA8719H"  # the PAN behind every _Test ISD registration
 
 
 def make_turnover_record(
@@ -157,4 +161,54 @@ class TestTurnoverRecord(IntegrationTestCase):
         self.assertEqual(frappe.db.get_value("Turnover Record", record.name, "amount"), 450000)
         self.assertEqual(get_turnover_amount(COMPANY, "Kerala", today()), 450000)
         # and no second record was created behind a swallowed exception
-        self.assertEqual(frappe.db.count("Turnover Record", {"gst_state": "Kerala"}), 1)
+        self.assertEqual(
+            frappe.db.count(
+                "Turnover Record",
+                {
+                    "company": COMPANY,
+                    "gst_state": "Kerala",
+                    "from_date": ["<=", record.to_date],
+                    "to_date": [">=", record.from_date],
+                },
+            ),
+            1,
+        )
+
+    def test_backfill_skips_unregistered_and_other_pan_addresses(self):
+        """A company address is not proof of a distribution recipient: job worker sites carry no
+        GSTIN and a shared address can carry one belonging to another legal entity. Credit reaches
+        neither, so neither gets a Turnover Record."""
+        for gstin, gst_category in (
+            (None, "Unregistered"),  # job worker site
+            ("24AABCR6898M1ZN", "Registered Regular"),  # another PAN altogether
+        ):
+            address = frappe.get_doc(
+                {
+                    "doctype": "Address",
+                    "address_title": f"_Test ISD Backfill {gst_category}",
+                    "address_type": "Billing",
+                    "address_line1": "Test",
+                    "city": "Ahmedabad",
+                    "state": "Gujarat",
+                    "country": "India",
+                    "pincode": "380015",
+                    "gstin": gstin,
+                    "gst_category": gst_category,
+                    "links": [{"link_doctype": "Company", "link_name": COMPANY}],
+                }
+            ).insert()
+            self.addCleanup(frappe.delete_doc, "Address", address.name, force=True)
+
+        # every considered GSTIN reports turnover, so anything missing below was filtered out
+        # rather than merely having no sales
+        with patch.object(
+            create_turnover_records_for_isd_recipients, "get_turnover_from_sales_invoices"
+        ) as turnover:
+            turnover.return_value = 100000
+            by_gstin = create_turnover_records_for_isd_recipients.get_turnover_by_gstin(
+                COMPANY, {ISD_PAN}, FROM_DATE, TO_DATE
+            )
+
+        self.assertNotIn("24AABCR6898M1ZN", by_gstin)
+        self.assertTrue(by_gstin, "no same-PAN recipient was considered at all")
+        self.assertTrue(all(gstin[2:12] == ISD_PAN for gstin in by_gstin))
