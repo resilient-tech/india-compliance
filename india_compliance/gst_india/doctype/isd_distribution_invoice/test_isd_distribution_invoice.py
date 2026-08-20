@@ -1,6 +1,8 @@
 # Copyright (c) 2026, Resilient Tech and Contributors
 # See license.txt
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_months, flt, today
@@ -11,6 +13,7 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.isd_distributio
 )
 from india_compliance.gst_india.doctype.turnover_record.turnover_record import get_relevant_period
 from india_compliance.gst_india.utils.isd import (
+    bulk_create_isd_distribution_invoices,
     get_input_gst_accounts,
     get_isd_autofill_values,
     sum_row_tax_by_type,
@@ -1184,3 +1187,173 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         doc.reload()
         doc.cancel()
         self.assertFalse(get_gl_rows(doc))
+
+
+class IntegrationTestISDBulkDistribution(IntegrationTestCase):
+    """bulk_create_isd_distribution_invoices: the bulk dialog's entry point, which raises one draft
+    per recipient branch from a single Purchase Invoice."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_isd_fixtures(cls)
+
+    def setUp(self):
+        self.bulk_pi = make_isd_pi(self.isd_address.name)
+
+    def row(self, address, turnover, **overrides):
+        """One line of the dialog's distribution table, as the client sends it."""
+        gstin, gst_state = frappe.db.get_value("Address", address, ["gstin", "gst_state"])
+        return {
+            "address": address,
+            "gstin": gstin,
+            "gst_state": gst_state,
+            "turnover_amount": turnover,
+            **overrides,
+        }
+
+    def bulk(self, table, total_turnover=100, **overrides):
+        return bulk_create_isd_distribution_invoices(
+            purchase_invoice=self.bulk_pi.name,
+            distribution_table=table,
+            posting_date=overrides.get("posting_date", today()),
+            total_turnover=total_turnover,
+        )
+
+    def test_one_draft_per_row_carrying_its_own_source_items(self):
+        result = self.bulk(
+            [
+                self.row(self.recipient_address.name, 25),
+                self.row(self.recipient_address_ka.name, 75),
+            ]
+        )
+        self.assertEqual(result["failed"], [])
+        self.assertEqual(len(result["invoices"]), 2)
+
+        expected = {self.recipient_address.name: (25, 25.0), self.recipient_address_ka.name: (75, 75.0)}
+        seen_rows = set()
+
+        for name in result["invoices"]:
+            doc = frappe.get_doc("ISD Distribution Invoice", name)
+            branch_turnover, ratio = expected.pop(doc.party_address)
+
+            self.assertEqual(doc.docstatus, 0)
+            self.assertEqual(doc.purchase_invoice, self.bulk_pi.name)
+            self.assertEqual(doc.company_address, self.isd_address.name)
+            self.assertEqual(doc.branch_turnover, branch_turnover)
+            self.assertEqual(doc.total_turnover, 100)
+            self.assertAlmostEqual(doc.distribution_ratio, ratio, places=2)
+
+            # the source items are copied per invoice, not shared: each draft owns its own rows and
+            # every row still points at the Purchase Invoice item it was raised from
+            self.assertEqual(
+                {row.purchase_invoice_item for row in doc.source_items},
+                {item.name for item in self.bulk_pi.items},
+            )
+            for row in doc.source_items:
+                self.assertEqual(row.parent, doc.name)
+                self.assertNotIn(row.name, seen_rows)
+                seen_rows.add(row.name)
+
+        self.assertFalse(expected)
+
+    def test_rows_without_turnover_are_dropped(self):
+        result = self.bulk(
+            [
+                self.row(self.recipient_address.name, 25),
+                self.row(self.recipient_address_ka.name, 0),
+            ]
+        )
+        self.assertEqual(len(result["invoices"]), 1)
+        self.assertEqual(
+            frappe.db.get_value("ISD Distribution Invoice", result["invoices"][0], "party_address"),
+            self.recipient_address.name,
+        )
+
+        # ... and a table with nothing left to distribute is rejected outright
+        self.assertRaisesRegex(
+            VALIDATION_ERROR,
+            "No rows with turnover to distribute",
+            self.bulk,
+            [self.row(self.recipient_address.name, 0)],
+        )
+
+    def test_total_turnover_must_be_positive(self):
+        """The ratio divides by it, and the dialog can be submitted before the total is fetched."""
+        for total in (0, -100):
+            with self.subTest(total=total):
+                self.assertRaisesRegex(
+                    VALIDATION_ERROR,
+                    "Total Turnover must be greater than zero",
+                    self.bulk,
+                    [self.row(self.recipient_address.name, 25)],
+                    total_turnover=total,
+                )
+
+    def test_an_unsavable_row_does_not_take_the_others_down(self):
+        """Each insert runs inside its own savepoint: without one, a failure part-way through would
+        poison the transaction and discard every draft already created."""
+        bad_address = "_Test ISD Nonexistent-Billing"
+        result = self.bulk(
+            [
+                self.row(self.recipient_address.name, 25),
+                dict(self.row(self.recipient_address_ka.name, 50), address=bad_address),
+                self.row(self.recipient_address_ka.name, 25),
+            ]
+        )
+
+        self.assertEqual(result["failed"], [bad_address])
+        self.assertEqual(len(result["invoices"]), 2)
+
+        # the drafts on either side of the failure survived the rollback
+        for name in result["invoices"]:
+            self.assertTrue(frappe.db.exists("ISD Distribution Invoice", name))
+
+    def test_turnover_is_enqueued_for_every_row_including_one_that_failed(self):
+        """The turnover a branch reported is recorded before the savepoint, so a branch whose draft
+        could not be raised still contributes its turnover to next year's ratio."""
+        bad_address = "_Test ISD Nonexistent-Billing"
+        table = [
+            self.row(self.recipient_address.name, 25),
+            dict(self.row(self.recipient_address_ka.name, 75), address=bad_address),
+        ]
+
+        with patch("frappe.enqueue") as enqueue:
+            self.bulk(table)
+
+        self.assertEqual(enqueue.call_count, 1)
+        args, kwargs = enqueue.call_args
+        self.assertEqual(args[0], "india_compliance.gst_india.utils.isd._upsert_turnover_records")
+        self.assertTrue(kwargs["enqueue_after_commit"])
+        self.assertEqual(
+            [(gstin, gst_state, turnover) for gstin, gst_state, turnover, _ in kwargs["data"]],
+            [(row["gstin"], row["gst_state"], row["turnover_amount"]) for row in table],
+        )
+
+    def test_against_party_rows_are_raised_against_the_party(self):
+        """A branch held as a Customer is billed rather than cleared through the provisional
+        account, so party_type / party have to survive the dialog."""
+        result = self.bulk(
+            [
+                dict(
+                    self.row(self.branch_address.name, 40),
+                    party_type="Customer",
+                    party=self.branch_customer.name,
+                ),
+                dict(self.row(self.recipient_address.name, 60), party_type="Company"),
+            ]
+        )
+        self.assertEqual(result["failed"], [])
+
+        against_party, own_branch = (
+            frappe.get_doc("ISD Distribution Invoice", name) for name in result["invoices"]
+        )
+
+        self.assertEqual(against_party.is_against_party, 1)
+        self.assertEqual(against_party.party_type, "Customer")
+        self.assertEqual(against_party.party, self.branch_customer.name)
+
+        # "Company" is the branch's own registration, not a party to bill
+        self.assertEqual(own_branch.is_against_party, 0)
+        self.assertIsNone(own_branch.party_type)
+        self.assertIsNone(own_branch.party)
