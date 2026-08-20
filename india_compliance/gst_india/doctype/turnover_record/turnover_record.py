@@ -64,7 +64,7 @@ def get_relevant_period(posting_date=None):
 def get_turnover_amount(gst_state, posting_date=None):
     from_date, to_date = get_relevant_period(posting_date)
 
-    filters = {"from_date": from_date, "to_date": to_date, "gst_state": gst_state}
+    filters = {"gst_state": gst_state, "from_date": ["<=", to_date], "to_date": [">=", from_date]}
 
     return frappe.db.get_value("Turnover Record", filters, "amount")
 
@@ -78,7 +78,7 @@ def upsert_turnover_record(gstin, gst_state, amount, posting_date=None):
     amount_precision = get_field_precision(frappe.get_meta("Turnover Record").get_field("amount"))
     amount = flt(amount, amount_precision)
 
-    existing_filters = {"from_date": from_date, "to_date": to_date, "gst_state": gst_state}
+    existing_filters = {"gst_state": gst_state, "from_date": ["<=", to_date], "to_date": [">=", from_date]}
     existing = frappe.db.get_value("Turnover Record", existing_filters)
 
     try:

@@ -4,11 +4,12 @@
 import frappe
 from erpnext.accounts.utils import get_fiscal_year
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_years, getdate, today
+from frappe.utils import add_months, add_years, getdate, today
 
 from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
     get_relevant_period,
     get_turnover_amount,
+    upsert_turnover_record,
 )
 
 FROM_DATE = "2024-04-01"
@@ -92,3 +93,44 @@ class TestTurnoverRecord(IntegrationTestCase):
         record = make_turnover_record("Goa", 900000, from_date=fy_start, to_date=fy_end)
         self.addCleanup(frappe.delete_doc, "Turnover Record", record.name, force=True)
         self.assertIsNone(get_turnover_amount("Goa", today()))
+
+    def test_lookup_resolves_a_record_filed_for_part_of_the_relevant_period(self):
+        """validate_duplicate_record rejects a second record overlapping the first, so a part-period
+        record *is* the record for that state. The lookup has to resolve it on the same terms the
+        bulk distribution dialog does, or the two disagree about the same branch."""
+        from_date, to_date = get_relevant_period(today())
+        record = make_turnover_record(
+            "Punjab", 250000, from_date=add_months(getdate(from_date), 6), to_date=to_date
+        )
+        self.addCleanup(frappe.delete_doc, "Turnover Record", record.name, force=True)
+
+        # the full period cannot be filed alongside it ...
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "already exists",
+            make_turnover_record,
+            "Punjab",
+            250000,
+            from_date=from_date,
+            to_date=to_date,
+        )
+
+        # ... so this is the only turnover Punjab has, and the lookup resolves it
+        self.assertEqual(get_turnover_amount("Punjab", today()), 250000)
+
+    def test_upsert_updates_the_overlapping_record(self):
+        """An exact-date lookup missed a part-period record, so the upsert fell through to an insert
+        that validate_duplicate_record rejected — and the blanket except swallowed it, leaving the
+        turnover silently unchanged."""
+        from_date, _ = get_relevant_period(today())
+        record = make_turnover_record(
+            "Kerala", 100000, from_date=from_date, to_date=add_months(getdate(from_date), 3)
+        )
+        self.addCleanup(frappe.delete_doc, "Turnover Record", record.name, force=True)
+
+        upsert_turnover_record(gstin=None, gst_state="Kerala", amount=450000)
+
+        self.assertEqual(frappe.db.get_value("Turnover Record", record.name, "amount"), 450000)
+        self.assertEqual(get_turnover_amount("Kerala", today()), 450000)
+        # and no second record was created behind a swallowed exception
+        self.assertEqual(frappe.db.count("Turnover Record", {"gst_state": "Kerala"}), 1)
