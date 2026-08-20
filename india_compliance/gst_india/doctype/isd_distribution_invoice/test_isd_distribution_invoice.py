@@ -882,7 +882,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
 
                 doc.setup_precision()
                 doc.setup_tax_amounts()
-                doc.clamp_itc_surplus(0.02)
+                doc.clamp_itc_surplus(doc.get_surplus_by_tax_type(0.02))
                 doc.set_tax_totals()
 
                 after = {tax.gst_tax_type: tax.tax_amount for tax in doc.taxes}
@@ -894,6 +894,29 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
                 distributed_after = sum(sum_row_tax_by_type(row, "distributed") for row in doc.source_items)
                 self.assertAlmostEqual(distributed_before - distributed_after, 0.02, places=2)
                 self.assertAlmostEqual(sum(before.values()) - sum(after.values()), 0.02, places=2)
+
+    def test_cess_gives_up_its_own_share_of_the_surplus(self):
+        """CESS is levied separately from GST but counts towards the surplus, so it has to be
+        reduced too — otherwise the GST heads absorb its excess and the CESS head keeps it."""
+        pi = make_isd_pi(self.isd_address.name)
+        doc = self._full_distribution(pi=pi)
+        doc.insert()
+
+        row = doc.source_items[0]
+        row.distributed_cess = 100
+        gst = sum_row_tax_by_type(row, "distributed") - 100
+
+        doc.setup_precision()
+        surplus_by_tax_type = doc.get_surplus_by_tax_type(0.02)
+
+        # 100 of CESS against the GST heads, so CESS carries its proportion of the 0.02 and the
+        # heads the credit was distributed under carry the rest
+        self.assertAlmostEqual(surplus_by_tax_type["cess"], flt(0.02 * 100 / (gst + 100), 2), places=2)
+        self.assertAlmostEqual(sum(surplus_by_tax_type.values()), 0.02, places=2)
+
+        doc.setup_tax_amounts()
+        doc.clamp_itc_surplus(surplus_by_tax_type)
+        self.assertAlmostEqual(flt(row.distributed_cess), 100 - surplus_by_tax_type["cess"], places=2)
 
     @change_settings("GST Settings", {"distribute_expense_with_isd_credit": 1})
     def test_expense_clamp_spreads_across_rows(self):
@@ -913,7 +936,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         self.assertTrue(all(before))
 
         doc.setup_precision()
-        doc.clamp_expense_surplus(0.02)
+        doc.reduce_distributed_amount("expense", 0.02)
 
         after = [flt(row.distributed_expense) for row in doc.source_items]
         # taken off every row that carries expense, and adding back to exactly the surplus
