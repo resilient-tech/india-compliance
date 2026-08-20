@@ -74,6 +74,7 @@ def validate(doc, method=None):
     set_itc_classification(doc)
     set_boe_applicability(doc)
     set_is_isd_applicable(doc)
+    notify_isd_invoice_creation(doc)
     validate_reverse_charge(doc)
     validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
@@ -170,10 +171,26 @@ def set_itc_classification(doc):
         doc.itc_classification = "Import Of Service"
     elif doc.is_reverse_charge:
         doc.itc_classification = "ITC on Reverse Charge"
-    elif doc.gst_category == "Input Service Distributor" and doc.is_internal_transfer():
+    elif doc.gst_category == ISD_GST_CATEGORY:
         doc.itc_classification = "Input Service Distributor"
     else:
         doc.itc_classification = "All Other ITC"
+
+
+def notify_isd_invoice_creation(doc):
+    """
+    Credit distributed by an ISD is claimed on an ISD Recipient Invoice.
+    """
+    if doc.gst_category != ISD_GST_CATEGORY:
+        return
+
+    frappe.msgprint(
+        _(
+            "Create an {0} to claim the credit distributed by this Input Service Distributor."
+            " It is no longer claimed through the Purchase Invoice."
+        ).format(frappe.bold(_("ISD Recipient Invoice"))),
+        indicator="orange",
+    )
 
 
 def validate_supplier_invoice_number(doc):
