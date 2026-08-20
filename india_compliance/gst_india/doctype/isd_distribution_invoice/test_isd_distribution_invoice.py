@@ -6,6 +6,9 @@ from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_months, flt, today
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.doctype.isd_distribution_invoice.isd_distribution_invoice import (
+    _create_isd_recipient_invoice,
+)
 from india_compliance.gst_india.doctype.turnover_record.turnover_record import get_relevant_period
 from india_compliance.gst_india.utils.isd import (
     get_input_gst_accounts,
@@ -323,6 +326,17 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             purchase_invoice=pi or self.pi, branch_turnover=branch, total_turnover=total, **kwargs
         )
 
+    def assert_invalid_rows(self, method, title, row_value=None):
+        """throw_invalid_rows renders as a list: the heading becomes the dialog title and only the
+        offending rows reach the exception message, so assert on both halves."""
+        frappe.clear_messages()
+        with self.assertRaises(VALIDATION_ERROR) as cm:
+            method()
+
+        self.assertIn(title, frappe.message_log[-1].get("title", ""))
+        if row_value:
+            self.assertIn(row_value, str(cm.exception))
+
     @staticmethod
     def _distributed_heads(doc):
         """The GST heads the recipient actually receives (non-zero distributed_* on the source items)."""
@@ -397,20 +411,21 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         # recipient in a state with no record (Karnataka) -> left empty
         self.assertIsNone(branch_turnover(self.recipient_address_ka.name))
 
-        # a manually entered turnover is kept when no record matches
-        self.assertEqual(
-            get_isd_autofill_values(
-                "ISD Distribution Invoice",
-                "party_address",
-                {
-                    "company": COMPANY,
-                    "party_address": self.recipient_address_ka.name,
-                    "posting_date": today(),
-                    "branch_turnover": 1234,
-                },
-            ).branch_turnover,
-            1234,
+        values = get_isd_autofill_values(
+            "ISD Distribution Invoice",
+            "party_address",
+            {
+                "company": COMPANY,
+                "party_address": self.recipient_address_ka.name,
+                "posting_date": today(),
+                "branch_turnover": 1234,
+            },
         )
+        self.assertIsNone(values.branch_turnover)
+
+        # nothing the caller sent is echoed back, so a field being edited mid-request is safe
+        for field in ("company", "posting_date"):
+            self.assertNotIn(field, values)
 
         # the recipient side never autofills a branch turnover
         # (on that doctype the recipient registration is the company's own address)
@@ -496,7 +511,9 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         row = make_source_item(self.pi)[0]
         row["expense_head"] = f"Cost of Goods Sold - {BRANCH_ABBR}"
         doc = make_distribution_invoice(source_items=[row])
-        self.assertRaisesRegex(VALIDATION_ERROR, "not valid for Company", doc.validate_expense_heads)
+        self.assert_invalid_rows(
+            doc.validate_expense_heads, "not valid for Company", f"Cost of Goods Sold - {BRANCH_ABBR}"
+        )
 
         # expense head cannot be a group account
         doc = make_distribution_invoice()
@@ -581,8 +598,8 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         row["purchase_invoice_item"] = "NON-EXISTENT-PII"
         doc = make_distribution_invoice(purchase_invoice=self.pi.name, source_items=[row])
         doc.setup_precision()
-        self.assertRaisesRegex(
-            VALIDATION_ERROR, "do not belong to Purchase Invoice", doc.validate_source_items
+        self.assert_invalid_rows(
+            doc.validate_source_items, "do not belong to Purchase Invoice", "_Test Service Item"
         )
 
         # the same Purchase Invoice item added twice
@@ -590,7 +607,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         rows.append(dict(rows[0]))
         doc = make_distribution_invoice(purchase_invoice=self.pi.name, source_items=rows)
         doc.setup_precision()
-        self.assertRaisesRegex(VALIDATION_ERROR, "added more than once", doc.validate_source_items)
+        self.assert_invalid_rows(doc.validate_source_items, "added more than once", "_Test Service Item")
 
         # a Purchase Invoice item missing from the source items
         pi = make_isd_pi(
@@ -609,7 +626,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         )
         doc = make_distribution_invoice(purchase_invoice=pi.name, source_items=make_source_item(pi)[:1])
         doc.setup_precision()
-        self.assertRaisesRegex(VALIDATION_ERROR, "missing from the source items", doc.validate_source_items)
+        self.assert_invalid_rows(doc.validate_source_items, "missing from the source items")
 
         # source item tax total does not match the Purchase Invoice
         row = make_source_item(self.pi)[0]
@@ -663,18 +680,6 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         self.assertEqual({tax.gst_tax_type for tax in doc.taxes}, {"cgst", "sgst"})
 
     # ------------------------------------------------------------------ end to end / distribution limits
-    def test_against_party_validate_passes(self):
-        pi = make_isd_pi(self.isd_address.name)
-        doc = self._full_distribution(
-            pi=pi,
-            party_address=self.branch_address.name,
-            is_against_party=1,
-            party_type="Customer",
-            party=self.branch_customer.name,
-        )
-        doc.insert()
-        self.assertEqual(doc.docstatus, 0)
-
     def test_invoices_excluded_from_the_isd_pool(self):
         """Reverse charge credit reaches an ISD only through a same-PAN regular registration
         (Sec 20(1) with Rule 39(1A)), and a return carries negative tax, which would distribute as
@@ -709,13 +714,47 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         opening_pi = make_isd_pi(self.isd_address.name, is_opening="Yes", do_not_submit=True)
         self.assertEqual(opening_pi.is_isd_applicable, 0)
 
-    def test_valid_distribution_submits(self):
+    def test_against_party_recipient_invoice_is_created(self):
+        """The inter-company mapper re-defaults every company-owned value onto the recipient
+        company. isd_provisional_account is the party account on an against-party document, so
+        seeding it with the company's Tax-type provisional account made the mapped invoice
+        unsaveable."""
         pi = make_isd_pi(self.isd_address.name)
-        doc = self._full_distribution(pi=pi, branch=25, total=100)
+        doc = self._full_distribution(
+            pi=pi,
+            party_address=self.branch_address.name,
+            is_against_party=1,
+            party_type="Customer",
+            party=self.branch_customer.name,
+        )
         doc.insert()
         doc.submit()
-        self.assertEqual(doc.docstatus, 1)
-        self.assertTrue(doc.get("taxes"))
+
+        recipient = _create_isd_recipient_invoice(doc.name)
+        recipient.reload()
+
+        self.assertEqual(recipient.docstatus, 1)
+        self.assertEqual(recipient.company, BRANCH_COMPANY)
+        self.assertEqual(recipient.is_against_party, 1)
+
+        # the distributing entity is a Supplier in the branch company's books
+        self.assertEqual(recipient.party_type, "Supplier")
+        self.assertEqual(recipient.party, "_Test ISD Distributor Supplier")
+
+        # addresses invert, and both now belong to the recipient company's side
+        self.assertEqual(recipient.company_address, "_Test ISD Branch Company-Billing")
+        self.assertEqual(recipient.party_address, "_Test ISD Distributor Supplier-Billing")
+
+        # the party account has to be Payable for a Supplier, and belong to the recipient company
+        account_type, company = frappe.get_cached_value(
+            "Account", recipient.isd_provisional_account, ["account_type", "company"]
+        )
+        self.assertEqual(account_type, "Payable")
+        self.assertEqual(company, BRANCH_COMPANY)
+
+        self.assertEqual(
+            recipient.cost_center, frappe.get_cached_value("Company", BRANCH_COMPANY, "cost_center")
+        )
 
     def test_cost_center_defaults_on_the_document(self):
         """The GL entries need a cost center; defaulting it at GL time would leave the document
@@ -771,9 +810,17 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         self.assertEqual(record.amount, 25)
         self.assertEqual(record.gst_state, self.recipient_address.gst_state)
 
-    def test_over_distribution_is_clamped_to_available(self):
-        pi = make_isd_pi(self.isd_address.name)
-        first = create_distribution_invoice(
+    def test_over_distribution_is_rejected(self):
+        item = {
+            "item_code": "_Test Service Item",
+            "qty": 1,
+            "rate": 10000,
+            "gst_hsn_code": "999900",
+            "cost_center": "Main - _TIRC",
+        }
+        pi = make_isd_pi(self.isd_address.name, items=[dict(item), dict(item)])
+
+        create_distribution_invoice(
             purchase_invoice=pi,
             company_address=self.isd_address.name,
             party_address=self.recipient_address.name,
@@ -781,17 +828,17 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             total_turnover=100,
         )
 
-        available = sum(sum_row_tax_by_type(row, "total") for row in first.source_items)
-        already = sum(sum_row_tax_by_type(row, "distributed") for row in first.source_items)
-
-        # a further 60% would take the total past 100%; only the remaining 40% may be drawn
+        # a further 60% would take the total past 100%: the turnover is the user's to correct,
+        # so the document is refused rather than quietly reduced to the remaining 40%
         second = self._full_distribution(pi=pi, branch=60, total=100)
-        second.insert()
+        self.assertRaisesRegex(VALIDATION_ERROR, "more than Purchase Invoice", second.insert)
 
-        distributed = sum(sum_row_tax_by_type(row, "distributed") for row in second.source_items)
-        self.assertAlmostEqual(distributed, available - already, places=2)
+        # a distribution that exactly fills the remainder still goes through
+        third = self._full_distribution(pi=pi, branch=40, total=100)
+        third.insert()
+        self.assertTrue(sum(sum_row_tax_by_type(row, "distributed") for row in third.source_items))
 
-    def test_credit_note_over_reversal_is_clamped(self):
+    def test_credit_note_over_reversal_is_rejected(self):
         pi = make_isd_pi(self.isd_address.name)
         first = create_distribution_invoice(
             purchase_invoice=pi,
@@ -802,13 +849,19 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         )
         distributed = sum(sum_row_tax_by_type(row, "distributed") for row in first.source_items)
 
-        # reversing 60% against a 50% distribution is capped at the 50% actually distributed
+        # reversing 60% against a 50% distribution would give back credit that was never passed on
         credit_note = self._full_distribution(
             pi=pi, branch=60, total=100, is_credit_note=1, credit_note_against=first.name
         )
-        credit_note.insert()
+        self.assertRaisesRegex(VALIDATION_ERROR, "more than Purchase Invoice", credit_note.insert)
 
-        reversed_itc = sum(sum_row_tax_by_type(row, "distributed") for row in credit_note.source_items)
+        # reversing exactly what was distributed is allowed
+        exact = self._full_distribution(
+            pi=pi, branch=50, total=100, is_credit_note=1, credit_note_against=first.name
+        )
+        exact.insert()
+
+        reversed_itc = sum(sum_row_tax_by_type(row, "distributed") for row in exact.source_items)
         self.assertAlmostEqual(reversed_itc, -distributed, places=2)
 
     # ------------------------------------------------------------------ GL entries
@@ -872,6 +925,8 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             purchase_invoice=pi,
             company_address=self.isd_address.name,
             party_address=self.recipient_address.name,
+            branch_turnover=100,
+            total_turnover=300,
         )
 
         rows = get_gl_rows(doc)
@@ -903,6 +958,35 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         recipient_row = recipient.source_items[0]
         expense_debit = sum(row.debit for row in recipient_rows if row.account == recipient_row.expense_head)
         self.assertAlmostEqual(expense_debit, recipient_row.distributed_expense + ineligible_tax, places=2)
+
+        # distributed inter-state the recipient takes the credit as IGST, but the distributor still
+        # holds CGST and SGST, so that is what its reversal has to hit -- and to the paisa, or the
+        # accounts keep a residue. The turnover ratio is a recurring third so that nothing here can
+        # rely on the amount dividing evenly.
+        inter_state = create_distribution_invoice(
+            purchase_invoice=pi,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address_ka.name,
+            branch_turnover=100,
+            total_turnover=300,
+        )
+        inter_state_totals = account_totals(get_gl_rows(inter_state))
+        accounts = get_input_gst_accounts(COMPANY)
+
+        # nothing is reversed out of IGST: the distributor never held the credit there
+        self.assertNotIn(accounts.igst_account, inter_state_totals)
+
+        inter_state_row = inter_state.source_items[0]
+        self.assertTrue(inter_state_row.distributed_igst)
+        reversed_total = 0
+
+        for account in (accounts.cgst_account, accounts.sgst_account):
+            # distributed and reversed in full, leaving no balance behind
+            self.assertEqual(inter_state_totals[account]["debit"], inter_state_totals[account]["credit"])
+            reversed_total += inter_state_totals[account]["debit"]
+
+        # the halves add back to exactly what was distributed, with no paisa lost or invented
+        self.assertEqual(reversed_total, inter_state_row.distributed_igst)
 
     @change_settings("GST Settings", {"auto_create_isd_recipient_invoice": 1})
     def test_inter_state_distribution_gl_entries(self):

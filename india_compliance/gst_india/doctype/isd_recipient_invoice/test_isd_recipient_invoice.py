@@ -232,12 +232,6 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         doc.validate_reference_distribution_invoice()
 
     # ------------------------------------------------------------------ smoke: full manual validate
-    def test_recipient_validate_passes_for_manual_entry(self):
-        doc = self._recipient(source_items=make_source_item(self.pi, ratio=0.25))
-        doc.insert()
-        self.assertEqual(doc.docstatus, 0)
-        self.assertTrue(doc.get("taxes"))
-
     # ------------------------------------------------------------------ GL entries
     def test_manual_recipient_gl_entries(self):
         doc = self._recipient(source_items=make_source_item(self.pi, ratio=0.25))
@@ -317,6 +311,42 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
             doc.total_expense + doc.total_eligible + doc.total_ineligible,
             places=2,
         )
+
+    @change_settings("GST Settings", {"distribute_expense_with_isd_credit": 0})
+    def test_unregistered_recipient_expenses_tax_when_expense_not_distributed(self):
+        """Whether the net amount travels with the credit says nothing about unclaimable tax: an
+        unregistered branch must expense it either way. Booking it back to the provisional account
+        posted a self-cancelling pair and stranded the credit in the clearing account."""
+        unregistered_address = make_isd_address(
+            "_Test ISD Unregistered Branch No Expense",
+            None,
+            "Unregistered",
+            "Gujarat",
+            link("Company", COMPANY),
+        )
+
+        doc = self._recipient(
+            company_address=unregistered_address.name,
+            source_items=make_source_item(self.pi, ratio=0.25),
+        )
+        doc.insert()
+        doc.submit()
+
+        rows = get_gl_rows(doc)
+        assert_balanced_gl(self, rows)
+
+        tax_received = doc.total_eligible + doc.total_ineligible
+        self.assertTrue(tax_received)
+
+        gst_expense_account = frappe.get_cached_value("Company", COMPANY, "default_gst_expense_account")
+        totals = account_totals(rows)
+        self.assertAlmostEqual(totals[gst_expense_account]["debit"], tax_received, places=2)
+
+        # the clearing account is relieved, not left holding a debit and a credit of the same amount
+        provisional_rows = [row for row in rows if row.account == doc.isd_provisional_account]
+        self.assertTrue(provisional_rows)
+        self.assertAlmostEqual(sum(row.credit for row in provisional_rows), tax_received, places=2)
+        self.assertAlmostEqual(sum(row.debit for row in provisional_rows), 0, places=2)
 
     def test_recipient_ineligible_gl_entries(self):
         # ineligible ITC on the recipient side is reversed through the GST Expense account, then

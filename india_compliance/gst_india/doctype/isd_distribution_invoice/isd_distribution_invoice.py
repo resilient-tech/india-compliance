@@ -16,6 +16,7 @@ from india_compliance.gst_india.utils.isd import (
     calculate_distribution,
     distribute_expense_with_isd_credit,
     get_purchase_doc,
+    is_inter_state_distribution,
     sum_row_tax_by_type,
     throw_invalid_rows,
     throw_row_table,
@@ -211,103 +212,126 @@ class ISDDistributionInvoice(ISDController):
 
     # ------------------------------------------------------------------ distribution limits
     def clamp_to_distribution_limits(self):
-        # TODO: should this at least be logged in the error log?
-        # otherwise we don't have any trace of clamping
         if not self.source_items:
             return
 
         itc_surplus, expense_surplus = self.get_distribution_surplus()
+        if not (itc_surplus or expense_surplus):
+            return
+
+        precision = self._source_item_precision
+        tolerance = len(self.source_items) * len(GST_TAX_TYPES) * 10**-precision
+        itc_excess = abs(itc_surplus)
+        expense_excess = abs(expense_surplus)
+
+        if itc_excess > tolerance or expense_excess > tolerance:
+            frappe.throw(
+                _(
+                    "This distribution takes more than Purchase Invoice {0} has left to distribute."
+                    " Excess ITC: {1}, Excess Expense: {2}. Kindly correct the turnover."
+                ).format(
+                    get_link_to_form("Purchase Invoice", self.purchase_invoice),
+                    frappe.bold(flt(itc_excess, precision)),
+                    frappe.bold(flt(expense_excess, precision)),
+                ),
+                title=_("Distribution Exceeds Available ITC"),
+            )
+
         if itc_surplus:
             self.clamp_itc_surplus(itc_surplus)
         if expense_surplus:
             self.clamp_expense_surplus(expense_surplus)
 
-        if itc_surplus or expense_surplus:
-            self.set_tax_totals()
-            self.isd_provisional_amount = flt(
-                self.total_eligible + self.total_ineligible + self.total_expense, self._tax_precision
-            )
-            self._notify_adjustment(itc_surplus + expense_surplus)
+        self.set_tax_totals()
+        self.set_provisional_values()
 
     def get_distribution_surplus(self):
+        precision = self._source_item_precision
         current_itc = sum(sum_row_tax_by_type(row, "distributed") for row in self.source_items)
         current_expense = sum(flt(row.distributed_expense) for row in self.source_items)
-        already = self.get_distributed_for_purchase_invoice()
 
-        if self.is_credit_note and self.credit_note_against:
-            against_values = frappe.get_value(
-                "ISD Distribution Invoice",
-                self.credit_note_against,
-                ["total_eligible", "total_ineligible", "total_expense"],
-                as_dict=True,
-            )
-            # credit allowed to reverse is minimum of credit_note_against's distributed and total available for distribution
-            allowed_itc = min(
-                flt(
-                    against_values.total_eligible + against_values.total_ineligible,
-                    self._source_item_precision,
-                ),
-                flt(already.itc, self._source_item_precision),
-            )
-            allowed_expense = min(
-                flt(against_values.total_expense, self._source_item_precision),
-                flt(already.expense, self._source_item_precision),
-            )
-            return (
-                min(0.0, flt(allowed_itc + current_itc, self._source_item_precision)),
-                min(0.0, flt(allowed_expense + current_expense, self._source_item_precision)),
-            )
+        if self.is_credit_note:
+            if self.credit_note_against:
+                # a credit note reverses one distribution: what that document passed on is the limit
+                against = frappe.get_value(
+                    "ISD Distribution Invoice",
+                    self.credit_note_against,
+                    ["total_eligible", "total_ineligible", "total_expense"],
+                    as_dict=True,
+                )
+                allowed_itc = flt(against.total_eligible + against.total_ineligible, precision)
+                allowed_expense = flt(against.total_expense, precision)
+            else:
+                # unlinked, so the limit is whatever the invoice still has distributed
+                already = self.get_distributed_for_purchase_invoice()
+                allowed_itc = flt(already.itc, precision)
+                allowed_expense = flt(already.expense, precision)
 
-        available_itc = sum(sum_row_tax_by_type(row, "total") for row in self.source_items)
-        available_expense = sum(flt(row.total_expense) for row in self.source_items)
+            itc_surplus = min(0.0, flt(allowed_itc + current_itc, precision))
+            expense_surplus = min(0.0, flt(allowed_expense + current_expense, precision))
+        else:
+            already = self.get_distributed_for_purchase_invoice()
+            available_itc = sum(sum_row_tax_by_type(row, "total") for row in self.source_items)
+            available_expense = sum(flt(row.total_expense) for row in self.source_items)
 
-        return (
-            max(0.0, flt(already.itc + current_itc - available_itc, self._source_item_precision)),
-            max(
-                0.0,
-                flt(already.expense + current_expense - available_expense, self._source_item_precision),
-            ),
-        )
+            itc_surplus = max(0.0, flt(already.itc + current_itc - available_itc, precision))
+            expense_surplus = max(0.0, flt(already.expense + current_expense - available_expense, precision))
+
+        if not distribute_expense_with_isd_credit():
+            expense_surplus = 0.0
+
+        return itc_surplus, expense_surplus
 
     def clamp_itc_surplus(self, surplus):
-        row = self.source_items[0]
+        total = abs(sum(sum_row_tax_by_type(row, "distributed") for row in self.source_items))
+        if not total:
+            return
 
-        # source item carries the converted heads (IGST inter-state, CGST/SGST intra-state)
-        if flt(row.distributed_cgst) or flt(row.distributed_sgst):
-            row.distributed_cgst = flt(flt(row.distributed_cgst) - surplus / 2, self._source_item_precision)
-            row.distributed_sgst = flt(flt(row.distributed_sgst) - surplus / 2, self._source_item_precision)
-        else:
-            row.distributed_igst = flt(flt(row.distributed_igst) - surplus, self._source_item_precision)
+        precision = self._source_item_precision
+        rows = [(row, itc) for row in self.source_items if (itc := sum_row_tax_by_type(row, "distributed"))]
+        inter_state = is_inter_state_distribution(self)
 
-        # taxes table carries the source heads being reduced
-        cgst_tax = next((t for t in self.taxes if t.gst_tax_type == "cgst"), None)
-        sgst_tax = next((t for t in self.taxes if t.gst_tax_type == "sgst"), None)
-        if cgst_tax or sgst_tax:
-            cgst_tax.tax_amount = flt(flt(cgst_tax.tax_amount) - surplus / 2, self._tax_precision)
-            sgst_tax.tax_amount = flt(flt(sgst_tax.tax_amount) - surplus / 2, self._tax_precision)
-            # also clamp the cache set_tax_totals() re-reads tax_amount from, else the next
-            # set_tax_totals() call (below) discards this clamp and restores the unclamped amount
-            self._tax_amounts_by_head["cgst"] = cgst_tax.tax_amount
-            self._tax_amounts_by_head["sgst"] = sgst_tax.tax_amount
+        remaining = surplus
+        for position, (row, itc) in enumerate(rows, start=1):
+            share = remaining if position == len(rows) else flt(surplus * abs(itc) / total, precision)
+            remaining = flt(remaining - share, precision)
+
+            if inter_state:
+                row.distributed_igst = flt(flt(row.distributed_igst) - share, precision)
+            else:
+                cgst_or_sgst_excess = flt(share / 2, precision)
+                row.distributed_cgst = flt(flt(row.distributed_cgst) - cgst_or_sgst_excess, precision)
+                row.distributed_sgst = flt(flt(row.distributed_sgst) - (cgst_or_sgst_excess), precision)
+
+        tax_precision = self._tax_precision
+        if flt(self._tax_amounts_by_head.get("cgst")):
+            cgst_or_sgst_excess = flt(surplus / 2, tax_precision)
+            reductions = {"cgst": cgst_or_sgst_excess, "sgst": cgst_or_sgst_excess}
         else:
-            igst_tax = next((t for t in self.taxes if t.gst_tax_type == "igst"), None)
-            igst_tax.tax_amount = flt(flt(igst_tax.tax_amount) - surplus, self._tax_precision)
-            self._tax_amounts_by_head["igst"] = igst_tax.tax_amount
+            reductions = {"igst": surplus}
+
+        for gst_tax_type, excess in reductions.items():
+            self._tax_amounts_by_head[gst_tax_type] = flt(
+                flt(self._tax_amounts_by_head.get(gst_tax_type)) - excess, tax_precision
+            )
 
     def clamp_expense_surplus(self, surplus):
-        row = self.source_items[0]
-        row.distributed_expense = flt(flt(row.distributed_expense) - surplus, self._source_item_precision)
+        total = abs(sum(flt(row.distributed_expense) for row in self.source_items))
+        if not total:
+            return
 
-    def _notify_adjustment(self, surplus):
-        frappe.msgprint(
-            _("{0} was {1} for Purchase Invoice {2}. It has been adjusted on row #1.").format(
-                frappe.bold(f"{abs(surplus):.{self._source_item_precision}f}"),
-                _("over-distributed") if surplus > 0 else _("over-reversed"),
-                get_link_to_form("Purchase Invoice", self.purchase_invoice),
-            ),
-            title=_("Distribution Adjusted"),
-            indicator="blue",
-        )
+        precision = self._source_item_precision
+        rows = [row for row in self.source_items if flt(row.distributed_expense)]
+
+        remaining = surplus
+        for position, row in enumerate(rows, start=1):
+            share = (
+                remaining
+                if position == len(rows)
+                else flt(surplus * abs(flt(row.distributed_expense)) / total, precision)
+            )
+            remaining = flt(remaining - share, precision)
+            row.distributed_expense = flt(flt(row.distributed_expense) - share, precision)
 
     def get_distributed_for_purchase_invoice(self):
         """Sum of distributed ITC and expense on every other submitted ISD Distribution Invoice
