@@ -69,19 +69,25 @@ frappe.ui.form.on("ISD Recipient Invoice", {
     },
 });
 
-const recalculate = (frm) => frm.isd_controller.recalculate();
+const recalculate = (frm) => {
+    if (frm.doctype !== "ISD Recipient Invoice") return;
+    frm.isd_controller.recalculate();
+};
+
+// the credit received is typed in row by row, so every amount field drives the totals
+const RECALCULATE_ON = [
+    ...(frappe.boot.gst_tax_types || []).map((tax_type) => `distributed_${tax_type}`),
+    "distributed_expense",
+    "is_ineligible_for_itc",
+];
 
 frappe.ui.form.on("ISD Source Item", {
-    ...Object.fromEntries(
-        [
-            ...frappe.boot.gst_tax_types.map((tax_type) => `distributed_${tax_type}`),
-            "distributed_expense",
-            "is_ineligible_for_itc",
-            "source_items_remove",
-        ].map((field) => [field, recalculate]),
-    ),
+    ...Object.fromEntries(RECALCULATE_ON.map((field) => [field, recalculate])),
+
+    source_items_remove: recalculate,
 
     source_items_add(frm) {
+        if (frm.doctype !== "ISD Recipient Invoice") return;
         frm.isd_controller.set_default_expense_head();
         recalculate(frm);
     },

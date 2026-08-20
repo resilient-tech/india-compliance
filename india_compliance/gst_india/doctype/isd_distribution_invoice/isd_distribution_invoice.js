@@ -7,10 +7,6 @@ frappe.ui.form.on("ISD Distribution Invoice", {
         if (frm.is_new() && !frm.doc.company) {
             frm.set_value("company", frappe.defaults.get_user_default("Company"));
         }
-
-        frm.set_query("credit_note_against", () => ({
-            filters: { docstatus: 1, is_credit_note: 0 },
-        }));
     },
 
     refresh(frm) {
@@ -74,6 +70,7 @@ frappe.ui.form.on("ISD Distribution Invoice", {
     async company_address(frm) {
         frm.isd_controller.set_address_display("company_address", "company_address_display");
         await frm.isd_controller.set_place_of_supply("company_address", "company_pos");
+        if (frm.__updating_isd_autofill) return;
         await frm.isd_controller.recalculate();
     },
 
@@ -87,12 +84,15 @@ frappe.ui.form.on("ISD Distribution Invoice", {
     },
 
     async purchase_invoice(frm) {
+        const purchase_invoice = frm.doc.purchase_invoice;
+
         frm.clear_table("source_items");
-        if (frm.doc.purchase_invoice) {
+        if (purchase_invoice) {
             const { message: items } = await frappe.call({
                 method: "india_compliance.gst_india.utils.isd.get_source_items_from_purchase_invoice",
-                args: { purchase_invoice: frm.doc.purchase_invoice },
+                args: { purchase_invoice },
             });
+            if (frm.doc.purchase_invoice !== purchase_invoice) return;
             for (const item of items || []) frm.add_child("source_items", item);
         }
         frm.refresh_field("source_items");
@@ -114,12 +114,12 @@ frappe.ui.form.on("ISD Distribution Invoice", {
     },
 });
 
-frappe.ui.form.on("ISD Source Item", {
-    async source_items_remove(frm) {
-        await frm.isd_controller.recalculate();
-    },
+const recalculate = (frm) => {
+    if (frm.doctype !== "ISD Distribution Invoice") return;
+    frm.isd_controller.recalculate();
+};
 
-    is_ineligible_for_itc(frm) {
-        frm.isd_controller.calculate_taxes_and_totals();
-    },
+frappe.ui.form.on("ISD Source Item", {
+    is_ineligible_for_itc: recalculate,
+    source_items_remove: recalculate,
 });

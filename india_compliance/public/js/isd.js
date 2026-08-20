@@ -28,6 +28,9 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                 label: __("Posting Date"),
                 default: frappe.datetime.get_today(),
                 reqd: 1,
+                change() {
+                    fetch_and_prefill_grid();
+                },
             },
             {
                 fieldtype: "Check",
@@ -39,7 +42,6 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     for (const field of ["party_type", "party"])
                         distribution_grid.update_docfield_property(field, "hidden", hidden);
                     distribution_grid.reset_grid();
-                    distribution_grid.refresh();
                 },
             },
             { fieldtype: "Column Break" },
@@ -108,8 +110,8 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                             frappe.call({
                                 method: "india_compliance.gst_india.utils.isd.get_distribution_addresses",
                                 args: { party_type, party, pi_posting_date: posting_date, address },
-                                callback: ({ message: [row] = [] }) => {
-                                    if (!row) return;
+                                callback: ({ message: { addresses: [row] = [] } = {} }) => {
+                                    if (!row || this.doc.address !== address) return;
                                     const { gstin, gst_category, gst_state, turnover_amount } = row;
                                     Object.assign(this.doc, {
                                         gstin,
@@ -270,12 +272,18 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
         callback: ({ message }) => message && render_summary(message),
     });
 
+    let fetched_period = null;
+
     function fetch_and_prefill_grid() {
         const posting_date = dialog.get_value("posting_date") || frappe.datetime.get_today();
         frappe.call({
             method: "india_compliance.gst_india.utils.isd.get_distribution_addresses",
             args: { party_type: "Company", party: company, pi_posting_date: posting_date },
-            callback({ message: rows = [] }) {
+            callback({ message: { addresses: rows = [], relevant_period } = {} }) {
+                const period = String(relevant_period);
+                if (period === fetched_period) return;
+
+                fetched_period = period;
                 if (!rows.length) return;
                 distribution_grid.df.data = rows.map((r) => ({
                     party_type: "Company",
@@ -444,7 +452,9 @@ india_compliance.ISDController = class ISDController {
                     party_gstin: frm.doc.company_gstin,
                 },
             }));
-            frm.set_query("credit_note_against", () => ({ filters: { docstatus: 1 } }));
+            frm.set_query("credit_note_against", () => ({
+                filters: { docstatus: 1, company: frm.doc.company, is_credit_note: 0 },
+            }));
         }
     }
 
@@ -497,38 +507,32 @@ india_compliance.ISDController = class ISDController {
             },
         });
 
-        if (!message) return;
+        if (!message || !Object.keys(message).length) return;
 
         frm.__updating_isd_autofill = true;
-        await frm.set_value(message); //TODO: instead of this we can do Object.assign and then call refresh
-        await frm.isd_controller.set_queries();
-        frm.__updating_isd_autofill = false;
+        try {
+            await frm.set_value(message);
+        } finally {
+            frm.__updating_isd_autofill = false;
+        }
     }
 
     // ------------------------------------------------------------------ address display / pos
     set_address_display(address_field, display_field) {
-        const address = this.frm.doc[address_field];
-        if (!address) {
-            this.frm.set_value(display_field, "");
-            return;
-        }
-        frappe
-            .call({
-                method: "frappe.contacts.doctype.address.address.get_address_display",
-                args: { address_dict: address },
-            })
-            .then((r) => this.frm.set_value(display_field, r.message || ""));
+        erpnext.utils.get_address_display(this.frm, address_field, display_field);
     }
 
-    async set_pos(address_field, pos_field) {
+    async set_place_of_supply(address_field, pos_field) {
         const address = this.frm.doc[address_field];
         if (!address) {
             this.frm.set_value(pos_field, "");
             return;
         }
-        const { message } = await frappe.db.get_value("Address", address, ["gst_state_number", "gst_state"]);
-        const pos = message?.gst_state ? `${message.gst_state_number}-${message.gst_state}` : "";
-        this.frm.set_value(pos_field, pos);
+        const { message } = await frappe.call({
+            method: "india_compliance.gst_india.utils.isd.get_isd_place_of_supply",
+            args: { address },
+        });
+        this.frm.set_value(pos_field, message || "");
     }
 
     // ------------------------------------------------------------------ distribution preview
@@ -593,9 +597,7 @@ india_compliance.ISDController = class ISDController {
     }
 
     async recalculate() {
-        if (!(this.frm.doc.source_items || []).length) return;
-
-        if (this.is_distribution_side) {
+        if (this.is_distribution_side && (this.frm.doc.source_items || []).length) {
             const inter_state = await this.is_inter_state_distribution();
             for (const row of this.frm.doc.source_items) {
                 this._calculate_distribution_row(row, inter_state);
@@ -704,7 +706,7 @@ india_compliance.ISDController = class ISDController {
     }
 
     set_common_buttons() {
-        if (this.frm.doc.docstatus === 1) {
+        if (this.frm.doc.docstatus >= 1) {
             this.frm.add_custom_button(
                 __("Accounting Ledger"),
                 () => {
