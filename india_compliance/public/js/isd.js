@@ -110,7 +110,13 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
 
                             frappe.call({
                                 method: "india_compliance.gst_india.utils.isd.get_distribution_addresses",
-                                args: { party_type, party, pi_posting_date: posting_date, address },
+                                args: {
+                                    party_type,
+                                    party,
+                                    company,
+                                    pi_posting_date: posting_date,
+                                    address,
+                                },
                                 callback: ({ message: { addresses: [row] = [] } = {} }) => {
                                     if (!row || this.doc.address !== address) return;
                                     const { gstin, gst_category, gst_state, turnover_amount } = row;
@@ -286,7 +292,12 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
         const posting_date = dialog.get_value("posting_date") || frappe.datetime.get_today();
         frappe.call({
             method: "india_compliance.gst_india.utils.isd.get_distribution_addresses",
-            args: { party_type: "Company", party: company, pi_posting_date: posting_date },
+            args: {
+                party_type: "Company",
+                party: company,
+                company,
+                pi_posting_date: posting_date,
+            },
             callback({ message: { addresses: rows = [], relevant_period } = {} }) {
                 const period = String(relevant_period);
                 if (period === fetched_period) return;

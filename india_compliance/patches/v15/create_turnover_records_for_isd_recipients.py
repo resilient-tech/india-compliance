@@ -11,15 +11,27 @@ from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
 def execute():
     """Backfill Turnover Records for the recipients of every ISD registered company"""
 
-    companies = get_companies_with_isd_registration()
+    companies = {row.company for row in get_company_addresses(isd=True).run(as_dict=True)}
     if not companies:
         return
 
     from_date, to_date = get_relevant_period()
 
-    # Turnover Record holds one amount per state per period, so aggregate every GSTIN of a state
+    for company in companies:
+        for gst_state, turnover in get_turnover_by_state(company, from_date, to_date).items():
+            upsert_turnover_record(
+                company=company,
+                gstin=turnover.gstin,
+                gst_state=gst_state,
+                amount=turnover.amount,
+            )
+
+
+def get_turnover_by_state(company, from_date, to_date):
+    """Turnover Record holds one amount per state per period, so aggregate every GSTIN of a state"""
     turnover_by_state = {}
-    for address in get_recipient_addresses(companies):
+
+    for address in get_recipient_addresses([company]):
         amount = get_turnover_from_sales_invoices(address.gstin, from_date, to_date, address.company)
         if not amount:
             continue
@@ -27,8 +39,7 @@ def execute():
         state = turnover_by_state.setdefault(address.gst_state, frappe._dict(gstin=address.gstin, amount=0))
         state.amount += amount
 
-    for gst_state, turnover in turnover_by_state.items():
-        upsert_turnover_record(gstin=turnover.gstin, gst_state=gst_state, amount=turnover.amount)
+    return turnover_by_state
 
 
 def get_company_addresses(isd):
@@ -52,10 +63,6 @@ def get_company_addresses(isd):
         .where((dynamic_link.link_doctype == "Company") & category_condition)
         .distinct()
     )
-
-
-def get_companies_with_isd_registration():
-    return {row.company for row in get_company_addresses(isd=True).run(as_dict=True)}
 
 
 def get_recipient_addresses(companies):

@@ -304,12 +304,12 @@ def _resolve_isd_addresses(doc, is_distribution_side):
 
 def _resolve_recipient_branch_turnover(doc):
     # only called on the distribution side, where the recipient is the party
-    if not doc.party_address:
+    if not (doc.party_address and doc.company):
         return doc.branch_turnover
 
     gst_state = frappe.get_cached_value("Address", doc.party_address, "gst_state")
 
-    return get_turnover_amount(gst_state, doc.posting_date)
+    return get_turnover_amount(doc.company, gst_state, doc.posting_date)
 
 
 @frappe.whitelist()
@@ -352,7 +352,9 @@ def get_isd_autofill_values(doctype: str, changed_field: str, doc: str | dict):
 
 # ---------------------------------------------------------------------------- bulk distribution dialog
 @frappe.whitelist()
-def get_distribution_addresses(party_type: str, party: str, pi_posting_date: str, address: str | None = None):
+def get_distribution_addresses(
+    party_type: str, party: str, company: str, pi_posting_date: str, address: str | None = None
+):
     """For distribution addresses table in bulk distribution dialog"""
 
     if not party_type or not party:
@@ -373,7 +375,8 @@ def get_distribution_addresses(party_type: str, party: str, pi_posting_date: str
         .on(dynamic_link.parent == addr.name)
         .left_join(turnover_record)
         .on(
-            (IfNull(turnover_record.gst_state, "") == IfNull(addr.gst_state, ""))
+            (turnover_record.company == company)
+            & (IfNull(turnover_record.gst_state, "") == IfNull(addr.gst_state, ""))
             & (turnover_record.from_date <= fy_to)
             & (turnover_record.to_date >= fy_from)
         )
@@ -493,7 +496,7 @@ def bulk_create_isd_distribution_invoices(
         )
         doc.extend("source_items", [dict(item) for item in pi.source_items])
 
-        turnover_data.append((row.get("gstin"), row.get("gst_state"), turnover, pi.posting_date))
+        turnover_data.append((pi.company, row.get("gstin"), row.get("gst_state"), turnover, pi.posting_date))
 
         frappe.db.savepoint("isd_bulk")
         try:
@@ -519,9 +522,10 @@ def bulk_create_isd_distribution_invoices(
 
 
 def _upsert_turnover_records(data):
-    """Data = [(gstin, gst_state, turnover, posting_date), ...]"""
-    for gstin, gst_state, turnover, date in data:
+    """Data = [(company, gstin, gst_state, turnover, posting_date), ...]"""
+    for company, gstin, gst_state, turnover, date in data:
         upsert_turnover_record(
+            company=company,
             gstin=gstin,
             gst_state=gst_state,
             amount=turnover,

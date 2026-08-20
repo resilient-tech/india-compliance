@@ -15,14 +15,19 @@ from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
 FROM_DATE = "2024-04-01"
 TO_DATE = "2025-03-31"
 GUJARAT_GSTIN = "24AAQCA8719H1ZC"  # the Gujarat GSTIN of _Test Indian Registered Company
+COMPANY = "_Test Indian Registered Company"
+OTHER_COMPANY = "_Test ISD Branch Company"
 
 
-def make_turnover_record(gst_state, amount, gstin=None, from_date=FROM_DATE, to_date=TO_DATE):
+def make_turnover_record(
+    gst_state, amount, gstin=None, from_date=FROM_DATE, to_date=TO_DATE, company=COMPANY
+):
     return frappe.get_doc(
         {
             "doctype": "Turnover Record",
             "from_date": from_date,
             "to_date": to_date,
+            "company": company,
             "gst_state": gst_state,
             "gstin": gstin,
             "amount": amount,
@@ -75,6 +80,25 @@ class TestTurnoverRecord(IntegrationTestCase):
             gstin=GUJARAT_GSTIN,
         )
 
+    def test_each_company_keeps_its_own_turnover_for_a_state(self):
+        """Two companies can each have a branch in Gujarat. Keyed on the state alone the second
+        overwrites the first, and both then divide the wrong pool. A company may also hold several
+        ISD registrations, so the company -- not the distributing GSTIN -- owns these figures."""
+        from_date, to_date = get_relevant_period(today())
+        for company, amount in ((COMPANY, 500000), (OTHER_COMPANY, 800000)):
+            record = make_turnover_record(
+                "Tripura", amount, from_date=from_date, to_date=to_date, company=company
+            )
+            self.addCleanup(frappe.delete_doc, "Turnover Record", record.name, force=True)
+
+        self.assertEqual(get_turnover_amount(COMPANY, "Tripura", today()), 500000)
+        self.assertEqual(get_turnover_amount(OTHER_COMPANY, "Tripura", today()), 800000)
+
+        # and an upsert reaches the company it names, leaving the other alone
+        upsert_turnover_record(OTHER_COMPANY, None, "Tripura", 850000, today())
+        self.assertEqual(get_turnover_amount(OTHER_COMPANY, "Tripura", today()), 850000)
+        self.assertEqual(get_turnover_amount(COMPANY, "Tripura", today()), 500000)
+
     def test_relevant_period_is_the_preceding_financial_year(self):
         """Rule 39(1): the ratio is driven by the financial year *preceding* the distribution, not
         by the year of distribution, which is still running and would move the ratio every month."""
@@ -87,12 +111,12 @@ class TestTurnoverRecord(IntegrationTestCase):
         # the lookup resolves the record filed for that preceding period ...
         record = make_turnover_record("Maharashtra", 750000, from_date=from_date, to_date=to_date)
         self.addCleanup(frappe.delete_doc, "Turnover Record", record.name, force=True)
-        self.assertEqual(get_turnover_amount("Maharashtra", today()), 750000)
+        self.assertEqual(get_turnover_amount(COMPANY, "Maharashtra", today()), 750000)
 
         # ... and a record filed for the distribution's own year is not picked up
         record = make_turnover_record("Goa", 900000, from_date=fy_start, to_date=fy_end)
         self.addCleanup(frappe.delete_doc, "Turnover Record", record.name, force=True)
-        self.assertIsNone(get_turnover_amount("Goa", today()))
+        self.assertIsNone(get_turnover_amount(COMPANY, "Goa", today()))
 
     def test_lookup_resolves_a_record_filed_for_part_of_the_relevant_period(self):
         """validate_duplicate_record rejects a second record overlapping the first, so a part-period
@@ -116,7 +140,7 @@ class TestTurnoverRecord(IntegrationTestCase):
         )
 
         # ... so this is the only turnover Punjab has, and the lookup resolves it
-        self.assertEqual(get_turnover_amount("Punjab", today()), 250000)
+        self.assertEqual(get_turnover_amount(COMPANY, "Punjab", today()), 250000)
 
     def test_upsert_updates_the_overlapping_record(self):
         """An exact-date lookup missed a part-period record, so the upsert fell through to an insert
@@ -128,9 +152,9 @@ class TestTurnoverRecord(IntegrationTestCase):
         )
         self.addCleanup(frappe.delete_doc, "Turnover Record", record.name, force=True)
 
-        upsert_turnover_record(gstin=None, gst_state="Kerala", amount=450000)
+        upsert_turnover_record(company=COMPANY, gstin=None, gst_state="Kerala", amount=450000)
 
         self.assertEqual(frappe.db.get_value("Turnover Record", record.name, "amount"), 450000)
-        self.assertEqual(get_turnover_amount("Kerala", today()), 450000)
+        self.assertEqual(get_turnover_amount(COMPANY, "Kerala", today()), 450000)
         # and no second record was created behind a swallowed exception
         self.assertEqual(frappe.db.count("Turnover Record", {"gst_state": "Kerala"}), 1)

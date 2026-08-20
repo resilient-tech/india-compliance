@@ -47,7 +47,7 @@ class ISDDistributionInvoice(ISDController):
         self.sync_distribution_percentage()
 
         gstin, gst_state = frappe.get_cached_value("Address", self.party_address, ["gstin", "gst_state"])
-        turnover_record_data = [(gstin, gst_state, self.branch_turnover, self.posting_date)]
+        turnover_record_data = [(self.company, gstin, gst_state, self.branch_turnover, self.posting_date)]
 
         frappe.enqueue(
             "india_compliance.gst_india.utils.isd._upsert_turnover_records",

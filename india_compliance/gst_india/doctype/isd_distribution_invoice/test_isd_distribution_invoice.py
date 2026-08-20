@@ -1326,8 +1326,11 @@ class IntegrationTestISDBulkDistribution(IntegrationTestCase):
         self.assertEqual(args[0], "india_compliance.gst_india.utils.isd._upsert_turnover_records")
         self.assertTrue(kwargs["enqueue_after_commit"])
         self.assertEqual(
-            [(gstin, gst_state, turnover) for gstin, gst_state, turnover, _ in kwargs["data"]],
-            [(row["gstin"], row["gst_state"], row["turnover_amount"]) for row in table],
+            [
+                (company, gstin, gst_state, turnover)
+                for company, gstin, gst_state, turnover, _ in kwargs["data"]
+            ],
+            [(COMPANY, row["gstin"], row["gst_state"], row["turnover_amount"]) for row in table],
         )
 
     def test_against_party_rows_are_raised_against_the_party(self):

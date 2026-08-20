@@ -38,6 +38,7 @@ class TurnoverRecord(Document):
         duplicate = frappe.db.exists(
             "Turnover Record",
             {
+                "company": self.company,
                 "gst_state": self.gst_state,
                 "from_date": ["<=", self.to_date],
                 "to_date": [">=", self.from_date],
@@ -61,15 +62,20 @@ def get_relevant_period(posting_date=None):
     return add_years(getdate(from_date), -1), add_years(getdate(to_date), -1)
 
 
-def get_turnover_amount(gst_state, posting_date=None):
+def get_turnover_amount(company, gst_state, posting_date=None):
     from_date, to_date = get_relevant_period(posting_date)
 
-    filters = {"gst_state": gst_state, "from_date": ["<=", to_date], "to_date": [">=", from_date]}
+    filters = {
+        "company": company,
+        "gst_state": gst_state,
+        "from_date": ["<=", to_date],
+        "to_date": [">=", from_date],
+    }
 
     return frappe.db.get_value("Turnover Record", filters, "amount")
 
 
-def upsert_turnover_record(gstin, gst_state, amount, posting_date=None):
+def upsert_turnover_record(company, gstin, gst_state, amount, posting_date=None):
     from_date, to_date = get_relevant_period(posting_date)
 
     if gstin:
@@ -78,7 +84,12 @@ def upsert_turnover_record(gstin, gst_state, amount, posting_date=None):
     amount_precision = get_field_precision(frappe.get_meta("Turnover Record").get_field("amount"))
     amount = flt(amount, amount_precision)
 
-    existing_filters = {"gst_state": gst_state, "from_date": ["<=", to_date], "to_date": [">=", from_date]}
+    existing_filters = {
+        "company": company,
+        "gst_state": gst_state,
+        "from_date": ["<=", to_date],
+        "to_date": [">=", from_date],
+    }
     existing = frappe.db.get_value("Turnover Record", existing_filters)
 
     try:
@@ -88,6 +99,7 @@ def upsert_turnover_record(gstin, gst_state, amount, posting_date=None):
             doc = frappe.new_doc("Turnover Record")
             doc.from_date = from_date
             doc.to_date = to_date
+            doc.company = company
             doc.gstin = gstin
             doc.gst_state = gst_state
             doc.amount = amount
@@ -96,8 +108,9 @@ def upsert_turnover_record(gstin, gst_state, amount, posting_date=None):
         frappe.log_error(
             title=_("Turnover Record upsert failed"),
             message=_(
-                "Failed to upsert Turnover Record for from_date={0}, to_date={1}, gst_state={2}, gstin={3}"
-            ).format(from_date, to_date, gst_state, gstin),
+                "Failed to upsert Turnover Record for company={0}, from_date={1}, to_date={2},"
+                " gst_state={3}, gstin={4}"
+            ).format(company, from_date, to_date, gst_state, gstin),
         )
 
 
