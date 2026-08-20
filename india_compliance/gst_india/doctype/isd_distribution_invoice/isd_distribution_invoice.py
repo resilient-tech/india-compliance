@@ -411,10 +411,10 @@ def apply_against_party_overrides(source, recipient):
 
     # Accounts and accounting dimensions belong to the source company; re-default them for the new
     # (recipient) company instead.
-    default_cost_center, default_expense_account, default_isd_provisional_account = frappe.get_cached_value(
+    default_cost_center, default_expense_account = frappe.get_cached_value(
         "Company",
         recipient_company,
-        ["cost_center", "default_expense_account", "default_isd_provisional_account"],
+        ["cost_center", "default_expense_account"],
     )
 
     recipient.update(
@@ -427,7 +427,7 @@ def apply_against_party_overrides(source, recipient):
             "company_address": recipient_address,
             "cost_center": default_cost_center,
             "project": None,
-            "isd_provisional_account": default_isd_provisional_account,
+            "isd_provisional_account": None,
         }
     )
 
