@@ -701,6 +701,11 @@ class PurchaseReconciliationToolAction {
             () => reconciliation.unlink_documents(this.frm),
             action_group,
         );
+        this.frm.add_custom_button(
+            __("Sync Data"),
+            () => reconciliation.sync_details(this.frm),
+            action_group,
+        );
         this.frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
 
         // Setup Actions
@@ -759,7 +764,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         const doctype = this.dialog.get_value("doctype") || this.missing_doctype;
         if (this.row.match_status == "Only in Books") return ["Link", "Ignore"];
         else if (this.row.match_status == "Only in 2A/2B")
-            if (doctype == "Purchase Invoice") return ["Create", "Link", "Pending", "Ignore"];
+            if (this.missing_doctype == "Purchase Invoice") return ["Create", "Link", "Pending", "Ignore"];
             else return ["Link", "Pending", "Ignore"];
         else return ["Unlink", "Accept", "Pending"];
     }

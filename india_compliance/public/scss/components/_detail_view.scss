@@ -15,3 +15,28 @@ tr.not-matched > td {
 td.not-matched {
     color: var(--red-500);
 }
+
+.modal-dialog [data-fieldname="detail_table"] {
+    // value on top, sync button underneath - never side by side, however wide the cell
+    td .sync-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    td [data-field] {
+        display: none;
+
+        &.sync-detail {
+            display: inline-flex;
+
+            max-width: 100%;
+
+            .es-button__label {
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        }
+    }
+}

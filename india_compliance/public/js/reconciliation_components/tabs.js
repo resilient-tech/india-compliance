@@ -482,6 +482,15 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     render_html() {
         this.render_cards();
         this.render_table();
+
+        this.dialog.$wrapper.find(".sync-detail").on("click", async (event) => {
+            const field = $(event.currentTarget).data("field");
+            await reconciliation.sync_details(this.frm, [this.row], [field]);
+
+            await this.get_invoice_details();
+            this.process_data();
+            this.render_html();
+        });
     }
 
     render_cards() {
@@ -522,6 +531,10 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         this._mark_differences(detail_table.$wrapper);
     }
 
+    can_sync_details() {
+        return frappe.model.can_write(this.row.purchase_doctype);
+    }
+
     _mark_differences(wrapper) {
         if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
 
@@ -536,7 +549,13 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                     ? flt(purchase, 2) === flt(inward_supply, 2)
                     : purchase == inward_supply;
 
-            if (!same) $(row).attr("title", __("Books and 2A/2B do not match")).addClass("not-matched");
+            if (same) return;
+
+            $(row).attr("title", __("Books and 2A/2B do not match")).addClass("not-matched");
+
+            if (this.can_sync_details()) {
+                $(row).find("[data-field]").addClass("sync-detail");
+            }
         });
     }
 };

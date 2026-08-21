@@ -641,6 +641,11 @@ class IMSAction {
                 () => reconciliation.unlink_documents(this.frm),
                 __("Actions"),
             );
+            this.frm.add_custom_button(
+                __("Sync Data"),
+                () => reconciliation.sync_details(this.frm),
+                __("Actions"),
+            );
             this.frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
 

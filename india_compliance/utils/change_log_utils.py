@@ -1,6 +1,39 @@
 import frappe
 from frappe import _
-from frappe.utils import escape_html, get_date_str, get_fullname
+from frappe.model.document import bulk_insert
+from frappe.utils import escape_html, get_date_str, get_fullname, random_string
+
+
+def add_comments_in_bulk(comments, comment_type="Info", user=None):
+    user = user or frappe.session.user
+    timestamp = frappe.utils.now()
+
+    comment_docs = [
+        frappe.new_doc("Comment").update(
+            {
+                "name": random_string(10),
+                "comment_type": comment_type,
+                "comment_email": user,
+                "comment_by": user,
+                "creation": timestamp,
+                "modified": timestamp,
+                "modified_by": user,
+                "owner": user,
+                "reference_doctype": doctype,
+                "reference_name": name,
+                "content": content,
+            }
+        )
+        for doctype, name, content in comments
+        if content
+    ]
+
+    if not comment_docs:
+        return 0
+
+    bulk_insert("Comment", comment_docs, ignore_duplicates=True)
+
+    return len(comment_docs)
 
 
 def create_change_log_comment(
