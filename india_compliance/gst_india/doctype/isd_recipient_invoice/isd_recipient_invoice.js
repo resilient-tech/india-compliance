@@ -59,6 +59,10 @@ frappe.ui.form.on("ISD Recipient Invoice", {
         frm.isd_controller.set_place_of_supply("company_address", "company_pos");
     },
 
+    is_credit_note(frm) {
+        frm.isd_controller.clear_credit_note_against();
+    },
+
     // the credit received is driven by distributed_*, so the ratio is informational here
     branch_turnover(frm) {
         frm.isd_controller.calculate_distribution_ratio();

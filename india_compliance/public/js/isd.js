@@ -409,6 +409,12 @@ india_compliance.ISDController = class ISDController {
         this.frm.refresh_field("taxes");
     }
 
+    clear_credit_note_against() {
+        if (this.frm.doc.is_credit_note || !this.frm.doc.credit_note_against) return;
+
+        return this.frm.set_value("credit_note_against", null);
+    }
+
     set_provisional_labels() {
         const against_party = this.frm.doc.is_against_party;
         this.frm.set_df_property(

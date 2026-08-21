@@ -110,6 +110,7 @@ frappe.ui.form.on("ISD Distribution Invoice", {
     },
 
     is_credit_note(frm) {
+        frm.isd_controller.clear_credit_note_against();
         frm.isd_controller.recalculate();
     },
 });
