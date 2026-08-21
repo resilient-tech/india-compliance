@@ -63,6 +63,106 @@ Object.assign(reconciliation, {
         reconciliation.after_successful_action(tab);
     },
 
+    SYNCABLE_FIELDS: [
+        { fieldname: "bill_no", label: "Bill No" },
+        { fieldname: "bill_date", label: "Bill Date" },
+    ],
+
+    async sync_details(frm, selected_rows, fields) {
+        const _class = frm.reconciliation_tabs;
+        const tab = _class.tabs[frm.get_active_tab()?.df.fieldname];
+        if (!selected_rows) selected_rows = reconciliation.get_affected_rows(frm);
+
+        // the server skips these anyway, we filter to tell the two empty cases apart:
+        // nothing selected to sync vs nothing left to sync
+        //TODO: can't think of any case where this will be needed
+        const rows = selected_rows.filter((row) => row.purchase_invoice_name && row.inward_supply_name);
+
+        if (!rows.length)
+            return frappe.show_alert({
+                message: __("Please select matched rows to sync"),
+                indicator: "red",
+            });
+
+        if (!fields) {
+            fields = await reconciliation.prompt_sync_fields();
+            if (fields === null) return; // cancelled
+
+            if (!fields.length)
+                return frappe.show_alert({
+                    message: __("Please select at least one value to copy"),
+                    indicator: "orange",
+                });
+        }
+
+        let synced_rows;
+        try {
+            ({ message: synced_rows } = await frm._call("sync_details", { data: rows, fields }));
+        } catch {
+            return frappe.show_alert({
+                message: __("An error occurred while syncing data"),
+                indicator: "red",
+            });
+        }
+
+        if (!synced_rows.length)
+            return frappe.show_alert({
+                message: __("No changes to sync"),
+                indicator: "blue",
+            });
+
+        // drop the stale copies before pushing the refreshed ones back, else they double up
+        const synced_names = new Set(synced_rows.map((row) => row.inward_supply_name));
+        const new_data = _class.data.filter((row) => !synced_names.has(row.inward_supply_name));
+
+        new_data.push(...synced_rows);
+        _class.refresh(new_data);
+
+        if (tab) tab.datatable.clear_checked_items();
+
+        frappe.show_alert({
+            message: __("{0} synced successfully", [reconciliation.get_field_labels(fields).join(", ")]),
+            indicator: "green",
+        });
+    },
+
+    get_field_labels(fields) {
+        return reconciliation.SYNCABLE_FIELDS.filter((field) => fields.includes(field.fieldname)).map(
+            (field) => __(field.label),
+        );
+    },
+
+    prompt_sync_fields() {
+        const syncable_fields = reconciliation.SYNCABLE_FIELDS;
+
+        return new Promise((resolve) => {
+            const dialog = new frappe.ui.Dialog({
+                title: __("Copy Values from 2A/2B"),
+                // the checks run across one section, so they read as a single choice
+                fields: syncable_fields.flatMap((field, index) => [
+                    ...(index ? [{ fieldtype: "Column Break" }] : []),
+                    {
+                        fieldtype: "Check",
+                        fieldname: field.fieldname,
+                        label: __(field.label),
+                        default: 1,
+                    },
+                ]),
+                primary_action_label: __("Apply"),
+                primary_action(values) {
+                    resolve(
+                        syncable_fields
+                            .filter((field) => values[field.fieldname])
+                            .map((field) => field.fieldname),
+                    );
+                    dialog.hide();
+                },
+            });
+            dialog.onhide = () => resolve(null);
+            dialog.show();
+        });
+    },
+
     prompt_unlink_intent(count, skipped) {
         // gives back the exclude flag, or null if cancelled
         return new Promise((resolve) => {
