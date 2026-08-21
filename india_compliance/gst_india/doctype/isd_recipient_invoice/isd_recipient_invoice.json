@@ -451,7 +451,7 @@
  "is_submittable": 1,
  "links": [
   {
-   "group": "Reference",
+   "group": "Returns",
    "link_doctype": "ISD Recipient Invoice",
    "link_fieldname": "credit_note_against"
   },

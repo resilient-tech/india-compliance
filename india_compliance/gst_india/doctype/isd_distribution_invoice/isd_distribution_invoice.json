@@ -441,6 +441,11 @@
    "group": "Reference",
    "link_doctype": "ISD Recipient Invoice",
    "link_fieldname": "isd_distribution_invoice_reference"
+  },
+  {
+   "group": "Returns",
+   "link_doctype": "ISD Distribution Invoice",
+   "link_fieldname": "credit_note_against"
   }
  ],
  "modified": "2026-08-03 18:12:05.298255",
