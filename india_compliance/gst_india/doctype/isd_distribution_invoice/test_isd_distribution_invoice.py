@@ -872,6 +872,36 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         reversed_itc = sum(sum_row_tax_by_type(row, "distributed") for row in exact.source_items)
         self.assertAlmostEqual(reversed_itc, -distributed, places=2)
 
+    def test_only_one_credit_note_per_distribution(self):
+        """The reversal limit comes from what the distribution passed on, so a second credit note
+        would be free to reverse the same credit all over again."""
+        pi = make_isd_pi(self.isd_address.name)
+        distribution = create_distribution_invoice(
+            purchase_invoice=pi,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
+            branch_turnover=50,
+            total_turnover=100,
+        )
+
+        credit_note = self._full_distribution(
+            pi=pi, branch=50, total=100, is_credit_note=1, credit_note_against=distribution.name
+        )
+        credit_note.insert()
+        credit_note.submit()
+
+        second = self._full_distribution(
+            pi=pi, branch=50, total=100, is_credit_note=1, credit_note_against=distribution.name
+        )
+        self.assertRaisesRegex(VALIDATION_ERROR, "already has a credit note", second.insert)
+
+        # a cancelled credit note does not hold the slot
+        credit_note.cancel()
+        replacement = self._full_distribution(
+            pi=pi, branch=50, total=100, is_credit_note=1, credit_note_against=distribution.name
+        )
+        replacement.insert()
+
     def test_clamp_reduces_the_source_heads_whichever_way_the_credit_converts(self):
         """The taxes table holds the source heads while the rows hold the converted ones, so an
         intra-state purchase distributed inter-state is IGST on the rows and CGST + SGST here.

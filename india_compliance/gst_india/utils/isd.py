@@ -36,6 +36,29 @@ def sum_row_tax_by_type(row, prefix):
     return sum(flt(row.get(f"{prefix}_{tax_type}")) for tax_type in GST_TAX_TYPES)
 
 
+def get_existing_credit_note(doc):
+    return frappe.db.exists(
+        doc.doctype,
+        {
+            "credit_note_against": doc.credit_note_against,
+            "is_credit_note": 1,
+            "name": ("!=", doc.name or ""),
+            "docstatus": ("<", 2),
+        },
+    )
+
+
+def validate_single_credit_note(doc):
+    if existing := get_existing_credit_note(doc):
+        frappe.throw(
+            _("{0} already has a credit note in {1}.").format(
+                get_link_to_form(doc.doctype, doc.credit_note_against),
+                get_link_to_form(doc.doctype, existing),
+            ),
+            title=_("Credit Note Already Exists"),
+        )
+
+
 def throw_row_table(title, header, rows):
     """Raise a ValidationError rendering all offending rows as a table under one title."""
     if not rows:

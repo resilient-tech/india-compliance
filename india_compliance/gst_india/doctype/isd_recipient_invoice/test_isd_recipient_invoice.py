@@ -567,12 +567,6 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
 
         original.submit()
 
-        # reversing a reversal would restore the credit instead of giving it back
-        reversal = credit_note(original.name)
-        reversal.insert()
-        reversal.submit()
-        self.assertRaisesRegex(VALIDATION_ERROR, "is itself a credit note", credit_note(reversal.name).insert)
-
         # a plain distribution document is not a reversal of anything
         plain = self._recipient(
             credit_note_against=original.name,
@@ -581,9 +575,43 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         )
         self.assertRaisesRegex(VALIDATION_ERROR, "Only a credit note", plain.insert)
 
-        # and the reversal must return credit to the branch that received it
+        # the reversal must return credit to the branch that received it -- asserted before the
+        # reversal below exists, since only one credit note is allowed per invoice
         other_branch = credit_note(original.name, company_address=self.recipient_address_ka.name)
         self.assertRaisesRegex(VALIDATION_ERROR, "different pair of GSTINs", other_branch.insert)
+
+        # reversing a reversal would restore the credit instead of giving it back
+        reversal = credit_note(original.name)
+        reversal.insert()
+        reversal.submit()
+        self.assertRaisesRegex(VALIDATION_ERROR, "is itself a credit note", credit_note(reversal.name).insert)
+
+    def test_only_one_credit_note_per_recipient_invoice(self):
+        """A second credit note would reverse the same received credit twice."""
+        original = self._recipient(
+            external_isd_invoice_number=frappe.generate_hash(length=8),
+            source_items=make_source_item(self.pi, ratio=0.25),
+        )
+        original.insert()
+        original.submit()
+
+        def credit_note():
+            return self._recipient(
+                is_credit_note=1,
+                credit_note_against=original.name,
+                external_isd_invoice_number=frappe.generate_hash(length=8),
+                source_items=make_source_item(self.pi, ratio=0.25, is_credit_note=1),
+            )
+
+        first = credit_note()
+        first.insert()
+        first.submit()
+
+        self.assertRaisesRegex(VALIDATION_ERROR, "already has a credit note", credit_note().insert)
+
+        # a cancelled credit note does not hold the slot
+        first.cancel()
+        credit_note().insert()
 
     def test_external_isd_invoice_number_identifies_a_manual_invoice(self):
         """With no distribution invoice to reference, this number is the document's only identity:

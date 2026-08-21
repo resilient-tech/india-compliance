@@ -6,7 +6,7 @@ from frappe import _
 from frappe.utils import flt, get_link_to_form
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
-from india_compliance.gst_india.utils.isd import throw_row_table
+from india_compliance.gst_india.utils.isd import throw_row_table, validate_single_credit_note
 from india_compliance.gst_india.utils.isd_controller import ISDController
 from india_compliance.gst_india.utils.itc_claim import (
     _is_gstr3b_filed,
@@ -86,6 +86,8 @@ class ISDRecipientInvoice(ISDController):
 
         if self.credit_note_against == self.name:
             frappe.throw(_("A credit note cannot be issued against itself."))
+
+        validate_single_credit_note(self)
 
         against = frappe.db.get_value(
             "ISD Recipient Invoice",

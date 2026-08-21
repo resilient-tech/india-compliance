@@ -20,6 +20,7 @@ from india_compliance.gst_india.utils.isd import (
     sum_row_tax_by_type,
     throw_invalid_rows,
     throw_row_table,
+    validate_single_credit_note,
 )
 from india_compliance.gst_india.utils.isd_controller import ISDController
 
@@ -140,6 +141,8 @@ class ISDDistributionInvoice(ISDController):
 
         if self.credit_note_against == self.name:
             frappe.throw(_("A credit note cannot be issued against itself."))
+
+        validate_single_credit_note(self)
 
         against = frappe.db.get_value(
             "ISD Distribution Invoice",
