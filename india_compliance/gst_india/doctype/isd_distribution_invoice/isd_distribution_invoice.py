@@ -207,12 +207,12 @@ class ISDDistributionInvoice(ISDController):
 
             # validate totals
             for gst_tax_type in GST_TAX_TYPES:
-                if (expected := flt(pi_item.get(f"{gst_tax_type}_amount"), precision)) != (
+                if (expected := flt(abs(flt(pi_item.get(f"{gst_tax_type}_amount"))), precision)) != (
                     given := flt(row.get(f"total_{gst_tax_type}"), precision)
                 ):
                     invalid_totals.append([str(row.idx), gst_tax_type.upper(), expected, given])
 
-            if (expected := flt(pi_item.base_net_amount, precision)) != (
+            if (expected := flt(abs(flt(pi_item.base_net_amount)), precision)) != (
                 given := flt(row.total_expense, precision)
             ):
                 invalid_totals.append([str(row.idx), _("Expense"), expected, given])
@@ -302,11 +302,8 @@ class ISDDistributionInvoice(ISDController):
                 allowed_itc = flt(against.total_eligible + against.total_ineligible, precision)
                 allowed_expense = flt(against.total_expense, precision)
             else:
-                # unlinked, so the limit is whatever the invoice still has distributed
-                already = self.get_distributed_for_purchase_invoice()
-                allowed_itc = flt(already.itc, precision)
-                allowed_expense = flt(already.expense, precision)
-
+                # unlinked, so no limit applied by government
+                return 0, 0
             itc_surplus = min(0.0, flt(allowed_itc + current_itc, precision))
             expense_surplus = min(0.0, flt(allowed_expense + current_expense, precision))
         else:

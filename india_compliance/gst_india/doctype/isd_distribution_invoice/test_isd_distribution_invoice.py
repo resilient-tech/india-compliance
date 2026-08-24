@@ -690,8 +690,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
     # ------------------------------------------------------------------ end to end / distribution limits
     def test_invoices_excluded_from_the_isd_pool(self):
         """Reverse charge credit reaches an ISD only through a same-PAN regular registration
-        (Sec 20(1) with Rule 39(1A)), and a return carries negative tax, which would distribute as
-        negative source totals and a meaningless distributed percentage."""
+        (Sec 20(1) with Rule 39(1A)), and an opening entry carries no credit at all."""
         rcm_pi = make_isd_pi(
             self.isd_address.name,
             is_in_state=False,
@@ -709,6 +708,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         # doubles as the invoice the return is raised against
         self.assertEqual(self.pi.is_isd_applicable, 1)
 
+        # a return stays in the pool: distributing its negative tax is how credit is handed back
         pi_return = make_isd_pi(
             self.isd_address.name,
             is_return=1,
@@ -716,7 +716,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             qty=-1,
             do_not_submit=True,
         )
-        self.assertEqual(pi_return.is_isd_applicable, 0)
+        self.assertEqual(pi_return.is_isd_applicable, 1)
 
         # an opening entry carries no credit to distribute
         opening_pi = make_isd_pi(self.isd_address.name, is_opening="Yes", do_not_submit=True)

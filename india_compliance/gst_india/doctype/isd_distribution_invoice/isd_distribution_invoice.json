@@ -168,7 +168,6 @@
    "fieldname": "credit_note_against",
    "fieldtype": "Link",
    "label": "Credit Note Against",
-   "mandatory_depends_on": "eval: doc.is_credit_note == 1",
    "options": "ISD Distribution Invoice"
   },
   {

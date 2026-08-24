@@ -141,7 +141,6 @@ def set_is_isd_applicable(doc):
 
     if (
         doc.is_reverse_charge
-        or doc.is_return
         or doc.is_opening == "Yes"
         or doc.ineligibility_reason == "ITC restricted due to PoS rules"
     ):

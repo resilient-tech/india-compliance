@@ -187,6 +187,10 @@ def get_source_items_from_purchase_invoice(purchase_invoice: str):
         order_by="idx",
     )
 
+    for row in source_items:
+        for fieldname in ("total_expense", *(f"total_{tax_type}" for tax_type in GST_TAX_TYPES)):
+            row[fieldname] = abs(flt(row[fieldname]))
+
     return source_items
 
 
@@ -205,6 +209,7 @@ def get_purchase_doc(purchase_invoice: str):
             "billing_address",
             "docstatus",
             "is_isd_applicable",
+            "is_return",
         ],
         as_dict=True,
     )
@@ -515,6 +520,7 @@ def bulk_create_isd_distribution_invoices(
                 "branch_turnover": turnover,
                 "total_turnover": total_turnover,
                 "distribution_ratio": flt(turnover / total_turnover * 100) if total_turnover else 0,
+                "is_credit_note": cint(pi.is_return),
             }
         )
         doc.extend("source_items", [dict(item) for item in pi.source_items])
