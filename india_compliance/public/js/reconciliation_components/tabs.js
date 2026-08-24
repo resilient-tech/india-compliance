@@ -459,7 +459,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     }
 
     toggle_link_btn(disabled) {
-        const btn = this.dialog.$wrapper.find(".modal-footer .btn-link");
+        const btn = this.dialog.$wrapper.find(".modal-footer .link-document-btn");
         if (disabled) btn.addClass("disabled");
         else btn.removeClass("disabled");
     }
