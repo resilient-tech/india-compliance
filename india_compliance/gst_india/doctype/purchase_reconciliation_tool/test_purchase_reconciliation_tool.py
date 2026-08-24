@@ -718,8 +718,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertEqual(booked.bill_date, getdate("2024-02-07"))
         self.assertEqual(booked.bill_no, "SYNC-PI-003")
 
-        # an unrecognised field must not fall back to syncing everything
-        prt.sync_details([row], fields=["supplier_gstin"])
+        # an unrecognised field must throw an error and not fall back to syncing everything
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            prt.sync_details([row], fields=["supplier_gstin"])
         self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "SYNC-PI-003")
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
