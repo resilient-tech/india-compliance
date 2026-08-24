@@ -777,16 +777,16 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             {"bill_of_entry_no": "SYNC-BOE-001-A", "bill_of_entry_date": getdate("2023-12-15")},
         )
 
-        # self.assertTrue(
-        #     frappe.db.exists(
-        #         "Comment",
-        #         {
-        #             "reference_doctype": "Bill of Entry",
-        #             "reference_name": boe.name,
-        #             "comment_type": "Info",
-        #         },
-        #     )
-        # )
+        self.assertTrue(
+            frappe.db.exists(
+                "Comment",
+                {
+                    "reference_doctype": "Bill of Entry",
+                    "reference_name": boe.name,
+                    "comment_type": "Info",
+                },
+            )
+        )
 
         # already in agreement: nothing written, nothing returned
         self.assertEqual(
