@@ -775,6 +775,24 @@ def get_all_gst_accounts(company: str):
     return accounts_list
 
 
+def get_invalid_gst_accounts(accounts: list | tuple):
+    """
+    GST Accounts are accounted as Asset (Input) or Liability (Output).
+    Any other Root Type breaks accounting for GST. Eg: Income and Expense Accounts
+    are closed by Period Closing Voucher, where GST Accounts cannot be accounted.
+
+    Returns GST Accounts that are neither Asset nor Liability Accounts.
+    """
+    if not accounts:
+        return []
+
+    return frappe.get_all(
+        "Account",
+        filters={"name": ("in", list(accounts)), "root_type": ("not in", ("Asset", "Liability"))},
+        pluck="name",
+    )
+
+
 def parse_datetime(value, day_first=False, throw=True):
     """Convert IST string to offset-naive system time"""
 

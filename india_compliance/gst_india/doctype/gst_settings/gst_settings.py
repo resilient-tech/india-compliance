@@ -28,6 +28,7 @@ from india_compliance.gst_india.page.india_compliance_account import (
 )
 from india_compliance.gst_india.utils import (
     can_enable_api,
+    get_invalid_gst_accounts,
     is_api_enabled,
     is_production_api_enabled,
 )
@@ -174,7 +175,7 @@ class GSTSettings(Document):
                 return row.gstin
 
     def validate_gst_accounts(self):
-        account_list = []
+        account_row_map = {}
         company_wise_account_types = {}
 
         for row in self.gst_accounts:
@@ -184,7 +185,7 @@ class GSTSettings(Document):
                 if not account:
                     continue
 
-                if account in account_list:
+                if account in account_row_map:
                     frappe.throw(
                         _("Row #{0}: Account {1} appears multiple times").format(
                             row.idx,
@@ -192,18 +193,7 @@ class GSTSettings(Document):
                         )
                     )
 
-                account_list.append(account)
-
-                # Validate Root Type of Account
-                root_type = frappe.get_cached_value("Account", account, "root_type")
-                if root_type not in ("Asset", "Liability"):
-                    frappe.throw(
-                        _("Row #{0}: GST Account {1} cannot be an {2} Account").format(
-                            row.idx,
-                            frappe.bold(account),
-                            frappe.bold(root_type),
-                        )
-                    )
+                account_row_map[account] = row.idx
 
             # Validate Duplicate Account Types for each Company
             account_types = company_wise_account_types.setdefault(row.company, [])
@@ -217,6 +207,18 @@ class GSTSettings(Document):
                 )
 
             account_types.append(row.account_type)
+
+        # Validate Root Type of Accounts
+        if invalid_accounts := get_invalid_gst_accounts(account_row_map):
+            account_links = []
+            for account in invalid_accounts:
+                account_msg = _("Row #{0}: {1}").format(account_row_map[account], frappe.bold(account))
+                account_links.append(f"<li>{account_msg}</li>")
+
+            msg = _("Root Type of following GST Accounts should be Asset or Liability:")
+            msg += f"<br><br><ul>{''.join(account_links)}</ul>"
+
+            frappe.throw(msg)
 
     def update_custom_fields(self):
         if self.has_value_changed("enable_e_waybill"):

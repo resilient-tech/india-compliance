@@ -4,31 +4,27 @@ from frappe import _
 from india_compliance.gst_india.overrides.transaction import (
     is_indian_registered_company,
 )
-from india_compliance.gst_india.utils import get_all_gst_accounts
+from india_compliance.gst_india.utils import (
+    get_all_gst_accounts,
+    get_invalid_gst_accounts,
+)
 
 
 def validate(doc, method=None):
     """
-    Validate that GST Accounts are not Income or Expense Accounts before closing the period.
+    Period Closing Voucher closes all Income and Expense Accounts, and such closing
+    entries have no Company GSTIN. Validate GST Accounts before closing the period.
     """
     if not is_indian_registered_company(doc):
         return
 
-    gst_accounts = get_all_gst_accounts(doc.company)
-    if not gst_accounts:
+    invalid_accounts = get_invalid_gst_accounts(get_all_gst_accounts(doc.company))
+    if not invalid_accounts:
         return
 
-    pl_gst_accounts = frappe.get_all(
-        "Account",
-        filters={"name": ("in", gst_accounts), "root_type": ("in", ("Income", "Expense"))},
-        pluck="name",
-    )
+    account_links = "".join(f"<li>{frappe.bold(account)}</li>" for account in invalid_accounts)
 
-    if not pl_gst_accounts:
-        return
+    msg = _("Root Type of following GST Accounts should be Asset or Liability:")
+    msg += f"<br><br><ul>{account_links}</ul>"
 
-    frappe.throw(
-        pl_gst_accounts,
-        title=_("GST Accounts cannot be Income or Expense Accounts"),
-        as_list=True,
-    )
+    frappe.throw(msg)

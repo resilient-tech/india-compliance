@@ -89,9 +89,10 @@ class TestGSTSettings(IntegrationTestCase):
         )
 
         doc = update_gst_account("_Test Indian Registered Company", "Output", cgst_account=expense_account)
+
         self.assertRaisesRegex(
             frappe.ValidationError,
-            re.compile(rf"^(Row #\d+: GST Account .*{expense_account}.* cannot be an .*Expense.*)"),
+            re.compile(rf"(Row #\d+: .*{expense_account}.*)"),
             doc.save,
         )
 
