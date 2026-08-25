@@ -18,7 +18,7 @@ Object.assign(reconciliation, {
     get_unlinked_docs(selected_rows) {
         const unlinked_docs = new Set();
         selected_rows.forEach((row) => {
-            unlinked_docs.add(row.purchase_invoice_name);
+            unlinked_docs.add(row.linked_doc);
             unlinked_docs.add(row.inward_supply_name);
         });
 
@@ -31,7 +31,7 @@ Object.assign(reconciliation, {
         if (!selected_rows) selected_rows = reconciliation.get_affected_rows(frm);
 
         // nothing to unlink where a side is missing
-        const rows = selected_rows.filter((row) => row.purchase_invoice_name && row.inward_supply_name);
+        const rows = selected_rows.filter((row) => row.linked_doc && row.inward_supply_name);
 
         if (!rows.length)
             return frappe.show_alert({
@@ -54,8 +54,7 @@ Object.assign(reconciliation, {
         const unlinked_docs = reconciliation.get_unlinked_docs(rows);
 
         const new_data = _class.data.filter(
-            (row) =>
-                !(unlinked_docs.has(row.purchase_invoice_name) || unlinked_docs.has(row.inward_supply_name)),
+            (row) => !(unlinked_docs.has(row.linked_doc) || unlinked_docs.has(row.inward_supply_name)),
         );
 
         new_data.push(...r);
@@ -99,23 +98,19 @@ Object.assign(reconciliation, {
         });
     },
 
-    async link_documents(frm, purchase_invoice_name, inward_supply_name, link_doctype, alert = true) {
+    async link_documents(frm, linked_doc, inward_supply_name, link_doctype, alert = true) {
         if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
 
         // link documents & update data.
         const { message: r } = await frm._call("link_documents", {
-            purchase_invoice_name,
+            linked_doc,
             inward_supply_name,
             link_doctype,
         });
 
         const _class = frm.reconciliation_tabs;
         const new_data = _class.data.filter(
-            (row) =>
-                !(
-                    row.purchase_invoice_name == purchase_invoice_name ||
-                    row.inward_supply_name == inward_supply_name
-                ),
+            (row) => !(row.linked_doc == linked_doc || row.inward_supply_name == inward_supply_name),
         );
 
         new_data.push(...r);

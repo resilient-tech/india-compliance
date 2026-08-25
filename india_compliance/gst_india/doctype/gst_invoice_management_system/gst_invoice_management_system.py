@@ -223,13 +223,13 @@ class GSTInvoiceManagementSystem(Document):
     @frappe.whitelist()
     def link_documents(
         self,
-        purchase_invoice_name: str | None,
+        linked_doc: str | None,
         inward_supply_name: str | None,
         link_doctype: str | None,
     ):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
-        purchases, inward_supplies = _link_documents(purchase_invoice_name, inward_supply_name, link_doctype)
+        purchases, inward_supplies = _link_documents(linked_doc, inward_supply_name, link_doctype)
 
         return self.get_invoice_data(inward_supplies, purchases)
 
@@ -610,7 +610,7 @@ class BuildExcelIMS(BuildExcel):
             },
             {
                 "label": "Linked Voucher",
-                "fieldname": "purchase_invoice_name",
+                "fieldname": "linked_doc",
             },
             {
                 "label": "Posting Date",

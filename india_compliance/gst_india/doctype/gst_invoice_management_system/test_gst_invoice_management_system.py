@@ -475,7 +475,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
 
         self.assertEqual(result.inward_supply_name, gst_is.name)
         self.assertEqual(result.match_status, "Only in 2A/2B")
-        self.assertIsNone(result.purchase_invoice_name)
+        self.assertIsNone(result.linked_doc)
 
     def test_get_invoice_details_with_none_inward_supply_name(self):
         """
@@ -512,14 +512,14 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             inward_supply_name=None,
         )
 
-        self.assertEqual(result.purchase_invoice_name, pinv.name)
+        self.assertEqual(result.linked_doc, pinv.name)
         self.assertEqual(result.match_status, "Only in Books")
         self.assertIsNone(result.inward_supply_name)
 
-    def test_link_documents_with_none_purchase_invoice_name(self):
+    def test_link_documents_with_none_linked_doc(self):
         """
         Regression test: link_documents should be a no-op when
-        purchase_invoice_name is None.
+        linked_doc is None.
         """
         gst_is = create_gst_inward_supply(
             bill_no="IMS-GID-003",
@@ -540,7 +540,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         )
 
         result = gst_ims.link_documents(
-            purchase_invoice_name=None,
+            linked_doc=None,
             inward_supply_name=gst_is.name,
             link_doctype="Purchase Invoice",
         )
@@ -587,7 +587,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         )
 
         result = gst_ims.link_documents(
-            purchase_invoice_name=pinv.name,
+            linked_doc=pinv.name,
             inward_supply_name=gst_is.name,
             link_doctype=None,
         )
