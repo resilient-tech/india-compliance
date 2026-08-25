@@ -194,6 +194,17 @@ class GSTSettings(Document):
 
                 account_list.append(account)
 
+                # Validate Root Type of Account
+                root_type = frappe.get_cached_value("Account", account, "root_type")
+                if root_type not in ("Asset", "Liability"):
+                    frappe.throw(
+                        _("Row #{0}: GST Account {1} cannot be an {2} Account").format(
+                            row.idx,
+                            frappe.bold(account),
+                            frappe.bold(root_type),
+                        )
+                    )
+
             # Validate Duplicate Account Types for each Company
             account_types = company_wise_account_types.setdefault(row.company, [])
             if row.account_type in account_types:

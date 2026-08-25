@@ -68,6 +68,7 @@ function filter_accounts(frm, account_field) {
             filters: {
                 company: row.company,
                 account_type: "Tax",
+                root_type: ["in", ["Asset", "Liability"]],
                 is_group: 0,
             },
         };

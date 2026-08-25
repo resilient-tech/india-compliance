@@ -9,8 +9,20 @@ from frappe.utils.data import getdate
 from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
     RETRY_E_INVOICE_E_WAYBILL_JOB,
 )
+from india_compliance.tests.erpnext_test_utils import create_account
 
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "Account", "UOM"]
+
+
+def update_gst_account(company, account_type, **accounts):
+    """Update GST Accounts of given Account Type in GST Settings, and return the unsaved doc"""
+    gst_settings = frappe.get_doc("GST Settings")
+    for row in gst_settings.gst_accounts:
+        if row.company == company and row.account_type == account_type:
+            row.update(accounts)
+            break
+
+    return gst_settings
 
 
 class TestGSTSettings(IntegrationTestCase):
@@ -66,6 +78,22 @@ class TestGSTSettings(IntegrationTestCase):
                     doc.save,
                 )
                 break
+
+    def test_validate_gst_account_root_type(self):
+        # GST Account under an Expense group (as reported by users)
+        expense_account = create_account(
+            account_name="Test Output Tax CGST",
+            account_type="Tax",
+            company="_Test Indian Registered Company",
+            parent_account="Indirect Expenses - _TIRC",
+        )
+
+        doc = update_gst_account("_Test Indian Registered Company", "Output", cgst_account=expense_account)
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(rf"^(Row #\d+: GST Account .*{expense_account}.* cannot be an .*Expense.*)"),
+            doc.save,
+        )
 
     @change_settings(
         "GST Settings",

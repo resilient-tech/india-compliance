@@ -197,6 +197,9 @@ doc_events = {
         "on_update_after_submit": "india_compliance.gst_india.overrides.payment_entry.on_update_after_submit",
         "before_cancel": "india_compliance.gst_india.overrides.payment_entry.before_cancel",
     },
+    "Period Closing Voucher": {
+        "validate": "india_compliance.gst_india.overrides.period_closing_voucher.validate",
+    },
     "Purchase Invoice": {
         "onload": [
             "india_compliance.gst_india.overrides.purchase_invoice.onload",
