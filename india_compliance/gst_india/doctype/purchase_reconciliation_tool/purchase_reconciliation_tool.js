@@ -291,7 +291,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             },
             {
                 label: "DocType",
-                fieldname: "purchase_doctype",
+                fieldname: "linked_voucher_type",
                 fieldtype: "Select",
                 options: ["Purchase Invoice", "Bill of Entry"],
             },
@@ -365,7 +365,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
 
         this.filtered_data.forEach((row) => {
             if (row.inward_supply_name) inward_supplies.push(row.inward_supply_name);
-            if (row.purchase_invoice_name) purchases.push(row.purchase_invoice_name);
+            if (row.linked_doc) purchases.push(row.linked_doc);
         });
 
         return {
@@ -392,7 +392,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 };
             }
             if (row.inward_supply_name) new_row.inward_supply_count += 1;
-            if (row.purchase_invoice_name) new_row.purchase_count += 1;
+            if (row.linked_doc) new_row.purchase_count += 1;
             if (row.action != "No Action") new_row.action_taken_count += 1;
             new_row.total_docs += 1;
             new_row.tax_difference += row.tax_difference || 0;
@@ -465,7 +465,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 };
             }
             if (row.inward_supply_name) new_row.inward_supply_count += 1;
-            if (row.purchase_invoice_name) new_row.purchase_count += 1;
+            if (row.linked_doc) new_row.purchase_count += 1;
             if (row.action != "No Action") new_row.action_taken_count += 1;
             new_row.total_docs += 1;
             new_row.tax_difference += row.tax_difference || 0;
@@ -589,9 +589,9 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             },
             {
                 label: "Purchase <br>Invoice",
-                fieldname: "purchase_invoice_name",
+                fieldname: "linked_doc",
                 fieldtype: "Dynamic Link",
-                options: "purchase_doctype",
+                options: "linked_voucher_type",
                 align: "center",
                 width: 120,
             },
@@ -775,9 +775,9 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         } else if (action == "Link") {
             reconciliation.link_documents(
                 this.frm,
-                this.data.purchase_invoice_name,
+                this.data.linked_doc,
                 this.data.inward_supply_name,
-                this.data.purchase_doctype,
+                this.data.linked_voucher_type,
                 true,
             );
         } else if (action == "Create") {
@@ -1234,8 +1234,7 @@ function get_irn_indicator(value, row) {
 }
 
 function get_hash(data) {
-    if (data.purchase_invoice_name || data.inward_supply_name)
-        return data.purchase_invoice_name + "~" + data.inward_supply_name;
+    if (data.linked_doc || data.inward_supply_name) return data.linked_doc + "~" + data.inward_supply_name;
     if (data.supplier_gstin) return data.supplier_gstin;
 }
 
@@ -1332,7 +1331,7 @@ function apply_action(frm, action, selected_rows) {
 }
 
 function is_linked(row) {
-    return row.purchase_invoice_name && row.inward_supply_name;
+    return row.linked_doc && row.inward_supply_name;
 }
 
 function has_matching_row(row, array) {

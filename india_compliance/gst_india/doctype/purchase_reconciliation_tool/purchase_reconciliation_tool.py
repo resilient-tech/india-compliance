@@ -263,13 +263,13 @@ class PurchaseReconciliationTool(Document):
     @frappe.whitelist()
     def link_documents(
         self,
-        purchase_invoice_name: str | None,
+        linked_doc: str | None,
         inward_supply_name: str | None,
         link_doctype: str | None,
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        purchases, inward_supplies = _link_documents(purchase_invoice_name, inward_supply_name, link_doctype)
+        purchases, inward_supplies = _link_documents(linked_doc, inward_supply_name, link_doctype)
 
         return self.ReconciledData.get(purchases, inward_supplies)
 
@@ -294,7 +294,7 @@ class PurchaseReconciliationTool(Document):
 
         for doc in data:
             # a doc with both sides is matched, a doc with one side is not
-            is_linked = doc.get("inward_supply_name") and doc.get("purchase_invoice_name")
+            is_linked = doc.get("inward_supply_name") and doc.get("linked_doc")
 
             if action == "Ignore" and is_linked:
                 continue
@@ -305,12 +305,12 @@ class PurchaseReconciliationTool(Document):
             if inward_supply_name := doc.get("inward_supply_name"):
                 inward_supplies.append(inward_supply_name)
 
-            purchase_doctype = doc.get("purchase_doctype")
-            if purchase_doctype == "Purchase Invoice":
-                purchases.append(doc.get("purchase_invoice_name"))
+            linked_voucher_type = doc.get("linked_voucher_type")
+            if linked_voucher_type == "Purchase Invoice":
+                purchases.append(doc.get("linked_doc"))
 
-            elif purchase_doctype == "Bill of Entry":
-                boe.append(doc.get("purchase_invoice_name"))
+            elif linked_voucher_type == "Bill of Entry":
+                boe.append(doc.get("linked_doc"))
 
         if inward_supplies:
             frappe.db.set_value("GST Inward Supply", {"name": ("in", inward_supplies)}, "action", action)
@@ -363,9 +363,9 @@ class PurchaseReconciliationTool(Document):
             .where(GSTR2.bill_date[filters.from_date : filters.to_date])
         )
 
-        if filters.get("purchase_doctype") == "Purchase Invoice":
+        if filters.get("linked_voucher_type") == "Purchase Invoice":
             query = query.where(GSTR2.classification.notin(IMPORT_CATEGORY))
-        elif filters.get("purchase_doctype") == "Bill of Entry":
+        elif filters.get("linked_voucher_type") == "Bill of Entry":
             query = query.where(GSTR2.classification.isin(IMPORT_CATEGORY))
 
         if not filters.show_matched:
@@ -1324,7 +1324,7 @@ class BuildExcel:
             },
             {
                 "label": "Purchase Document Name",
-                "fieldname": "purchase_invoice_name",
+                "fieldname": "linked_doc",
                 "data_format": {
                     "horizontal": "left",
                 },

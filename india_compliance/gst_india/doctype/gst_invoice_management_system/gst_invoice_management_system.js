@@ -305,7 +305,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 };
             }
             if (row.inward_supply_name) new_row.inward_supply_count += 1;
-            if (row.purchase_invoice_name) new_row.purchase_count += 1;
+            if (row.linked_doc) new_row.purchase_count += 1;
             if (row.ims_action != "No Action") new_row.action_taken_count += 1;
             new_row.total_docs += 1;
             new_row.tax_difference += row.tax_difference || 0;
@@ -413,13 +413,13 @@ class IMS extends reconciliation.reconciliation_tabs {
                 classification: row._inward_supply.classification,
                 ims_action: row.ims_action || "",
                 match_status: row.match_status,
-                linked_doc: row.purchase_invoice_name,
+                linked_doc: row.linked_doc,
                 tax_difference: row.tax_difference,
                 taxable_value_difference: row.taxable_value_difference,
                 inward_supply_name: row.inward_supply_name,
                 pending_upload: row.pending_upload,
                 is_supplier_return_filed: row.is_supplier_return_filed,
-                linked_voucher_type: row._purchase_invoice.doctype,
+                linked_voucher_type: row.linked_voucher_type,
                 posting_date: row.posting_date,
             });
         });
@@ -855,7 +855,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         } else if (action == "Link") {
             reconciliation.link_documents(
                 this.frm,
-                this.data.purchase_invoice_name,
+                this.data.linked_doc,
                 this.data.inward_supply_name,
                 this.dialog.get_value("doctype"),
                 true,
@@ -1023,7 +1023,7 @@ function is_specified_row(row) {
 
 function needs_itc_review(row) {
     // matched specified record where books differ from supplier
-    if (!is_specified_row(row) || !row.purchase_invoice_name) return false;
+    if (!is_specified_row(row) || !row.linked_doc) return false;
     if (row._inward_supply.is_itc_reduction_blocked) return false;
 
     return TAX_HEADS.some(
