@@ -27,6 +27,8 @@ const INWARD_SECTION_MAPPING = {
     },
 };
 
+const ITC_CLAIM_PERIOD_DEFERRED = "Deferred";
+
 frappe.provide("india_compliance");
 
 window.gst_settings = frappe.boot.gst_settings;
@@ -436,26 +438,40 @@ Object.assign(india_compliance, {
     async update_itc_claim_period(frm) {
         if (frm.doc.docstatus !== 0 || !frm.doc.company_gstin || !frm.doc.posting_date) return;
 
-        if (frm.__updating_itc_claim_period) return;
-        frm.__updating_itc_claim_period = true;
+        const { name, company_gstin, posting_date } = frm.doc;
 
         await frappe.after_ajax();
 
-        const { message: valid_periods } = await frappe.call({
-            method: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
-            args: {
-                company_gstin: frm.doc.company_gstin,
-                posting_date: frm.doc.posting_date,
-            },
-        });
+        const valid_periods = await frappe
+            .call({
+                method: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
+                args: { company_gstin, posting_date },
+            })
+            .then((response) => response.message)
+            .catch(() => null);
 
-        frm.__updating_itc_claim_period = false;
+        if (
+            !valid_periods ||
+            frm.doc.name !== name ||
+            frm.doc.company_gstin !== company_gstin ||
+            frm.doc.posting_date !== posting_date
+        )
+            return;
 
         const current_period = frm.doc.itc_claim_period;
-        if (current_period && valid_periods?.includes(current_period)) return;
+        if (current_period === ITC_CLAIM_PERIOD_DEFERRED) return;
 
-        const period = valid_periods?.[1];
-        if (!period || period === current_period) return;
+        // Only replace a period that is no longer on offer (filed, or out of range).
+        if (current_period && valid_periods.includes(current_period)) return;
+
+        const claimable = valid_periods.filter(
+            (period) =>
+                period !== ITC_CLAIM_PERIOD_DEFERRED &&
+                moment(period, "MMYYYY").isSameOrAfter(posting_date, "month"),
+        );
+
+        const period = claimable.at(-1);
+        if (!period) return;
 
         await frm.set_value("itc_claim_period", period);
         frappe.show_alert(

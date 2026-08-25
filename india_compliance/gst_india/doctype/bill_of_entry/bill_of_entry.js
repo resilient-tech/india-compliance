@@ -87,7 +87,6 @@ frappe.ui.form.on("Bill of Entry", {
         ]);
 
         await frm.set_value(message);
-        await india_compliance.update_itc_claim_period(frm);
     },
 
     get_items_from_purchase_invoice(frm) {
