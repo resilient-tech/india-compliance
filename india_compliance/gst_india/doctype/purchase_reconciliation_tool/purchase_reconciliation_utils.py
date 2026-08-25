@@ -7,11 +7,11 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
 from india_compliance.gst_india.utils.itc_claim import set_itc_claim_period_on_match
 
 
-def link_documents(linked_doc, inward_supply_name, link_doctype):
+def link_documents(purchase_invoice_name, inward_supply_name, link_doctype):
     purchases = []
     inward_supplies = []
 
-    if not linked_doc or not inward_supply_name or not link_doctype:
+    if not purchase_invoice_name or not inward_supply_name or not link_doctype:
         return purchases, inward_supplies
 
     # silently handle existing links
@@ -22,7 +22,7 @@ def link_documents(linked_doc, inward_supply_name, link_doctype):
 
     link_doc = {
         "link_doctype": link_doctype,
-        "link_name": linked_doc,
+        "link_name": purchase_invoice_name,
     }
     if pur_linked_with := frappe.db.get_all("GST Inward Supply", link_doc, pluck="name"):
         _unlink_documents(pur_linked_with)
@@ -32,15 +32,15 @@ def link_documents(linked_doc, inward_supply_name, link_doctype):
 
     # link documents
     frappe.db.set_value("GST Inward Supply", inward_supply_name, link_doc)
-    set_reconciliation_status(link_doctype, (linked_doc,), "Match Found")
+    set_reconciliation_status(link_doctype, (purchase_invoice_name,), "Match Found")
 
     set_itc_claim_period_on_match(
-        [linked_doc],
-        {inward_supply_name: linked_doc},
+        [purchase_invoice_name],
+        {inward_supply_name: purchase_invoice_name},
         doctype=link_doctype,
     )
 
-    purchases.append(linked_doc)
+    purchases.append(purchase_invoice_name)
     inward_supplies.append(inward_supply_name)
 
     return purchases, inward_supplies
@@ -55,17 +55,17 @@ def unlink_documents(data, exclude_from_reconciliation=False):
 
     for row in data:
         # nothing to unlink where a side is missing
-        if not (row.get("inward_supply_name") and row.get("linked_doc")):
+        if not (row.get("inward_supply_name") and row.get("purchase_invoice_name")):
             continue
 
         inward_supplies.add(row.get("inward_supply_name"))
 
-        linked_voucher_type = row.get("linked_voucher_type")
-        if linked_voucher_type == "Purchase Invoice":
-            purchases.add(row.get("linked_doc"))
+        purchase_doctype = row.get("purchase_doctype")
+        if purchase_doctype == "Purchase Invoice":
+            purchases.add(row.get("purchase_invoice_name"))
 
-        elif linked_voucher_type == "Bill of Entry":
-            boe.add(row.get("linked_doc"))
+        elif purchase_doctype == "Bill of Entry":
+            boe.add(row.get("purchase_invoice_name"))
 
     set_reconciliation_status("Purchase Invoice", purchases, "Unreconciled")
     set_reconciliation_status("Bill of Entry", boe, "Unreconciled")
