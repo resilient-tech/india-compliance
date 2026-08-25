@@ -787,13 +787,13 @@ class Reconciler(BaseReconciliation):
         """
 
         matching_purchases = {}
-        inward_supply_map = {}  # Maps inward_supply_name -> linked_doc
+        inward_supply_map = {}  # Maps inward_supply_name -> purchase_invoice_name
 
         for supplier_gstin in purchases:
             if not inward_supplies.get(supplier_gstin):
                 continue
 
-            for linked_doc, purchase in purchases[supplier_gstin].copy().items():
+            for purchase_invoice_name, purchase in purchases[supplier_gstin].copy().items():
                 for inward_supply_name, inward_supply in inward_supplies[supplier_gstin].copy().items():
                     # no bill no in this rule, so lean on the dates instead
                     if (
@@ -819,7 +819,7 @@ class Reconciler(BaseReconciliation):
                         inward_supply_map[inward_supply.name] = purchase.name
 
                     # Remove from current data to ensure matching is done only once.
-                    purchases[supplier_gstin].pop(linked_doc)
+                    purchases[supplier_gstin].pop(purchase_invoice_name)
                     inward_supplies[supplier_gstin].pop(inward_supply_name)
                     break
 
@@ -895,12 +895,12 @@ class Reconciler(BaseReconciliation):
 
         return abs(purchase.get(field, 0) - inward_supply.get(field, 0))
 
-    def update_matching_doc(self, match_status, linked_doc, inward_supply_name, link_doctype):
+    def update_matching_doc(self, match_status, purchase_invoice_name, inward_supply_name, link_doctype):
         """Update matching doc for records."""
         inward_supply_fields = {
             "match_status": match_status,
             "link_doctype": link_doctype,
-            "link_name": linked_doc,
+            "link_name": purchase_invoice_name,
         }
 
         frappe.db.set_value("GST Inward Supply", inward_supply_name, inward_supply_fields)
@@ -1115,7 +1115,7 @@ class ReconciledData(BaseReconciliation):
             "bill_no": "",
             "bill_date": "",
             "match_status": "",
-            "linked_doc": "",
+            "purchase_invoice_name": "",
             "inward_supply_name": "",
             "taxable_value_difference": "",
             "tax_difference": "",
@@ -1172,8 +1172,8 @@ class ReconciledData(BaseReconciliation):
                 "supplier_gstin": data.supplier_gstin or data.supplier_name,
                 "purchase_company_gstin": purchase.get("company_gstin") or "",
                 "inward_supply_company_gstin": inward_supply.get("company_gstin") or "",
-                "linked_voucher_type": purchase.get("doctype"),
-                "linked_doc": purchase.get("name"),
+                "purchase_doctype": purchase.get("doctype"),
+                "purchase_invoice_name": purchase.get("name"),
                 "inward_supply_name": inward_supply.get("name"),
                 "match_status": inward_supply.get("match_status"),
                 "action": inward_supply.get("action"),
