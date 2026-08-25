@@ -475,7 +475,7 @@ class TestGSTInvoiceManagementSystem(FrappeTestCase):
 
         self.assertEqual(result.inward_supply_name, gst_is.name)
         self.assertEqual(result.match_status, "Only in 2A/2B")
-        self.assertIsNone(result.linked_doc)
+        self.assertIsNone(result.purchase_invoice_name)
 
     def test_get_invoice_details_with_none_inward_supply_name(self):
         """
@@ -512,14 +512,14 @@ class TestGSTInvoiceManagementSystem(FrappeTestCase):
             inward_supply_name=None,
         )
 
-        self.assertEqual(result.linked_doc, pinv.name)
+        self.assertEqual(result.purchase_invoice_name, pinv.name)
         self.assertEqual(result.match_status, "Only in Books")
         self.assertIsNone(result.inward_supply_name)
 
-    def test_link_documents_with_none_linked_doc(self):
+    def test_link_documents_with_none_purchase_invoice_name(self):
         """
         Regression test: link_documents should be a no-op when
-        linked_doc is None.
+        purchase_invoice_name is None.
         """
         gst_is = create_gst_inward_supply(
             bill_no="IMS-GID-003",
@@ -540,7 +540,7 @@ class TestGSTInvoiceManagementSystem(FrappeTestCase):
         )
 
         result = gst_ims.link_documents(
-            linked_doc=None,
+            purchase_invoice_name=None,
             inward_supply_name=gst_is.name,
             link_doctype="Purchase Invoice",
         )
@@ -587,7 +587,7 @@ class TestGSTInvoiceManagementSystem(FrappeTestCase):
         )
 
         result = gst_ims.link_documents(
-            linked_doc=pinv.name,
+            purchase_invoice_name=pinv.name,
             inward_supply_name=gst_is.name,
             link_doctype=None,
         )
@@ -630,7 +630,7 @@ class TestGSTInvoiceManagementSystem(FrappeTestCase):
         )
 
         gst_ims.link_documents(
-            linked_doc=pinv.name,
+            purchase_invoice_name=pinv.name,
             inward_supply_name=gst_is.name,
             link_doctype="Purchase Invoice",
         )
@@ -639,9 +639,9 @@ class TestGSTInvoiceManagementSystem(FrappeTestCase):
         gst_ims.unlink_documents(
             [
                 {
-                    "linked_doc": pinv.name,
+                    "purchase_invoice_name": pinv.name,
                     "inward_supply_name": gst_is.name,
-                    "linked_voucher_type": "Purchase Invoice",
+                    "purchase_doctype": "Purchase Invoice",
                 }
             ]
         )

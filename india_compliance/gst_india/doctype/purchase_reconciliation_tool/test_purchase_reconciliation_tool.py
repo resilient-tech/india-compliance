@@ -104,7 +104,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         for row in reconciled_data:
             self.assertDictEqual(
                 row,
-                self.reconciled_data.get((row.linked_doc, row.inward_supply_name)) or {},
+                self.reconciled_data.get((row.purchase_invoice_name, row.inward_supply_name)) or {},
             )
 
     @classmethod
@@ -129,7 +129,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
 
                 _reconciled_data = value.get("RECONCILED_DATA")
 
-                _reconciled_data["linked_doc"] = pi.get("name")
+                _reconciled_data["purchase_invoice_name"] = pi.get("name")
                 _reconciled_data["inward_supply_name"] = gst_is.get("name")
 
                 cls.reconciled_data[(pi.get("name"), gst_is.get("name"))] = _reconciled_data
@@ -183,12 +183,12 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
                 "gst_return": "GSTR 2B",
             }
         )
-        rows = [row for row in tool.reconcile_and_generate_data() if row.linked_doc == boe.name]
+        rows = [row for row in tool.reconcile_and_generate_data() if row.purchase_invoice_name == boe.name]
 
         self.assertEqual(len(rows), 1, "a Bill of Entry must reconcile as exactly one row")
         row = rows[0]
 
-        self.assertEqual(row.linked_voucher_type, "Bill of Entry")
+        self.assertEqual(row.purchase_doctype, "Bill of Entry")
         self.assertEqual(row.supplier_name, invoices[0].supplier_name)
         self.assertEqual(row.bill_no, boe.bill_of_entry_no)
         self.assertEqual(row.classification, "IMPG")
@@ -420,7 +420,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
             inward_supply_name=None,
         )
 
-        self.assertEqual(result.linked_doc, pinv.name)
+        self.assertEqual(result.purchase_invoice_name, pinv.name)
         self.assertEqual(result.match_status, "Only in Books")
         self.assertIsNone(result.inward_supply_name)
 
@@ -453,7 +453,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
 
         self.assertEqual(result.inward_supply_name, gst_is.name)
         self.assertEqual(result.match_status, "Only in 2A/2B")
-        self.assertIsNone(result.linked_doc)
+        self.assertIsNone(result.purchase_invoice_name)
         self.assertEqual(result._inward_supply.doc_type, "Invoice")
 
     def test_link_documents_with_none_inward_supply_name(self):
@@ -478,15 +478,15 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         )
         prt.reconcile_and_generate_data()
         result = prt.link_documents(
-            linked_doc=pinv.name,
+            purchase_invoice_name=pinv.name,
             inward_supply_name=None,
             link_doctype="Purchase Invoice",
         )
         self.assertIsInstance(result, list)
 
-    def test_link_documents_with_none_linked_doc(self):
+    def test_link_documents_with_none_purchase_invoice_name(self):
         """
-        link_documents with linked_doc=None must not raise FrappeTypeError.
+        link_documents with purchase_invoice_name=None must not raise FrappeTypeError.
         """
         gst_is = create_gst_inward_supply(
             bill_no="GID-004",
@@ -506,7 +506,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         )
         prt.reconcile_and_generate_data()
         result = prt.link_documents(
-            linked_doc=None,
+            purchase_invoice_name=None,
             inward_supply_name=gst_is.name,
             link_doctype="Purchase Invoice",
         )
@@ -539,7 +539,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         )
         prt.reconcile_and_generate_data()
         result = prt.link_documents(
-            linked_doc=pinv.name,
+            purchase_invoice_name=pinv.name,
             inward_supply_name=gst_is.name,
             link_doctype=None,
         )
@@ -576,15 +576,15 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         result = prt.unlink_documents(
             [
                 {
-                    "linked_doc": pinv.name,
+                    "purchase_invoice_name": pinv.name,
                     "inward_supply_name": gst_is.name,
-                    "linked_voucher_type": "Purchase Invoice",
+                    "purchase_doctype": "Purchase Invoice",
                 },
                 # nothing to unlink, must be skipped
                 {
-                    "linked_doc": "",
+                    "purchase_invoice_name": "",
                     "inward_supply_name": gst_is.name,
-                    "linked_voucher_type": "Purchase Invoice",
+                    "purchase_doctype": "Purchase Invoice",
                 },
             ]
         )
@@ -596,7 +596,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         )
 
         # both sides come back so the list can be refreshed
-        names = {row.linked_doc for row in result} | {row.inward_supply_name for row in result}
+        names = {row.purchase_invoice_name for row in result} | {row.inward_supply_name for row in result}
         self.assertIn(pinv.name, names)
         self.assertIn(gst_is.name, names)
 
