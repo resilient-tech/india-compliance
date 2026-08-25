@@ -276,7 +276,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
 
     async get_invoice_details() {
         const { message } = await this.frm._call("get_invoice_details", {
-            purchase_name: this.row.purchase_invoice_name,
+            purchase_name: this.row.linked_doc,
             inward_supply_name: this.row.inward_supply_name,
         });
 
@@ -405,7 +405,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
             from_date: date_range[0],
             to_date: date_range[1],
             show_matched: this.dialog.get_value("show_matched"),
-            purchase_doctype: this.data.purchase_doctype,
+            linked_voucher_type: this.data.linked_voucher_type,
         };
 
         const { message } = await this.frm._call("get_link_options", {
@@ -470,7 +470,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         if (field.value) this.toggle_link_btn(false);
 
         if (this.missing_doctype == "GST Inward Supply") this.row.inward_supply_name = field.value;
-        else this.row.purchase_invoice_name = field.value;
+        else this.row.linked_doc = field.value;
 
         await this.get_invoice_details();
         this.process_data();
@@ -502,7 +502,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
             },
         ];
 
-        if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) cards = [];
+        if (!this.row.linked_doc || !this.row.inward_supply_name) cards = [];
 
         new india_compliance.NumberCardManager({
             $wrapper: this.dialog.fields_dict.diff_cards.$wrapper,
@@ -523,7 +523,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     }
 
     _mark_differences(wrapper) {
-        if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
+        if (!this.row.linked_doc || !this.row.inward_supply_name) return;
 
         // template marks the rows worth comparing
         wrapper.find("[data-compare]").each((_index, row) => {
