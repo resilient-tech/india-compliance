@@ -24,6 +24,7 @@ from india_compliance.gst_india.utils import (
     get_validated_country_code,
     is_api_enabled,
     is_foreign_doc,
+    update_dashboard_with_gst_logs,
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (
@@ -290,33 +291,6 @@ def get_dashboard_data(data):
     )
 
 
-def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
-    if not is_api_enabled():
-        return data
-
-    data.setdefault("non_standard_fieldnames", {}).update(
-        {
-            "e-Waybill Log": "reference_name",
-            "Integration Request": "reference_docname",
-            "GST Inward Supply": "link_name",
-            "e-Invoice Log": "reference_name",
-        }
-    )
-
-    data.setdefault("dynamic_links", {}).update(
-        reference_docname=[doctype, "reference_doctype"],
-        reference_name=[doctype, "reference_doctype"],
-    )
-
-    transactions = data.setdefault("transactions", [])
-
-    # GST Logs section looks best at the 3rd position
-    # If there are less than 2 transactions, insert will be equivalent to append
-    transactions.insert(2, {"label": _("GST Logs"), "items": log_doctypes})
-
-    return data
-
-
 def set_e_waybill_status(doc, gst_settings=None):
     if doc.docstatus != 1 or doc.e_waybill_status:
         return
@@ -355,10 +329,16 @@ def set_and_validate_advances_with_gst(doc):
         allocated_amount_with_taxes += _tax_amount
         allocated_amount_with_taxes += advance.allocated_amount
 
-    excess_allocation = flt(
-        flt(allocated_amount_with_taxes, 2) - (doc.base_rounded_total or doc.base_grand_total),
-        2,
-    )
+    # allocated_amount is in the party account currency, which is not always the invoice
+    # currency (a USD invoice can be booked to an INR receivable), so the ceiling follows
+    # the receivable. Same branch as erpnext's set_advances.
+    if doc.get("party_account_currency") == doc.company_currency:
+        total = doc.get("base_rounded_total") or doc.base_grand_total
+    else:
+        total = doc.get("rounded_total") or doc.grand_total
+
+    precision = doc.precision("grand_total")
+    excess_allocation = flt(flt(allocated_amount_with_taxes, precision) - total, precision)
     if excess_allocation > 0:
         message = _(
             "Allocated amount with taxes (GST) in advances table cannot be greater than"

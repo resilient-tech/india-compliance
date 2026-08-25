@@ -175,12 +175,12 @@ class GSTR3BOutwardInvoices(GSTR3BCategoryConditions):
             ),
             (
                 "get_11B_query",
-                (
-                    advance_data.pe.name.as_("invoice_no"),
-                    advance_data.pe.party.as_("customer_name"),
-                    advance_data.pe.posting_date,
-                    advance_data.pe.company_gstin,
-                    advance_data.pe_ref.reference_name.as_("return_against"),
+                advance_data.get_11B_payment_entry_fields(
+                    name="invoice_no",
+                    party="customer_name",
+                    posting_date="posting_date",
+                    company_gstin="company_gstin",
+                    reference_name="return_against",
                 ),
                 -1,
             ),

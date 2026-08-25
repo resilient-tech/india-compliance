@@ -1,11 +1,11 @@
 # Just for reference
 # DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
 
-from frappe.utils import getdate
-
-# Date from which NIC requires shipToGSTIN/shipToTradeName in production
-# (already live in sandbox)
-E_WAYBILL_CHANGES_APPLICABLE_DATE = getdate("2026-08-01")
+SANDBOX_SHIP_TO = {
+    "gstin": "02AMBPG7773M002",
+    "state_number": "02",
+    "pincode": 171302,
+}
 
 selling_address = {
     "bill_from": "company_address",
@@ -34,6 +34,7 @@ ADDRESS_FIELDS = {
     "Delivery Note": selling_address,
     "Purchase Receipt": buying_address,
     "Stock Entry": stock_entry_address,
+    "Asset Movement": stock_entry_address,
     "Subcontracting Receipt": buying_address,
 }
 

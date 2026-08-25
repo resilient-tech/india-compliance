@@ -414,6 +414,15 @@ Object.assign(india_compliance, {
         };
     },
 
+    set_hsn_code_autocomplete(frm, table_fieldname = "items") {
+        const grid = frm.fields_dict[table_fieldname].grid;
+        frm.set_query("gst_hsn_code", table_fieldname, () => ({
+            query: "india_compliance.gst_india.utils.get_hsn_code_list",
+        }));
+
+        frappe.meta.get_docfield(grid.doctype, "gst_hsn_code").ignore_validation = 1;
+    },
+
     setup_itc_claim_period_query(frm) {
         frm.set_query("itc_claim_period", () => ({
             query: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
@@ -495,12 +504,14 @@ Object.assign(india_compliance, {
         // returns a list of error messages if invoice number is invalid
         let message_list = [];
         if (invoice_number.length > 16) {
-            message_list.push("Transaction Name must be 16 characters or fewer to meet GST requirements");
+            message_list.push(__("Transaction Name must be 16 characters or fewer to meet GST requirements"));
         }
 
         if (!GST_INVOICE_NUMBER_FORMAT.test(invoice_number)) {
             message_list.push(
-                "Transaction Name should start with an alphanumeric character and can only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements.",
+                __(
+                    "Transaction Name should start with an alphanumeric character and can only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements.",
+                ),
             );
         }
 
@@ -621,37 +632,17 @@ Object.assign(india_compliance, {
             .addClass("text-danger");
     },
 
-    show_dismissable_alert(wrapper, message, alert_type = "primary", on_close = null) {
-        const alert = $(`
-            <div class="container">
-            <div
-                class="alert alert-${alert_type} alert-dismissable fade show d-flex justify-content-between border-0"
-                role="alert"
-            >
-                <div>${message}</div>
-                <button
-                    type="button"
-                    class="close"
-                    data-dismiss="alert"
-                    aria-label="Close"
-                    style="outline: 0px solid black !important"
-                >
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            </div>
-        `).prependTo(wrapper);
-
-        alert.on("closed.bs.alert", () => {
-            if (on_close) on_close();
-        });
-
+    // same banner every other form uses. returns it, to wire links inside
+    show_doc_alert(frm, message, color = "blue", on_close = null) {
+        const alert = frm.dashboard.set_headline(`<div>${message}</div>`, color, !on_close);
+        if (on_close) alert.find(".close-message").on("click", on_close);
         return alert;
     },
 
     is_e_waybill_applicable_for_subcontracting(doc) {
         if (
             !(
+                india_compliance.is_indian_registered_company(doc.company) &&
                 gst_settings.enable_api &&
                 gst_settings.enable_e_waybill &&
                 gst_settings.enable_e_waybill_for_sc
@@ -673,6 +664,43 @@ Object.assign(india_compliance, {
         if (!company) return false;
 
         return frappe.boot.indian_registered_companies?.includes(company);
+    },
+
+    is_e_waybill_applicable_for_asset_movement(doc) {
+        return !!(
+            india_compliance.is_indian_registered_company(doc.company) &&
+            gst_settings.enable_api &&
+            gst_settings.enable_e_waybill &&
+            gst_settings.enable_e_waybill_from_asset_movement
+        );
+    },
+
+    set_address_display_events(doctype) {
+        // Used by Stock Entry and Asset Movement
+        const event_fields = ["bill_from_address", "bill_to_address", "ship_from_address", "ship_to_address"];
+
+        const events = Object.fromEntries(
+            event_fields.map((field) => [
+                field,
+                (frm) => {
+                    erpnext.utils.get_address_display(frm, field, `${field}_display`, false);
+                },
+            ]),
+        );
+
+        frappe.ui.form.on(doctype, events);
+    },
+
+    get_items_fieldname(doctype) {
+        if (doctype == "Asset Movement") {
+            return "assets";
+        }
+
+        return "items";
+    },
+
+    get_items(doc) {
+        return doc[this.get_items_fieldname(doc.doctype)] || [];
     },
 
     get_inward_subcategory_options(sub_section) {

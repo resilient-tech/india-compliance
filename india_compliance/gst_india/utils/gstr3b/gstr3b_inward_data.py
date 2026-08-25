@@ -6,7 +6,7 @@ from frappe.query_builder.functions import IfNull, Sum
 from india_compliance.gst_india.constants import GST_TAX_TYPES, SERVICE_HSN_PREFIX
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.utils import get_full_gst_uom
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
+from india_compliance.gst_india.utils.gstr_1 import SubCategory
 from india_compliance.gst_india.utils.itc_claim import (
     apply_period_filter as _apply_itc_period_filter,
 )
@@ -147,11 +147,11 @@ class GSTR3BCategoryConditions:
     def is_itc_available(self, invoice):
         return invoice.ineligibility_reason != "ITC restricted due to PoS rules"
 
-    def is_itc_reversed(self, invoice):
-        return invoice.ineligibility_reason == "Ineligible As Per Section 17(5)"
-
     def is_ineligible_itc(self, invoice):
         return invoice.ineligibility_reason == "ITC restricted due to PoS rules"
+
+    def is_itc_reversed(self, invoice):
+        return invoice.is_ineligible_for_itc and not self.is_ineligible_itc(invoice)
 
     def is_itc_available_for_boe(self, invoice):
         return True
@@ -228,6 +228,7 @@ class GSTR3BInwardQuery:
                 self.PI.company_gstin,
                 IfNull(self.PI.supplier_gstin, "").as_("supplier_gstin"),
                 self.PI.is_reverse_charge,
+                self.PI_ITEM.is_ineligible_for_itc,
                 self.PI_ITEM.item_code,
                 IfNull(self.PI_ITEM.gst_treatment, "").as_("gst_treatment"),
                 self.PI_ITEM.gst_hsn_code,
@@ -430,7 +431,7 @@ class GSTR3BInwardInvoices(GSTR3BInwardQuery, GSTR3BSubcategory):
                 self.set_invoice_category(invoice, conditions)
                 self.set_invoice_sub_category(invoice, conditions)
 
-            invoice.hsn_sub_category = GSTR1_SubCategory.HSN.value
+            invoice.hsn_sub_category = SubCategory.HSN.value
 
             self.update_tax_values(invoice)
 

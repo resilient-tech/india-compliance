@@ -27,6 +27,8 @@ def execute():
         make_default_customs_accounts(company)
         make_default_gst_expense_accounts(company)
 
+        frappe.db.commit()  # nosemgrep — reset transaction_writes between companies
+
 
 def update_root_for_rcm(company):
     # Root type for RCM had been updated to "Liability".
