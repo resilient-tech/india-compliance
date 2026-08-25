@@ -595,6 +595,59 @@ class TestGSTInvoiceManagementSystem(FrappeTestCase):
         self.assertIsNone(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
         self.assertTrue(any(row.inward_supply_name == gst_is.name for row in result))
 
+    def test_unlink_documents(self):
+        pinv = create_purchase_invoice(
+            bill_no="IMS-GID-005",
+            bill_date="2024-12-12",
+            posting_date="2024-12-12",
+            supplier="_Test Registered Supplier",
+            supplier_gstin="24AABCR6898M1ZN",
+            company="_Test Indian Registered Company",
+            company_gstin="24AAQCA8719H1ZC",
+            items=[
+                {
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1,
+                }
+            ],
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="IMS-GID-005",
+            bill_date="2024-12-12",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-12",
+            previous_ims_action="No Action",
+            ims_action="No Action",
+        )
+
+        gst_ims = frappe.get_doc(
+            {
+                "doctype": "GST Invoice Management System",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "return_period": "122024",
+            }
+        )
+
+        gst_ims.link_documents(
+            purchase_invoice_name=pinv.name,
+            inward_supply_name=gst_is.name,
+            link_doctype="Purchase Invoice",
+        )
+        self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+
+        gst_ims.unlink_documents(
+            [
+                {
+                    "purchase_invoice_name": pinv.name,
+                    "inward_supply_name": gst_is.name,
+                    "purchase_doctype": "Purchase Invoice",
+                }
+            ]
+        )
+
+        self.assertFalse(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
+
     def get_periods(self):
         periods = []
         date = add_to_date(None, months=-1)

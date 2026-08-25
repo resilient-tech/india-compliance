@@ -361,11 +361,11 @@ class IMS extends reconciliation.reconciliation_tabs {
             },
             {
                 label: "Linked Voucher",
-                fieldname: "linked_doc",
+                fieldname: "purchase_invoice_name",
                 align: "center",
                 width: 150,
                 fieldtype: "Dynamic Link",
-                options: "linked_voucher_type",
+                options: "purchase_doctype",
             },
             {
                 label: "Posting Date",
@@ -413,13 +413,13 @@ class IMS extends reconciliation.reconciliation_tabs {
                 classification: row._inward_supply.classification,
                 ims_action: row.ims_action || "",
                 match_status: row.match_status,
-                linked_doc: row.purchase_invoice_name,
+                purchase_invoice_name: row.purchase_invoice_name,
                 tax_difference: row.tax_difference,
                 taxable_value_difference: row.taxable_value_difference,
                 inward_supply_name: row.inward_supply_name,
                 pending_upload: row.pending_upload,
                 is_supplier_return_filed: row.is_supplier_return_filed,
-                linked_voucher_type: row._purchase_invoice.doctype,
+                purchase_doctype: row._purchase_invoice.doctype,
                 posting_date: row.posting_date,
             });
         });
