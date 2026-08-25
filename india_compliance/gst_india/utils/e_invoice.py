@@ -38,6 +38,7 @@ from india_compliance.gst_india.constants.e_invoice import (
     CANCEL_REASON_CODES,
     ITEM_LIMIT,
 )
+from india_compliance.gst_india.constants.e_waybill import SANDBOX_SHIP_TO
 from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
     get_e_invoice_applicability_date,
 )
@@ -48,6 +49,7 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     is_foreign_doc,
     is_overseas_doc,
+    is_ship_to_gstin_applicable,
     load_doc,
     parse_datetime,
     send_updated_doc,
@@ -801,6 +803,14 @@ class EInvoiceData(GSTTransactionData):
         if ship_to_address and self.doc.customer_address != ship_to_address:
             self.shipping_address = self.get_address_details(ship_to_address)
 
+            # Ship To GSTIN can't be the same as Buyer GSTIN, once it's mandatory.
+            if (
+                is_ship_to_gstin_applicable(self.settings)
+                and self.shipping_address.gstin != "URP"
+                and self.shipping_address.gstin == self.billing_address.gstin
+            ):
+                self.shipping_address = None
+
         if self.doc.dispatch_address_name and self.doc.company_address != self.doc.dispatch_address_name:
             self.dispatch_address = self.get_address_details(self.doc.dispatch_address_name)
 
@@ -830,8 +840,10 @@ class EInvoiceData(GSTTransactionData):
                     "pincode": 500055,
                 }
                 self.billing_address.update(buyer)
-                if self.shipping_address:
-                    self.shipping_address.update(buyer)
+
+                # consignee is a different party here, so it needs a GSTIN of its own
+                if self.shipping_address and self.shipping_address.gstin != "URP":
+                    self.shipping_address.update(SANDBOX_SHIP_TO)
 
                 if self.transaction_details.total_igst_amount > 0:
                     self.transaction_details.pos_state_code = "36"

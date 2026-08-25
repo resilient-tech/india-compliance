@@ -4,7 +4,7 @@ import frappe
 from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 
-from india_compliance.gst_india.utils import get_data_file_path
+from india_compliance.gst_india.utils import get_data_file_path, merge_dicts
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
@@ -89,6 +89,67 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 "diffprcnt": "1",
                 "original_bill_no": "S008400",
                 "original_bill_date": date(2016, 11, 24),
+                "doc_type": "Invoice",
+                "taxable_value": 12200,
+                "igst": 183,
+                "cgst": 0,
+                "sgst": 0,
+                "cess": 0,
+                "is_downloaded_from_2b": 1,
+                "is_supplier_return_filed": 1,
+            },
+            doc,
+        )
+
+    def test_gstr2b_ecom(self):
+        doc = self.get_doc(GSTRCategory.ECOM)
+        self.assertDocumentEqual(
+            {
+                "supplier_gstin": "07USERR0205A1ZS",
+                "supplier_name": "GSTN",
+                "gstr_1_filing_date": date(2023, 8, 26),
+                "sup_return_period": "052023",
+                "bill_no": "E123",
+                "supply_type": "Regular",
+                "bill_date": date(2023, 5, 1),
+                "document_value": 234324234,
+                "place_of_supply": "23-Madhya Pradesh",
+                "is_reverse_charge": 0,
+                "itc_availability": "Yes",
+                "diffprcnt": "1",
+                "irn_source": "e-Invoice",
+                "irn_number": ("897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"),
+                "irn_gen_date": date(2019, 12, 24),
+                "doc_type": "Invoice",
+                "taxable_value": 12200,
+                "igst": 183,
+                "cgst": 0,
+                "sgst": 0,
+                "cess": 0,
+                "is_downloaded_from_2b": 1,
+                "is_supplier_return_filed": 1,
+            },
+            doc,
+        )
+
+    def test_gstr2b_ecoma(self):
+        doc = self.get_doc(GSTRCategory.ECOMA)
+        self.assertDocumentEqual(
+            {
+                "supplier_gstin": "07USERR0205A1ZS",
+                "supplier_name": "GSTN",
+                "gstr_1_filing_date": date(2023, 8, 26),
+                "sup_return_period": "052023",
+                "bill_no": "E123",
+                "supply_type": "Regular",
+                "bill_date": date(2023, 5, 1),
+                "document_value": 234324234,
+                "place_of_supply": "23-Madhya Pradesh",
+                "is_reverse_charge": 0,
+                "itc_availability": "Yes",
+                "diffprcnt": "1",
+                "original_bill_no": None,
+                "original_bill_date": None,
                 "doc_type": "Invoice",
                 "taxable_value": 12200,
                 "igst": 183,
@@ -290,3 +351,16 @@ class TestGetUniqueKey(IntegrationTestCase):
     def test_normal_gstin(self):
         t = frappe._dict(supplier_gstin="01AABCE2207R1Z5", bill_no="INV-1")
         self.assertEqual(get_unique_key(t), "01AABCE2207R1Z5-INV-1")
+
+
+class TestMultiFileRawMerge(IntegrationTestCase):
+    def test_docs_concat_summary_not_doubled(self):
+        combined = {}
+        file1 = {"itcsumm": {"itcavl": 100}, "docdata": {"b2b": [{"inum": "1"}]}}
+        file2 = {"itcsumm": {"itcavl": 150}, "docdata": {"b2b": [{"inum": "2"}], "cdnr": [{"nt": "9"}]}}
+        merge_dicts(combined, file1)
+        merge_dicts(combined, file2)
+
+        self.assertEqual(combined["docdata"]["b2b"], [{"inum": "1"}, {"inum": "2"}])
+        self.assertEqual(combined["docdata"]["cdnr"], [{"nt": "9"}])
+        self.assertEqual(combined["itcsumm"]["itcavl"], 150)

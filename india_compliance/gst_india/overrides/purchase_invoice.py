@@ -8,13 +8,10 @@ from india_compliance.gst_india.constants import (
     IMPORT_GST_CATEGORIES,
     VALID_HSN_LENGTHS,
 )
-from india_compliance.gst_india.overrides.sales_invoice import (
-    update_dashboard_with_gst_logs,
-)
 from india_compliance.gst_india.overrides.transaction import (
     _validate_hsn_codes,
     ignore_gst_validations,
-    sync_address_dependent_fields_on_submit,
+    sync_address_dependent_fields_after_submit,
     validate_transaction,
 )
 from india_compliance.gst_india.utils import (
@@ -22,6 +19,7 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     is_import_of_goods,
     is_import_of_services,
+    update_dashboard_with_gst_logs,
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
@@ -81,7 +79,7 @@ def validate(doc, method=None):
 
 
 def before_update_after_submit(doc, method=None):
-    sync_address_dependent_fields_on_submit(doc)
+    sync_address_dependent_fields_after_submit(doc)
 
     if ignore_gst_validations(doc):
         return

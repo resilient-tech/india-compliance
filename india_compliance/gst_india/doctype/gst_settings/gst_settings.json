@@ -30,6 +30,7 @@
   "enable_e_waybill_from_pi",
   "enable_e_waybill_from_pr",
   "enable_e_waybill_for_sc",
+  "enable_e_waybill_from_asset_movement",
   "fetch_e_waybill_data",
   "attach_e_waybill_print",
   "column_break_10",
@@ -74,18 +75,6 @@
   "enable_auto_reconciliation",
   "inward_supply_period",
   "column_break_zlfe",
-  "gst_categories_section",
-  "reconcile_for_b2b",
-  "reconcile_for_b2ba",
-  "column_break_notc",
-  "reconcile_for_cdnr",
-  "reconcile_for_cdnra",
-  "column_break_jpws",
-  "reconcile_for_isd",
-  "reconcile_for_isda",
-  "column_break_brkt",
-  "reconcile_for_impg",
-  "reconcile_for_impgsez",
   "auto_reconciliation_days_section",
   "reconcile_on_monday",
   "reconcile_on_friday",
@@ -457,24 +446,6 @@
    "label": "Inward Supply Period in months"
   },
   {
-   "depends_on": "eval: doc.enable_auto_reconciliation",
-   "fieldname": "gst_categories_section",
-   "fieldtype": "Section Break",
-   "label": "GST Categories"
-  },
-  {
-   "fieldname": "column_break_brkt",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "column_break_notc",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "column_break_jpws",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "column_break_koqs",
    "fieldtype": "Column Break"
   },
@@ -523,54 +494,6 @@
    "fieldname": "reconcile_on_thursday",
    "fieldtype": "Check",
    "label": "Thursday"
-  },
-  {
-   "default": "1",
-   "fieldname": "reconcile_for_b2b",
-   "fieldtype": "Check",
-   "label": "B2B"
-  },
-  {
-   "default": "0",
-   "fieldname": "reconcile_for_b2ba",
-   "fieldtype": "Check",
-   "label": "B2BA"
-  },
-  {
-   "default": "1",
-   "fieldname": "reconcile_for_cdnr",
-   "fieldtype": "Check",
-   "label": "CDNR"
-  },
-  {
-   "default": "0",
-   "fieldname": "reconcile_for_cdnra",
-   "fieldtype": "Check",
-   "label": "CDNRA"
-  },
-  {
-   "default": "0",
-   "fieldname": "reconcile_for_isd",
-   "fieldtype": "Check",
-   "label": "ISD"
-  },
-  {
-   "default": "0",
-   "fieldname": "reconcile_for_isda",
-   "fieldtype": "Check",
-   "label": "ISDA"
-  },
-  {
-   "default": "0",
-   "fieldname": "reconcile_for_impg",
-   "fieldtype": "Check",
-   "label": "IMPG"
-  },
-  {
-   "default": "0",
-   "fieldname": "reconcile_for_impgsez",
-   "fieldtype": "Check",
-   "label": "IMPGSEZ"
   },
   {
    "default": "0",
@@ -623,6 +546,13 @@
    "fieldname": "enable_e_waybill_for_sc",
    "fieldtype": "Check",
    "label": "Enable e-Waybill Generation for Subcontracting and Material Transfer"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_e_waybill",
+   "fieldname": "enable_e_waybill_from_asset_movement",
+   "fieldtype": "Check",
+   "label": "Enable e-Waybill Generation from Asset Movement"
   },
   {
    "default": "1",

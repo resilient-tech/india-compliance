@@ -302,16 +302,16 @@ def update_gst_treatment_for_zero_rated(table, query, doctype):
 
     doc = frappe.qb.DocType(doctype)
 
-    (
-        query.join(doc)
-        .on(doc.name == table.parent)
-        .set(table.gst_treatment, "Zero-Rated")
+    zero_rated_docs = (
+        frappe.qb.from_(doc)
+        .select(doc.name)
         .where(
             (doc.gst_category == "SEZ")
             | ((doc.gst_category == "Overseas") & (doc.place_of_supply == "96-Other Countries"))
         )
-        .run()
     )
+
+    (query.set(table.gst_treatment, "Zero-Rated").where(table.parent.isin(zero_rated_docs)).run())
 
 
 def update_gst_details_for_transactions(companies):
@@ -351,7 +351,7 @@ def _update_gst_details(company, doctype, is_sales_doctype, docs):
             if not complied_docs:
                 continue
 
-            gst_details = ItemGSTDetails().get(complied_docs.values(), doctype, company)
+            gst_details = ItemGSTDetails.get(complied_docs.values(), doctype, company)
 
             if not gst_details:
                 continue

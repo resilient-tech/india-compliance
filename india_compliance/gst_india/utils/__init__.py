@@ -1,6 +1,7 @@
 import copy
 import datetime
 import functools
+import inspect
 import io
 import tarfile
 
@@ -12,6 +13,7 @@ from erpnext.stock.get_item_details import purchase_doctypes
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.desk.form.load import get_docinfo, run_onload
+from frappe.query_builder.functions import Length
 from frappe.utils import (
     add_months,
     add_to_date,
@@ -32,6 +34,7 @@ from titlecase import titlecase as _titlecase
 from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
+    CUSTOM_ADDRESS_FIELDS_DOCTYPES,
     E_INVOICE_MASTER_CODES_URL,
     GST_ACCOUNT_FIELDS,
     GST_INVOICE_NUMBER_FORMAT,
@@ -42,6 +45,7 @@ from india_compliance.gst_india.constants import (
     PINCODE_FORMAT,
     SALES_DOCTYPES,
     SERVICE_HSN_PREFIX,
+    SHIP_TO_GSTIN_APPLICABLE_DATE,
     STATE_NUMBERS,
     STATE_PINCODE_MAPPING,
     TAX_TYPES,
@@ -69,6 +73,14 @@ def load_doc(doctype, name, perm="read"):
     run_onload(doc)
 
     return doc
+
+
+def has_changed(doc, fieldname):
+    return doc.meta.has_field(fieldname) and doc.has_value_changed(fieldname)
+
+
+def get_changed_fields(doc, fieldnames):
+    return [fieldname for fieldname in fieldnames if has_changed(doc, fieldname)]
 
 
 def update_onload(doc, key, value):
@@ -153,6 +165,76 @@ def get_party_for_gstin(gstin: str, party_type: str = "Supplier"):
     )
     if party:
         return party[0][0]
+
+
+def validate_company_access(company, doctype="GST Inward Supply"):
+    """Throw unless the user may read doctype data for company."""
+    if not company:
+        return
+
+    reference = frappe.new_doc(doctype)
+    reference.company = company
+    if not frappe.has_permission(doctype, "read", doc=reference):
+        frappe.throw(
+            _("You are not permitted to access data for Company {0}.").format(company),
+            frappe.PermissionError,
+        )
+
+
+def validate_company_gstin_access(company_gstin, doctype="GST Inward Supply"):
+    """Throw unless the user may read doctype data for company_gstin's Company."""
+    if not company_gstin or company_gstin == "All":
+        return
+
+    company = get_party_for_gstin(company_gstin, "Company")
+    if not company:
+        frappe.throw(
+            _("GSTIN {0} is not linked to any Company.").format(company_gstin),
+            frappe.ValidationError,
+        )
+
+    validate_company_access(company, doctype)
+
+
+def validate_gstin_permission(fn=None, *, doctype=None):
+    """Whitelist decorator gating a method on its company_gstin / gstin argument.
+    Place below @frappe.whitelist() and above @otp_handler.
+    """
+    if fn is None:
+        return functools.partial(validate_gstin_permission, doctype=doctype)
+
+    signature = inspect.signature(fn)
+    if "company_gstin" in signature.parameters:
+        field = "company_gstin"
+    elif "gstin" in signature.parameters:
+        field = "gstin"
+    else:
+        raise ValueError(
+            f"validate_gstin_permission requires '{fn.__name__}' to declare a "
+            "'company_gstin' or 'gstin' parameter."
+        )
+
+    resolved_doctype = doctype or "GST Inward Supply"
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        bound = signature.bind_partial(*args, **kwargs)
+        company_gstin = bound.arguments.get(field)
+
+        if company_gstin == "All":
+            company = bound.arguments.get("company") or getattr(bound.arguments.get("self"), "company", None)
+            if not company:
+                frappe.throw(
+                    _("Company is required to validate access for all GSTINs."),
+                    frappe.PermissionError,
+                )
+            validate_company_access(company, resolved_doctype)
+        else:
+            validate_company_gstin_access(company_gstin, resolved_doctype)
+
+        return fn(*args, **kwargs)
+
+    return wrapper
 
 
 @frappe.whitelist()
@@ -367,6 +449,16 @@ def is_overseas_transaction(doctype, gst_category, place_of_supply):
     return gst_category == "Overseas"
 
 
+def is_ship_to_gstin_applicable(settings=None):
+    """Ship To GSTIN is mandatory, and must differ from Bill To GSTIN, in both the
+    e-Invoice and e-Waybill APIs. Live in sandbox, and in production from the rollout date.
+    """
+    if not settings:
+        settings = frappe.get_cached_doc("GST Settings")
+
+    return settings.sandbox_mode or getdate(as_ist()) >= SHIP_TO_GSTIN_APPLICABLE_DATE
+
+
 def is_foreign_doc(doc):
     return is_foreign_transaction(doc.gst_category, doc.place_of_supply)
 
@@ -407,6 +499,28 @@ def get_hsn_settings():
     valid_hsn_length = tuple(length for length in VALID_HSN_LENGTHS if length >= min_hsn_digits)
 
     return validate_hsn_code, valid_hsn_length
+
+
+@frappe.whitelist()
+def get_hsn_code_list(txt: str | None = None, limit: int = 20):
+    # GST HSN Code is public data, hence no permission check.
+
+    hsn_code = frappe.qb.DocType("GST HSN Code")
+    query = (
+        frappe.qb.from_(hsn_code)
+        .select(hsn_code.name.as_("value"), hsn_code.name.as_("label"), hsn_code.description)
+        .orderby(hsn_code.name)
+        .limit(cint(limit))
+    )
+
+    validate_hsn_code, valid_hsn_length = get_hsn_settings()
+    if validate_hsn_code and valid_hsn_length:
+        query = query.where(Length(hsn_code.name).isin(valid_hsn_length))
+
+    if txt:
+        query = query.where(hsn_code.name.like(f"{txt}%") | hsn_code.description.like(f"%{txt}%"))
+
+    return query.run(as_dict=True)
 
 
 def get_place_of_supply(party_details, doctype):
@@ -452,7 +566,19 @@ def get_place_of_supply(party_details, doctype):
         # for registered
         pos_gstin = customer_gstin or party_details.company_gstin
 
-    elif doctype == "Stock Entry":
+    elif doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
+        # Place of supply for goods is where the movement terminates (s.10(1)(a)), so
+        # read it off the Bill To address whenever that party has no GSTIN to derive it
+        # from - an unregistered consignee, or one billed as URP.
+        if not party_details.bill_to_gstin and (bill_to_address := party_details.get("bill_to_address")):
+            gst_state_number, gst_state = frappe.db.get_value(
+                "Address",
+                bill_to_address,
+                ("gst_state_number", "gst_state"),
+            )
+            if gst_state_number and gst_state:
+                return f"{gst_state_number}-{gst_state}"
+
         pos_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
     else:
         # for purchase, subcontracting order and receipt
@@ -475,7 +601,8 @@ def get_overseas_place_of_supply(party_details):
     """
     place_of_supply = "96-Other Countries"
 
-    if not party_details.shipping_address_name:
+    # Payment Entry has no shipping address field
+    if not party_details.get("shipping_address_name"):
         return place_of_supply
 
     shipping_address_details = frappe.get_value(
@@ -1052,6 +1179,46 @@ def get_periods_between_dates(
     return periods
 
 
+def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
+    """Add a GST Logs section to a doctype's dashboard.
+
+    Shared by every doctype that can carry an e-Waybill / e-Invoice.
+    """
+    if not is_api_enabled():
+        return data
+
+    data.setdefault("non_standard_fieldnames", {}).update(
+        {
+            "e-Waybill Log": "reference_name",
+            "Integration Request": "reference_docname",
+            "GST Inward Supply": "link_name",
+            "e-Invoice Log": "reference_name",
+        }
+    )
+
+    data.setdefault("dynamic_links", {}).update(
+        reference_docname=[doctype, "reference_doctype"],
+        reference_name=[doctype, "reference_doctype"],
+    )
+
+    transactions = data.setdefault("transactions", [])
+
+    # GST Logs section looks best at the 3rd position
+    # If there are less than 2 transactions, insert will be equivalent to append
+    transactions.insert(2, {"label": _("GST Logs"), "items": log_doctypes})
+
+    return data
+
+
+def get_items_fieldname(doctype):
+    return "assets" if doctype == "Asset Movement" else "items"
+
+
+def get_items(doc):
+    """Rows of the doctype's item table, which isn't always called `items`."""
+    return doc.get(get_items_fieldname(doc.doctype)) or []
+
+
 def is_outward_stock_entry(doc):
     if (
         doc.doctype == "Stock Entry"
@@ -1059,6 +1226,27 @@ def is_outward_stock_entry(doc):
         and not doc.is_return
     ):
         return True
+
+
+def is_inward_transaction(doc):
+    """True when the goods flow towards the company, ie Bill To is the company's side.
+
+    Everywhere else this is `is_return`; Asset Movement has no such field and states the
+    direction through `purpose` instead.
+    """
+    if doc.get("doctype") == "Asset Movement":
+        return doc.get("purpose") == "Receipt"
+
+    return bool(doc.get("is_return"))
+
+
+def is_same_gstin_allowed(doc):
+    """Whether both sides of the transaction may carry the same GSTIN.
+
+    The company is moving its own goods, so no supply takes place between distinct
+    persons and NIC accepts the e-Waybill as Self -> Self ("For Own Use" and friends).
+    """
+    return bool(is_outward_stock_entry(doc)) or doc.get("doctype") == "Asset Movement"
 
 
 def create_notification(message_content, document_type, document_name=None, request_id=None):

@@ -37,7 +37,7 @@
             "totInvValue": 100.0,
             "transMode": 1,
             "transDistance": 10,
-            "transporterName": "Test Common Supplier",
+            "transporterName": "Test Transporter Without GST ID",
             "vehicleNo": "GJ06AA1123",
             "vehicleType": "R",
             "itemList": [
@@ -122,7 +122,7 @@
             "transDistance": 10,
             "transMode": 1,
             "transactionType": 1,
-            "transporterName": "Test Common Supplier",
+            "transporterName": "Test Transporter Without GST ID",
             "userGstin": "05AAACG2115R1ZN",
             "vehicleNo": "GJ07DL9009",
             "vehicleType": "R"
@@ -1086,7 +1086,7 @@
             "transDistance": 10,
             "transMode": 1,
             "transactionType": 1,
-            "transporterName": "Test Common Supplier",
+            "transporterName": "Test Transporter Without GST ID",
             "userGstin": "05AAACG2115R1ZN",
             "vehicleNo": "GJ07DL9009",
             "vehicleType": "R"
@@ -1389,7 +1389,7 @@
             "toPincode": 380015,
             "toStateCode": 24,
             "actToStateCode": 24,
-            "shipToGSTIN": "05AAACG2140A1ZL",
+            "shipToGSTIN": "02AMBPG7773M002",
             "shipToTradeName": "Test Foreign Customer-1",
             "totalValue": 100.0,
             "cgstValue": 9.0,
@@ -1401,7 +1401,7 @@
             "totInvValue": 118.0,
             "transMode": 1,
             "transDistance": 10,
-            "transporterName": "Test Common Supplier",
+            "transporterName": "Test Transporter Without GST ID",
             "vehicleNo": "GJ07DL9009",
             "vehicleType": "R",
             "itemList": [
@@ -1428,6 +1428,84 @@
                 "alert": "",
                 "ewayBillDate": "09/01/2026 12:00:00 PM",
                 "ewayBillNo": 391010000001,
+                "validUpto": "10/01/2026 11:59:00 PM"
+            },
+            "success": true
+        }
+    },
+    "asset_movement": {
+        "kwargs": {
+            "purpose": "Transfer",
+            "company": "_Test Indian Registered Company",
+            "bill_from_address": "_Test Indian Registered Company-Billing",
+            "bill_to_address": "_Test Registered Supplier-Billing"
+        },
+        "values": {
+            "distance": 10,
+            "mode_of_transport": "Road",
+            "vehicle_no": "GJ07DL9009",
+            "gst_vehicle_type": "Regular",
+            "sub_supply_type": "For Own Use",
+            "sub_supply_desc": ""
+        },
+        "request_data": {
+            "userGstin": "05AAACG2115R1ZN",
+            "supplyType": "O",
+            "subSupplyType": 5,
+            "docType": "CHL",
+            "docNo": "test_invoice_no",
+            "docDate": "07/08/2026",
+            "transactionType": 1,
+            "fromTrdName": "_Test Indian Registered Company",
+            "fromGstin": "05AAACG2115R1ZN",
+            "fromAddr1": "Test Address - 1",
+            "fromPlace": "Test City",
+            "fromPincode": 380015,
+            "fromStateCode": 24,
+            "actFromStateCode": 24,
+            "toTrdName": "Test Registered Supplier",
+            "toGstin": "05AAACG2140A1ZL",
+            "toAddr1": "Test Address - 7",
+            "toPlace": "Test City",
+            "toPincode": 380015,
+            "toStateCode": 24,
+            "actToStateCode": 24,
+            "totalValue": 100000.0,
+            "cgstValue": 9000.0,
+            "sgstValue": 9000.0,
+            "igstValue": 0.0,
+            "cessValue": 0.0,
+            "cessNonAdvolValue": 0.0,
+            "otherValue": 0.0,
+            "totInvValue": 118000.0,
+            "transMode": 1,
+            "transDistance": 10,
+            "vehicleNo": "GJ07DL9009",
+            "vehicleType": "R",
+            "itemList": [
+                {
+                    "itemNo": 1,
+                    "productDesc": "Test Asset Movement Fixed Asset",
+                    "hsnCode": "847130",
+                    "qtyUnit": "NOS",
+                    "quantity": 1.0,
+                    "taxableAmount": 100000.0,
+                    "sgstRate": 9.0,
+                    "cgstRate": 9.0,
+                    "igstRate": 0.0,
+                    "cessRate": 0.0,
+                    "cessNonAdvol": 0.0
+                }
+            ],
+            "mainHsnCode": "847130"
+        },
+        "params": "action=GENEWAYBILL",
+        "response_data": {
+            "message": "E-Way Bill is generated successfully",
+            "result": {
+                "alert": "",
+                "ewayBillDate": "09/01/2026 12:00:00 PM",
+                "ewayBillNo": 391010000002,
                 "validUpto": "10/01/2026 11:59:00 PM"
             },
             "success": true
