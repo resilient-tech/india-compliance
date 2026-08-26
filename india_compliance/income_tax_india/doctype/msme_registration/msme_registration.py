@@ -29,7 +29,7 @@ class MSMERegistration(Document):
 
         cancelled_date = getdate(self.cancelled_date)
 
-        if self.registration_date and cancelled_date < getdate(self.registration_date):
+        if cancelled_date < getdate(self.registration_date):
             frappe.throw(_("Cancelled Date cannot be before the Registration Date"))
 
         if cancelled_date > getdate(today()):
@@ -89,9 +89,6 @@ class MSMERegistration(Document):
 
     def validate_against_registration_date(self, row):
         """Start a period no earlier than the registration itself."""
-        if not self.registration_date:
-            return
-
         registration_date = getdate(self.registration_date)
 
         if registration_date > getdate(row.to_date):
