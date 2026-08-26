@@ -39,7 +39,7 @@ supplier_msme_fields = [
         "fieldname": "msme_section",
         "label": "MSME Details",
         "fieldtype": "Section Break",
-        "insert_after": "pan",
+        "insert_after": "is_reverse_charge_applicable",
         "collapsible": 1,
     },
     {
@@ -80,7 +80,7 @@ supplier_msme_fields = [
         "label": "Registration Cancelled",
         "fieldtype": "Check",
         "insert_after": "msme_activity",
-        "hidden": 1,
+        "depends_on": "eval:doc.msme_is_cancelled",
         "is_virtual": 1,
         "read_only": 1,
     },

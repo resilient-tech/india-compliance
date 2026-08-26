@@ -406,8 +406,40 @@ class MSMERegistrationQuickEntryForm extends frappe.ui.form.QuickEntryForm {
      * Creating a registration this way keeps it classified from the start.
      */
     render_dialog() {
-        this.mandatory = [...this.mandatory, ...this.get_classification_fields()];
+        // underscore-prefixed: frappe replaces a dialog field that shares a real
+        // fieldname with the doctype's own docfield, dropping onchange and description
+        this.docfields = [
+            ...this.docfields.filter((df) => df.fieldname !== "udyam_number"),
+            this.get_udyam_number_field(),
+            {
+                fieldname: "_registration_date",
+                label: __("Registration Date"),
+                fieldtype: "Date",
+                description: __("Supplies accepted before this date are not covered by MSME."),
+                onchange: () => this.set_financial_year_options(),
+            },
+            ...this.get_classification_fields(),
+        ];
         super.render_dialog();
+    }
+
+    get_udyam_number_field() {
+        return {
+            ...frappe.meta.get_docfield(this.doctype, "udyam_number"),
+            fieldname: "_udyam_number",
+            onchange: () => {
+                const d = this.dialog;
+                d.set_value("_udyam_number", india_compliance.validate_udyam_number(d.doc._udyam_number));
+            },
+        };
+    }
+
+    set_financial_year_options() {
+        const registration_date = this.dialog.doc._registration_date || undefined;
+        const field = this.dialog.get_field("_financial_year");
+
+        field.set_data(india_compliance.get_indian_fiscal_year_options(9, 1, registration_date));
+        this.dialog.set_value("_financial_year", india_compliance.get_indian_fiscal_year(registration_date));
     }
 
     get_classification_fields() {
@@ -450,7 +482,8 @@ class MSMERegistrationQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     update_doc() {
         const doc = super.update_doc();
 
-        doc.udyam_number = india_compliance.validate_udyam_number(doc.udyam_number);
+        doc.udyam_number = india_compliance.validate_udyam_number(doc._udyam_number);
+        doc.registration_date = doc._registration_date;
 
         const classification = frappe.model.add_child(doc, "India MSME Classification", "classifications");
         classification.financial_year = doc._financial_year;

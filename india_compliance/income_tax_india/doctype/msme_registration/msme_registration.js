@@ -5,11 +5,53 @@ const UDYAM_NUMBER_LENGTH = 19;
 
 frappe.ui.form.on("MSME Registration", {
     refresh(frm) {
-        india_compliance.setup_indian_fiscal_year_options(frm, "classifications");
+        india_compliance.setup_indian_fiscal_year_options(
+            frm,
+            "classifications",
+            "financial_year",
+            frm.doc.registration_date || undefined,
+        );
 
-        if (frm.is_new() || frm.doc.is_cancelled) return;
+        // both actions save the document, so unsaved changes would be swept along
+        if (frm.is_new() || frm.is_dirty()) return;
+
+        if (frm.doc.is_cancelled) {
+            frm.add_custom_button(__("Undo Cancellation"), () =>
+                frm
+                    .call({
+                        method: "undo_cancellation",
+                        doc: frm.doc,
+                        freeze: true,
+                        freeze_message: __("Undoing Cancellation"),
+                    })
+                    .then(() => frm.refresh()),
+            );
+            return;
+        }
 
         frm.add_custom_button(__("Mark as Cancelled"), () => show_cancellation_dialog(frm));
+    },
+
+    registration_date(frm) {
+        // the years worth offering start where the registration does
+        india_compliance.setup_indian_fiscal_year_options(
+            frm,
+            "classifications",
+            "financial_year",
+            frm.doc.registration_date || undefined,
+        );
+
+        // a lone classification is the one the registration was created with, so
+        // it follows the date rather than being left describing another year
+        if (frm.doc.classifications?.length !== 1) return;
+
+        const [classification] = frm.doc.classifications;
+        frappe.model.set_value(
+            classification.doctype,
+            classification.name,
+            "financial_year",
+            india_compliance.get_indian_fiscal_year(frm.doc.registration_date || undefined),
+        );
     },
 
     udyam_number(frm) {
@@ -44,9 +86,15 @@ function show_cancellation_dialog(frm) {
         ],
         primary_action_label: __("Mark as Cancelled"),
         primary_action(values) {
-            frm.call("mark_as_cancelled", values).then(() => {
+            frm.call({
+                method: "mark_as_cancelled",
+                doc: frm.doc,
+                args: values,
+                freeze: true,
+                freeze_message: __("Cancelling MSME Registration"),
+            }).then(() => {
                 dialog.hide();
-                frm.reload_doc();
+                frm.refresh();
             });
         },
     });

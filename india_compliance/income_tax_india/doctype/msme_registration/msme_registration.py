@@ -4,12 +4,14 @@
 import frappe
 from frappe import _, bold
 from frappe.model.document import Document, bulk_insert
-from frappe.utils import format_date, getdate, now, random_string, today
+from frappe.utils import format_date, getdate, random_string, today
 
+from india_compliance.gst_india.utils import send_updated_doc
 from india_compliance.income_tax_india.constants import (
     FINANCIAL_YEAR_REGEX,
     UDYAM_NUMBER_REGEX,
 )
+from india_compliance.income_tax_india.utils.msme import get_financial_year_dates
 
 
 class MSMERegistration(Document):
@@ -18,9 +20,25 @@ class MSMERegistration(Document):
 
     def validate(self):
         self.validate_udyam_number()
+        self.validate_cancelled_date()
         self.validate_classifications()
 
+    def validate_cancelled_date(self):
+        if not self.is_cancelled or not self.cancelled_date:
+            return
+
+        cancelled_date = getdate(self.cancelled_date)
+
+        if self.registration_date and cancelled_date < getdate(self.registration_date):
+            frappe.throw(_("Cancelled Date cannot be before the Registration Date"))
+
+        if cancelled_date > getdate(today()):
+            frappe.throw(_("Cancelled Date cannot be in the future"))
+
     def validate_udyam_number(self):
+        if not self.udyam_number:
+            frappe.throw(_("UDYAM Registration Number is required"))
+
         self.udyam_number = self.udyam_number.strip().upper()
 
         if not UDYAM_NUMBER_REGEX.match(self.udyam_number):
@@ -32,23 +50,22 @@ class MSMERegistration(Document):
             )
 
     def validate_classifications(self):
-        seen_years = set()
+        financial_years = set()
 
         for row in self.classifications:
             self.validate_financial_year(row)
+            self.set_period(row)
+            self.validate_against_registration_date(row)
+            self.validate_against_cancelled_date(row)
 
-            if row.financial_year in seen_years:
+            if row.financial_year in financial_years:
                 frappe.throw(
                     _("Row #{0}: Duplicate MSME classification for Financial Year {1}").format(
                         row.idx, bold(row.financial_year)
                     )
                 )
 
-            seen_years.add(row.financial_year)
-
-            # a row is resolved by date; frappe does not run hooks on child rows,
-            # so the period has to be set from here
-            row.set_period()
+            financial_years.add(row.financial_year)
 
     def validate_financial_year(self, row):
         financial_year = row.financial_year or ""
@@ -64,6 +81,46 @@ class MSMERegistration(Document):
             title=_("Invalid Financial Year"),
         )
 
+    def set_period(self, row):
+        if not row.financial_year:
+            return
+
+        row.from_date, row.to_date = get_financial_year_dates(row.financial_year)
+
+    def validate_against_registration_date(self, row):
+        """Start a period no earlier than the registration itself."""
+        if not self.registration_date:
+            return
+
+        registration_date = getdate(self.registration_date)
+
+        if registration_date > getdate(row.to_date):
+            frappe.throw(
+                _("Row #{0}: Not registered in Financial Year {1}, registered on {2}").format(
+                    row.idx, bold(row.financial_year), bold(format_date(registration_date))
+                )
+            )
+
+        if registration_date > getdate(row.from_date):
+            row.from_date = registration_date
+
+    def validate_against_cancelled_date(self, row):
+        """End a period no later than the cancellation itself."""
+        if not self.is_cancelled or not self.cancelled_date:
+            return
+
+        cancelled_date = getdate(self.cancelled_date)
+
+        if cancelled_date < getdate(row.from_date):
+            frappe.throw(
+                _("Row #{0}: Not registered in Financial Year {1}, cancelled on {2}").format(
+                    row.idx, bold(row.financial_year), bold(format_date(cancelled_date))
+                )
+            )
+
+        if cancelled_date < getdate(row.to_date):
+            row.to_date = cancelled_date
+
     def get_linked_suppliers(self) -> list[str]:
         return frappe.get_all("Supplier", filters={"msme_registration": self.name}, pluck="name")
 
@@ -71,14 +128,7 @@ class MSMERegistration(Document):
     def mark_as_cancelled(self, cancelled_date: str, unlink_suppliers: bool = False):
         """Cancellation is a registration-level event: set the flag and date together."""
         self.check_permission("write")
-        self.validate_cancellation(cancelled_date)
 
-        self.db_set({"is_cancelled": 1, "cancelled_date": getdate(cancelled_date)})
-
-        if unlink_suppliers:
-            self.unlink_suppliers()
-
-    def validate_cancellation(self, cancelled_date):
         if self.is_cancelled:
             frappe.throw(
                 _("{0} was already cancelled on {1}").format(
@@ -86,42 +136,48 @@ class MSMERegistration(Document):
                 )
             )
 
-        if getdate(cancelled_date) < getdate(self.registration_date or cancelled_date):
-            frappe.throw(_("Cancelled Date cannot be before the Registration Date"))
+        self.is_cancelled = 1
+        self.cancelled_date = getdate(cancelled_date)
+        self.save()
 
-        # a future date would keep every supply until then covered by 43B(h),
-        # for a supplier who is no longer an MSE
-        if getdate(cancelled_date) > getdate(today()):
-            frappe.throw(_("Cancelled Date cannot be in the future"))
+        if unlink_suppliers:
+            self.unlink_suppliers()
+
+        return send_updated_doc(self)
+
+    @frappe.whitelist()
+    def undo_cancellation(self):
+        """
+        Restore a registration cancelled by mistake.
+        """
+        self.check_permission("write")
+
+        if not self.is_cancelled:
+            frappe.throw(_("{0} is not cancelled").format(bold(self.name)))
+
+        self.is_cancelled = 0
+        self.cancelled_date = None
+        self.save()
+
+        return send_updated_doc(self)
 
     def unlink_suppliers(self):
-        """Remove this registration from every supplier linked to it.
-
-        Bulk updated, so the change is recorded as a Comment on each supplier
-        rather than by saving each document.
+        """
+        Remove this registration from every supplier linked to it.
         """
         suppliers = self.get_linked_suppliers()
         if not suppliers:
             return
 
-        timestamp = now()
-        frappe.db.set_value(
-            "Supplier",
-            {"name": ("in", suppliers)},
-            {"msme_registration": None, "modified": timestamp},
-            update_modified=False,
-        )
+        frappe.db.set_value("Supplier", {"name": ("in", suppliers)}, "msme_registration", None)
 
-        # a bulk update leaves the cached documents stale
-        for supplier in suppliers:
-            frappe.clear_document_cache("Supplier", supplier)
-
-        add_comment_to_suppliers(suppliers, self.name, timestamp)
+        add_comment_to_suppliers(suppliers, self.name)
 
 
-def add_comment_to_suppliers(suppliers, msme_registration, timestamp=None):
-    """Record the unlink on each supplier, since a bulk update leaves no version."""
-    timestamp = timestamp or now()
+def add_comment_to_suppliers(suppliers, msme_registration):
+    """
+    Record the unlink on each supplier, since a bulk update leaves no version.
+    """
     user = frappe.session.user
     content = _("removed MSME Registration {0}, as it was cancelled").format(msme_registration)
 
@@ -134,10 +190,6 @@ def add_comment_to_suppliers(suppliers, msme_registration, timestamp=None):
                 "comment_type": "Info",
                 "comment_email": user,
                 "comment_by": user,
-                "creation": timestamp,
-                "modified": timestamp,
-                "modified_by": user,
-                "owner": user,
                 "reference_doctype": "Supplier",
                 "reference_name": supplier,
                 "content": content,
