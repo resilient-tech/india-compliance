@@ -92,8 +92,7 @@ purchase_invoice_msme_fields = [
     {
         "fieldname": "msme_registration",
         "label": "MSME Registration",
-        "fieldtype": "Link",
-        "options": "MSME Registration",
+        "fieldtype": "Autocomplete",
         "insert_after": "gst_category",
         "fetch_from": "",
         "print_hide": 1,

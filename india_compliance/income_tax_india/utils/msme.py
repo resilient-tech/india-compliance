@@ -55,61 +55,63 @@ def is_section_43_b_msme_applicable(enterprise_type, activity) -> bool:
     return bool(enterprise_type in MSME_APPLICABLE_TYPES and activity != TRADING_ACTIVITY)
 
 
-def get_msme_classification(msme_registration: str, on_date=None) -> dict | None:
-    """Classification of a registration as on a date (default: today).
-
-    None = not MSME on that date: either unclassified for the year, or the
-    registration was already cancelled.
+def get_msme_registration_details(msme_registration: str, on_date=None) -> dict | None:
+    """
+    The registration, with whatever it was classified as on a date.
     """
     if not msme_registration:
         return None
 
-    on_date = getdate(on_date or today())
-
-    if get_msme_cancellation(msme_registration, on_date):
-        return None
-
-    # keyed on the dates, not the financial_year string: the dates are what a
-    # supply is actually tested against, and they survive a change to the
-    # statutory year. financial_year is the label the user picks.
-    classification = frappe.db.get_value(
-        "India MSME Classification",
-        {
-            "parenttype": "MSME Registration",
-            "parent": msme_registration,
-            "from_date": ("<=", on_date),
-            "to_date": (">=", on_date),
-        },
-        ["enterprise_type", "activity"],
-        as_dict=True,
+    msme = frappe.qb.DocType("MSME Registration")
+    registrations = (
+        get_msme_registration_query(getdate(on_date or today()))
+        .where(msme.name == msme_registration)
+        .run(as_dict=True)
     )
 
-    if classification:
-        classification.msme_applicable = is_section_43_b_msme_applicable(
-            classification.enterprise_type, classification.activity
+    return registrations[0] if registrations else None
+
+
+def get_msme_registration_query(on_date):
+    msme = frappe.qb.DocType("MSME Registration")
+    classification = frappe.qb.DocType("India MSME Classification")
+
+    return (
+        frappe.qb.from_(msme)
+        .left_join(classification)
+        .on(
+            (classification.parent == msme.name)
+            & (classification.parenttype == "MSME Registration")
+            & (classification.financial_year == get_indian_fiscal_year(on_date))
         )
-
-    return classification
-
-
-def get_msme_cancellation(msme_registration: str, on_date) -> dict | None:
-    """The registration's cancellation, if it applies to a supply on ``on_date``.
-
-    None = still registered on that date. Otherwise the MSME row, so callers can
-    report *when* it was cancelled.
-    """
-    registration = frappe.db.get_value(
-        "MSME Registration", msme_registration, ["is_cancelled", "cancelled_date"], as_dict=True
+        .select(
+            msme.name,
+            msme.registration_date,
+            msme.is_cancelled,
+            msme.cancelled_date,
+            classification.enterprise_type,
+            classification.activity,
+            classification.not_written_agreement,
+            # covered the supply: granted by then, and not cancelled before it
+            Case()
+            .when(msme.registration_date > on_date, 0)
+            .when(msme.is_cancelled == 0, 1)
+            .when(msme.cancelled_date >= on_date, 1)
+            .else_(0)
+            .as_("valid"),
+            # Section 43B(h) reaches Micro/Small enterprises that are not traders.
+            # Matched positively, so a year with no classification row at all -
+            # every column NULL - is not applicable either.
+            Case()
+            .when(
+                classification.enterprise_type.isin(MSME_APPLICABLE_TYPES)
+                & (classification.activity != TRADING_ACTIVITY),
+                1,
+            )
+            .else_(0)
+            .as_("is_43b_applicable"),
+        )
     )
-    if not registration or not registration.is_cancelled:
-        return None
-
-    # a cancelled registration with no date on record is treated as never valid
-    if not registration.cancelled_date:
-        return registration
-
-    if getdate(on_date) > getdate(registration.cancelled_date):
-        return registration
 
 
 def get_financial_years_between(from_date, to_date) -> list[str]:
@@ -123,6 +125,38 @@ def get_financial_years_between(from_date, to_date) -> list[str]:
         date = add_years(date, 1)
 
     return financial_years
+
+
+@frappe.whitelist()
+def get_msme_registration_options(posting_date: str | None = None) -> list[dict]:
+    """Every registration, described as it stood on the supply date.
+
+    Invalid ones are offered too: the user decides, and the description says why
+    it did not cover the supply.
+    """
+    frappe.has_permission("MSME Registration", "read", throw=True)
+
+    posting_date = getdate(posting_date or today())
+    msme = frappe.qb.DocType("MSME Registration")
+    options = []
+
+    for registration in get_msme_registration_query(posting_date).orderby(msme.name).run(as_dict=True):
+        description = []
+
+        if registration.enterprise_type:
+            description.append(f"{_(registration.enterprise_type)} - {_(registration.activity)}")
+
+        if not registration.valid:
+            description.append(_("Invalid"))
+
+        options.append(
+            {
+                "value": registration.name,
+                "description": ", ".join(description) or _("Not Classified"),
+            }
+        )
+
+    return options
 
 
 def update_msme_classification():

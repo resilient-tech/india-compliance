@@ -28,7 +28,8 @@
    "fieldname": "registration_date",
    "fieldtype": "Date",
    "in_list_view": 1,
-   "label": "Registration Date"
+   "label": "Registration Date",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_cxfg",
