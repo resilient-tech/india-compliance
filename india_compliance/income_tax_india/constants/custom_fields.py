@@ -41,6 +41,7 @@ supplier_msme_fields = [
         "fieldtype": "Section Break",
         "insert_after": "is_reverse_charge_applicable",
         "collapsible": 1,
+        "collapsible_depends_on": "eval:doc.msme_registration",
     },
     {
         "fieldname": "msme_registration",
