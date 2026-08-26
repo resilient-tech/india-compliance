@@ -612,7 +612,10 @@ FISCAL_YEAR_START_MONTH = 4
 
 # MSME
 
+# Section 15 MSMED Act: pay by the date agreed in writing, and in no case
+# beyond 45 days. Where there is no written agreement at all, the limit is 15.
 MSME_PAYMENT_DAYS = 45
+MSME_PAYMENT_DAYS_WITHOUT_AGREEMENT = 15
 
 # UDYAM registration number, e.g. UDYAM-MH-12-3456789 (19 characters)
 UDYAM_NUMBER_REGEX = re.compile(r"^UDYAM-[A-Z]{2}-\d{2}-\d{7}$")

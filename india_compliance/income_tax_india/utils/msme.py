@@ -11,6 +11,7 @@ from india_compliance.income_tax_india.constants import (
     FISCAL_YEAR_START_MONTH,
     MSME_APPLICABLE_TYPES,
     MSME_PAYMENT_DAYS,
+    MSME_PAYMENT_DAYS_WITHOUT_AGREEMENT,
     TRADING_ACTIVITY,
 )
 
@@ -46,11 +47,13 @@ def get_financial_year_dates(financial_year: str) -> tuple:
     return get_fiscal_year_dates(getdate(f"{start_year}-{FISCAL_YEAR_START_MONTH:02d}-01"))
 
 
-def get_msme_due_date(posting_date, agreed_due_date=None):
+def get_msme_due_date(posting_date, agreed_due_date=None, not_written_agreement=False):
     posting_date = getdate(posting_date)
 
-    statutory_days = MSME_PAYMENT_DAYS
-    statutory_limit = add_days(posting_date, statutory_days)
+    if not_written_agreement:
+        return add_days(posting_date, MSME_PAYMENT_DAYS_WITHOUT_AGREEMENT)
+
+    statutory_limit = add_days(posting_date, MSME_PAYMENT_DAYS)
 
     if not agreed_due_date or getdate(agreed_due_date) <= posting_date:
         return statutory_limit
@@ -94,6 +97,7 @@ def get_msme_registration_query(on_date):
             msme.cancelled_date,
             classification.enterprise_type,
             classification.activity,
+            classification.not_written_agreement,
             # covered the supply: granted by then, and not cancelled before it
             Case()
             .when(msme.registration_date > on_date, 0)
@@ -195,6 +199,7 @@ def update_msme_classification():
             "to_date",
             "enterprise_type",
             "activity",
+            "not_written_agreement",
         ],
     ):
         # a row without a period is invisible to every lookup, so it cannot be
@@ -242,6 +247,7 @@ def update_msme_classification():
                     "to_date": to_date,
                     "enterprise_type": latest.enterprise_type,
                     "activity": latest.activity,
+                    "not_written_agreement": latest.not_written_agreement,
                 }
             )
 

@@ -36,7 +36,7 @@ class MSMEPayablesDue(MSMEReport):
             if not self.is_applicable(classification):
                 continue
 
-            due_date = self.get_due_date(posting_date)
+            due_date = self.get_due_date(due.voucher_no, posting_date, classification)
             days_remaining = (due_date - self.filters.as_on_date).days
 
             # already overdue: belongs to the 43B(h) disallowance report

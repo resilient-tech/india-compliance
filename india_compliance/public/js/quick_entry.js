@@ -476,6 +476,16 @@ class MSMERegistrationQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 reqd: 1,
                 description: __("Traders are excluded from Section 43B(h)."),
             },
+            {
+                fieldname: "_not_written_agreement",
+                label: __("No Written Agreement"),
+                fieldtype: "Check",
+                default: 0,
+                description: __(
+                    "Tick when there is no written agreement on payment terms." +
+                        " The Section 15 limit is then 15 days instead of 45.",
+                ),
+            },
         ];
     }
 
@@ -489,6 +499,7 @@ class MSMERegistrationQuickEntryForm extends frappe.ui.form.QuickEntryForm {
         classification.financial_year = doc._financial_year;
         classification.enterprise_type = doc._enterprise_type;
         classification.activity = doc._activity;
+        classification.not_written_agreement = doc._not_written_agreement;
 
         return doc;
     }

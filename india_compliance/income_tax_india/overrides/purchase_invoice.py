@@ -39,7 +39,7 @@ def validate_msme_payment_terms(doc, registration, posting_date):
     if doc.is_return or not registration.is_43b_applicable:
         return
 
-    msme_due_date = get_msme_due_date(posting_date, doc.due_date)
+    msme_due_date = get_msme_due_date(posting_date, doc.due_date, registration.not_written_agreement)
 
     if not doc.due_date or getdate(doc.due_date) <= msme_due_date:
         return

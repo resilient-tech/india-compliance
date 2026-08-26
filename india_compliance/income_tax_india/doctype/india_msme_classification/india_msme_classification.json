@@ -8,6 +8,7 @@
   "financial_year",
   "enterprise_type",
   "activity",
+  "not_written_agreement",
   "from_date",
   "to_date"
  ],
@@ -38,15 +39,26 @@
    "reqd": 1
   },
   {
+   "default": "0",
+   "description": "No signed payment terms with this supplier. Payment is then due in 15 days instead of 45.",
+   "fieldname": "not_written_agreement",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "No Written Agreement"
+  },
+  {
    "description": "Derived from the Financial Year, so a classification can be resolved by date.",
    "fieldname": "from_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "From Date",
    "read_only": 1
   },
   {
+   "description": "Derived from the Financial Year, so a classification can be resolved by date.",
    "fieldname": "to_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "To Date",
    "read_only": 1
   }
