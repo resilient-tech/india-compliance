@@ -1,9 +1,10 @@
 # Copyright (c) 2026, Resilient Tech and contributors
 # For license information, please see license.txt
 
-import collections
-
 import frappe
+from frappe import _
+from frappe.model.document import bulk_insert
+from frappe.query_builder import Case
 from frappe.utils import add_days, add_years, get_first_day, getdate, today
 
 from india_compliance.income_tax_india.constants import (
@@ -45,14 +46,16 @@ def get_financial_year_dates(financial_year: str) -> tuple:
     return get_fiscal_year_dates(getdate(f"{start_year}-{FISCAL_YEAR_START_MONTH:02d}-01"))
 
 
-def get_msme_due_date(posting_date):
-    """MSME payment due date: posting date (treated as date of acceptance) + 45 days."""
-    return add_days(getdate(posting_date), MSME_PAYMENT_DAYS)
+def get_msme_due_date(posting_date, agreed_due_date=None):
+    posting_date = getdate(posting_date)
 
+    statutory_days = MSME_PAYMENT_DAYS
+    statutory_limit = add_days(posting_date, statutory_days)
 
-def is_section_43_b_msme_applicable(enterprise_type, activity) -> bool:
-    """Section 43B(h) applies only to Micro/Small enterprises that are not traders."""
-    return bool(enterprise_type in MSME_APPLICABLE_TYPES and activity != TRADING_ACTIVITY)
+    if not agreed_due_date or getdate(agreed_due_date) <= posting_date:
+        return statutory_limit
+
+    return min(getdate(agreed_due_date), statutory_limit)
 
 
 def get_msme_registration_details(msme_registration: str, on_date=None) -> dict | None:
@@ -91,7 +94,6 @@ def get_msme_registration_query(on_date):
             msme.cancelled_date,
             classification.enterprise_type,
             classification.activity,
-            classification.not_written_agreement,
             # covered the supply: granted by then, and not cancelled before it
             Case()
             .when(msme.registration_date > on_date, 0)
@@ -168,67 +170,82 @@ def get_msme_registration_options(posting_date: str | None = None) -> list[dict]
 
 
 def update_msme_classification():
-    """Carry classifications forward into the new FY, so users only update the
-    registrations that actually changed. Idempotent: never overwrites a year
-    that is already classified.
+    """Carry each registration's year-end status into the years since.
+
+    Users then only revisit the registrations that actually changed. Idempotent:
+    a year that already has a row is left alone.
+
+    Every missing year is filled, not just the last one - a run missed for a
+    whole year would otherwise leave registrations unclassified, and an
+    unclassified registration is invisible to every MSME report.
     """
-    start_date = get_fiscal_year_dates()[0]
-    new_fy = get_indian_fiscal_year(start_date)
-    prev_fy = get_indian_fiscal_year(add_years(start_date, -1))
-
-    prev_rows = frappe.get_all(
-        "India MSME Classification",
-        filters={"parenttype": "MSME Registration", "financial_year": prev_fy},
-        fields=["parent", "enterprise_type", "activity"],
-    )
-    if not prev_rows:
-        return
-
     # a cancelled registration covers no new supplies, so carrying its
     # classification forward would only accrete rows no lookup can use
-    cancelled = set(
-        frappe.get_all(
-            "MSME Registration",
-            filters={"name": ("in", [row.parent for row in prev_rows]), "is_cancelled": 1},
-            pluck="name",
-        )
-    )
+    registrations = frappe.get_all("MSME Registration", filters={"is_cancelled": 0}, pluck="name")
+    if not registrations:
+        return
 
-    classified = set(
-        frappe.get_all(
-            "India MSME Classification",
-            filters={"parenttype": "MSME Registration", "financial_year": new_fy},
-            pluck="parent",
-        )
-    )
+    classifications = {}
+    for row in frappe.get_all(
+        "India MSME Classification",
+        filters={"parenttype": "MSME Registration", "parent": ("in", registrations)},
+        fields=[
+            "parent",
+            "financial_year",
+            "to_date",
+            "enterprise_type",
+            "activity",
+        ],
+    ):
+        # a row without a period is invisible to every lookup, so it cannot be
+        # the status a year ended on either
+        if row.to_date:
+            classifications.setdefault(row.parent, []).append(row)
 
-    # idx continues after the rows the registration already has
-    row_count = collections.Counter(
-        frappe.get_all(
-            "India MSME Classification",
-            filters={"parenttype": "MSME Registration", "parent": ("in", [row.parent for row in prev_rows])},
-            pluck="parent",
-        )
-    )
+    current_year_start = get_fiscal_year_dates()[0]
+    new_rows = []
 
-    for row in prev_rows:
-        if row.parent in classified or row.parent in cancelled:
+    for registration, rows in classifications.items():
+        # a year may hold several rows; only the last one is still current
+        latest = max(rows, key=lambda row: getdate(row.to_date))
+
+        # the year ended with no row covering its last day: the status lapsed,
+        # so there is nothing to carry
+        if getdate(latest.to_date) != get_financial_year_dates(latest.financial_year)[1]:
             continue
 
-        new_row = frappe.new_doc("India MSME Classification")
-        new_row.update(
-            {
-                "parenttype": "MSME Registration",
-                "parentfield": "classifications",
-                "parent": row.parent,
-                "idx": row_count[row.parent] + 1,
-                "financial_year": new_fy,
-                "enterprise_type": row.enterprise_type,
-                "activity": row.activity,
-            }
-        )
+        classified_years = {row.financial_year for row in rows}
+        idx = len(rows)
 
-        # db_insert bypasses the document hooks, and a row without a period is
-        # invisible to every lookup
-        new_row.set_period()
-        new_row.db_insert()
+        for financial_year in get_financial_years_between(
+            add_days(getdate(latest.to_date), 1), current_year_start
+        ):
+            if financial_year in classified_years:
+                continue
+
+            idx += 1
+            from_date, to_date = get_financial_year_dates(financial_year)
+
+            new_row = frappe.new_doc("India MSME Classification")
+            new_row.update(
+                {
+                    # bulk_insert writes rows as they are: it names nothing and
+                    # runs no hooks
+                    "name": frappe.generate_hash(length=10),
+                    "parenttype": "MSME Registration",
+                    "parentfield": "classifications",
+                    "parent": registration,
+                    "idx": idx,
+                    "financial_year": financial_year,
+                    # a row without a period is invisible to every lookup
+                    "from_date": from_date,
+                    "to_date": to_date,
+                    "enterprise_type": latest.enterprise_type,
+                    "activity": latest.activity,
+                }
+            )
+
+            new_rows.append(new_row)
+
+    if new_rows:
+        bulk_insert("India MSME Classification", new_rows)
