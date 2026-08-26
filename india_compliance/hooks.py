@@ -122,6 +122,7 @@ doctype_js = {
     "Supplier": [
         "gst_india/client_scripts/party.js",
         "gst_india/client_scripts/supplier.js",
+        "income_tax_india/client_scripts/supplier.js",
     ],
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
     "Customize Form": "audit_trail/client_scripts/customize_form.js",
@@ -451,11 +452,6 @@ override_doctype_class = {
 }
 
 # class extensions for virtual fields
-extend_doctype_class = {
-    "Supplier": ["india_compliance.income_tax_india.overrides.virtual_fields.MSMEDetailsExt"],
-}
-
-
 # DocTypes to be ignored while clearing transactions of a Company
 company_data_to_be_ignored = ["GST Account", "GST Credential"]
 

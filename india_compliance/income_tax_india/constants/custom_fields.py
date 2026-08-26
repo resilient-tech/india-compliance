@@ -36,54 +36,11 @@ party_fields = [
 # MSME
 supplier_msme_fields = [
     {
-        "fieldname": "msme_section",
-        "label": "MSME Details",
-        "fieldtype": "Section Break",
-        "insert_after": "is_reverse_charge_applicable",
-        "collapsible": 1,
-        "collapsible_depends_on": "eval:doc.msme_registration",
-    },
-    {
         "fieldname": "msme_registration",
         "label": "MSME Registration",
         "fieldtype": "Link",
         "options": "MSME Registration",
-        "insert_after": "msme_section",
-        "description": "UDYAM registration of the supplier.",
-    },
-    {
-        "fieldname": "msme_enterprise_type",
-        "label": "Enterprise Type",
-        "fieldtype": "Data",
-        "insert_after": "msme_registration",
-        "depends_on": "eval:doc.msme_registration",
-        "is_virtual": 1,
-        "read_only": 1,
-        "translatable": 0,
-    },
-    {
-        "fieldname": "msme_column_break",
-        "fieldtype": "Column Break",
-        "insert_after": "msme_enterprise_type",
-    },
-    {
-        "fieldname": "msme_activity",
-        "label": "Activity",
-        "fieldtype": "Data",
-        "insert_after": "msme_column_break",
-        "depends_on": "eval:doc.msme_registration",
-        "is_virtual": 1,
-        "read_only": 1,
-        "translatable": 0,
-    },
-    {
-        "fieldname": "msme_is_cancelled",
-        "label": "Registration Cancelled",
-        "fieldtype": "Check",
-        "insert_after": "msme_activity",
-        "depends_on": "eval:doc.msme_is_cancelled",
-        "is_virtual": 1,
-        "read_only": 1,
+        "insert_after": "is_reverse_charge_applicable",
     },
 ]
 

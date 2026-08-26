@@ -128,6 +128,14 @@ def get_financial_years_between(from_date, to_date) -> list[str]:
 
 
 @frappe.whitelist()
+def get_msme_registration_status(msme_registration: str) -> dict | None:
+    """One registration as it stands today, for display beside the field."""
+    frappe.has_permission("MSME Registration", "read", throw=True)
+
+    return get_msme_registration_details(msme_registration)
+
+
+@frappe.whitelist()
 def get_msme_registration_options(posting_date: str | None = None) -> list[dict]:
     """Every registration, described as it stood on the supply date.
 
