@@ -402,7 +402,7 @@ regional_overrides = {
             "india_compliance.gst_india.overrides.payment_entry.update_gl_for_advance_gst_reversal"
         ),
         "erpnext.accounts.party.get_regional_address_details": (
-            "india_compliance.gst_india.overrides.transaction.update_party_details"
+            "india_compliance.utils.party.update_party_details"
         ),
         "erpnext.assets.doctype.asset_depreciation_schedule.depreciation_methods.get_wdv_or_dd_depr_amount": (
             "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.get_wdv_or_dd_depr_amount"
