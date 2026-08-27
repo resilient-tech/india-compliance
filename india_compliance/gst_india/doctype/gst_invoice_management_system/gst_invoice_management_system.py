@@ -248,12 +248,13 @@ class GSTInvoiceManagementSystem(Document):
     def sync_details(self, data: str | list, fields: str | list | None = None):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
-        updated_purchases, updated_inward_supplies = _sync_details(data, fields, tool=self.doctype)
+        purchases, inward_supplies = _sync_details(data, fields, tool=self.doctype)
 
-        if not updated_purchases:
+        # empty names would fetch the whole grid instead of nothing
+        if not purchases:
             return []
 
-        return self.get_invoice_data(updated_inward_supplies, updated_purchases)
+        return self.get_invoice_data(inward_supplies, purchases)
 
     @frappe.whitelist()
     def get_link_options(self, doctype: str, filters: dict | frappe._dict):
