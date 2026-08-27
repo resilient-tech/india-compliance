@@ -679,6 +679,104 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
         self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
 
+        # a debit note adds to the ITC, so it stays positive on both sides
+        detail = prt.get_invoice_details(pinv.name, gst_is.name)
+        self.assertEqual(detail._purchase_invoice.taxable_value, 10000)
+        self.assertEqual(detail._inward_supply.taxable_value, 10000)
+
+    def test_cdnr_credit_note_is_signed_on_both_sides(self):
+        """
+        A supplier's credit note reduces the ITC. It is booked as a return invoice,
+        so both sides must report it negative and difference out to zero.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="CN-23-00001",
+            bill_date="2023-09-15",
+            posting_date="2023-09-15",
+            is_return=1,
+            qty=-5,
+        )
+
+        gst_is = create_gst_inward_supply(
+            bill_no="CN-23-00001",
+            bill_date="2023-09-15",
+            classification="CDNR",
+            doc_type="Credit Note",
+            return_period_2b="092023",
+            # 2A/2B reports note values as positive
+            items=[{"taxable_value": 5000, "rate": 18, "sgst": 450, "cgst": 450}],
+            document_value=5900,
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2023-09-01",
+                "to_date": "2023-09-30",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        rows = [row for row in prt.reconcile_and_generate_data() if row.purchase_invoice_name == pinv.name]
+
+        self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].classification, "CDNR")
+        self.assertEqual(rows[0].taxable_value_difference, 0)
+        self.assertEqual(rows[0].tax_difference, 0)
+
+        detail = prt.get_invoice_details(pinv.name, gst_is.name)
+        purchase, inward_supply = detail._purchase_invoice, detail._inward_supply
+
+        self.assertEqual(purchase.taxable_value, -5000)
+        self.assertEqual(purchase.cgst, -450)
+        self.assertEqual(purchase.sgst, -450)
+
+        self.assertEqual(inward_supply.taxable_value, -5000)
+        self.assertEqual(inward_supply.cgst, -450)
+        self.assertEqual(inward_supply.sgst, -450)
+
+    def test_credit_note_nets_off_the_invoice_in_books(self):
+        """
+        An invoice and its credit note, neither reported in 2A/2B, must net to the
+        amount actually claimable rather than adding up to the gross.
+        """
+        dates = {"bill_date": "2023-10-15", "posting_date": "2023-10-15"}
+
+        # own amounts, so no other invoice can claim these by a residual match
+        invoice = create_purchase_invoice(bill_no="NET-23-00001", qty=7, rate=1100, **dates)
+        credit_note = create_purchase_invoice(bill_no="NET-23-00002", is_return=1, qty=-2, rate=1100, **dates)
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2023-10-01",
+                "to_date": "2023-10-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        rows = {
+            row.purchase_invoice_name: row
+            for row in prt.reconcile_and_generate_data()
+            if row.purchase_invoice_name in (invoice.name, credit_note.name)
+        }
+
+        self.assertEqual(len(rows), 2)
+        for row in rows.values():
+            self.assertEqual(row.match_status, "Only in Books")
+
+        # nothing in 2A/2B, so each difference is the negated book value
+        self.assertEqual(rows[invoice.name].taxable_value_difference, -7700)
+        self.assertEqual(rows[credit_note.name].taxable_value_difference, 2200)
+
+        # what the summary rolls up: the net claimable, not the gross of both documents
+        self.assertEqual(sum(row.taxable_value_difference for row in rows.values()), -5500)
+        self.assertEqual(sum(row.tax_difference for row in rows.values()), -990)
+
     def test_purchase_posted_after_period_is_not_matched(self):
         """
         A purchase booked after the period ends must stay out of that period's run.
