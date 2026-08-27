@@ -47,10 +47,15 @@ class TestMSMEPaymentTerms(IntegrationTestCase):
             supplier = self._create_supplier(enterprise_type=enterprise_type)
             self.assertAdvisory(supplier, days=MSME_PAYMENT_DAYS + 30, shown=False)
 
-    def test_no_advisory_when_unclassified_for_the_year(self):
+    def test_advisory_falls_back_to_45_days_when_unclassified(self):
+        """A year with no classification is assumed covered, on the Act's outer
+        limit - the same assumption the reports make.
+        """
         # classified for a different FY than the invoice's
         supplier = self._create_supplier(enterprise_type="Micro", financial_year="2024-2025")
-        self.assertAdvisory(supplier, days=MSME_PAYMENT_DAYS + 30, shown=False)
+
+        self.assertAdvisory(supplier, days=MSME_PAYMENT_DAYS + 1, shown=True)
+        self.assertAdvisory(supplier, days=MSME_PAYMENT_DAYS, shown=False)
 
     def test_a_registration_cancelled_before_the_supply_is_unset(self):
         supplier = self._create_cancelled_supplier(cancelled_on=add_days(POSTING_DATE, -1))

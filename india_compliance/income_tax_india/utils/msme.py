@@ -121,9 +121,10 @@ def get_msme_registration_query(on_date):
             .else_(0)
             .as_("valid"),
             # Section 43B(h) reaches Micro/Small enterprises that are not traders.
-            # Matched positively, so a year with no classification row at all -
-            # every column NULL - is not applicable either.
+            # A year with no classification row is assumed covered, as the reports
+            # assume it: omitting a due payable to an MSME is the worse failure.
             Case()
+            .when(classification.enterprise_type.isnull(), 1)
             .when(
                 classification.enterprise_type.isin(MSME_APPLICABLE_TYPES)
                 & (classification.activity != TRADING_ACTIVITY),
