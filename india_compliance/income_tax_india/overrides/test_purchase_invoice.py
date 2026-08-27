@@ -116,19 +116,31 @@ class TestMSMEPaymentTerms(IntegrationTestCase):
         self.assertTrue(self._is_selectable(msme.name, "2023-06-01"))
         self.assertTrue(self._is_selectable(msme.name, "2030-01-01"))
 
-    def test_renaming_a_registration_leaves_a_filed_invoice_alone(self):
-        """The invoice holds the number as filed, not a link a rename rewrites."""
+    def test_a_registration_already_used_in_transaction_cannot_be_renamed(self):
+        """The invoice keeps the number as filed, so a rename would orphan it -
+        and orphaning loses the classification that set its payment limit.
+        """
         supplier = self._create_supplier(enterprise_type="Micro")
         pi = self._get_purchase_invoice(supplier, days=10)
         pi.submit()
 
-        renamed = frappe.rename_doc("MSME Registration", pi.msme_registration, "UDYAM-MH-12-9999999")
-
-        self.assertEqual(
-            frappe.db.get_value("Purchase Invoice", pi.name, "msme_registration"),
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "submitted Purchase Invoice",
+            frappe.rename_doc,
+            "MSME Registration",
             pi.msme_registration,
+            "UDYAM-MH-12-9999999",
         )
-        # the master data itself does follow the rename
+
+    def test_a_registration_not_yet_used_in_transaction_can_be_renamed(self):
+        """A mistyped number stays correctable until it has been filed against."""
+        supplier = self._create_supplier(enterprise_type="Micro")
+        registration = frappe.db.get_value("Supplier", supplier, "msme_registration")
+
+        renamed = frappe.rename_doc("MSME Registration", registration, "UDYAM-MH-12-9999999")
+
+        # the supplier link follows, because master data is a Link
         self.assertEqual(frappe.db.get_value("Supplier", supplier, "msme_registration"), renamed)
 
     def _get_selectable(self, posting_date):

@@ -103,9 +103,9 @@ Object.assign(india_compliance, {
          *
          * @returns {Array} - e.g. ["2025-2026", "2024-2025", ...]
          */
-        const current_start = parseInt(this.get_indian_fiscal_year().split("-")[0]);
+        const current_start = parseInt(this.get_indian_fiscal_year().split("-")[0], 10);
         const first_start = from_date
-            ? parseInt(this.get_indian_fiscal_year(from_date).split("-")[0])
+            ? parseInt(this.get_indian_fiscal_year(from_date).split("-")[0], 10)
             : current_start - years_before;
 
         const last_start = Math.max(current_start + years_after, first_start);

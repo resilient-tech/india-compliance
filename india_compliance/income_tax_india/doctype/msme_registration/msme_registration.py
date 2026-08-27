@@ -1,10 +1,12 @@
 # Copyright (c) 2026, Resilient Tech and contributors
 # For license information, please see license.txt
 
+from urllib.parse import urlencode
+
 import frappe
 from frappe import _, bold
 from frappe.model.document import Document, bulk_insert
-from frappe.utils import format_date, getdate, random_string, today
+from frappe.utils import format_date, get_url_to_list, getdate, random_string, today
 
 from india_compliance.gst_india.utils import send_updated_doc
 from india_compliance.income_tax_india.constants import FINANCIAL_YEAR_REGEX
@@ -17,6 +19,20 @@ from india_compliance.income_tax_india.utils.msme import (
 class MSMERegistration(Document):
     def before_naming(self):
         self.validate_udyam_number()
+
+    def before_rename(self, old_name, new_name, merge=False):
+        if not frappe.db.get_value(
+            "Purchase Invoice", {"msme_registration": old_name, "docstatus": 1}, "name"
+        ):
+            return
+
+        filters = urlencode({"msme_registration": old_name, "docstatus": 1})
+        invoices = (
+            f'<a href="{get_url_to_list("Purchase Invoice")}?{filters}">'
+            f"{_('submitted Purchase Invoices')}</a>"
+        )
+
+        frappe.throw(_("{0} cannot be renamed as it is linked with {1}").format(bold(old_name), invoices))
 
     def validate(self):
         self.validate_udyam_number()
