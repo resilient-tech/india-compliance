@@ -9,7 +9,7 @@ from india_compliance.income_tax_india.doctype.msme_registration.test_msme_regis
     create_msme_registration,
     create_supplier,
 )
-from india_compliance.income_tax_india.report.msme_payables_due_within_45_days.msme_payables_due_within_45_days import (
+from india_compliance.income_tax_india.report.msme_payables_report.msme_payables_report import (
     execute,
 )
 from india_compliance.income_tax_india.utils.test_msme_utils import COMPANY, MSMEReportTestCase

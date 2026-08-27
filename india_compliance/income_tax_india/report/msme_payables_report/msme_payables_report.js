@@ -1,7 +1,7 @@
 // Copyright (c) 2026, Resilient Tech and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["MSME Payables Due Within 45 Days"] = {
+frappe.query_reports["MSME Payables Report"] = {
     filters: [
         {
             fieldname: "company",

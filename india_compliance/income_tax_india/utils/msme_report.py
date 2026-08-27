@@ -1,32 +1,16 @@
 # Copyright (c) 2026, Resilient Tech and contributors
 # For license information, please see license.txt
 
-"""Base class for the MSME reports.
-
-Every MSME report answers the same three questions about a supply: was the
-supplier MSME-registered when it was accepted, was that registration covered by
-Section 43B(h), and when did the 45 days run out.
-
-The registration is read from the *invoice*, never the supplier - it is a fact
-about the supply. Unlinking a supplier when its registration is cancelled must
-not erase its historical dues, and an invoice whose registration the user
-cleared is not an MSME supply.
-
-That pipeline lives here, bulk-loaded once per run, so a subclass only has to
-supply its vouchers and its columns. The query count does not grow with the
-number of rows - a subclass cannot reintroduce an N+1 by accident.
-
-``get_msme_classification`` in ``utils.msme`` answers the same question for a
-single document (a Purchase Invoice on validate). Same rule, different loading
-strategy: one query per call is right there, and wrong in a report loop.
-"""
+from functools import cached_property
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import IfNull
 from frappe.utils import flt, getdate, nowdate
 
 from india_compliance.income_tax_india.constants import (
     MSME_APPLICABLE_TYPES,
+    MSME_UNCLASSIFIED,
     TRADING_ACTIVITY,
 )
 from india_compliance.income_tax_india.utils.msme import (
@@ -49,13 +33,6 @@ class MSMEReport:
     def run(self):
         self.validate_filters()
 
-        self.invoices = self.get_msme_invoices()
-        if not self.invoices:
-            return self.get_columns(), []
-
-        self.classifications = self.get_classifications()
-        self.cancellations = self.get_cancellations()
-
         return self.get_columns(), self.get_data()
 
     def validate_filters(self):
@@ -64,108 +41,93 @@ class MSMEReport:
 
         self.filters.as_on_date = getdate(self.filters.as_on_date or nowdate())
 
-    def get_msme_invoices(self) -> dict:
-        """Purchase Invoices that carry an MSME registration, keyed by name.
+    @cached_property
+    def company_currency(self) -> str:
+        return frappe.get_cached_value("Company", self.filters.company, "default_currency")
 
-        The registration is read from the *invoice*, not the supplier: it is what
-        applied when the supply was accepted. A supplier unlinked after the
-        registration was cancelled must not erase its historical dues, and an
-        invoice whose registration the user cleared is not an MSME supply.
+    @cached_property
+    def invoices(self) -> dict:
+        """Purchase Invoices that carry an MSME registration, keyed by name."""
+        return {row.name: row for row in self.get_invoices_query().run(as_dict=True)}
 
-        Section 43B(h) disallows sums payable for goods supplied or services
-        rendered (MSMED Act s.15), so only invoices are payables here - a Journal
-        Entry crediting a supplier is not necessarily a supply.
+    def get_invoices_query(self):
+        """The invoices every MSME report reads. Subclasses narrow it further.
+
+        A Journal Entry crediting a supplier is not necessarily a supply.
         """
-        filters = {"docstatus": 1, "msme_registration": ("is", "set"), "company": self.filters.company}
-        if self.filters.supplier:
-            filters["supplier"] = self.filters.supplier
+        pi = frappe.qb.DocType("Purchase Invoice")
+        supp = frappe.qb.DocType("Supplier")
 
-        return {
-            invoice.name: invoice
-            for invoice in frappe.get_all(
-                "Purchase Invoice",
-                filters=filters,
-                fields=[
-                    "name",
-                    "supplier",
-                    "supplier_name",
-                    "msme_registration",
-                    "supplier.pan as pan",
-                ],
+        query = (
+            frappe.qb.from_(pi)
+            .left_join(supp)
+            .on(supp.name == pi.supplier)
+            .select(
+                pi.name,
+                pi.supplier,
+                pi.supplier_name,
+                pi.msme_registration,
+                pi.posting_date,
+                pi.due_date,
+                pi.outstanding_amount,
+                # outstanding_amount is booked in the party account's currency
+                pi.party_account_currency,
+                supp.pan,
             )
-        }
+            .where(pi.docstatus == 1)
+            .where(pi.is_return == 0)
+            .where(IfNull(pi.msme_registration, "") != "")
+            .where(pi.company == self.filters.company)
+            .where(pi.posting_date <= (self.filters.to_date or self.filters.as_on_date))
+        )
 
-    @property
-    def suppliers(self) -> list[str]:
-        return list({invoice.supplier for invoice in self.invoices.values()})
+        if self.filters.from_date:
+            query = query.where(pi.posting_date >= self.filters.from_date)
 
-    @property
-    def registrations(self) -> list[str]:
-        return list({invoice.msme_registration for invoice in self.invoices.values()})
+        if self.filters.supplier:
+            query = query.where(pi.supplier == self.filters.supplier)
 
-    def get_classifications(self) -> dict:
-        """Classification rows by registration, each with the dates it covers.
+        return query
 
-        Keyed on the dates rather than the financial_year string - the same rule
-        the document layer applies, so the desk and the reports can never
-        disagree about whether a supply was MSME.
-        """
+    @cached_property
+    def classifications(self) -> dict:
+        """Classification rows by registration, each with the dates it covers."""
+        if not self.invoices:
+            return {}
+
         classifications = {}
+        registrations = list({invoice.msme_registration for invoice in self.invoices.values()})
 
         for row in frappe.get_all(
             "India MSME Classification",
-            filters={"parenttype": "MSME Registration", "parent": ("in", self.registrations)},
-            fields=["parent", "from_date", "to_date", "enterprise_type", "activity"],
+            filters={"parenttype": "MSME Registration", "parent": ("in", registrations)},
+            fields=[
+                "parent",
+                "from_date",
+                "to_date",
+                "enterprise_type",
+                "activity",
+                "not_written_agreement",
+            ],
         ):
             classifications.setdefault(row.parent, []).append(row)
 
         return classifications
 
-    def get_cancellations(self) -> dict:
-        """Cancellation date by registration, for the ones that are cancelled."""
-        rows = frappe.get_all(
-            "MSME Registration",
-            filters={"name": ("in", self.registrations), "is_cancelled": 1},
-            fields=["name", "cancelled_date"],
-        )
-        return {row.name: row.cancelled_date for row in rows}
-
-    def get_classification(self, invoice: str, posting_date):
-        """Classification covering the supply this invoice was accepted for.
-
-        None = not MSME then: unclassified for that period, or already cancelled.
+    def get_msme_status(self, registration: str, posting_date):
         """
-        registration = self.invoices[invoice].msme_registration
+        Classification covering the supply this registration was accepted for.
+        """
         posting_date = getdate(posting_date)
 
-        if self.is_cancelled(registration, posting_date):
-            return None
-
         for classification in self.classifications.get(registration, []):
-            # a row without a period is invisible, exactly as it is to the SQL
-            # date filters on the document layer (getdate(None) would be today)
-            if not (classification.from_date and classification.to_date):
-                continue
-
             if getdate(classification.from_date) <= posting_date <= getdate(classification.to_date):
                 return classification
-
-    def is_cancelled(self, registration: str, posting_date) -> bool:
-        if registration not in self.cancellations:
-            return False
-
-        cancelled_date = self.cancellations[registration]
-
-        # cancelled with no date on record: treated as never valid
-        if not cancelled_date:
-            return True
-
-        return getdate(posting_date) > getdate(cancelled_date)
 
     def is_applicable(self, classification) -> bool:
         """Whether the report covers this classification."""
         if not classification:
-            return False
+            return not self.filters.enterprise_type
 
         if classification.enterprise_type not in MSME_APPLICABLE_TYPES:
             return False
@@ -179,45 +141,48 @@ class MSMEReport:
 
         return True
 
-    def get_due_date(self, posting_date):
-        return get_msme_due_date(posting_date)
+    def get_due_date(self, posting_date, due_date, classification):
+        """The Section 15 time limit, from inputs already bulk-loaded."""
+        if not classification:
+            # nothing on record says the terms were agreed in writing, so apply
+            # the Act's outer limit rather than assume the stricter 15 days
+            return get_msme_due_date(posting_date)
+
+        return get_msme_due_date(posting_date, due_date, classification.not_written_agreement)
 
     def get_data(self) -> list[dict]:
-        raise NotImplementedError
+        return []
 
     def get_columns(self) -> list[dict]:
-        raise NotImplementedError
+        return []
 
 
 class MSMEPayablesReport(MSMEReport):
     """Base for the reports built on the Payment Ledger (43B(h) and Form-1).
 
-    Both need to know *when* each rupee was paid relative to the 45-day due
-    date, which ERPNext's Accounts Payable report aggregates away - hence
+    Both need to know *when* each rupee was paid relative to the due date, which
+    ERPNext's Accounts Payable report aggregates away - hence
     ReceivablePayableLedger.
 
-    The payable is always a Purchase Invoice - one row per supply, each with its
-    own 45-day clock. An unadjusted advance is an asset, not a sum payable, so it
-    is not a row; once it is allocated it reduces that invoice's outstanding and
-    the disallowance follows.
+    The payable is always a Purchase Invoice, one row per supply. An unadjusted
+    advance is an asset, not a sum payable, so it is not a row; once allocated it
+    reduces that invoice's outstanding and the disallowance follows.
     """
 
-    # window start for the paid_within_due / paid_after_due split; Form-1 counts
-    # only the payments made during its half-year
+    # Form-1 counts only the payments made during its half-year
     settlement_from_date = None
 
     def get_payables(self) -> list[dict]:
-        """Rows for the MSME invoices, with settlements from every voucher type.
+        """Rows for the MSME invoices, settled by any voucher type the ledger holds."""
+        # the ledger reads every party when given no supplier to filter by
+        if not self.invoices:
+            return []
 
-        The *payable* is always a Purchase Invoice, but it may be settled by a
-        Payment Entry, a Journal Entry, a credit note - the ledger picks all of
-        those up as settlements against the invoice.
-        """
         groups = ReceivablePayableLedger(
             company=self.filters.company,
             account_type="Payable",
             report_date=self.filters.as_on_date,
-            parties=self.suppliers,
+            parties=list({invoice.supplier for invoice in self.invoices.values()}),
         ).run()
 
         records = []
@@ -229,7 +194,7 @@ class MSMEPayablesReport(MSMEReport):
                 continue
 
             posting_date = getdate(group.anchor.posting_date)
-            classification = self.get_classification(voucher_no, posting_date)
+            classification = self.get_msme_status(self.invoices[voucher_no].msme_registration, posting_date)
 
             if not self.is_applicable(classification):
                 continue
@@ -254,17 +219,18 @@ class MSMEPayablesReport(MSMEReport):
     def get_voucher_row(self, voucher_type, voucher_no, group, classification) -> dict:
         posting_date = getdate(group.anchor.posting_date)
         invoice = self.invoices[voucher_no]
-        due_date = self.get_due_date(posting_date)
+        due_date = self.get_due_date(posting_date, invoice.due_date, classification)
 
         return {
             "supplier": invoice.supplier,
             "supplier_name": invoice.supplier_name,
             "pan": invoice.pan,
-            # the registration is named after the UDYAM number
+            # the registration is named after its UDYAM number
             "udyam_number": invoice.msme_registration,
-            "enterprise_type": classification.enterprise_type,
+            "enterprise_type": classification.enterprise_type if classification else MSME_UNCLASSIFIED,
             "voucher_type": voucher_type,
             "voucher_no": voucher_no,
+            "currency": self.company_currency,
             "posting_date": posting_date,
             "financial_year": get_indian_fiscal_year(posting_date),
             "due_date": due_date,
@@ -274,7 +240,6 @@ class MSMEPayablesReport(MSMEReport):
     def get_due_amounts(self, group, due_date) -> dict:
         summary = get_settlement_summary(group.settlements, due_date)
 
-        # the windowed split only differs from the full one when a start is given
         window = summary
         if self.settlement_from_date:
             window = get_settlement_summary(group.settlements, due_date, from_date=self.settlement_from_date)
@@ -297,8 +262,7 @@ class MSMEPayablesReport(MSMEReport):
             "outstanding": outstanding,
             "outstanding_not_due": 0 if is_overdue else outstanding,
             "outstanding_overdue": outstanding if is_overdue else 0,
-            # paid in-year is allowed in that year; only the unpaid overdue
-            # portion is added back u/s 43B(h)
+            # only the unpaid overdue portion is added back u/s 43B(h)
             "disallowable_amount": outstanding if is_overdue else 0,
             "payment_status": payment_status,
             "days_overdue": (self.filters.as_on_date - due_date).days if is_overdue else 0,

@@ -14,10 +14,10 @@
  "modified": "2026-06-10 00:00:00",
  "modified_by": "Administrator",
  "module": "Income Tax India",
- "name": "MSME Payables Due Within 45 Days",
+ "name": "MSME Payables Report",
  "prepared_report": 0,
  "ref_doctype": "Purchase Invoice",
- "report_name": "MSME Payables Due Within 45 Days",
+ "report_name": "MSME Payables Report",
  "report_type": "Script Report",
  "roles": [
   {
