@@ -1047,6 +1047,7 @@ class ReconciledData(BaseReconciliation):
             "irn_source",
             "irn_number",
             "irn_gen_date",
+            "return_period_2b",
         ]
 
         return super().get_all_inward_supply(inward_supply_fields, names, only_names) or []
@@ -1059,6 +1060,7 @@ class ReconciledData(BaseReconciliation):
             "is_return",
             "gst_category",
             "reconciliation_status",
+            "itc_claim_period",
             *self.dimension_fields,
         ]
 
