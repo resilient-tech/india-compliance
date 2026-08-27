@@ -1,19 +1,36 @@
 # Copyright (c) 2026, Resilient Tech and contributors
 # For license information, please see license.txt
 
+import re
+
 import frappe
 from frappe import _
 from frappe.model.document import bulk_insert
 from frappe.query_builder import Case
 from frappe.utils import add_days, add_years, get_first_day, getdate, today
 
-from india_compliance.income_tax_india.constants import (
-    FISCAL_YEAR_START_MONTH,
-    MSME_APPLICABLE_TYPES,
-    MSME_PAYMENT_DAYS,
-    MSME_PAYMENT_DAYS_WITHOUT_AGREEMENT,
-    TRADING_ACTIVITY,
-)
+from india_compliance.income_tax_india.constants import FISCAL_YEAR_START_MONTH
+
+# Section 15 MSMED Act: pay by the date agreed in writing, and in no case
+# beyond 45 days. Where there is no written agreement at all, the limit is 15.
+MSME_PAYMENT_DAYS = 45
+MSME_PAYMENT_DAYS_WITHOUT_AGREEMENT = 15
+
+# UDYAM registration number, e.g. UDYAM-MH-12-3456789 (19 characters)
+UDYAM_NUMBER_REGEX = re.compile(r"^UDYAM-[A-Z]{2}-\d{2}-\d{7}$")
+
+# Only Micro and Small enterprises are covered by Section 43B(h); Medium is not.
+MSME_APPLICABLE_TYPES = ("Micro", "Small")
+
+# A supply whose supplier held a UDYAM registration, but no classification for
+# the year it was accepted in. Reported rather than skipped: omitting a due that
+# is payable to an MSME is a worse compliance failure than reporting one whose
+# status could not be determined.
+MSME_UNCLASSIFIED = "Unclassified"
+
+# Traders are registered on UDYAM only for Priority Sector Lending, and are
+# excluded from Section 43B(h) (MSME Ministry OM dated 02-07-2021).
+TRADING_ACTIVITY = "Trading"
 
 
 def get_fiscal_year_dates(date=None) -> tuple:

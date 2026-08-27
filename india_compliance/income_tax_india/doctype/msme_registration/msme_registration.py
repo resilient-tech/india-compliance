@@ -7,11 +7,11 @@ from frappe.model.document import Document, bulk_insert
 from frappe.utils import format_date, getdate, random_string, today
 
 from india_compliance.gst_india.utils import send_updated_doc
-from india_compliance.income_tax_india.constants import (
-    FINANCIAL_YEAR_REGEX,
+from india_compliance.income_tax_india.constants import FINANCIAL_YEAR_REGEX
+from india_compliance.income_tax_india.utils.msme import (
     UDYAM_NUMBER_REGEX,
+    get_financial_year_dates,
 )
-from india_compliance.income_tax_india.utils.msme import get_financial_year_dates
 
 
 class MSMERegistration(Document):

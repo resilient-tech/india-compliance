@@ -8,12 +8,10 @@ from frappe import _
 from frappe.query_builder.functions import IfNull
 from frappe.utils import flt, getdate, nowdate
 
-from india_compliance.income_tax_india.constants import (
+from india_compliance.income_tax_india.utils.msme import (
     MSME_APPLICABLE_TYPES,
     MSME_UNCLASSIFIED,
     TRADING_ACTIVITY,
-)
-from india_compliance.income_tax_india.utils.msme import (
     get_indian_fiscal_year,
     get_msme_due_date,
 )

@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, getdate
 
-from india_compliance.income_tax_india.constants import MSME_UNCLASSIFIED
+from india_compliance.income_tax_india.utils.msme import MSME_UNCLASSIFIED
 from india_compliance.income_tax_india.utils.msme_report import MSMEReport
 
 
