@@ -49,6 +49,18 @@ class TestMSMEPayablesDue(MSMEReportTestCase):
 
         self.assertNotIn(pi.name, self._run(supplier))
 
+    def test_a_due_settled_after_the_report_date_is_still_shown(self):
+        """The position is taken as on the report date: a payment made later
+        cannot erase a due that was outstanding then.
+        """
+        supplier = self._create_msme_supplier(enterprise_type="Micro")
+        pi = self._pi(supplier, POSTING_DATE, 5000)
+        self._pay(pi, add_days(AS_ON_DATE, 9))
+
+        row = self._run(supplier)[pi.name]
+
+        self.assertEqual(row["outstanding"], 5000)
+
     def test_cancelled_registration_excluded(self):
         """A supply accepted after cancellation is not from an MSME."""
         msme = create_msme_registration(

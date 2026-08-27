@@ -21,11 +21,8 @@ class TestMSMEForm1(MSMEReportTestCase):
         return data
 
     def test_settled_in_an_earlier_half_year_is_not_redeclared(self):
-        """A supply belongs to the half-year it was paid in, or one where it is
-        still outstanding - never to a later one where neither is true, or the
-        same payment would be declared twice to the Registrar.
-        """
-        # Posted and settled within Apr-Sep, read from the Oct-Mar return.
+        """Or the same payment is declared twice, in two half-yearly returns."""
+        # posted and settled within Apr-Sep, read from the Oct-Mar return
         pi = self._pi(self.supplier, "2023-05-01", 10000)
         self._pay(pi, "2023-06-01")
 
@@ -51,6 +48,21 @@ class TestMSMEForm1(MSMEReportTestCase):
         self.assertEqual(flt(rows[pi.name]["outstanding_overdue"]), 10000)
         self.assertEqual(flt(rows[pi.name]["paid_within_due"]), 0)
         self.assertEqual(flt(rows[pi.name]["paid_after_due"]), 0)
+
+    def test_paid_during_this_half_year_is_declared_here(self):
+        """A supply belongs to the return for the period it was paid in."""
+        pi = self._pi(self.supplier, "2023-05-01", 10000)
+        self._pay(pi, "2023-11-15")
+
+        rows = {
+            row["voucher_no"]: row
+            for row in self._run_form1(group_by="Invoice Wise", period="Oct-Mar")
+            if row["supplier"] == self.supplier
+        }
+
+        # due 2023-06-15, paid 2023-11-15 -> late, and inside Oct-Mar
+        self.assertEqual(flt(rows[pi.name]["paid_after_due"]), 10000)
+        self.assertEqual(flt(rows[pi.name]["outstanding"]), 0)
 
     def test_invoice_wise_buckets(self):
         # Posted 2023-05-01 -> due 2023-06-15 (within Apr-Sep 2023).
@@ -110,6 +122,18 @@ class TestMSMEForm1(MSMEReportTestCase):
         self.assertEqual(flt(row["paid_within_due"]), 3000)
         self.assertEqual(row["outstanding_overdue_count"], 1)
         self.assertEqual(flt(row["outstanding_overdue"]), 7000)
+
+    def test_supplier_paid_on_time_throughout_is_still_reported(self):
+        """The return carries every MSE supplier with activity, late or not."""
+        supplier = self._create_msme_supplier(enterprise_type="Micro")
+        pi = self._pi(supplier, "2023-05-01", 4000)
+        self._pay(pi, "2023-06-01")
+
+        rows = [row for row in self._run_form1() if row["supplier"] == supplier]
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(flt(rows[0]["paid_within_due"]), 4000)
+        self.assertEqual(flt(rows[0]["paid_after_due"]), 0)
 
     def test_traders_are_included_by_default(self):
         """Form-1 is filed under the MSMED Act, which has no trader carve-out."""

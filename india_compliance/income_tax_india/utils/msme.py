@@ -22,10 +22,8 @@ UDYAM_NUMBER_REGEX = re.compile(r"^UDYAM-[A-Z]{2}-\d{2}-\d{7}$")
 # Only Micro and Small enterprises are covered by Section 43B(h); Medium is not.
 MSME_APPLICABLE_TYPES = ("Micro", "Small")
 
-# A supply whose supplier held a UDYAM registration, but no classification for
-# the year it was accepted in. Reported rather than skipped: omitting a due that
-# is payable to an MSME is a worse compliance failure than reporting one whose
-# status could not be determined.
+# Registered, but unclassified for the year of supply. Reported rather than
+# skipped, and untranslated like the stored enterprise types beside it.
 MSME_UNCLASSIFIED = "Unclassified"
 
 # Traders are registered on UDYAM only for Priority Sector Lending, and are

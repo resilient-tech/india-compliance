@@ -482,8 +482,7 @@ class MSMERegistrationQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Check",
                 default: 0,
                 description: __(
-                    "Tick when there is no written agreement on payment terms." +
-                        " The Section 15 limit is then 15 days instead of 45.",
+                    "Tick when there is no written agreement on payment terms. The Section 15 limit is then 15 days instead of 45.",
                 ),
             },
         ];

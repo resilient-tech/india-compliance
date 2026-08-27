@@ -39,7 +39,7 @@ frappe.query_reports["MSME Form-1"] = {
             fieldtype: "Check",
             default: 1,
             description: __(
-                "Form-1 is filed under the MSMED Act, which covers traders." + " Section 43B(h) does not.",
+                "Form-1 is filed under the MSMED Act, which covers traders. Section 43B(h) does not.",
             ),
         },
     ],

@@ -147,9 +147,7 @@ class TestMSME43BHReport(_TestMSME43BHBase):
         self.assertIn(on_the_day.name, rows)
 
     def test_unclassified_supplier_is_reported(self):
-        # Registered and live on the posting date, but with no classification row
-        # for the invoice's FY. Reported with the status flagged rather than
-        # dropped: omitting a due payable to an MSME is the worse failure.
+        # live registration, no classification for the invoice's FY
         supplier = self._create_msme_supplier(enterprise_type="Micro", financial_year="2024-2025")
         pi = self._pi(supplier, "2023-05-01", 4000)
 

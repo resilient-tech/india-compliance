@@ -10,6 +10,7 @@ from india_compliance.income_tax_india.doctype.msme_registration.test_msme_regis
     create_msme_registration,
     create_supplier,
 )
+from india_compliance.income_tax_india.overrides.party import get_msme_details
 from india_compliance.income_tax_india.utils.msme import MSME_PAYMENT_DAYS, get_msme_registration_options
 
 COMPANY = "_Test Indian Registered Company"
@@ -154,6 +155,10 @@ class TestMSMEPaymentTerms(IntegrationTestCase):
             pi.msme_registration,
             frappe.db.get_value("Supplier", supplier, "msme_registration"),
         )
+
+    def test_nothing_is_fetched_for_a_party_without_a_supplier(self):
+        """The regional override is shared with GST and runs on sales too."""
+        self.assertEqual(get_msme_details({"customer": "_Test Registered Customer"}), {})
 
     def test_advisory_keys_off_the_last_instalment(self):
         """A schedule paid in parts is late only if the final instalment is."""

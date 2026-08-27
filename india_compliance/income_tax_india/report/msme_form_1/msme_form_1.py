@@ -67,8 +67,10 @@ class MSMEForm1(MSMEPayablesReport):
         return _get_msme_due_date(posting_date)
 
     def get_data(self):
-        # an invoice settled before this half-year, with nothing still due at its
-        # end, has nothing to declare in this return
+        """Every MSE supplier with activity, not only those a payment ran late for:
+        a superset of what the 2024 amendment asks for.
+        """
+        # settled before this half-year and nothing still due: nothing to declare
         rows = [
             row
             for row in self.get_payables()

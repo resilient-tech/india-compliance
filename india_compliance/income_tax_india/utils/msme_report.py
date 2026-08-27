@@ -142,8 +142,7 @@ class MSMEReport:
     def get_msme_due_date(self, posting_date, due_date, classification):
         """The Section 15 time limit, from inputs already bulk-loaded."""
         if not classification:
-            # nothing on record says the terms were agreed in writing, so apply
-            # the Act's outer limit rather than assume the stricter 15 days
+            # terms unknown: the Act's outer limit, not the stricter 15 days
             return get_msme_due_date(posting_date)
 
         return get_msme_due_date(posting_date, due_date, classification.not_written_agreement)
@@ -193,8 +192,7 @@ class MSMEPayablesReport(MSMEReport):
         return records
 
     def is_voucher_included(self, voucher_balance) -> bool:
-        # settlements with no supply of their own to report: the posting dates are
-        # already bounded by the invoice query, so nothing else is left to check
+        # settlements with no supply of their own to report
         if not voucher_balance.origin:
             return False
 
@@ -231,17 +229,17 @@ class MSMEPayablesReport(MSMEReport):
         is_overdue = self.filters.as_on_date > due_date
 
         if not outstanding:
-            # settled: late if any part was paid past the limit, in whichever period
+            # late if any part was paid past the limit, in whichever period
             paid_late = sum(
                 settlement["amount"]
                 for settlement in voucher_balance.settlements
                 if settlement["posting_date"] > due_date
             )
-            payment_status = "Paid Late" if paid_late > 0 else "Paid On Time"
+            payment_status = _("Paid Late") if paid_late > 0 else _("Paid On Time")
         elif is_overdue:
-            payment_status = "Unpaid - Overdue"
+            payment_status = _("Unpaid - Overdue")
         else:
-            payment_status = "Within Due Date"
+            payment_status = _("Within Due Date")
 
         return {
             "invoice_amount": flt(voucher_balance.origin.amount),
