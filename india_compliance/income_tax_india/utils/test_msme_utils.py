@@ -1,20 +1,13 @@
 # Copyright (c) 2026, Resilient Tech and contributors
 # For license information, please see license.txt
 
-"""Shared fixtures for the MSME report tests.
-
-Lives here (not next to the 43B(h) report) because that report's folder contains
-parentheses - a module path plain ``import`` syntax cannot express.
-"""
+"""Shared fixtures for the MSME report tests."""
 
 import frappe
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 from frappe.tests import IntegrationTestCase
 
-from india_compliance.gst_india.utils.tests import (
-    create_purchase_invoice,
-    create_transaction,
-)
+from india_compliance.gst_india.utils.tests import create_purchase_invoice
 from india_compliance.income_tax_india.doctype.msme_registration.test_msme_registration import (
     FY,
     create_msme_registration,
@@ -23,12 +16,19 @@ from india_compliance.income_tax_india.doctype.msme_registration.test_msme_regis
 
 COMPANY = "_Test Indian Registered Company"
 
+# test records: both Micro/Manufacturing for FY 2023-2024. The second has no
+# written agreement on payment terms, so supplies to it carry the 15-day limit
+# u/s 15 rather than 45.
+MSME_SUPPLIER = "_Test MSME Supplier"
+MSME_SUPPLIER_WITHOUT_AGREEMENT = "_Test MSME Supplier without Agreement"
+
 
 class MSMEReportTestCase(IntegrationTestCase):
+    supplier = MSME_SUPPLIER
+
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_msme_report")
-        cls.supplier = cls._create_msme_supplier(enterprise_type="Micro")
 
     @classmethod
     def tearDownClass(cls):
@@ -50,7 +50,7 @@ class MSMEReportTestCase(IntegrationTestCase):
         )
         return create_supplier(msme.name)
 
-    def _pi(self, supplier, posting_date, rate):
+    def _pi(self, supplier, posting_date, rate, **kwargs):
         return create_purchase_invoice(
             supplier=supplier,
             company=COMPANY,
@@ -58,6 +58,7 @@ class MSMEReportTestCase(IntegrationTestCase):
             set_posting_time=1,  # keep the backdated posting_date
             qty=1,
             rate=rate,
+            **kwargs,
         )
 
     def _pay(self, pi, posting_date, amount=None):
@@ -72,35 +73,3 @@ class MSMEReportTestCase(IntegrationTestCase):
         pe.insert()
         pe.submit()
         return pe
-
-    def _make_advance(self, supplier, payable_account, posting_date, amount):
-        """Payment to the supplier not allocated against any voucher."""
-        pe = create_transaction(
-            doctype="Payment Entry",
-            company=COMPANY,
-            payment_type="Pay",
-            mode_of_payment="Cash",
-            party_type="Supplier",
-            party=supplier,
-            paid_from=self._get_cash_account(),
-            paid_to=payable_account,
-            paid_amount=amount,
-            posting_date=posting_date,
-            set_posting_time=1,
-            reference_no="TEST",
-            reference_date=posting_date,
-            do_not_save=True,
-        )
-        pe.setup_party_account_field()
-        pe.set_missing_values()
-        pe.set_exchange_rate()
-        pe.received_amount = pe.paid_amount / pe.target_exchange_rate
-        pe.save()
-        pe.submit()
-        return pe
-
-    @staticmethod
-    def _get_cash_account():
-        return frappe.db.get_value("Company", COMPANY, "default_cash_account") or (
-            frappe.db.get_value("Account", {"company": COMPANY, "account_type": "Cash", "is_group": 0})
-        )

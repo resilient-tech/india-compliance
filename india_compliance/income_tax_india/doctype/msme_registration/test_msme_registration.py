@@ -12,8 +12,8 @@ from india_compliance.income_tax_india.utils.msme import (
     get_financial_years_between,
     get_fiscal_year_dates,
     get_indian_fiscal_year,
-    get_msme_classification,
-    is_section_43_b_msme_applicable,
+    get_msme_registration_details,
+    get_msme_registration_status,
     update_msme_classification,
 )
 
@@ -23,6 +23,7 @@ FY = "2023-2024"
 def create_msme_registration(classifications=None, **kwargs):
     """MSME registration with a unique UDYAM number."""
     msme = frappe.new_doc("MSME Registration")
+    kwargs.setdefault("registration_date", "2020-04-01")
     msme.udyam_number = kwargs.pop("udyam_number", None) or (
         f"UDYAM-MH-12-{random.randint(1000000, 9999999)}"
     )
@@ -67,7 +68,7 @@ class IntegrationTestMSME(IntegrationTestCase):
         )
 
         self.assertEqual(msme.classifications[0].activity, "Manufacturing")
-        self.assertTrue(self._is_applicable(msme.name, FY))
+        self.assertTrue(get_msme_registration_details(msme.name, "2023-06-01").is_43b_applicable)
 
     def test_invalid_financial_year_rejected(self):
         for invalid_financial_year in ("2024", "2024-2026", "24-25", "FY 2024-25"):
@@ -78,8 +79,12 @@ class IntegrationTestMSME(IntegrationTestCase):
             )
 
     def test_duplicate_financial_year_rejected(self):
-        self.assertRaises(
+        """A period is always the year it names, so two rows for one year would
+        make the classification ambiguous.
+        """
+        self.assertRaisesRegex(
             frappe.ValidationError,
+            "Duplicate MSME classification",
             create_msme_registration,
             classifications=[
                 {"financial_year": "2024-2025", "enterprise_type": enterprise_type}
@@ -87,42 +92,17 @@ class IntegrationTestMSME(IntegrationTestCase):
             ],
         )
 
-    def test_applicability_derived_from_classification(self):
-        msme = create_msme_registration(
-            classifications=[
-                {"financial_year": "2024-2025", "enterprise_type": "Micro"},
-                {"financial_year": "2025-2026", "enterprise_type": "Medium"},
-            ]
+    def test_year_ending_before_the_registration_is_rejected(self):
+        """Classifying a year the enterprise was not yet registered for would
+        leave a period starting after it ends.
+        """
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "Not registered in Financial Year",
+            create_msme_registration,
+            registration_date="2025-06-01",
+            classifications=[{"financial_year": "2023-2024", "enterprise_type": "Micro"}],
         )
-
-        self.assertTrue(self._is_applicable(msme.name, "2024-2025"))
-        self.assertFalse(self._is_applicable(msme.name, "2025-2026"))
-        # No row for an FY -> not MSME that year, never inferred.
-        self.assertIsNone(get_msme_classification(msme.name, "2023-06-01"))
-
-    def test_trading_activity_excludes_micro(self):
-        msme = create_msme_registration(
-            classifications=[
-                {"financial_year": "2024-2025", "enterprise_type": "Small", "activity": "Trading"}
-            ]
-        )
-        self.assertFalse(self._is_applicable(msme.name, "2024-2025"))
-
-    def test_activity_is_year_wise(self):
-        """A registration that stops trading is applicable only from that year on."""
-        msme = create_msme_registration(
-            classifications=[
-                {"financial_year": "2023-2024", "enterprise_type": "Micro", "activity": "Trading"},
-                {
-                    "financial_year": "2024-2025",
-                    "enterprise_type": "Micro",
-                    "activity": "Manufacturing",
-                },
-            ]
-        )
-
-        self.assertFalse(self._is_applicable(msme.name, "2023-2024"))
-        self.assertTrue(self._is_applicable(msme.name, "2024-2025"))
 
     def test_cancellation_before_registration_rejected(self):
         msme = create_msme_registration(registration_date="2023-04-01")
@@ -136,8 +116,58 @@ class IntegrationTestMSME(IntegrationTestCase):
         msme.mark_as_cancelled("2023-10-15")
 
         # supplies accepted before cancellation are still covered
-        self.assertTrue(get_msme_classification(msme.name, "2023-10-15").msme_applicable)
-        self.assertIsNone(get_msme_classification(msme.name, "2023-10-16"))
+        self.assertEqual(get_msme_registration_details(msme.name, "2023-10-15").enterprise_type, "Micro")
+        self.assertFalse(get_msme_registration_details(msme.name, "2023-10-16").valid)
+
+    def test_cancellation_shortens_the_period_of_that_year(self):
+        """The stored period must say what the registration actually covered,
+        not the whole year it was cancelled in.
+        """
+        msme = create_msme_registration(
+            registration_date="2023-04-01",
+            classifications=[{"financial_year": FY, "enterprise_type": "Micro"}],
+        )
+
+        msme.mark_as_cancelled("2023-10-15")
+        msme.reload()
+        self.assertEqual(getdate(msme.classifications[0].to_date), getdate("2023-10-15"))
+
+        msme.undo_cancellation()
+        msme.reload()
+        self.assertEqual(getdate(msme.classifications[0].to_date), getdate("2024-03-31"))
+
+    def test_year_starting_after_the_cancellation_is_rejected(self):
+        """The mirror of the registration rule: a year the enterprise was no
+        longer registered for cannot be classified.
+        """
+        msme = create_msme_registration(
+            registration_date="2023-04-01",
+            classifications=[
+                {"financial_year": FY, "enterprise_type": "Micro"},
+                {"financial_year": "2024-2025", "enterprise_type": "Micro"},
+            ],
+        )
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "Not registered in Financial Year",
+            msme.mark_as_cancelled,
+            "2023-10-15",
+        )
+
+    def test_cancellation_can_be_undone(self):
+        """A mistyped cancellation date must be fixable without touching the DB."""
+        msme = create_msme_registration(
+            registration_date="2023-04-01",
+            classifications=[{"financial_year": FY, "enterprise_type": "Micro"}],
+        )
+        msme.mark_as_cancelled("2023-10-15")
+        self.assertFalse(get_msme_registration_details(msme.name, "2023-10-16").valid)
+
+        msme.undo_cancellation()
+
+        self.assertEqual(get_msme_registration_details(msme.name, "2023-10-16").enterprise_type, "Micro")
+        self.assertRaises(frappe.ValidationError, msme.undo_cancellation)
 
     def test_cancellation_unlinks_suppliers_on_request(self):
         msme = create_msme_registration(registration_date="2023-04-01")
@@ -181,9 +211,12 @@ class IntegrationTestMSME(IntegrationTestCase):
         msme = create_msme_registration(classifications=[{"financial_year": FY, "enterprise_type": "Micro"}])
         frappe.db.set_value("MSME Registration", msme.name, "is_cancelled", 1, update_modified=False)
 
-        self.assertIsNone(get_msme_classification(msme.name, "2023-05-01"))
+        self.assertFalse(get_msme_registration_details(msme.name, "2023-05-01").valid)
 
-    def test_virtual_fields_read_through_registration(self):
+    def test_supplier_details_are_read_on_demand(self):
+        """Nothing is copied onto the Supplier, so the details cannot drift from
+        the master - the form fetches them when it shows them.
+        """
         msme = create_msme_registration(
             classifications=[
                 {
@@ -193,13 +226,12 @@ class IntegrationTestMSME(IntegrationTestCase):
                 }
             ]
         )
-        supplier = frappe.get_doc("Supplier", create_supplier(msme.name))
+        supplier = create_supplier(msme.name)
+        status = get_msme_registration_status(frappe.db.get_value("Supplier", supplier, "msme_registration"))
 
-        self.assertEqual(supplier.msme_enterprise_type, "Micro")
-        self.assertEqual(supplier.msme_activity, "Manufacturing")
-        self.assertFalse(supplier.msme_is_cancelled)
-
-        # nothing is stored on the Supplier itself
+        self.assertEqual(status.enterprise_type, "Micro")
+        self.assertEqual(status.activity, "Manufacturing")
+        self.assertTrue(status.valid)
         self.assertFalse(frappe.db.has_column("Supplier", "msme_enterprise_type"))
 
     def test_annual_bump_carries_classification_forward(self):
@@ -217,7 +249,7 @@ class IntegrationTestMSME(IntegrationTestCase):
         )
 
         update_msme_classification()
-        carried = get_msme_classification(msme.name)
+        carried = get_msme_registration_details(msme.name)
         self.assertEqual(carried.enterprise_type, "Micro")
         self.assertEqual(carried.activity, "Trading")
 
@@ -251,9 +283,23 @@ class IntegrationTestMSME(IntegrationTestCase):
             1,
         )
 
+    def test_annual_bump_fills_every_year_it_missed(self):
+        """A run missed for years would otherwise leave the registration
+        unclassified, and an unclassified registration is invisible to the reports.
+        """
+        start_year = int(get_indian_fiscal_year(today()).split("-")[0]) - 3
+
+        msme = create_msme_registration(
+            classifications=[{"financial_year": f"{start_year}-{start_year + 1}", "enterprise_type": "Micro"}]
+        )
+
+        update_msme_classification()
+
+        self.assertEqual(get_msme_registration_details(msme.name).enterprise_type, "Micro")
+
     def test_carried_row_is_resolvable_by_date(self):
-        """The bump uses db_insert, which bypasses the document hooks. A row with
-        no period is invisible to every lookup, so it must set one itself.
+        """The bump uses bulk_insert, which bypasses the document hooks. A row
+        with no period is invisible to every lookup, so it must set one itself.
         """
         previous_year = int(get_indian_fiscal_year(today()).split("-")[0]) - 1
 
@@ -285,7 +331,20 @@ class IntegrationTestMSME(IntegrationTestCase):
 
         self.assertEqual(getdate(row.from_date), getdate("2023-04-01"))
         self.assertEqual(getdate(row.to_date), getdate("2024-03-31"))
-        self.assertTrue(get_msme_classification(msme.name, "2023-06-01").msme_applicable)
+        self.assertEqual(get_msme_registration_details(msme.name, "2023-06-01").enterprise_type, "Micro")
+
+    def test_period_starts_at_a_mid_year_registration_date(self):
+        """An enterprise registered in November was not an MSE the previous April."""
+        msme = create_msme_registration(
+            registration_date="2023-11-01",
+            classifications=[{"financial_year": FY, "enterprise_type": "Micro"}],
+        )
+        row = msme.classifications[0]
+
+        self.assertEqual(getdate(row.from_date), getdate("2023-11-01"))
+        self.assertEqual(getdate(row.to_date), getdate("2024-03-31"))
+        self.assertFalse(get_msme_registration_details(msme.name, "2023-06-01").valid)
+        self.assertEqual(get_msme_registration_details(msme.name, "2023-11-01").enterprise_type, "Micro")
 
     def test_future_cancellation_date_rejected(self):
         msme = create_msme_registration(registration_date="2023-04-01")
@@ -297,11 +356,6 @@ class IntegrationTestMSME(IntegrationTestCase):
         msme.reload()
 
         self.assertRaises(frappe.ValidationError, msme.mark_as_cancelled, "2023-11-01")
-
-    def _is_applicable(self, msme_registration, financial_year):
-        # any date inside the FY resolves that year's classification
-        start_year = financial_year.split("-")[0]
-        return get_msme_classification(msme_registration, f"{start_year}-06-01").msme_applicable
 
 
 class UnitTestMSME(UnitTestCase):
@@ -326,12 +380,3 @@ class UnitTestMSME(UnitTestCase):
         self.assertEqual(get_financial_years_between("2024-05-01", "2024-06-01"), ["2024-2025"])
         # a range straddling 31 March spans two FYs
         self.assertEqual(get_financial_years_between("2024-03-31", "2024-04-01"), ["2023-2024", "2024-2025"])
-
-    def test_applicability_rule(self):
-        self.assertTrue(is_section_43_b_msme_applicable("Micro", "Manufacturing"))
-        self.assertTrue(is_section_43_b_msme_applicable("Small", "Service"))
-        # Medium is not covered by 43B(h).
-        self.assertFalse(is_section_43_b_msme_applicable("Medium", "Manufacturing"))
-        # Traders are excluded even if Micro/Small.
-        self.assertFalse(is_section_43_b_msme_applicable("Small", "Trading"))
-        self.assertFalse(is_section_43_b_msme_applicable("Not MSME", "Manufacturing"))

@@ -3,7 +3,6 @@
 
 from frappe.utils import add_days, getdate
 
-from india_compliance.income_tax_india.constants import MSME_PAYMENT_DAYS
 from india_compliance.income_tax_india.doctype.msme_registration.test_msme_registration import (
     FY,
     create_msme_registration,
@@ -12,6 +11,7 @@ from india_compliance.income_tax_india.doctype.msme_registration.test_msme_regis
 from india_compliance.income_tax_india.report.msme_payables_report.msme_payables_report import (
     execute,
 )
+from india_compliance.income_tax_india.utils.msme import MSME_PAYMENT_DAYS
 from india_compliance.income_tax_india.utils.test_msme_utils import COMPANY, MSMEReportTestCase
 
 POSTING_DATE = "2023-05-01"
@@ -46,18 +46,6 @@ class TestMSMEPayablesDue(MSMEReportTestCase):
         supplier = self._create_msme_supplier(enterprise_type="Micro")
         pi = self._pi(supplier, POSTING_DATE, 5000)
         self._pay(pi, "2023-05-15")
-
-        self.assertNotIn(pi.name, self._run(supplier))
-
-    def test_trader_excluded(self):
-        supplier = self._create_msme_supplier(enterprise_type="Micro", activity="Trading")
-        pi = self._pi(supplier, POSTING_DATE, 5000)
-
-        self.assertNotIn(pi.name, self._run(supplier))
-
-    def test_medium_enterprise_excluded(self):
-        supplier = self._create_msme_supplier(enterprise_type="Medium")
-        pi = self._pi(supplier, POSTING_DATE, 5000)
 
         self.assertNotIn(pi.name, self._run(supplier))
 

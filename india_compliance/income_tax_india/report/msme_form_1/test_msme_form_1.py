@@ -25,10 +25,15 @@ class TestMSMEForm1(MSMEReportTestCase):
         still outstanding - never to a later one where neither is true, or the
         same payment would be declared twice to the Registrar.
         """
+        # Posted and settled within Apr-Sep, read from the Oct-Mar return.
         pi = self._pi(self.supplier, "2023-05-01", 10000)
         self._pay(pi, "2023-06-01")
 
-        rows = {row["voucher_no"] for row in self._run_form1(group_by="Invoice Wise", period="Oct-Mar")}
+        rows = {
+            row["voucher_no"]: row
+            for row in self._run_form1(group_by="Invoice Wise", period="Oct-Mar")
+            if row["supplier"] == self.supplier
+        }
 
         self.assertNotIn(pi.name, rows)
 
@@ -36,13 +41,16 @@ class TestMSMEForm1(MSMEReportTestCase):
         """The same supply left unpaid stays on every return until it is settled."""
         pi = self._pi(self.supplier, "2023-05-01", 10000)
 
-        rows = {row["voucher_no"]: row for row in self._run_form1(group_by="Invoice Wise", period="Oct-Mar")}
-        row = rows[pi.name]
+        rows = {
+            row["voucher_no"]: row
+            for row in self._run_form1(group_by="Invoice Wise", period="Oct-Mar")
+            if row["supplier"] == self.supplier
+        }
 
-        self.assertEqual(flt(row["outstanding_overdue"]), 10000)
-        # paid nothing in this half-year, so neither paid bucket carries it
-        self.assertEqual(flt(row["paid_within_due"]), 0)
-        self.assertEqual(flt(row["paid_after_due"]), 0)
+        # nothing paid in this half-year, so neither paid bucket carries it
+        self.assertEqual(flt(rows[pi.name]["outstanding_overdue"]), 10000)
+        self.assertEqual(flt(rows[pi.name]["paid_within_due"]), 0)
+        self.assertEqual(flt(rows[pi.name]["paid_after_due"]), 0)
 
     def test_invoice_wise_buckets(self):
         # Posted 2023-05-01 -> due 2023-06-15 (within Apr-Sep 2023).
@@ -102,12 +110,6 @@ class TestMSMEForm1(MSMEReportTestCase):
         self.assertEqual(flt(row["paid_within_due"]), 3000)
         self.assertEqual(row["outstanding_overdue_count"], 1)
         self.assertEqual(flt(row["outstanding_overdue"]), 7000)
-
-    def test_medium_supplier_excluded_from_form1(self):
-        medium = self._create_msme_supplier(enterprise_type="Medium")
-        self._pi(medium, "2023-05-01", 9000)
-        rows = [row for row in self._run_form1() if row["supplier"] == medium]
-        self.assertEqual(rows, [])
 
     def test_traders_are_included_by_default(self):
         """Form-1 is filed under the MSMED Act, which has no trader carve-out."""

@@ -7,11 +7,12 @@ from frappe.utils import flt, getdate
 from india_compliance.gst_india.utils.tests import (
     create_journal_entry,
     create_purchase_invoice,
+    create_transaction,
 )
-from india_compliance.income_tax_india.constants import MSME_UNCLASSIFIED
 from india_compliance.income_tax_india.report.msme_disallowance_report.msme_disallowance_report import (
     execute,
 )
+from india_compliance.income_tax_india.utils.msme import MSME_UNCLASSIFIED
 from india_compliance.income_tax_india.utils.test_msme_utils import (
     COMPANY,
     MSME_SUPPLIER_WITHOUT_AGREEMENT,
@@ -34,6 +35,38 @@ class _TestMSME43BHBase(MSMEReportTestCase):
             }
         )
         return {row["voucher_no"]: row for row in data}
+
+    def _make_advance(self, supplier, payable_account, posting_date, amount):
+        """Payment to the supplier not allocated against any voucher."""
+        pe = create_transaction(
+            doctype="Payment Entry",
+            company=COMPANY,
+            payment_type="Pay",
+            mode_of_payment="Cash",
+            party_type="Supplier",
+            party=supplier,
+            paid_from=self._get_cash_account(),
+            paid_to=payable_account,
+            paid_amount=amount,
+            posting_date=posting_date,
+            set_posting_time=1,
+            reference_no="TEST",
+            reference_date=posting_date,
+            do_not_save=True,
+        )
+        pe.setup_party_account_field()
+        pe.set_missing_values()
+        pe.set_exchange_rate()
+        pe.received_amount = pe.paid_amount / pe.target_exchange_rate
+        pe.save()
+        pe.submit()
+        return pe
+
+    @staticmethod
+    def _get_cash_account():
+        return frappe.db.get_value("Company", COMPANY, "default_cash_account") or (
+            frappe.db.get_value("Account", {"company": COMPANY, "account_type": "Cash", "is_group": 0})
+        )
 
 
 class TestMSME43BHReport(_TestMSME43BHBase):

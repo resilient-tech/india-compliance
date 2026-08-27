@@ -6,23 +6,18 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days
 
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
-from india_compliance.income_tax_india.constants import MSME_PAYMENT_DAYS
 from india_compliance.income_tax_india.doctype.msme_registration.test_msme_registration import (
     create_msme_registration,
     create_supplier,
 )
-from india_compliance.income_tax_india.overrides.purchase_invoice import (
-    get_msme_details,
-    get_valid_msme_registrations,
-)
+from india_compliance.income_tax_india.utils.msme import MSME_PAYMENT_DAYS, get_msme_registration_options
 
 COMPANY = "_Test Indian Registered Company"
 POSTING_DATE = "2023-05-01"
 FY = "2023-2024"
 
 DUE_DATE_ADVISORY = "Invalid Due Date"
-CANCELLED_ADVISORY = "MSME Registration Cancelled"
-NOT_APPLICABLE_ADVISORY = "MSME Registration Not Applicable"
+INVALID_ADVISORY = "Invalid MSME Registration"
 
 
 class TestMSMEPaymentTerms(IntegrationTestCase):
@@ -46,48 +41,32 @@ class TestMSMEPaymentTerms(IntegrationTestCase):
         supplier = self._create_supplier(enterprise_type="Micro", activity="Trading")
         self.assertAdvisory(supplier, days=MSME_PAYMENT_DAYS + 30, shown=False)
 
-    def test_no_advisory_for_medium_enterprise(self):
-        supplier = self._create_supplier(enterprise_type="Medium")
-        self.assertAdvisory(supplier, days=MSME_PAYMENT_DAYS + 30, shown=False)
+    def test_no_advisory_for_a_type_outside_43bh(self):
+        for enterprise_type in ("Medium", "Not MSME"):
+            supplier = self._create_supplier(enterprise_type=enterprise_type)
+            self.assertAdvisory(supplier, days=MSME_PAYMENT_DAYS + 30, shown=False)
 
     def test_no_advisory_when_unclassified_for_the_year(self):
         # classified for a different FY than the invoice's
         supplier = self._create_supplier(enterprise_type="Micro", financial_year="2024-2025")
         self.assertAdvisory(supplier, days=MSME_PAYMENT_DAYS + 30, shown=False)
 
-    def test_cancelled_registration_is_advised(self):
+    def test_a_registration_cancelled_before_the_supply_is_unset(self):
         supplier = self._create_cancelled_supplier(cancelled_on=add_days(POSTING_DATE, -1))
         pi = self._get_purchase_invoice(supplier, days=10)
 
-        self.assertTrue(self._get_advisory(pi, CANCELLED_ADVISORY))
-        self.assertEqual(pi.docstatus, 0)  # advisory only: the invoice still saves
+        self.assertIsNone(pi.msme_registration)
+        self.assertTrue(self._get_advisory(pi, INVALID_ADVISORY))
+        self.assertEqual(pi.docstatus, 0)  # the invoice still saves
 
-    def test_no_cancellation_advisory_on_the_cancellation_date(self):
+    def test_a_registration_cancelled_on_the_posting_date_is_kept(self):
         """A supply accepted on the cancellation date is still covered."""
         supplier = self._create_cancelled_supplier(cancelled_on=POSTING_DATE)
         pi = self._get_purchase_invoice(supplier, days=10)
 
-        self.assertFalse(self._get_advisory(pi, CANCELLED_ADVISORY))
+        self.assertTrue(pi.msme_registration)
 
-    def test_no_cancellation_advisory_for_active_registration(self):
-        supplier = self._create_supplier(enterprise_type="Micro")
-        pi = self._get_purchase_invoice(supplier, days=10)
-
-        self.assertFalse(self._get_advisory(pi, CANCELLED_ADVISORY))
-
-    def test_cancellation_supersedes_the_due_date_advisory(self):
-        """A cancelled registration is not MSME, so the 45-day limit no longer applies."""
-        supplier = self._create_cancelled_supplier(cancelled_on=add_days(POSTING_DATE, -1))
-        pi = self._get_purchase_invoice(supplier, days=MSME_PAYMENT_DAYS + 30)
-
-        frappe.message_log.clear()
-        pi.save()
-
-        titles = [frappe.parse_json(message).get("title") for message in frappe.message_log]
-        self.assertIn(CANCELLED_ADVISORY, titles)
-        self.assertNotIn(DUE_DATE_ADVISORY, titles)
-
-    def test_advisory_when_invoice_predates_the_registration(self):
+    def test_a_supply_predating_the_registration_is_unset(self):
         """A backdated invoice cannot claim a registration that did not exist yet."""
         msme = create_msme_registration(
             registration_date=add_days(POSTING_DATE, 1),
@@ -95,20 +74,31 @@ class TestMSMEPaymentTerms(IntegrationTestCase):
         )
         pi = self._get_purchase_invoice(create_supplier(msme.name), days=10)
 
-        self.assertTrue(self._get_advisory(pi, NOT_APPLICABLE_ADVISORY))
+        self.assertIsNone(pi.msme_registration)
 
-    def test_only_valid_registrations_are_selectable(self):
-        """The link field must not offer a registration that did not cover the supply."""
+    def test_unsetting_takes_the_due_date_advisory_with_it(self):
+        """An unset registration is not MSME, so the 45-day limit no longer applies."""
+        supplier = self._create_cancelled_supplier(cancelled_on=add_days(POSTING_DATE, -1))
+        pi = self._get_purchase_invoice(supplier, days=MSME_PAYMENT_DAYS + 30)
+
+        self.assertFalse(self._get_advisory(pi))
+
+    def test_a_registration_that_did_not_apply_is_offered_with_the_reason(self):
+        """The field is editable and the advisory only advises, so nothing is
+        hidden - but the description says why it did not cover the supply.
+        """
         msme = create_msme_registration(
             registration_date="2023-04-01",
             classifications=[{"financial_year": FY, "enterprise_type": "Micro"}],
         )
         msme.mark_as_cancelled("2023-10-15")
 
-        self.assertFalse(self._is_selectable(msme.name, "2023-03-01"))  # before registration
-        self.assertTrue(self._is_selectable(msme.name, "2023-06-01"))  # while valid
-        self.assertTrue(self._is_selectable(msme.name, "2023-10-15"))  # on cancellation date
-        self.assertFalse(self._is_selectable(msme.name, "2023-11-01"))  # after cancellation
+        self.assertEqual(self._get_selectable("2023-06-01")[msme.name], "Micro - Manufacturing")
+
+        # the classification is shown either way, marked for the supplies it missed
+        self.assertEqual(self._get_selectable("2023-11-01")[msme.name], "Micro - Manufacturing, Invalid")
+        # 2023-03-01 falls in FY 2022-2023, which has no classification at all
+        self.assertEqual(self._get_selectable("2023-03-01")[msme.name], "Invalid")
 
     def test_active_registration_is_always_selectable(self):
         """cancelled_date is NULL when active, which a plain date filter would exclude."""
@@ -120,22 +110,50 @@ class TestMSMEPaymentTerms(IntegrationTestCase):
         self.assertTrue(self._is_selectable(msme.name, "2023-06-01"))
         self.assertTrue(self._is_selectable(msme.name, "2030-01-01"))
 
-    def _is_selectable(self, msme_registration, posting_date):
-        registrations = get_valid_msme_registrations(
-            "MSME Registration", "", "name", 0, 50, {"posting_date": posting_date}
-        )
-        return msme_registration in [row[0] for row in registrations]
-
-    def test_registration_can_be_cleared_on_the_invoice(self):
-        """The field is editable: a cleared value must not be refetched on save."""
+    def test_renaming_a_registration_leaves_a_filed_invoice_alone(self):
+        """The invoice holds the number as filed, not a link a rename rewrites."""
         supplier = self._create_supplier(enterprise_type="Micro")
-        pi = self._get_purchase_invoice(supplier, days=MSME_PAYMENT_DAYS + 30)
-        self.assertTrue(pi.msme_registration)
+        pi = self._get_purchase_invoice(supplier, days=10)
+        pi.submit()
 
-        pi.msme_registration = None
-        pi.save()
+        renamed = frappe.rename_doc("MSME Registration", pi.msme_registration, "UDYAM-MH-12-9999999")
 
-        self.assertFalse(pi.msme_registration)
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pi.name, "msme_registration"),
+            pi.msme_registration,
+        )
+        # the master data itself does follow the rename
+        self.assertEqual(frappe.db.get_value("Supplier", supplier, "msme_registration"), renamed)
+
+    def _get_selectable(self, posting_date):
+        return {
+            option["value"]: option["description"] for option in get_msme_registration_options(posting_date)
+        }
+
+    def _is_selectable(self, msme_registration, posting_date):
+        return msme_registration in self._get_selectable(posting_date)
+
+    def test_blank_udyam_number_is_reported_not_crashed_on(self):
+        """before_naming runs before any mandatory check, so a blank number must
+        fall through the format validation rather than blow up inside it.
+        """
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "UDYAM Registration Number is required",
+            frappe.new_doc("MSME Registration").insert,
+        )
+
+    def test_registration_is_seeded_from_the_supplier(self):
+        """Through the regional party-details override, so an invoice created by
+        API, import or a background job resolves it the same way the desk does.
+        """
+        supplier = self._create_supplier(enterprise_type="Micro")
+        pi = self._get_purchase_invoice(supplier, days=10)
+
+        self.assertEqual(
+            pi.msme_registration,
+            frappe.db.get_value("Supplier", supplier, "msme_registration"),
+        )
 
     def test_advisory_keys_off_the_last_instalment(self):
         """A schedule paid in parts is late only if the final instalment is."""
@@ -169,8 +187,6 @@ class TestMSMEPaymentTerms(IntegrationTestCase):
             set_posting_time=1,
             payment_terms_template=None,
             due_date=add_days(POSTING_DATE, days),
-            # seeded from the supplier by the client script, not fetch_from
-            msme_registration=get_msme_details({"supplier": supplier})["msme_registration"],
             qty=1,
             rate=1000,
             do_not_submit=True,
