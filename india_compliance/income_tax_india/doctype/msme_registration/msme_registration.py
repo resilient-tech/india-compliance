@@ -21,9 +21,7 @@ class MSMERegistration(Document):
         self.validate_udyam_number()
 
     def before_rename(self, old_name, new_name, merge=False):
-        if not frappe.db.get_value(
-            "Purchase Invoice", {"msme_registration": old_name, "docstatus": 1}, "name"
-        ):
+        if not frappe.db.exists("Purchase Invoice", {"msme_registration": old_name, "docstatus": 1}):
             return
 
         filters = urlencode({"msme_registration": old_name, "docstatus": 1})
