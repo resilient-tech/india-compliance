@@ -20,6 +20,30 @@ class TestMSMEForm1(MSMEReportTestCase):
         )
         return data
 
+    def test_settled_in_an_earlier_half_year_is_not_redeclared(self):
+        """A supply belongs to the half-year it was paid in, or one where it is
+        still outstanding - never to a later one where neither is true, or the
+        same payment would be declared twice to the Registrar.
+        """
+        pi = self._pi(self.supplier, "2023-05-01", 10000)
+        self._pay(pi, "2023-06-01")
+
+        rows = {row["voucher_no"] for row in self._run_form1(group_by="Invoice Wise", period="Oct-Mar")}
+
+        self.assertNotIn(pi.name, rows)
+
+    def test_unpaid_from_an_earlier_half_year_is_still_outstanding(self):
+        """The same supply left unpaid stays on every return until it is settled."""
+        pi = self._pi(self.supplier, "2023-05-01", 10000)
+
+        rows = {row["voucher_no"]: row for row in self._run_form1(group_by="Invoice Wise", period="Oct-Mar")}
+        row = rows[pi.name]
+
+        self.assertEqual(flt(row["outstanding_overdue"]), 10000)
+        # paid nothing in this half-year, so neither paid bucket carries it
+        self.assertEqual(flt(row["paid_within_due"]), 0)
+        self.assertEqual(flt(row["paid_after_due"]), 0)
+
     def test_invoice_wise_buckets(self):
         # Posted 2023-05-01 -> due 2023-06-15 (within Apr-Sep 2023).
         paid_on_time = self._pi(self.supplier, "2023-05-01", 4000)
@@ -43,6 +67,22 @@ class TestMSMEForm1(MSMEReportTestCase):
         self.assertEqual(flt(rows[paid_late.name]["paid_after_due"]), 5000)
         self.assertEqual(flt(rows[unpaid_overdue.name]["outstanding_overdue"]), 7000)
         self.assertEqual(flt(rows[unpaid_recent.name]["outstanding_not_due"]), 3000)
+
+    def test_buckets_split_at_a_flat_45_days(self):
+        """The Specified Companies Order asks for 45 days from acceptance, and
+        this form's columns say so.
+
+        Posted 2023-05-01 with 30-day terms and paid on 2023-06-10 is late
+        against the agreed date - and so disallowable u/s 43B(h) - but still
+        within the 45 days Form-1 reports on.
+        """
+        pi = self._pi(self.supplier, "2023-05-01", 4000, due_date="2023-05-31")
+        self._pay(pi, "2023-06-10")
+
+        rows = {row["voucher_no"]: row for row in self._run_form1(group_by="Invoice Wise")}
+
+        self.assertEqual(flt(rows[pi.name]["paid_within_due"]), 4000)
+        self.assertEqual(flt(rows[pi.name]["paid_after_due"]), 0)
 
     def test_supplier_wise_aggregates_with_counts(self):
         # Two invoices paid on time, one unpaid overdue -> aggregated per supplier

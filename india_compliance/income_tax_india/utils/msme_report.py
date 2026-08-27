@@ -141,7 +141,7 @@ class MSMEReport:
 
         return True
 
-    def get_due_date(self, posting_date, due_date, classification):
+    def get_msme_due_date(self, posting_date, due_date, classification):
         """The Section 15 time limit, from inputs already bulk-loaded."""
         if not classification:
             # nothing on record says the terms were agreed in writing, so apply
@@ -205,7 +205,7 @@ class MSMEPayablesReport(MSMEReport):
     def get_voucher_row(self, voucher_type, voucher_no, voucher_balance, classification) -> dict:
         posting_date = getdate(voucher_balance.origin.posting_date)
         invoice = self.invoices[voucher_no]
-        due_date = self.get_due_date(posting_date, invoice.due_date, classification)
+        due_date = self.get_msme_due_date(posting_date, invoice.due_date, classification)
 
         return {
             "supplier": invoice.supplier,
@@ -226,7 +226,7 @@ class MSMEPayablesReport(MSMEReport):
     def get_due_amounts(self, voucher_balance, due_date) -> dict:
         # Form-1 counts only the payments made during its half-year
         summary = get_settlement_summary(
-            voucher_balance.settlements, due_date, from_date=self.filters.settlement_from_date
+            voucher_balance.settlements, due_date, from_date=self.filters.paid_from_date
         )
 
         outstanding = max(flt(voucher_balance.balance), 0)

@@ -12,10 +12,16 @@ import frappe
 from frappe import _
 from frappe.utils import add_months, cint, get_last_day
 
-from india_compliance.income_tax_india.utils.msme import get_financial_year_dates
+from india_compliance.income_tax_india.utils.msme import (
+    get_financial_year_dates,
+)
+from india_compliance.income_tax_india.utils.msme import (
+    get_msme_due_date as _get_msme_due_date,
+)
 from india_compliance.income_tax_india.utils.msme_report import MSMEPayablesReport
 
-PERIODS = {"Apr-Sep": 0, "Oct-Mar": 6}
+# months into the financial year the period starts, and how many it covers
+PERIODS = {"Apr-Mar": (0, 12), "Apr-Sep": (0, 6), "Oct-Mar": (6, 6)}
 
 BUCKETS = (
     ("paid_within_due", "Paid within 45 days"),
@@ -46,31 +52,33 @@ class MSMEForm1(MSMEPayablesReport):
 
         # the report is as on the period end, and only counts payments made
         # within the period
-        self.filters.to_date = self.filters.period_end
         self.filters.as_on_date = self.filters.period_end
-        self.settlement_from_date = self.filters.period_start
+        self.filters.paid_from_date = self.filters.period_start
 
         # MSMED Act covers traders; 43B(h) is what excludes them. cint, because
         # a filter set via route options arrives as the string "0"
         self.exclude_traders = not cint(self.filters.include_traders)
 
+    def get_msme_due_date(self, posting_date, due_date, classification):
+        """
+        Override the base class to implement the Form-1 due date logic.
+        Form-1 splits at a flat 45 days from the date of acceptance.
+        """
+        return _get_msme_due_date(posting_date)
+
     def get_data(self):
-        rows = self.get_invoice_rows()
+        # an invoice settled before this half-year, with nothing still due at its
+        # end, has nothing to declare in this return
+        rows = [
+            row
+            for row in self.get_payables()
+            if row["paid_within_due"] or row["paid_after_due"] or row["outstanding"]
+        ]
 
         if self.filters.group_by != "Invoice Wise":
             rows = self.group_by_supplier(rows)
 
         return rows
-
-    def get_invoice_rows(self):
-        # Form-1 reports dues against supplies: skip unadjusted payment / credit
-        # rows (negative) and vouchers with no period activity and no dues.
-        return [
-            row
-            for row in self.get_payables()
-            if row["invoice_amount"] > 0
-            and (row["paid_within_due"] or row["paid_after_due"] or row["outstanding"])
-        ]
 
     def group_by_supplier(self, rows):
         """Aggregate into the supplier-wise MCA annexure shape.
@@ -86,6 +94,8 @@ class MSMEForm1(MSMEPayablesReport):
                     "supplier": row["supplier"],
                     "supplier_name": row["supplier_name"],
                     "pan": row["pan"],
+                    "udyam_number": row["udyam_number"],
+                    "currency": row["currency"],
                     **{fieldname: 0 for fieldname, _label in BUCKETS},
                     **{f"{fieldname}_count": 0 for fieldname, _label in BUCKETS},
                 },
@@ -113,6 +123,13 @@ class MSMEForm1(MSMEPayablesReport):
                 "fieldtype": "Data",
                 "width": 120,
             },
+            {
+                "label": _("Udyam No. of the Supplier"),
+                "fieldname": "udyam_number",
+                "fieldtype": "Link",
+                "options": "MSME Registration",
+                "width": 150,
+            },
         ]
 
         if self.filters.group_by == "Invoice Wise":
@@ -135,6 +152,7 @@ class MSMEForm1(MSMEPayablesReport):
                         "label": _(label),
                         "fieldname": fieldname,
                         "fieldtype": "Currency",
+                        "options": "currency",
                         "width": 150,
                     }
                     for fieldname, label in BUCKETS
@@ -156,6 +174,7 @@ class MSMEForm1(MSMEPayablesReport):
                     "label": _("Amount (Rs.) - {0}").format(_(label)),
                     "fieldname": fieldname,
                     "fieldtype": "Currency",
+                    "options": "currency",
                     "width": 160,
                 },
             ]
@@ -164,11 +183,7 @@ class MSMEForm1(MSMEPayablesReport):
 
 
 def get_period_dates(period_fy, period=None):
-    fy_start, fy_end = get_financial_year_dates(period_fy)
+    offset, months = PERIODS[period or "Apr-Mar"]
 
-    # No period selected -> cover the whole financial year (Apr-Mar).
-    if not period:
-        return fy_start, fy_end
-
-    start = add_months(fy_start, PERIODS[period])
-    return start, get_last_day(add_months(start, 5))
+    start = add_months(get_financial_year_dates(period_fy)[0], offset)
+    return start, get_last_day(add_months(start, months - 1))

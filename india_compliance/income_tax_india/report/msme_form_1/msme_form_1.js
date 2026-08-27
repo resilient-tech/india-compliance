@@ -23,8 +23,8 @@ frappe.query_reports["MSME Form-1"] = {
             fieldname: "period",
             label: __("Period"),
             fieldtype: "Select",
-            options: ["", "Apr-Sep", "Oct-Mar"],
-            description: __("Leave blank for the full financial year"),
+            options: ["Apr-Mar", "Apr-Sep", "Oct-Mar"],
+            default: "Apr-Mar",
         },
         {
             fieldname: "group_by",
