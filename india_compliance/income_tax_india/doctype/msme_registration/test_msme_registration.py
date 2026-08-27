@@ -4,9 +4,11 @@
 import random
 
 import frappe
+from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 from frappe.tests import IntegrationTestCase, UnitTestCase
 from frappe.utils import add_days, getdate, today
 
+from india_compliance.gst_india.utils.tests import create_purchase_invoice
 from india_compliance.income_tax_india.utils.msme import (
     get_financial_year_dates,
     get_financial_years_between,
@@ -18,6 +20,13 @@ from india_compliance.income_tax_india.utils.msme import (
 )
 
 FY = "2023-2024"
+COMPANY = "_Test Indian Registered Company"
+
+# test records: both Micro/Manufacturing for FY 2023-2024. The second has no
+# written agreement on payment terms, so supplies to it carry the 15-day limit
+# u/s 15 rather than 45.
+MSME_SUPPLIER = "_Test MSME Supplier"
+MSME_SUPPLIER_WITHOUT_AGREEMENT = "_Test MSME Supplier without Agreement"
 
 
 def create_msme_registration(classifications=None, **kwargs):
@@ -43,6 +52,58 @@ def create_supplier(msme_registration=None):
     supplier.msme_registration = msme_registration
     supplier.insert()
     return supplier.name
+
+
+class MSMEReportTestCase(IntegrationTestCase):
+    supplier = MSME_SUPPLIER
+
+    @classmethod
+    def setUpClass(cls):
+        frappe.db.savepoint("before_test_msme_report")
+
+    @classmethod
+    def tearDownClass(cls):
+        frappe.db.rollback(save_point="before_test_msme_report")
+
+    @classmethod
+    def _create_msme_supplier(
+        cls, enterprise_type, activity="Manufacturing", financial_year=FY, **msme_kwargs
+    ):
+        msme = create_msme_registration(
+            classifications=[
+                {
+                    "financial_year": financial_year,
+                    "enterprise_type": enterprise_type,
+                    "activity": activity,
+                }
+            ],
+            **msme_kwargs,
+        )
+        return create_supplier(msme.name)
+
+    def _pi(self, supplier, posting_date, rate, **kwargs):
+        return create_purchase_invoice(
+            supplier=supplier,
+            company=COMPANY,
+            posting_date=posting_date,
+            set_posting_time=1,  # keep the backdated posting_date
+            qty=1,
+            rate=rate,
+            **kwargs,
+        )
+
+    def _pay(self, pi, posting_date, amount=None):
+        pe = get_payment_entry("Purchase Invoice", pi.name)
+        pe.posting_date = posting_date
+        pe.set_posting_time = 1
+        pe.reference_no = "TEST"
+        pe.reference_date = posting_date
+        if amount is not None:
+            pe.paid_amount = amount
+            pe.references[0].allocated_amount = amount
+        pe.insert()
+        pe.submit()
+        return pe
 
 
 class IntegrationTestMSME(IntegrationTestCase):
@@ -291,6 +352,25 @@ class IntegrationTestMSME(IntegrationTestCase):
 
         msme = create_msme_registration(
             classifications=[{"financial_year": f"{start_year}-{start_year + 1}", "enterprise_type": "Micro"}]
+        )
+
+        update_msme_classification()
+
+        self.assertEqual(get_msme_registration_details(msme.name).enterprise_type, "Micro")
+
+    def test_annual_bump_ignores_a_year_still_ahead(self):
+        """A classification entered for a future year must not stop the years in
+        between from being carried forward.
+        """
+        current_year = int(get_indian_fiscal_year(today()).split("-")[0])
+        previous_year = current_year - 1
+        future_year = current_year + 2
+
+        msme = create_msme_registration(
+            classifications=[
+                {"financial_year": f"{previous_year}-{previous_year + 1}", "enterprise_type": "Micro"},
+                {"financial_year": f"{future_year}-{future_year + 1}", "enterprise_type": "Small"},
+            ]
         )
 
         update_msme_classification()

@@ -3,8 +3,11 @@
 
 from frappe.utils import flt
 
+from india_compliance.income_tax_india.doctype.msme_registration.test_msme_registration import (
+    COMPANY,
+    MSMEReportTestCase,
+)
 from india_compliance.income_tax_india.report.msme_form_1.msme_form_1 import execute
-from india_compliance.income_tax_india.utils.test_msme_utils import COMPANY, MSMEReportTestCase
 
 
 class TestMSMEForm1(MSMEReportTestCase):

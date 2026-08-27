@@ -409,7 +409,7 @@ class MSMERegistrationQuickEntryForm extends frappe.ui.form.QuickEntryForm {
         // underscore-prefixed: frappe replaces a dialog field that shares a real
         // fieldname with the doctype's own docfield, dropping onchange and description
         this.docfields = [
-            ...this.docfields.filter((df) => df.fieldname !== "udyam_number"),
+            ...this.docfields.filter((df) => !["udyam_number", "registration_date"].includes(df.fieldname)),
             this.get_udyam_number_field(),
             {
                 fieldname: "_registration_date",
@@ -429,7 +429,12 @@ class MSMERegistrationQuickEntryForm extends frappe.ui.form.QuickEntryForm {
             fieldname: "_udyam_number",
             onchange: () => {
                 const d = this.dialog;
-                d.set_value("_udyam_number", india_compliance.validate_udyam_number(d.doc._udyam_number));
+                const udyam_number = d.doc._udyam_number;
+
+                // validate only once the full number is entered (UDYAM-XX-00-0000000)
+                if (!udyam_number || udyam_number.length < 19) return;
+
+                d.set_value("_udyam_number", india_compliance.validate_udyam_number(udyam_number));
             },
         };
     }

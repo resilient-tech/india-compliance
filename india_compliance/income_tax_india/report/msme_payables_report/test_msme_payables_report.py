@@ -4,7 +4,9 @@
 from frappe.utils import add_days, getdate
 
 from india_compliance.income_tax_india.doctype.msme_registration.test_msme_registration import (
+    COMPANY,
     FY,
+    MSMEReportTestCase,
     create_msme_registration,
     create_supplier,
 )
@@ -12,7 +14,6 @@ from india_compliance.income_tax_india.report.msme_payables_report.msme_payables
     execute,
 )
 from india_compliance.income_tax_india.utils.msme import MSME_PAYMENT_DAYS
-from india_compliance.income_tax_india.utils.test_msme_utils import COMPANY, MSMEReportTestCase
 
 POSTING_DATE = "2023-05-01"
 # posted 2023-05-01 -> due 2023-06-15; still within the 45 days as on 2023-06-01

@@ -226,8 +226,13 @@ def update_msme_classification():
     new_rows = []
 
     for registration, rows in classifications.items():
-        # a year may hold several rows; only the last one is still current
-        latest = max(rows, key=lambda row: getdate(row.to_date))
+        # a year still ahead says nothing about the years since: carry from the
+        # last one that has actually ended
+        ended_rows = [row for row in rows if getdate(row.to_date) < current_year_start]
+        if not ended_rows:
+            continue
+
+        latest = max(ended_rows, key=lambda row: getdate(row.to_date))
 
         # the year ended with no row covering its last day: the status lapsed,
         # so there is nothing to carry

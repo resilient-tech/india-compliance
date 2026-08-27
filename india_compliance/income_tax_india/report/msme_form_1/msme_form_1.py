@@ -113,20 +113,26 @@ class MSMEForm1(MSMEPayablesReport):
     def get_columns(self):
         columns = [
             {
-                "label": _("Name of MSE Supplier"),
+                "label": _("Supplier"),
                 "fieldname": "supplier",
                 "fieldtype": "Link",
                 "options": "Supplier",
+                "width": 140,
+            },
+            {
+                "label": _("Supplier Name"),
+                "fieldname": "supplier_name",
+                "fieldtype": "Data",
                 "width": 180,
             },
             {
-                "label": _("PAN of the Supplier"),
+                "label": _("PAN"),
                 "fieldname": "pan",
                 "fieldtype": "Data",
                 "width": 120,
             },
             {
-                "label": _("Udyam No. of the Supplier"),
+                "label": _("UDYAM No."),
                 "fieldname": "udyam_number",
                 "fieldtype": "Link",
                 "options": "MSME Registration",

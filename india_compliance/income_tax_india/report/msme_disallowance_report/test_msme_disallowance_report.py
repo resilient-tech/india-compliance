@@ -9,15 +9,15 @@ from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice,
     create_transaction,
 )
-from india_compliance.income_tax_india.report.msme_disallowance_report.msme_disallowance_report import (
-    execute,
-)
-from india_compliance.income_tax_india.utils.msme import MSME_UNCLASSIFIED
-from india_compliance.income_tax_india.utils.test_msme_utils import (
+from india_compliance.income_tax_india.doctype.msme_registration.test_msme_registration import (
     COMPANY,
     MSME_SUPPLIER_WITHOUT_AGREEMENT,
     MSMEReportTestCase,
 )
+from india_compliance.income_tax_india.report.msme_disallowance_report.msme_disallowance_report import (
+    execute,
+)
+from india_compliance.income_tax_india.utils.msme import MSME_UNCLASSIFIED
 
 
 class _TestMSME43BHBase(MSMEReportTestCase):
