@@ -1,13 +1,6 @@
 # Copyright (c) 2026, Resilient Tech and contributors
 # For license information, please see license.txt
 
-"""Amounts payable to Micro & Small suppliers, disallowed u/s 43B(h).
-
-Only the unpaid overdue portion is added back: an amount paid late but within
-the same financial year is allowed in that year, so it never reaches this
-statement (it is visible in Form-1's invoice-wise view instead).
-"""
-
 import frappe
 from frappe import _
 from frappe.utils import getdate
@@ -20,6 +13,13 @@ def execute(filters: dict | None = None):
 
 
 class MSME43BHDisallowance(MSMEPayablesReport):
+    """Amounts payable to Micro & Small suppliers, disallowed u/s 43B(h).
+
+    Only the unpaid overdue portion is added back: an amount paid late but within
+    the same financial year is allowed in that year, so it never reaches this
+    statement (it is visible in Form-1's invoice-wise view instead).
+    """
+
     def validate_filters(self):
         super().validate_filters()
 
@@ -36,7 +36,8 @@ class MSME43BHDisallowance(MSMEPayablesReport):
         self.filters.as_on_date = getdate(self.filters.to_date)
 
     def get_data(self):
-        return [row for row in self.get_payables() if row["disallowable_amount"]]
+        # only the unpaid overdue portion is added back u/s 43B(h)
+        return [row for row in self.get_payables() if row["outstanding_overdue"]]
 
     def get_columns(self):
         return [
@@ -95,18 +96,21 @@ class MSME43BHDisallowance(MSMEPayablesReport):
                 "label": _("Voucher Amount"),
                 "fieldname": "invoice_amount",
                 "fieldtype": "Currency",
+                "options": "currency",
                 "width": 120,
             },
             {
                 "label": _("Paid"),
                 "fieldname": "paid_amount",
                 "fieldtype": "Currency",
+                "options": "currency",
                 "width": 110,
             },
             {
                 "label": _("Paid After Due (in-year)"),
                 "fieldname": "paid_after_due",
                 "fieldtype": "Currency",
+                "options": "currency",
                 "width": 150,
             },
             {
@@ -119,6 +123,7 @@ class MSME43BHDisallowance(MSMEPayablesReport):
                 "label": _("Outstanding"),
                 "fieldname": "outstanding",
                 "fieldtype": "Currency",
+                "options": "currency",
                 "width": 110,
             },
             {
@@ -135,8 +140,9 @@ class MSME43BHDisallowance(MSMEPayablesReport):
             },
             {
                 "label": _("Disallowable u/s 43B(h)"),
-                "fieldname": "disallowable_amount",
+                "fieldname": "outstanding_overdue",
                 "fieldtype": "Currency",
+                "options": "currency",
                 "width": 160,
             },
         ]

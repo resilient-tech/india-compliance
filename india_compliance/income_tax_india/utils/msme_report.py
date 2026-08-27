@@ -160,64 +160,50 @@ class MSMEReport:
 class MSMEPayablesReport(MSMEReport):
     """Base for the reports built on the Payment Ledger (43B(h) and Form-1).
 
-    Both need to know *when* each rupee was paid relative to the due date, which
-    ERPNext's Accounts Payable report aggregates away - hence
-    ReceivablePayableLedger.
-
     The payable is always a Purchase Invoice, one row per supply. An unadjusted
     advance is an asset, not a sum payable, so it is not a row; once allocated it
     reduces that invoice's outstanding and the disallowance follows.
     """
 
-    # Form-1 counts only the payments made during its half-year
-    settlement_from_date = None
-
     def get_payables(self) -> list[dict]:
         """Rows for the MSME invoices, settled by any voucher type the ledger holds."""
-        # the ledger reads every party when given no supplier to filter by
+
         if not self.invoices:
             return []
 
-        groups = ReceivablePayableLedger(
+        voucher_balances = ReceivablePayableLedger(
             company=self.filters.company,
             account_type="Payable",
             report_date=self.filters.as_on_date,
-            parties=list({invoice.supplier for invoice in self.invoices.values()}),
+            vouchers=tuple(("Purchase Invoice", name) for name in self.invoices),
         ).run()
 
         records = []
-        for (voucher_type, voucher_no, _party), group in groups.items():
-            if voucher_type != "Purchase Invoice" or voucher_no not in self.invoices:
+        for (voucher_type, voucher_no, _party), voucher_balance in voucher_balances.items():
+            if not self.is_voucher_included(voucher_balance):
                 continue
 
-            if not self.is_voucher_included(group):
-                continue
-
-            posting_date = getdate(group.anchor.posting_date)
+            posting_date = getdate(voucher_balance.origin.posting_date)
             classification = self.get_msme_status(self.invoices[voucher_no].msme_registration, posting_date)
 
             if not self.is_applicable(classification):
                 continue
 
-            records.append(self.get_voucher_row(voucher_type, voucher_no, group, classification))
+            records.append(self.get_voucher_row(voucher_type, voucher_no, voucher_balance, classification))
 
         records.sort(key=lambda record: (record["supplier"], record["posting_date"]))
         return records
 
-    def is_voucher_included(self, group) -> bool:
-        # anchorless groups have no payable voucher as on date (e.g. allocations
-        # of a future dated voucher)
-        if not group.anchor:
+    def is_voucher_included(self, voucher_balance) -> bool:
+        # settlements with no supply of their own to report: the posting dates are
+        # already bounded by the invoice query, so nothing else is left to check
+        if not voucher_balance.origin:
             return False
 
-        posting_date = getdate(group.anchor.posting_date)
-        if posting_date > getdate(self.filters.to_date):
-            return False
+        return True
 
-        return not (self.filters.from_date and posting_date < getdate(self.filters.from_date))
-
-    def get_voucher_row(self, voucher_type, voucher_no, group, classification) -> dict:
-        posting_date = getdate(group.anchor.posting_date)
+    def get_voucher_row(self, voucher_type, voucher_no, voucher_balance, classification) -> dict:
+        posting_date = getdate(voucher_balance.origin.posting_date)
         invoice = self.invoices[voucher_no]
         due_date = self.get_due_date(posting_date, invoice.due_date, classification)
 
@@ -234,37 +220,41 @@ class MSMEPayablesReport(MSMEReport):
             "posting_date": posting_date,
             "financial_year": get_indian_fiscal_year(posting_date),
             "due_date": due_date,
-            **self.get_due_amounts(group, due_date),
+            **self.get_due_amounts(voucher_balance, due_date),
         }
 
-    def get_due_amounts(self, group, due_date) -> dict:
-        summary = get_settlement_summary(group.settlements, due_date)
+    def get_due_amounts(self, voucher_balance, due_date) -> dict:
+        # Form-1 counts only the payments made during its half-year
+        summary = get_settlement_summary(
+            voucher_balance.settlements, due_date, from_date=self.filters.settlement_from_date
+        )
 
-        window = summary
-        if self.settlement_from_date:
-            window = get_settlement_summary(group.settlements, due_date, from_date=self.settlement_from_date)
-
-        outstanding = max(flt(group.balance), 0)
+        outstanding = max(flt(voucher_balance.balance), 0)
         is_overdue = self.filters.as_on_date > due_date
 
-        if outstanding <= 0:
-            payment_status = "Paid Late" if summary["paid_late"] > 0 else "Paid On Time"
+        if not outstanding:
+            # settled: late if any part was paid past the limit, in whichever period
+            paid_late = sum(
+                settlement["amount"]
+                for settlement in voucher_balance.settlements
+                if settlement["posting_date"] > due_date
+            )
+            payment_status = "Paid Late" if paid_late > 0 else "Paid On Time"
         elif is_overdue:
             payment_status = "Unpaid - Overdue"
         else:
             payment_status = "Within Due Date"
 
         return {
-            "invoice_amount": flt(group.anchor.amount),
+            "invoice_amount": flt(voucher_balance.origin.amount),
             "paid_amount": flt(summary["paid_on_time"] + summary["paid_late"]),
-            "paid_within_due": flt(window["paid_on_time"]),
-            "paid_after_due": flt(window["paid_late"]),
+            "paid_within_due": flt(summary["paid_on_time"]),
+            "paid_after_due": flt(summary["paid_late"]),
             "outstanding": outstanding,
             "outstanding_not_due": 0 if is_overdue else outstanding,
+            # what 43B(h) adds back, and Form-1's "outstanding beyond the limit"
             "outstanding_overdue": outstanding if is_overdue else 0,
-            # only the unpaid overdue portion is added back u/s 43B(h)
-            "disallowable_amount": outstanding if is_overdue else 0,
             "payment_status": payment_status,
             "days_overdue": (self.filters.as_on_date - due_date).days if is_overdue else 0,
-            "payment_date": max((s["posting_date"] for s in group.settlements), default=None),
+            "payment_date": max((s["posting_date"] for s in voucher_balance.settlements), default=None),
         }

@@ -626,6 +626,9 @@ FINANCIAL_YEAR_REGEX = re.compile(r"^\d{4}-\d{4}$")
 # Only Micro and Small enterprises are covered by Section 43B(h); Medium is not.
 MSME_APPLICABLE_TYPES = ("Micro", "Small")
 
+
+MSME_UNCLASSIFIED = "Unclassified"
+
 # Traders are registered on UDYAM only for Priority Sector Lending, and are
 # excluded from Section 43B(h) (MSME Ministry OM dated 02-07-2021).
 TRADING_ACTIVITY = "Trading"

@@ -3,7 +3,7 @@
 
 const fy_bounds = india_compliance.get_indian_fiscal_year_bounds();
 
-frappe.query_reports["MSME 43B(h) Disallowance"] = {
+frappe.query_reports["MSME Disallowance Report"] = {
     filters: [
         {
             fieldname: "company",

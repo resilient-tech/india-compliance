@@ -14,11 +14,11 @@
  "modified": "2026-06-10 16:33:29.211146",
  "modified_by": "Administrator",
  "module": "Income Tax India",
- "name": "MSME 43B(h) Disallowance",
+ "name": "MSME Disallowance Report",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "Purchase Invoice",
- "report_name": "MSME 43B(h) Disallowance",
+ "report_name": "MSME Disallowance Report",
  "report_type": "Script Report",
  "roles": [
   {
