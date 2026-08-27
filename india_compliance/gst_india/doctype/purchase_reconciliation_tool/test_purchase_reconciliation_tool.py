@@ -647,7 +647,8 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                     "inward_supply_name": matched_gst_is.name,
                     "purchase_doctype": "Purchase Invoice",
                 },
-            ]
+            ],
+            fields=["bill_no", "bill_date"],
         )
 
         self.assertEqual(
@@ -723,6 +724,86 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             prt.sync_details([row], fields=["supplier_gstin"])
         self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "SYNC-PI-003")
 
+    def test_sync_details_skips_docs_without_differences(self):
+        """
+        A document syncs only when at least one of the requested fields differs.
+        Differences in fields that were not requested don't count.
+        """
+        # all requested fields already in agreement
+        agreed_pinv = create_purchase_invoice(
+            bill_no="SYNC-PI-004",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        agreed_gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-004",
+            bill_date="2024-02-01",
+            return_period_2b="022024",
+        )
+
+        # bill_no differs, but only bill_date will be requested
+        pinv = create_purchase_invoice(
+            bill_no="SYNC-PI-005",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-005-A",
+            bill_date="2024-02-01",
+            return_period_2b="022024",
+        )
+
+        prt = self.get_reconciliation_tool()
+        for purchase, inward_supply in (
+            (agreed_pinv, agreed_gst_is),
+            (pinv, gst_is),
+        ):
+            prt.link_documents(purchase.name, inward_supply.name, "Purchase Invoice")
+
+        result = prt.sync_details(
+            [
+                {
+                    "purchase_invoice_name": agreed_pinv.name,
+                    "inward_supply_name": agreed_gst_is.name,
+                    "purchase_doctype": "Purchase Invoice",
+                },
+            ],
+            fields=["bill_no", "bill_date"],
+        )
+        self.assertEqual(result, [])
+
+        result = prt.sync_details(
+            [
+                {
+                    "purchase_invoice_name": pinv.name,
+                    "inward_supply_name": gst_is.name,
+                    "purchase_doctype": "Purchase Invoice",
+                },
+            ],
+            fields=["bill_date"],
+        )
+        self.assertEqual(result, [])
+
+        # nothing written, nothing logged on either document
+        for purchase_name, bill_no in ((agreed_pinv.name, "SYNC-PI-004"), (pinv.name, "SYNC-PI-005")):
+            self.assertEqual(
+                frappe.db.get_value(
+                    "Purchase Invoice", purchase_name, ["bill_no", "bill_date"], as_dict=True
+                ),
+                {"bill_no": bill_no, "bill_date": getdate("2024-02-01")},
+            )
+            self.assertFalse(
+                frappe.db.exists(
+                    "Comment",
+                    {
+                        "reference_doctype": "Purchase Invoice",
+                        "reference_name": purchase_name,
+                        "comment_type": "Info",
+                        "content": ("like", "%Purchase Reconciliation Tool%"),
+                    },
+                )
+            )
+
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_sync_details_for_bill_of_entry(self):
         """
@@ -764,7 +845,8 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                     "inward_supply_name": matched_gst_is.name,
                     "purchase_doctype": "Bill of Entry",
                 },
-            ]
+            ],
+            fields=["bill_no", "bill_date"],
         )
 
         self.assertEqual(

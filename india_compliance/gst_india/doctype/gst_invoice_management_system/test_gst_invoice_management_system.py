@@ -689,7 +689,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             "inward_supply_name": gst_is.name,
             "purchase_doctype": "Purchase Invoice",
         }
-        result = self.gst_ims.sync_details([row])
+        result = self.gst_ims.sync_details([row], fields=["bill_no", "bill_date"])
 
         self.assertEqual(
             frappe.db.get_value("Purchase Invoice", pinv.name, ["bill_no", "bill_date"], as_dict=True),
@@ -718,7 +718,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual(result[0].bill_no, "IMS-SYNC-001-A")
 
         # now in agreement: nothing written, nothing returned
-        self.assertEqual(self.gst_ims.sync_details([row]), [])
+        self.assertEqual(self.gst_ims.sync_details([row], fields=["bill_no", "bill_date"]), [])
 
     def get_periods(self):
         periods = []
