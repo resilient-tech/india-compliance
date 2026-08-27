@@ -1,7 +1,7 @@
 {
  "app": "india_compliance",
  "charts": [],
- "content": "[{\"id\":\"5lsCmLRfWb\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Masters</b></span>\",\"col\":12}},{\"id\":\"fina67k1Ip\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tax Withholding Category\",\"col\":5}},{\"id\":\"LaQ64p519z\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tax Withholding Group\",\"col\":4}},{\"id\":\"RqYCD6zDGw\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"qQRYrVUAgQ\",\"type\":\"card\",\"data\":{\"card_name\":\"Tax Withholding Reports\",\"col\":4}},{\"id\":\"NQYVwfZj6k\",\"type\":\"card\",\"data\":{\"card_name\":\"MSME Reports\",\"col\":4}}]",
+ "content": "[{\"id\":\"5lsCmLRfWb\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Masters</b></span>\",\"col\":12}},{\"id\":\"fina67k1Ip\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tax Withholding Category\",\"col\":5}},{\"id\":\"LaQ64p519z\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tax Withholding Group\",\"col\":4}},{\"id\":\"Kv8ZqTnRb2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"MSME Registration\",\"col\":4}},{\"id\":\"RqYCD6zDGw\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"qQRYrVUAgQ\",\"type\":\"card\",\"data\":{\"card_name\":\"Tax Withholding Reports\",\"col\":4}},{\"id\":\"NQYVwfZj6k\",\"type\":\"card\",\"data\":{\"card_name\":\"MSME Reports\",\"col\":4}}]",
  "creation": "2026-04-24 14:01:49.481971",
  "custom_blocks": [],
  "docstatus": 0,
@@ -56,9 +56,9 @@
   {
    "hidden": 0,
    "is_query_report": 1,
-   "label": "MSME 43B(h) Disallowance",
+   "label": "MSME Disallowance Report",
    "link_count": 0,
-   "link_to": "MSME 43B(h) Disallowance",
+   "link_to": "MSME Disallowance Report",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
@@ -77,16 +77,16 @@
   {
    "hidden": 0,
    "is_query_report": 1,
-   "label": "MSME Payables Due Within 45 Days",
+   "label": "MSME Payables Report",
    "link_count": 0,
-   "link_to": "MSME Payables Due Within 45 Days",
+   "link_to": "MSME Payables Report",
    "link_type": "Report",
    "onboard": 0,
    "report_ref_doctype": "Purchase Invoice",
    "type": "Link"
   }
  ],
- "modified": "2026-06-10 16:20:39.021642",
+ "modified": "2026-08-25 18:30:00.000000",
  "modified_by": "Administrator",
  "module": "Income Tax India",
  "name": "Income Tax India",
@@ -114,6 +114,14 @@
    "doc_view": "List",
    "label": "Tax Withholding Group",
    "link_to": "Tax Withholding Group",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "MSME Registration",
+   "link_to": "MSME Registration",
    "stats_filter": "[]",
    "type": "DocType"
   }
