@@ -604,6 +604,7 @@ class BillOfEntry:
             self.BOE.bill_of_entry_date.as_("bill_date"),
             self.BOE.posting_date,
             self.BOE.company_gstin,
+            self.PI.supplier,
             self.PI.supplier_name,
             self.PI.is_reverse_charge,
             *tax_fields,
@@ -1106,6 +1107,7 @@ class ReconciledData(BaseReconciliation):
 
         """
         default_dict = {
+            "supplier": "",
             "supplier_name": "",
             "supplier_gstin": "",
             "purchase_company_gstin": "",
@@ -1155,7 +1157,6 @@ class ReconciledData(BaseReconciliation):
             data[dimension] = purchase.get(dimension) or ""
 
         for field in (
-            "supplier_name",
             "supplier_gstin",
             "bill_no",
             "bill_date",
@@ -1163,11 +1164,15 @@ class ReconciledData(BaseReconciliation):
         ):
             data[field] = purchase.get(field) or inward_supply.get(field)
 
+        party = purchase or self.guess_supplier(data.supplier_gstin)
+        supplier_name = party.get("supplier_name") or inward_supply.get("supplier_name")
+
         gstin_info = self.gstin_map.get(data.supplier_gstin, frappe._dict())
         data.update(
             {
-                "supplier_name": data.supplier_name or self.guess_supplier_name(data.supplier_gstin),
-                "supplier_gstin": data.supplier_gstin or data.supplier_name,
+                "supplier": party.get("supplier") or "",
+                "supplier_name": supplier_name or "Unknown",
+                "supplier_gstin": data.supplier_gstin or supplier_name or "",
                 "purchase_company_gstin": purchase.get("company_gstin") or "",
                 "inward_supply_company_gstin": inward_supply.get("company_gstin") or "",
                 "purchase_doctype": purchase.get("doctype"),
@@ -1241,11 +1246,16 @@ class ReconciledData(BaseReconciliation):
 
         data.differences = ", ".join(differences)
 
-    def guess_supplier_name(self, gstin):
-        if party := self.gstin_party_map.get(gstin):
-            return party
+    def guess_supplier(self, gstin):
+        """Supplier behind a GSTIN, for invoices that are not booked in the system."""
+        if gstin not in self.gstin_party_map:
+            supplier = get_party_for_gstin(gstin)
+            self.gstin_party_map[gstin] = frappe._dict(
+                supplier=supplier,
+                supplier_name=supplier and frappe.db.get_value("Supplier", supplier, "supplier_name"),
+            )
 
-        return self.gstin_party_map.setdefault(gstin, get_party_for_gstin(gstin) or "Unknown")
+        return self.gstin_party_map[gstin]
 
     @staticmethod
     def guess_classification(doc):

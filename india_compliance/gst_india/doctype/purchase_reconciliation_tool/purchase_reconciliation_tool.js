@@ -447,6 +447,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             if (!new_row) {
                 new_row = data[row.supplier_gstin] = {
                     supplier_name_gstin: this.get_supplier_name_gstin(row),
+                    supplier: row.supplier,
                     supplier_name: row.supplier_name,
                     supplier_gstin: row.supplier_gstin,
                     inward_supply_count: 0,
@@ -1171,12 +1172,12 @@ class EmailDialog {
     }
 
     async get_recipients() {
-        if (!this.data) return [];
+        if (!this.data?.supplier) return [];
 
         const { message } = await frappe.call({
             method: "india_compliance.gst_india.utils.get_party_contact_details",
             args: {
-                party: this.data.supplier_name,
+                party: this.data.supplier,
             },
         });
 
