@@ -250,10 +250,6 @@ class GSTInvoiceManagementSystem(Document):
 
         purchases, inward_supplies = _sync_details(data, fields, tool=self.doctype)
 
-        # empty names would fetch the whole grid instead of nothing
-        if not purchases:
-            return []
-
         return self.get_invoice_data(inward_supplies, purchases)
 
     @frappe.whitelist()
