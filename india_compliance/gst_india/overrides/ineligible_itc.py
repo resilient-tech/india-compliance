@@ -1,4 +1,5 @@
 from collections import defaultdict
+from functools import cached_property
 
 import frappe
 from erpnext.assets.doctype.asset.asset import (
@@ -19,7 +20,6 @@ class IneligibleITC:
     def __init__(self, doc):
         self.doc = doc
 
-        self.warehouse_account_map = get_warehouse_account_map(doc.company)
         self.company = frappe.get_cached_doc("Company", doc.company)
         self.is_perpetual = self.company.enable_perpetual_inventory
         self.cost_center = doc.cost_center or self.company.cost_center
@@ -27,6 +27,12 @@ class IneligibleITC:
 
         self.dr_or_cr = "credit" if doc.get("is_return") else "debit"
         self.cr_or_dr = "debit" if doc.get("is_return") else "credit"
+
+    @cached_property
+    def warehouse_account_map(self):
+        # Only read for stock items under perpetual inventory. Building it
+        # eagerly scans every warehouse of the company on each transaction.
+        return get_warehouse_account_map(self.doc.company)
 
     def update_valuation_rate(self):
         """
