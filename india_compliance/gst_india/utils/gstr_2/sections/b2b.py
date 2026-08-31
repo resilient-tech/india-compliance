@@ -5,8 +5,6 @@ from india_compliance.gst_india.utils.gstr_2.gstr import (
     GST_CATEGORY,
     STATES,
     add_original_details,
-    decode,
-    take,
     to_period,
 )
 from india_compliance.gst_returns.fields.gstr2 import (
@@ -18,6 +16,7 @@ from india_compliance.gst_returns.fields.gstr2 import (
 from india_compliance.gst_returns.fields.gstr2 import DocField as doc
 from india_compliance.gst_returns.fields.gstr2 import RawField2a as raw2a
 from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
+from india_compliance.gst_returns.steps import decode, take
 
 KEYS_2A = {
     raw2a.DOC_NUMBER: doc.BILL_NO,
