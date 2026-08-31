@@ -15,8 +15,7 @@ from india_compliance.utils.change_log_utils import (
 
 SYNCABLE_FIELDS = ("bill_no", "bill_date")
 
-# fields names mapper
-BILLING_FIELDS = {
+PURCHASE_FIELDNAME_MAP = {
     "Purchase Invoice": {"bill_no": "bill_no", "bill_date": "bill_date"},
     "Bill of Entry": {"bill_no": "bill_of_entry_no", "bill_date": "bill_of_entry_date"},
 }
@@ -171,32 +170,31 @@ def _validate_sync_fields(fields):
 
 def _get_changes_to_sync(inward_supply_names, fields):
     """
-    One row per linked inward supply:
-    [doctype, name (inward supply), link_name (purchase), {field_name: old_value...}, {field_name: new_value...}]
+    return:[doctype, name (inward supply), link_name (purchase), {field_name: old_value...}, {field_name: new_value...}]
     """
     changes = []
 
-    for doctype, booked_fields in BILLING_FIELDS.items():
-        billing_fields = {field: booked_fields[field] for field in fields}
+    for doctype, purchase_fieldnames in PURCHASE_FIELDNAME_MAP.items():
+        fieldname_map = {field: purchase_fieldnames[field] for field in fields}
 
-        for row in _get_linked_details(doctype, billing_fields, inward_supply_names):
+        for row in _get_linked_details(doctype, fieldname_map, inward_supply_names):
             new_values = {
-                booked_field: reported
-                for booked_field in billing_fields.values()
-                if (reported := row[f"reported_{booked_field}"]) and row[booked_field] != reported
+                field_name: reported
+                for field_name in fieldname_map.values()
+                if (reported := row[f"reported_{field_name}"]) and row[field_name] != reported
             }
 
             if not new_values:
                 continue
 
             row.new_values = new_values
-            row.old_values = {booked_field: row[booked_field] for booked_field in new_values}
+            row.old_values = {field_name: row[field_name] for field_name in new_values}
             changes.append(row)
 
     return changes
 
 
-def _get_linked_details(doctype, billing_fields, inward_supply_names):
+def _get_linked_details(doctype, fieldname_map, inward_supply_names):
     isup = frappe.qb.DocType("GST Inward Supply")
     purchase = frappe.qb.DocType(doctype)
 
@@ -209,8 +207,8 @@ def _get_linked_details(doctype, billing_fields, inward_supply_names):
             isup.name,
             isup.link_name,
             # each field as booked, with what 2A/2B reports for it alongside
-            *(purchase[booked].as_(booked) for booked in billing_fields.values()),
-            *(isup[field].as_(f"reported_{booked}") for field, booked in billing_fields.items()),
+            *(purchase[booked].as_(booked) for booked in fieldname_map.values()),
+            *(isup[field].as_(f"reported_{booked}") for field, booked in fieldname_map.items()),
         )
         # the stored link decides where the values are booked, not the client
         .where(isup.link_doctype == doctype)
@@ -235,7 +233,7 @@ def _apply_changes(changes, tool=None):
                     change.old_values,
                     change.new_values,
                     field_labels={field: meta.get_label(field) for field in change.new_values},
-                    date_fields=(BILLING_FIELDS[change.doctype]["bill_date"],),
+                    date_fields=(PURCHASE_FIELDNAME_MAP[change.doctype]["bill_date"],),
                     source=tool,
                 ),
             )
