@@ -1,7 +1,7 @@
+from collections import defaultdict
+
 import frappe
 from frappe import _
-from frappe.query_builder import Criterion
-from frappe.query_builder.functions import IfNull
 
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
@@ -13,7 +13,9 @@ from india_compliance.utils.change_log_utils import (
     create_change_log_comment,
 )
 
-# as reported in 2A/2B, mapped to where the purchase document books them
+SYNCABLE_FIELDS = ("bill_no", "bill_date")
+
+# fields names mapper
 BILLING_FIELDS = {
     "Purchase Invoice": {"bill_no": "bill_no", "bill_date": "bill_date"},
     "Bill of Entry": {"bill_no": "bill_of_entry_no", "bill_date": "bill_of_entry_date"},
@@ -127,68 +129,117 @@ def _unlink_documents(inward_supplies, exclude_from_reconciliation=False):
 
 def sync_details(data, fields, tool=None):
     """
-    Copy bill no / date reported in 2A/2B onto the linked purchase document
+    Copy bill no / date reported in 2A/2B onto the linked purchase document.
     """
-    for doctype in BILLING_FIELDS.keys():
-        frappe.has_permission(doctype, "write", throw=True)
+    fields = _validate_sync_fields(fields)
 
+    inward_supply_names = {
+        row["inward_supply_name"]
+        for row in frappe.parse_json(data)
+        # nothing to sync where a side is missing
+        if row.get("inward_supply_name") and row.get("purchase_invoice_name")
+    }
+
+    if not inward_supply_names:
+        return [], []
+
+    changes = _get_changes_to_sync(inward_supply_names, fields)
+
+    if not changes:
+        return [], []
+
+    _apply_changes(changes, tool)
+
+    return (
+        [change.link_name for change in changes],
+        [change.name for change in changes],
+    )
+
+
+def _validate_sync_fields(fields):
     if isinstance(fields, str):
         fields = frappe.parse_json(fields)
 
     if not fields:
         frappe.throw(_("No fields to sync"))
 
-    if invalid := set(fields) - set(next(iter(BILLING_FIELDS.values()))):
-        frappe.throw(_("Unable to sync {0}").format(frappe.bold(", ".join(invalid))))
+    if invalid := set(fields) - set(SYNCABLE_FIELDS):
+        frappe.throw(_("Unable to sync {0}").format(frappe.bold(", ".join(sorted(invalid)))))
 
-    # validate data
-    data = frappe.parse_json(data)
-    rows = [
-        row
-        for row in data
-        if row.get("inward_supply_name")
-        and row.get("purchase_invoice_name")
-        and row.get("purchase_doctype") in BILLING_FIELDS
-    ]
+    return [field for field in SYNCABLE_FIELDS if field in fields]
 
-    if not rows:
-        return [], []
 
-    details_to_sync = _get_details_to_sync(rows, fields)
+def _get_changes_to_sync(inward_supply_names, fields):
+    """
+    One row per linked inward supply:
+    [doctype, name (inward supply), link_name (purchase), {field_name: old_value...}, {field_name: new_value...}]
+    """
+    changes = []
 
-    updated_purchases = []
-    updated_inward_supplies = []
+    for doctype, booked_fields in BILLING_FIELDS.items():
+        billing_fields = {field: booked_fields[field] for field in fields}
+
+        for row in _get_linked_details(doctype, billing_fields, inward_supply_names):
+            new_values = {
+                booked_field: reported
+                for booked_field in billing_fields.values()
+                if (reported := row[f"reported_{booked_field}"]) and row[booked_field] != reported
+            }
+
+            if not new_values:
+                continue
+
+            row.new_values = new_values
+            row.old_values = {booked_field: row[booked_field] for booked_field in new_values}
+            changes.append(row)
+
+    return changes
+
+
+def _get_linked_details(doctype, billing_fields, inward_supply_names):
+    isup = frappe.qb.DocType("GST Inward Supply")
+    purchase = frappe.qb.DocType(doctype)
+
+    return (
+        frappe.qb.from_(isup)
+        .join(purchase)  # linked purchases only
+        .on(purchase.name == isup.link_name)
+        .select(
+            isup.link_doctype.as_("doctype"),
+            isup.name,
+            isup.link_name,
+            # each field as booked, with what 2A/2B reports for it alongside
+            *(purchase[booked].as_(booked) for booked in billing_fields.values()),
+            *(isup[field].as_(f"reported_{booked}") for field, booked in billing_fields.items()),
+        )
+        # the stored link decides where the values are booked, not the client
+        .where(isup.link_doctype == doctype)
+        .where(isup.name.isin(inward_supply_names))
+        .run(as_dict=True)
+    )
+
+
+def _apply_changes(changes, tool=None):
+    doc_updates_by_doctype = defaultdict(dict)
     comments = []
-    comment_prefix = _("updated")
-    if tool:
-        comment_prefix = _("updated using {tool}").replace("{tool}", frappe.bold(_(tool)))
-    doc_updates_by_doctype = {}
 
-    for row in details_to_sync:
-        doctype = row.get("doctype")
-        billing_fields = BILLING_FIELDS[doctype]
+    for change in changes:
+        meta = frappe.get_meta(change.doctype)
+        doc_updates_by_doctype[change.doctype][change.link_name] = change.new_values
 
-        update = {billing_fields[field]: row.get(field) for field in fields}
-        old_values = {billing_fields[field]: row.get(f"booked_{field}") for field in fields}
-
-        meta = frappe.get_meta(doctype)
         comments.append(
             (
-                doctype,
-                row.link_name,
+                change.doctype,
+                change.link_name,
                 create_change_log_comment(
-                    old_values,
-                    update,
-                    field_labels={field: meta.get_label(field) for field in update},
-                    date_fields=(billing_fields["bill_date"],),
-                    comment_prefix=comment_prefix,
+                    change.old_values,
+                    change.new_values,
+                    field_labels={field: meta.get_label(field) for field in change.new_values},
+                    date_fields=(BILLING_FIELDS[change.doctype]["bill_date"],),
+                    source=tool,
                 ),
             )
         )
-
-        doc_updates_by_doctype.setdefault(doctype, {})[row.link_name] = update
-        updated_purchases.append(row.link_name)
-        updated_inward_supplies.append(row.name)
 
     for doctype, doc_updates in doc_updates_by_doctype.items():
         frappe.db.bulk_update(doctype, doc_updates)
@@ -198,48 +249,6 @@ def sync_details(data, fields, tool=None):
             frappe.clear_document_cache(doctype, purchase_name)
 
     add_comments_in_bulk(comments)
-
-    return updated_purchases, updated_inward_supplies
-
-
-def _get_details_to_sync(rows, fields):
-    """
-    One row per linked inward supply:
-    {doctype, name (inward supply), link_name (purchase),
-     <reported fields>, booked_<fields> (values booked on the purchase document)}
-    """
-    inward_supply_names = {row["inward_supply_name"] for row in rows}
-
-    isup = frappe.qb.DocType("GST Inward Supply")
-
-    details_to_sync = []
-    for doctype, billing_fields in BILLING_FIELDS.items():
-        purchase = frappe.qb.DocType(doctype)
-
-        # at least one reported value is set and differs from the booked value
-        has_difference = Criterion.any(
-            (IfNull(isup[field], "") != "")
-            & (IfNull(purchase[billing_fields[field]], "") != IfNull(isup[field], ""))
-            for field in fields
-        )
-
-        details_to_sync.extend(
-            frappe.qb.from_(isup)
-            .join(purchase)  # linked purchases only
-            .on((purchase.name == isup.link_name) & (isup.link_doctype == doctype))
-            .select(
-                isup.link_doctype.as_("doctype"),
-                isup.name,
-                isup.link_name,
-                *(isup[field] for field in fields),
-                *(purchase[billing_fields[field]].as_(f"booked_{field}") for field in fields),
-            )
-            .where(isup.name.isin(inward_supply_names))
-            .where(has_difference)
-            .run(as_dict=True)
-        )
-
-    return details_to_sync
 
 
 def get_formatted_options(data):
