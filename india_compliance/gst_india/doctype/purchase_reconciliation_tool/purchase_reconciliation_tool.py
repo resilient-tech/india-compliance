@@ -290,9 +290,6 @@ class PurchaseReconciliationTool(Document):
 
         purchases, inward_supplies = _sync_details(data, fields, tool=self.doctype)
 
-        if not purchases:
-            return []
-
         return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()

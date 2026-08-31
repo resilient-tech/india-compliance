@@ -760,29 +760,29 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         ):
             prt.link_documents(purchase.name, inward_supply.name, "Purchase Invoice")
 
-        result = prt.sync_details(
-            [
-                {
-                    "purchase_invoice_name": agreed_pinv.name,
-                    "inward_supply_name": agreed_gst_is.name,
-                    "purchase_doctype": "Purchase Invoice",
-                },
-            ],
-            fields=["bill_no", "bill_date"],
-        )
-        self.assertEqual(result, [])
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            prt.sync_details(
+                [
+                    {
+                        "purchase_invoice_name": agreed_pinv.name,
+                        "inward_supply_name": agreed_gst_is.name,
+                        "purchase_doctype": "Purchase Invoice",
+                    },
+                ],
+                fields=["bill_no", "bill_date"],
+            )
 
-        result = prt.sync_details(
-            [
-                {
-                    "purchase_invoice_name": pinv.name,
-                    "inward_supply_name": gst_is.name,
-                    "purchase_doctype": "Purchase Invoice",
-                },
-            ],
-            fields=["bill_date"],
-        )
-        self.assertEqual(result, [])
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            prt.sync_details(
+                [
+                    {
+                        "purchase_invoice_name": pinv.name,
+                        "inward_supply_name": gst_is.name,
+                        "purchase_doctype": "Purchase Invoice",
+                    },
+                ],
+                fields=["bill_date"],
+            )
 
         # nothing written, nothing logged on either document
         for purchase_name, bill_no in ((agreed_pinv.name, "SYNC-PI-004"), (pinv.name, "SYNC-PI-005")):

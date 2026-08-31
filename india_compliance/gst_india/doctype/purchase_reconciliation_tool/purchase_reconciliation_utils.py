@@ -140,12 +140,12 @@ def sync_details(data, fields, tool=None):
     }
 
     if not inward_supply_names:
-        return [], []
+        frappe.throw(_("Please select matched rows to sync"))
 
     changes = _get_changes_to_sync(inward_supply_names, fields)
 
     if not changes:
-        return [], []
+        frappe.throw(_("No changes to sync"))
 
     _apply_changes(changes, tool)
 
