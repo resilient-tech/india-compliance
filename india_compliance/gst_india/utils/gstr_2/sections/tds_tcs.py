@@ -1,8 +1,8 @@
 """TDS (GSTR-7) and TCS (GSTR-8) credit. Flat records, one per deductor or operator, no items."""
 
-from india_compliance.gst_india.utils.gstr_2.gstr import take
 from india_compliance.gst_returns.fields.gstr2 import DocField as doc
 from india_compliance.gst_returns.fields.gstr2 import RawField2a as raw2a
+from india_compliance.gst_returns.steps import take
 
 TDS_KEYS = {
     raw2a.DEDUCTOR_GSTIN: doc.SUPPLIER_GSTIN,

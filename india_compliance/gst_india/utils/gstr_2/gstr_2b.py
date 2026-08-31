@@ -3,11 +3,12 @@ from typing import ClassVar
 import frappe
 
 from india_compliance.gst_india.utils import parse_datetime
-from india_compliance.gst_india.utils.gstr_2.gstr import GSTR, take
+from india_compliance.gst_india.utils.gstr_2.gstr import GSTR
 from india_compliance.gst_india.utils.gstr_2.sections import SECTIONS_2B
 from india_compliance.gst_returns.fields.gstr2 import DocField as doc
 from india_compliance.gst_returns.fields.gstr2 import ItemField as item
 from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
+from india_compliance.gst_returns.steps import take
 
 SUPPLIER_KEYS = {
     raw2b.SUPPLIER_GSTIN: doc.SUPPLIER_GSTIN,

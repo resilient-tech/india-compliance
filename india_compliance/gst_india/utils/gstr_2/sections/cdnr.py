@@ -2,16 +2,12 @@
 type and date, so the b2b details do the base work."""
 
 from india_compliance.gst_india.utils import parse_datetime
-from india_compliance.gst_india.utils.gstr_2.gstr import (
-    GST_CATEGORY,
-    add_original_details,
-    decode,
-    take,
-)
+from india_compliance.gst_india.utils.gstr_2.gstr import GST_CATEGORY, add_original_details
 from india_compliance.gst_returns.fields.gstr2 import NOTE_TYPE
 from india_compliance.gst_returns.fields.gstr2 import DocField as doc
 from india_compliance.gst_returns.fields.gstr2 import RawField2a as raw2a
 from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
+from india_compliance.gst_returns.steps import decode, take
 
 from . import b2b
 

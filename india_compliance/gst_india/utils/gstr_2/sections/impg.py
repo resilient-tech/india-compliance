@@ -1,11 +1,11 @@
 """Bills of entry for imports. Goods from overseas come flat; goods from SEZ name the supplier."""
 
 from india_compliance.gst_india.utils import parse_datetime
-from india_compliance.gst_india.utils.gstr_2.gstr import decode, take
 from india_compliance.gst_returns.fields.gstr2 import Y_N_TO_CHECK
 from india_compliance.gst_returns.fields.gstr2 import DocField as doc
 from india_compliance.gst_returns.fields.gstr2 import RawField2a as raw2a
 from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
+from india_compliance.gst_returns.steps import decode, take
 
 KEYS_2A = {
     raw2a.BOE_NUMBER: doc.BILL_NO,
