@@ -40,7 +40,12 @@ def get_document_details_2a(document, gstr):
     details[doc.OTHER_RETURN_PERIOD] = to_period(details[doc.OTHER_RETURN_PERIOD])
     details[doc.IS_AMENDED] = 1 if document.get(raw2a.AMEND_TYPE) else 0
     decode(details, doc.AMENDMENT_TYPE, AMEND_TYPE)
-    details[doc.DOC_VALUE] = details[doc.IGST] + details[doc.CGST] + details[doc.SGST] + details[doc.CESS]
+    details[doc.DOC_VALUE] = (
+        (details[doc.IGST] or 0)
+        + (details[doc.CGST] or 0)
+        + (details[doc.SGST] or 0)
+        + (details[doc.CESS] or 0)
+    )
 
     return details
 
@@ -69,7 +74,12 @@ def get_document_details_2b(document, gstr):
     decode(details, doc.DOC_TYPE, ISD_TYPE_2B)
     details[doc.BILL_DATE] = parse_datetime(details[doc.BILL_DATE], day_first=True)
     decode(details, doc.ITC_AVAILABILITY, YES_NO)
-    details[doc.DOC_VALUE] = details[doc.IGST] + details[doc.CGST] + details[doc.SGST] + details[doc.CESS]
+    details[doc.DOC_VALUE] = (
+        (details[doc.IGST] or 0)
+        + (details[doc.CGST] or 0)
+        + (details[doc.SGST] or 0)
+        + (details[doc.CESS] or 0)
+    )
 
     return details
 

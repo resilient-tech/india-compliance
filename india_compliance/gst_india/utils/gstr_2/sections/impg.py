@@ -28,7 +28,9 @@ def get_entry_details_2a(entry, gstr):
 
     details[doc.BILL_DATE] = parse_datetime(details[doc.BILL_DATE], day_first=True)
     decode(details, doc.IS_AMENDED, Y_N_TO_CHECK)
-    details[doc.DOC_VALUE] = details[doc.TAXABLE_VALUE] + details[doc.IGST] + details[doc.CESS]
+    details[doc.DOC_VALUE] = (
+        (details[doc.TAXABLE_VALUE] or 0) + (details[doc.IGST] or 0) + (details[doc.CESS] or 0)
+    )
 
     return details
 
@@ -56,7 +58,9 @@ def get_entry_details_2b(entry, gstr):
 
     details[doc.BILL_DATE] = parse_datetime(details[doc.BILL_DATE], day_first=True)
     decode(details, doc.IS_AMENDED, Y_N_TO_CHECK)
-    details[doc.DOC_VALUE] = details[doc.TAXABLE_VALUE] + details[doc.IGST] + details[doc.CESS]
+    details[doc.DOC_VALUE] = (
+        (details[doc.TAXABLE_VALUE] or 0) + (details[doc.IGST] or 0) + (details[doc.CESS] or 0)
+    )
     details[doc.ITC_AVAILABILITY] = "Yes"  # always available on imports
 
     return details
