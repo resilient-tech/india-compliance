@@ -604,14 +604,9 @@ class BillOfEntry:
             self.BOE.bill_of_entry_date.as_("bill_date"),
             self.BOE.posting_date,
             self.BOE.company_gstin,
-<<<<<<< HEAD
+            self.PI.supplier,
             self.PI.supplier_name,
             self.PI.is_reverse_charge,
-=======
-            Max(self.PI.supplier).as_("supplier"),
-            Max(self.PI.supplier_name).as_("supplier_name"),
-            Max(self.PI.is_reverse_charge).as_("is_reverse_charge"),
->>>>>>> f1f1ae0 (fix: show party name instead of party id in purchase reco)
             *tax_fields,
         ]
 
