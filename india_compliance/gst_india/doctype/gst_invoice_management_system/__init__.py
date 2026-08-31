@@ -252,6 +252,7 @@ class PurchaseInvoice:
 
     def get_fields(self, additional_fields=None, is_return=False):
         fields = [
+            "supplier",
             "supplier_gstin",
             "supplier_name",
             "bill_no",
