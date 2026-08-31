@@ -257,6 +257,7 @@ class TestGSTR2a(TestGSTRMixin, FrappeTestCase):
             doc,
         )
 
+<<<<<<< HEAD
     def test_another_gstins_download_keeps_unfiled_documents(self):
         period = "082020"
         other_gstin = "24AAQCA8719H1ZC"
@@ -279,6 +280,23 @@ class TestGSTR2a(TestGSTRMixin, FrappeTestCase):
         )
 
         self.assertTrue(frappe.db.exists(self.doctype, doc.name))
+=======
+    def test_blanks_from_the_portal(self):
+        from india_compliance.gst_india.utils.gstr_2.gstr_2a import GSTR2a
+
+        handler = GSTR2a(None, self.gstin, "042020", "B2B")
+        transactions = handler.get_all_transactions(
+            [{"ctin": self.gstin, "inv": [{"inum": "NO-ITEMS-1", "idt": "24-11-2016", "val": 100}]}]
+        )
+        self.assertEqual(len(transactions), 1)
+        self.assertFalse(transactions[0]["items"])
+
+        handler = GSTR2a(None, self.gstin, "042020", "ISD")
+        transactions = handler.get_all_transactions(
+            [{"ctin": self.gstin, "doclist": [{"docnum": "ISD-NC-1", "iamt": 10, "camt": 5, "samt": 5}]}]
+        )
+        self.assertEqual(transactions[0].document_value, 20)
+>>>>>>> 63e7535 (fix: handle blank from portal and imports)
 
     def test_gstr2a_isd(self):
         doc = self.get_doc(GSTRCategory.ISD)

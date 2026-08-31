@@ -9,9 +9,11 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
 )
 from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_returns.fields.gstr2 import DocField as doc
-from india_compliance.gst_returns.steps import decode as decode
-from india_compliance.gst_returns.steps import set_item_totals as set_item_totals
-from india_compliance.gst_returns.steps import take as take
+from india_compliance.gst_returns.steps import (  # noqa: F401
+    decode,
+    set_item_totals,
+    take,
+)
 
 # gov code -> stored value
 GST_CATEGORY = GST_CATEGORY_MAP
