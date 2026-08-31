@@ -1,0 +1,81 @@
+"""Credit distributed by an Input Service Distributor. Amounts sit on the document, no items."""
+
+from india_compliance.gst_india.utils import parse_datetime
+from india_compliance.gst_india.utils.gstr_2.gstr import (
+    add_original_details,
+    decode,
+    take,
+    to_period,
+)
+from india_compliance.gst_returns.fields.gstr2 import (
+    AMEND_TYPE,
+    ISD_TYPE_2A,
+    ISD_TYPE_2B,
+    YES_NO,
+)
+from india_compliance.gst_returns.fields.gstr2 import DocField as doc
+from india_compliance.gst_returns.fields.gstr2 import RawField2a as raw2a
+from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
+
+KEYS_2A = {
+    raw2a.ISD_DOC_TYPE: doc.DOC_TYPE,
+    raw2a.ISD_DOC_NUMBER: doc.BILL_NO,
+    raw2a.ISD_DOC_DATE: doc.BILL_DATE,
+    raw2a.ITC_ELIGIBILITY: doc.ITC_AVAILABILITY,
+    raw2a.OTHER_PERIOD: doc.OTHER_RETURN_PERIOD,
+    raw2a.AMEND_TYPE: doc.AMENDMENT_TYPE,
+    raw2a.IGST: doc.IGST,
+    raw2a.CGST: doc.CGST,
+    raw2a.SGST: doc.SGST,
+    raw2a.ISD_CESS: doc.CESS,
+}
+
+
+def get_document_details_2a(document, gstr):
+    details = take(document, KEYS_2A)
+
+    decode(details, doc.DOC_TYPE, ISD_TYPE_2A)
+    details[doc.BILL_DATE] = parse_datetime(details[doc.BILL_DATE], day_first=True)
+    decode(details, doc.ITC_AVAILABILITY, YES_NO)
+    details[doc.OTHER_RETURN_PERIOD] = to_period(details[doc.OTHER_RETURN_PERIOD])
+    details[doc.IS_AMENDED] = 1 if document.get(raw2a.AMEND_TYPE) else 0
+    decode(details, doc.AMENDMENT_TYPE, AMEND_TYPE)
+    details[doc.DOC_VALUE] = details[doc.IGST] + details[doc.CGST] + details[doc.SGST] + details[doc.CESS]
+
+    return details
+
+
+KEYS_2B = {
+    raw2b.ISD_DOC_TYPE: doc.DOC_TYPE,
+    raw2b.ISD_DOC_NUMBER: doc.BILL_NO,
+    raw2b.ISD_DOC_DATE: doc.BILL_DATE,
+    raw2b.ITC_ELIGIBILITY: doc.ITC_AVAILABILITY,
+    raw2b.IGST: doc.IGST,
+    raw2b.CGST: doc.CGST,
+    raw2b.SGST: doc.SGST,
+    raw2b.CESS: doc.CESS,
+}
+
+ORIGINAL_KEYS_2B = {
+    raw2b.ORIGINAL_ISD_DOC_NUMBER: doc.ORIGINAL_BILL_NO,
+    raw2b.ORIGINAL_ISD_DOC_DATE: doc.ORIGINAL_BILL_DATE,
+    raw2b.ORIGINAL_ISD_DOC_TYPE: doc.ORIGINAL_DOC_TYPE,
+}
+
+
+def get_document_details_2b(document, gstr):
+    details = take(document, KEYS_2B)
+
+    decode(details, doc.DOC_TYPE, ISD_TYPE_2B)
+    details[doc.BILL_DATE] = parse_datetime(details[doc.BILL_DATE], day_first=True)
+    decode(details, doc.ITC_AVAILABILITY, YES_NO)
+    details[doc.DOC_VALUE] = details[doc.IGST] + details[doc.CGST] + details[doc.SGST] + details[doc.CESS]
+
+    return details
+
+
+def get_amended_document_details_2b(document, gstr):
+    details = add_original_details(get_document_details_2b(document, gstr), document, ORIGINAL_KEYS_2B)
+    decode(details, doc.ORIGINAL_DOC_TYPE, ISD_TYPE_2B)
+
+    return details
