@@ -212,7 +212,7 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
             `<a href="#" style="font-size: 0.9em;" class="supplier-gstin">${row.supplier_gstin || ""}</a>`,
         )
             .addClass(`indicator ${get_gstin_indicator_color(status)}`)
-            .attr("title", status || "Unknown")
+            .attr("title", status || __("Unknown"))
             .prop("outerHTML");
         return `${row.supplier_name}<br />${gstin_link}`;
     }
@@ -295,26 +295,9 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     }
 
     init_dialog() {
-        let gstin_text = "";
-        if (this.row.supplier_gstin) {
-            const status = get_gstin_status_at_invoice_date(this.row);
-            const color = get_gstin_indicator_color(status);
-            let note = "";
-            if (
-                status === "Active" &&
-                this.row.gstin_status === "Cancelled" &&
-                this.row.gstin_cancelled_date
-            ) {
-                note = ` <span> — Currently Cancelled since ${frappe.datetime.str_to_user(
-                    this.row.gstin_cancelled_date,
-                )}</span>`;
-            } else if (status === "Cancelled" && this.row.gstin_cancelled_date) {
-                note = ` <span>since ${frappe.datetime.str_to_user(this.row.gstin_cancelled_date)}</span>`;
-            }
-            const status_html = ` — <span class="indicator ${color}">${status || "Unknown"}</span>${note}`;
-            gstin_text = ` (${this.row.supplier_gstin}${status_html})`;
-        }
-        const supplier_details = `<h5>${this.row.supplier_name}${gstin_text}</h5>`;
+        const supplier_details = `
+            <h5 class="mb-1">${frappe.utils.escape_html(this.row.supplier_name || "")}</h5>
+            ${this._get_gstin_html()}`;
 
         this.dialog = new frappe.ui.Dialog({
             title: `Detail View (${this.row.classification})`,
@@ -339,16 +322,54 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         this.set_link_options();
     }
 
+    // GSTIN and its status, under the supplier name. Imports have no GSTIN: the row
+    // falls back to the supplier name there, which the name above already says
+    _get_gstin_html() {
+        const gstin = this.row.supplier_gstin;
+        if (!gstin || gstin === this.row.supplier_name) return "";
+
+        const status = get_gstin_status_at_invoice_date(this.row);
+        let note = "";
+
+        if (status === "Active" && this.row.gstin_status === "Cancelled" && this.row.gstin_cancelled_date) {
+            note = __("Currently Cancelled since {0}", [
+                frappe.datetime.str_to_user(this.row.gstin_cancelled_date),
+            ]);
+        } else if (status === "Cancelled" && this.row.gstin_cancelled_date) {
+            note = __("Cancelled since {0}", [frappe.datetime.str_to_user(this.row.gstin_cancelled_date)]);
+        }
+
+        return `
+            <div class="d-flex align-items-center flex-wrap">
+                <span class="text-muted mr-2">${frappe.utils.escape_html(gstin)}</span>
+                <span class="es-badge" data-size="sm" data-theme="${get_gstin_indicator_color(
+                    status,
+                )}" title="${__("GSTIN Status")}">${status || __("Unknown")}</span>
+                ${note ? `<span class="text-muted ml-2">${note}</span>` : ""}
+            </div>`;
+    }
+
     _get_document_link_fields() {
         this._set_missing_doctype();
         if (!this.missing_doctype) return [];
 
+        // everything that narrows the search, then the document those filters turned up
         return [
             {
-                label: "GSTIN",
-                fieldtype: "Data",
-                fieldname: "supplier_gstin",
-                default: this.row.supplier_gstin,
+                fieldtype: "Section Break",
+                fieldname: "filters_section",
+                label: __("Link Filters"),
+                collapsible: 1,
+                collapsible_depends_on: "eval:!doc.link_with",
+                css_class: "link-filters",
+            },
+            {
+                label: "Document Type",
+                fieldtype: "Autocomplete",
+                fieldname: "doctype",
+                default: this.missing_doctype,
+                options: this.doctype_options,
+                read_only_depends_on: this.doctype_options.length === 1,
                 onchange: () => this.set_link_options(),
             },
             {
@@ -361,31 +382,27 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                 fieldtype: "Column Break",
             },
             {
-                label: "Document Type",
-                fieldtype: "Autocomplete",
-                fieldname: "doctype",
-                default: this.missing_doctype,
-                options: this.doctype_options,
-                read_only_depends_on: this.doctype_options.length === 1,
-
-                onchange: () => {
-                    const doctype = this.dialog.get_value("doctype");
-                    this.dialog
-                        .get_field("show_matched")
-                        .set_label(`Show matched options for linking ${doctype}`);
-                },
+                label: "GSTIN",
+                fieldtype: "Data",
+                fieldname: "supplier_gstin",
+                default: this.row.supplier_gstin,
+                onchange: () => this.set_link_options(),
+            },
+            {
+                label: __("Show matched documents"),
+                fieldtype: "Check",
+                fieldname: "show_matched",
+                onchange: () => this.set_link_options(),
+            },
+            {
+                fieldtype: "Section Break",
+                hide_border: 1,
             },
             {
                 label: `Document Name`,
                 fieldtype: "Autocomplete",
                 fieldname: "link_with",
                 onchange: () => this.refresh_data(),
-            },
-            {
-                label: `Show matched options for linking ${this.missing_doctype}`,
-                fieldtype: "Check",
-                fieldname: "show_matched",
-                onchange: () => this.set_link_options(),
             },
             {
                 fieldtype: "Section Break",
@@ -516,6 +533,8 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
             frappe.render_template("invoice_detail_comparison", {
                 purchase: this.data._purchase_invoice,
                 inward_supply: this.data._inward_supply,
+                // nothing booked yet: name the column after the document waiting to be linked
+                purchase_label: this.data._purchase_invoice.doctype || this.missing_doctype || __("Books"),
             }),
         );
         this._mark_differences(detail_table.$wrapper);
