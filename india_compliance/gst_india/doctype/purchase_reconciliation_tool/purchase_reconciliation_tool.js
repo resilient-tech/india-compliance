@@ -761,7 +761,6 @@ class PurchaseReconciliationToolAction {
 
 class DetailViewDialog extends reconciliation.detail_view_dialog {
     _get_custom_actions() {
-        const doctype = this.dialog.get_value("doctype") || this.missing_doctype;
         if (this.row.match_status == "Only in Books") return ["Link", "Ignore"];
         else if (this.row.match_status == "Only in 2A/2B")
             if (this.missing_doctype == "Purchase Invoice") return ["Create", "Link", "Pending", "Ignore"];
