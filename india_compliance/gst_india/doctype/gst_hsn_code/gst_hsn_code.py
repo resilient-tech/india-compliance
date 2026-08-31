@@ -10,6 +10,7 @@ from india_compliance.gst_india.utils import (
     get_hsn_settings,
     join_list_with_custom_separators,
 )
+from india_compliance.utils.change_log_utils import add_comments_in_bulk
 
 
 class GSTHSNCode(Document):
@@ -80,36 +81,12 @@ def _update_item_modified_timestamp(item_names, timestamp=None):
 
 
 def _add_comment_to_items(item_names, hsn_code, timestamp=None):
-    if not item_names:
-        return
-
     comment_text = f"changed item tax from GST HSN Code {hsn_code}"
 
-    comment_docs = []
-    current_time = timestamp or frappe.utils.now()
-    current_user = frappe.session.user
-
-    for item_name in item_names:
-        comment_doc = frappe.new_doc("Comment")
-        comment_doc.update(
-            {
-                "name": random_string(10),
-                "comment_type": "Info",
-                "comment_email": current_user,
-                "comment_by": current_user,
-                "creation": current_time,
-                "modified": current_time,
-                "modified_by": current_user,
-                "owner": current_user,
-                "reference_doctype": "Item",
-                "reference_name": item_name,
-                "content": comment_text,
-            }
-        )
-        comment_docs.append(comment_doc)
-
-    if comment_docs:
-        bulk_insert("Comment", comment_docs)
+    add_comments_in_bulk(
+        (("Item", item_name, comment_text) for item_name in item_names),
+        timestamp=timestamp,
+    )
 
 
 def validate_hsn_code(hsn_code):

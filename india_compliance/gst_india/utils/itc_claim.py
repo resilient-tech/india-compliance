@@ -9,7 +9,6 @@ from typing import Literal
 
 import frappe
 from frappe import _
-from frappe.model.document import bulk_insert
 from frappe.query_builder.functions import IfNull
 from frappe.utils import (
     add_months,
@@ -17,7 +16,6 @@ from frappe.utils import (
     get_last_day,
     get_table_name,
     getdate,
-    random_string,
 )
 
 from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
@@ -26,6 +24,7 @@ from india_compliance.gst_india.utils import (
     get_periods_between_dates,
     validate_gstin_permission,
 )
+from india_compliance.utils.change_log_utils import add_comments_in_bulk
 
 SUPPORTED_DOCTYPES = frozenset(("Purchase Invoice", "Bill of Entry"))
 SUPPORTED_TABLE_NAMES = frozenset(get_table_name(dt) for dt in SUPPORTED_DOCTYPES)
@@ -410,32 +409,11 @@ def _bulk_update(updates: dict[str, set[str]], doctype: str, source: str) -> Non
             update_modified=True,
         )
 
-    user = frappe.session.user
-    current_time = frappe.utils.now()
-    comments = []
-    for period, names in updates.items():
-        content = _("ITC Claim Period set to {0} via {1}").format(period, source)
-        for name in names:
-            comment = frappe.new_doc("Comment")
-            comment.update(
-                {
-                    "name": random_string(10),
-                    "comment_type": "Info",
-                    "comment_email": user,
-                    "comment_by": user,
-                    "creation": current_time,
-                    "modified": current_time,
-                    "modified_by": user,
-                    "owner": user,
-                    "reference_doctype": doctype,
-                    "reference_name": name,
-                    "content": content,
-                }
-            )
-            comments.append(comment)
-
-    if comments:
-        bulk_insert("Comment", comments, ignore_duplicates=True)
+    add_comments_in_bulk(
+        (doctype, name, _("ITC Claim Period set to {0} via {1}").format(period, source))
+        for period, names in updates.items()
+        for name in names
+    )
 
 
 def _fetch_document_data(doctype: str, names: list[str], only_claim_period_set: bool = False) -> list[dict]:

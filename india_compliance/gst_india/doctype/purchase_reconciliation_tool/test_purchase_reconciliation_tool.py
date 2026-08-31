@@ -877,6 +877,60 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         )
         self.assertEqual([row.purchase_invoice_name for row in result], [boe.name])
 
+    def test_sync_details_does_not_blank_booked_values(self):
+        """
+        The bill no differs but 2A/2B reports no bill date, so only the bill no may be
+        written. Whether a document is worth syncing is a per row question, but what to
+        write is a per field one.
+        """
+        prt = self.get_reconciliation_tool()
+        pinv, gst_is = self.get_fixture_pair("BILL-23-00040")  # reported bill no BILL-23-00045
+
+        frappe.db.set_value("GST Inward Supply", gst_is, "bill_date", None)
+        self.addCleanup(frappe.db.set_value, "GST Inward Supply", gst_is, "bill_date", "2023-12-11")
+
+        prt.sync_details([self.sync_row(pinv, gst_is)], fields=["bill_no", "bill_date"])
+
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv, ["bill_no", "bill_date"], as_dict=True),
+            {"bill_no": "BILL-23-00045", "bill_date": getdate("2023-12-11")},
+        )
+
+    def test_sync_details_uses_the_stored_link_doctype(self):
+        """
+        purchase_doctype comes off a grid row that may be stale or missing. The stored
+        link_doctype is what decides where the values are booked.
+        """
+        prt = self.get_reconciliation_tool()
+        boe, gst_is = self.get_fixture_pair("BILL-23-00011")  # a Bill of Entry pair
+
+        frappe.db.set_value("GST Inward Supply", gst_is, "bill_no", "BILL-23-00011-A")
+        self.addCleanup(frappe.db.set_value, "GST Inward Supply", gst_is, "bill_no", "BILL-23-00011")
+
+        row = self.sync_row(boe, gst_is)
+        row.pop("purchase_doctype")
+
+        result = prt.sync_details([row], fields=["bill_no"])
+
+        self.assertEqual(frappe.db.get_value("Bill of Entry", boe, "bill_of_entry_no"), "BILL-23-00011-A")
+        self.assertEqual([row.purchase_invoice_name for row in result], [boe])
+
+    def get_fixture_pair(self, bill_no):
+        """(purchase, inward supply) of a linked pair created from the shared test json"""
+        for names, row in self.reconciled_data.items():
+            if row.get("bill_no") == bill_no:
+                return names
+
+        self.fail(f"No test fixture with bill no {bill_no}")
+
+    def sync_row(self, purchase_name, inward_supply_name):
+        """a grid row as the client sends it to sync_details"""
+        return {
+            "purchase_invoice_name": purchase_name,
+            "inward_supply_name": inward_supply_name,
+            "purchase_doctype": frappe.db.get_value("GST Inward Supply", inward_supply_name, "link_doctype"),
+        }
+
     def get_reconciliation_tool(self):
         prt = frappe.get_doc("Purchase Reconciliation Tool")
         prt.update(
