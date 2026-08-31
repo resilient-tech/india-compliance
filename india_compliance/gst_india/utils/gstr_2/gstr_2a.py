@@ -54,7 +54,7 @@ class GSTR2a(GSTR):
                 item.ITEM_NUMBER: line.get(raw2a.ITEM_NUMBER, 0),
                 **take(line.get(raw2a.ITEM_DETAILS, {}), ITEM_KEYS),
             }
-            for line in document.get(raw2a.ITEMS)
+            for line in document.get(raw2a.ITEMS) or []
         ]
 
     def update_gstins_list(self, supplier_details):
