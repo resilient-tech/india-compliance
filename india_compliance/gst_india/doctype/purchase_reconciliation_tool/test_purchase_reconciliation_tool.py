@@ -5,7 +5,7 @@ import datetime
 
 import frappe
 from frappe.test_runner import make_test_objects
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests.utils import FrappeTestCase, change_settings
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -136,8 +136,6 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
 
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 0)
 
-<<<<<<< HEAD
-=======
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_bill_of_entry_over_multiple_invoices_is_one_row(self):
         dates = {"bill_date": "2023-08-11", "posting_date": "2023-08-11"}
@@ -256,7 +254,6 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         self.assertEqual(rows[0].supplier, supplier.name)
         self.assertEqual(rows[0].supplier_name, supplier.supplier_name)
 
->>>>>>> f1f1ae0 (fix: show party name instead of party id in purchase reco)
     def test_itc_claim_period_on_reconciliation_match(self):
         """
         Test ITC Claim Period is updated when a Purchase Invoice is matched
