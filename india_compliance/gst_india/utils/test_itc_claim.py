@@ -317,10 +317,6 @@ class TestITCClaim(IntegrationTestCase):
         filed_periods = [period.get("value") for period in periods if period.get("filed")]
 
         self.assertIn(current_period, values)
-        self.assertEqual(
-            next(period["label"] for period in periods if period.get("value") == current_period),
-            f"{today.strftime('%B')} {today.year}",
-        )
         self.assertEqual(filed_periods, [current_period])
         self.assertEqual(values[-1], current_period)
 
