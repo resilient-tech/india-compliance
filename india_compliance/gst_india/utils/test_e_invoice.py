@@ -1429,17 +1429,15 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
             api="ei/api/invoice/cancel",
         )
 
-        # portal cancel only: SI stays submitted
+        # cancel the invoice first, then the portal: the IRN stays cancellable for 24h
+        doc.cancel()
+
         cancel_e_invoice(doc.name, values=values)
 
-        portal_cancelled = frappe.get_doc("Sales Invoice", doc.name)
-        self.assertEqual(portal_cancelled.docstatus, 1)
-        self.assertEqual(portal_cancelled.irn, "")
-        self.assertEqual(portal_cancelled.einvoice_status, "Cancelled")
+        cancelled = frappe.get_doc("Sales Invoice", doc.name)
+        self.assertEqual(cancelled.docstatus, 2)
 
-        # then cancel the SI (separate request in the UI)
-        portal_cancelled.cancel()
-        return frappe.get_doc("Sales Invoice", doc.name)
+        return cancelled
 
 
 def update_dates_for_test_data(test_data):

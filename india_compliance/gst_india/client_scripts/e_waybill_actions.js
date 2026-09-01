@@ -46,7 +46,34 @@ function setup_e_waybill_actions(doctype) {
 
             if (!is_e_waybill_api_enabled(frm) || frm.is_dirty()) return;
 
-            if (frm.doc.docstatus === 2) return;
+            // portal cancel is open for 24h, doc cancelled or not
+            if (frm.doc.docstatus === 2) {
+                // if IRN is present, e-Waybill gets cancelled in e-Invoice action
+                if (
+                    !frm.doc.irn &&
+                    frm.doc.ewaybill &&
+                    is_e_waybill_cancellable(frm) &&
+                    frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
+                ) {
+                    frm.dashboard
+                        .set_headline_alert(
+                            __("e-Waybill is still active and cancellable. {0}", [
+                                `<a href="#">${__("Cancel it")}</a>`,
+                            ]),
+                            "red",
+                            true,
+                        )
+                        .find("a")
+                        .on("click", (e) => {
+                            e.preventDefault();
+                            show_cancel_e_waybill_dialog(frm);
+                        });
+
+                    add_cancel_e_waybill_button(frm);
+                }
+
+                return;
+            }
 
             const is_ewb_generatable = is_e_waybill_generatable(frm, true);
 
@@ -170,9 +197,7 @@ function setup_e_waybill_actions(doctype) {
                 if (is_e_waybill_cancellable(frm)) {
                     india_compliance.add_divider_to_btn_group("e-Waybill");
 
-                    frm.add_custom_button(__("Cancel"), () => show_cancel_e_waybill_dialog(frm), "e-Waybill");
-
-                    india_compliance.make_text_red("e-Waybill", "Cancel");
+                    add_cancel_e_waybill_button(frm);
                 }
 
                 frm.add_custom_button(
@@ -188,6 +213,9 @@ function setup_e_waybill_actions(doctype) {
             // if IRN is present, e-Waybill gets cancelled in e-Invoice action
             if (!india_compliance.is_api_enabled() || frm.doc.irn || !frm.doc.ewaybill) return;
 
+            // still cancellable -> e-Waybill is cancelled after this, automatically or by the user
+            if (is_e_waybill_cancellable(frm)) return;
+
             frappe.validated = false;
 
             return new Promise((resolve) => {
@@ -196,29 +224,19 @@ function setup_e_waybill_actions(doctype) {
                     resolve();
                 };
 
-                if (!is_e_waybill_cancellable(frm)) {
-                    const d = frappe.warn(
-                        __("Cannot Cancel e-Waybill"),
-                        __(
-                            `The e-Waybill created against this invoice cannot be
-                            cancelled.<br><br>
+                const d = frappe.warn(
+                    __("Cannot Cancel e-Waybill"),
+                    __(
+                        `The e-Waybill created against this invoice cannot be
+                        cancelled.<br><br>
 
-                            Do you want to continue anyway?`,
-                        ),
-                        continueCancellation,
-                        __("Yes"),
-                    );
+                        Do you want to continue anyway?`,
+                    ),
+                    continueCancellation,
+                    __("Yes"),
+                );
 
-                    d.set_secondary_action_label(__("No"));
-                    return;
-                }
-
-                if (gst_settings.auto_cancel_e_waybill === 1) {
-                    continueCancellation();
-                    return;
-                }
-
-                return show_cancel_e_waybill_dialog(frm, continueCancellation);
+                d.set_secondary_action_label(__("No"));
             });
         },
     });
@@ -695,12 +713,19 @@ function show_mark_e_waybill_as_generated_dialog(frm) {
     d.show();
 }
 
-function show_cancel_e_waybill_dialog(frm, callback) {
+function add_cancel_e_waybill_button(frm) {
+    frm.add_custom_button(__("Cancel"), () => show_cancel_e_waybill_dialog(frm), "e-Waybill");
+
+    india_compliance.make_text_red("e-Waybill", "Cancel");
+}
+
+function show_cancel_e_waybill_dialog(frm) {
     const d = new frappe.ui.Dialog({
         title: __("Cancel e-Waybill"),
         fields: get_cancel_e_waybill_dialog_fields(frm),
         primary_action_label: __("Cancel"),
         primary_action(values) {
+            d.hide();
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.cancel_e_waybill",
                 args: {
@@ -708,12 +733,8 @@ function show_cancel_e_waybill_dialog(frm, callback) {
                     docname: frm.doc.name,
                     values,
                 },
-                callback: () => {
-                    frm.refresh();
-                    if (callback) callback();
-                },
+                callback: () => frm.refresh(),
             });
-            d.hide();
         },
     });
 
