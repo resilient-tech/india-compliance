@@ -294,9 +294,9 @@ class TestITCClaim(IntegrationTestCase):
         )
 
         self.assertGreater(len(periods), 0)
-        self.assertEqual(periods[0], ITC_CLAIM_PERIOD_DEFERRED)
+        self.assertEqual(periods[0].get("value"), ITC_CLAIM_PERIOD_DEFERRED)
 
-        # Filed period should be excluded
+        # Filed period should be offered, but only after every unfiled one
         month_or_quarter = today.strftime("%B")
         year = today.year
 
@@ -313,7 +313,16 @@ class TestITCClaim(IntegrationTestCase):
         )
 
         current_period = f"{today.month:02}{today.year}"
-        self.assertNotIn(current_period, periods)
+        values = [period.get("value") for period in periods]
+        filed_periods = [period.get("value") for period in periods if period.get("filed")]
+
+        self.assertIn(current_period, values)
+        self.assertEqual(
+            next(period["label"] for period in periods if period.get("value") == current_period),
+            f"{today.strftime('%B')} {today.year}",
+        )
+        self.assertEqual(filed_periods, [current_period])
+        self.assertEqual(values[-1], current_period)
 
         # cleanup
         update_gstr3b_filing_status(

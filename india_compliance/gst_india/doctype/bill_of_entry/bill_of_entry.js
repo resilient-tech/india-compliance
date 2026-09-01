@@ -14,7 +14,6 @@ frappe.ui.form.on("Bill of Entry", {
 
     refresh(frm) {
         india_compliance.set_reconciliation_status(frm, "bill_of_entry_no");
-        india_compliance.set_itc_claim_period_status(frm);
 
         if (frm.doc.docstatus === 0) return;
 

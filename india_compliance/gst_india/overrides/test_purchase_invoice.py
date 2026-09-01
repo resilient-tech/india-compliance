@@ -305,44 +305,6 @@ class TestPurchaseInvoice(IntegrationTestCase):
         pinv.submit()
         self.assertEqual(pinv.itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
 
-    def test_itc_claim_period_update_restriction_when_filed(self):
-        """
-        Test that ITC Claim Period cannot be changed when GSTR-3B is filed
-        """
-        pinv = create_purchase_invoice(do_not_submit=True)
-        current_period = format_period(pinv.posting_date)
-        pinv.submit()
-
-        self.assertEqual(pinv.itc_claim_period, current_period)
-
-        with _gstr3b_filed(pinv.company_gstin, pinv.posting_date):
-            # Try to change to a different period - should fail
-            next_period = format_period(add_months(pinv.posting_date, 1))
-            pinv.itc_claim_period = next_period
-
-            self.assertRaisesRegex(
-                frappe.exceptions.ValidationError,
-                re.compile(r"Cannot change ITC Claim Period from .* to .*\. GSTR-3B already filed for .*\."),
-                pinv.save,
-            )
-
-            # Reload and try to change to "Deferred" - should also fail
-            pinv.reload()
-            pinv.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
-
-            self.assertRaisesRegex(
-                frappe.exceptions.ValidationError,
-                re.compile(r"Cannot change ITC Claim Period from .* to .*\. GSTR-3B already filed for .*\."),
-                pinv.save,
-            )
-
-        # Period is now unfiled — change should be allowed
-        pinv.reload()
-        pinv.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
-        pinv.save()
-
-        self.assertEqual(pinv.itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
-
     def test_itc_claim_period_change_unfiled_to_unfiled(self):
         """Change from one unfiled period to another — should be allowed."""
         pinv = create_purchase_invoice(do_not_submit=True)
@@ -370,8 +332,8 @@ class TestPurchaseInvoice(IntegrationTestCase):
 
         self.assertEqual(pinv.itc_claim_period, unfiled_period)
 
-    def test_itc_claim_period_change_to_filed_period_blocked(self):
-        """Cannot change TO a filed period (even if current is unfiled)."""
+    def test_itc_claim_period_change_to_filed_period_warns(self):
+        """Changing TO a filed period warns but is allowed."""
         pinv = create_purchase_invoice(do_not_submit=True)
         pinv.submit()
 
@@ -380,56 +342,18 @@ class TestPurchaseInvoice(IntegrationTestCase):
 
         with _gstr3b_filed(pinv.company_gstin, next_date):
             pinv.itc_claim_period = next_period
-            self.assertRaisesRegex(
-                frappe.exceptions.ValidationError,
-                re.compile(r"GSTR-3B already filed"),
-                pinv.save,
-            )
-
-    def test_itc_claim_period_change_deferred_to_filed_blocked(self):
-        """Cannot change from Deferred TO a filed period."""
-        pinv = create_purchase_invoice(do_not_submit=True)
-        pinv.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
-        pinv.submit()
-
-        posting_date = getdate(pinv.posting_date)
-        posting_period = format_period(posting_date)
-
-        with _gstr3b_filed(pinv.company_gstin, posting_date):
-            pinv.itc_claim_period = posting_period
-            self.assertRaisesRegex(
-                frappe.exceptions.ValidationError,
-                re.compile(r"GSTR-3B already filed"),
-                pinv.save,
-            )
-
-    def test_itc_claim_period_change_allowed_for_draft_from_filed_to_unfiled_period(self):
-        """Draft invoice should be editable even if its original period later gets filed."""
-        pinv = create_purchase_invoice(do_not_submit=True)
-        current_date = getdate(pinv.posting_date)
-        next_period = format_period(add_months(current_date, 1))
-
-        with _gstr3b_filed(pinv.company_gstin, current_date):
-            pinv.itc_claim_period = next_period
+            frappe.local.message_log = []
             pinv.save()
-            self.assertEqual(pinv.itc_claim_period, next_period)
 
-    def test_itc_claim_period_for_draft_invoice_cannot_be_filed(self):
-        """Draft invoices should not be saved with a filed ITC Claim Period."""
-        pinv = create_purchase_invoice(do_not_submit=True)
-        posting_date = getdate(pinv.posting_date)
-        posting_period = format_period(posting_date)
-
-        with _gstr3b_filed(pinv.company_gstin, posting_date):
-            pinv.itc_claim_period = posting_period
-            self.assertRaisesRegex(
-                frappe.exceptions.ValidationError,
-                re.compile(r"Cannot set ITC Claim Period to .+\. GSTR-3B is already filed"),
-                pinv.save,
+            self.assertIn(
+                f"GSTR-3B is already filed for ITC Claim Period {next_period}",
+                frappe.as_json(frappe.message_log),
             )
+
+        self.assertEqual(pinv.itc_claim_period, next_period)
 
     def test_itc_claim_period_unchanged_update_after_submit_allowed_even_if_filed(self):
-        """Submitted docs should not be blocked for non-ITC updates if period is unchanged."""
+        """Non-ITC updates on submitted docs must not be blocked or warned if period is unchanged."""
         pinv = create_purchase_invoice(do_not_submit=True)
         pinv.submit()
 
@@ -438,10 +362,13 @@ class TestPurchaseInvoice(IntegrationTestCase):
         with _gstr3b_filed(pinv.company_gstin, posting_date):
             pinv.reload()
             pinv.title = "Update-after-submit allowed field"
+            frappe.local.message_log = []
             pinv.save()
 
-    def test_submit_blocked_if_draft_period_gets_filed_before_submit(self):
-        """Submitting a draft must fail if its unchanged claim period gets filed meanwhile."""
+            self.assertNotIn("GSTR-3B is already filed", frappe.as_json(frappe.message_log))
+
+    def test_submit_warns_if_draft_period_gets_filed_before_submit(self):
+        """Submitting a draft must warn, not fail, if its claim period gets filed meanwhile."""
         pinv = create_purchase_invoice(do_not_submit=True)
         posting_date = getdate(pinv.posting_date)
         posting_period = format_period(posting_date)
@@ -449,8 +376,12 @@ class TestPurchaseInvoice(IntegrationTestCase):
         self.assertEqual(pinv.itc_claim_period, posting_period)
 
         with _gstr3b_filed(pinv.company_gstin, posting_date):
-            self.assertRaisesRegex(
-                frappe.exceptions.ValidationError,
-                re.compile(r"Cannot set ITC Claim Period to .+\. GSTR-3B is already filed"),
-                pinv.submit,
+            frappe.local.message_log = []
+            pinv.submit()
+
+            self.assertIn(
+                f"GSTR-3B is already filed for ITC Claim Period {posting_period}",
+                frappe.as_json(frappe.message_log),
             )
+
+        self.assertEqual(pinv.docstatus, 1)

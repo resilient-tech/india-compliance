@@ -431,20 +431,8 @@ Object.assign(india_compliance, {
                 posting_date: frm.doc.posting_date,
             },
         }));
-    },
 
-    set_itc_claim_period_status(frm) {
-        frm.set_df_property("itc_claim_period", "ignore_validation", 1);
-
-        const is_filed = frm.doc.__onload?.is_itc_period_filed;
-        frm.set_df_property("itc_claim_period", "read_only", is_filed ? 1 : 0);
-        frm.set_df_property(
-            "itc_claim_period",
-            "description",
-            is_filed
-                ? __("GSTR-3B for {0} is filed", [frm.doc.itc_claim_period])
-                : __("GSTR-3B period for claiming ITC (MMYYYY) or 'Deferred' to postpone."),
-        );
+        frappe.meta.get_docfield(frm.doctype, "itc_claim_period").ignore_validation = 1;
     },
 
     set_reconciliation_status(frm, field) {

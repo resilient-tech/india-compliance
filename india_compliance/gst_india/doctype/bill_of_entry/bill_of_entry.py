@@ -25,7 +25,6 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import (
-    _is_gstr3b_filed,
     set_or_validate_itc_claim_period,
     validate_itc_claim_period_on_update_after_submit,
 )
@@ -44,12 +43,6 @@ class BillofEntry(Document):
     def onload(self):
         if self.docstatus != 1:
             return
-
-        if self.itc_claim_period:
-            self.set_onload(
-                "is_itc_period_filed",
-                _is_gstr3b_filed(self.company_gstin, self.itc_claim_period),
-            )
 
         self.set_onload(
             "journal_entry_exists",
