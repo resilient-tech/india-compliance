@@ -34,6 +34,7 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Turnover Amount",
+   "non_negative": 1,
    "reqd": 1
   },
   {
@@ -73,7 +74,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-03 18:44:29.236538",
+ "modified": "2026-09-01 12:00:02.000000",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Turnover Record",

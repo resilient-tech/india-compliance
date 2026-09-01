@@ -74,6 +74,14 @@ class TestTurnoverRecord(IntegrationTestCase):
         record = make_turnover_record("Gujarat", 100000, from_date="2023-04-01", to_date="2024-03-31")
         self.assertEqual(record.gst_state, "Gujarat")
 
+        # turnover is the pool the credit is divided by, so it can never be negative
+        self.assertRaises(
+            frappe.NonNegativeError,
+            make_turnover_record,
+            "Tamil Nadu",
+            -100000,
+        )
+
         # a GSTIN belongs to the state its first two digits encode
         self.assertRaisesRegex(
             frappe.ValidationError,
