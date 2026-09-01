@@ -17,8 +17,6 @@ from india_compliance.gst_india.constants import DISTANCE_REGEX
 
 class EWaybillAPI(BaseAPI):
     API_NAME = "e-Waybill"
-    # runs on a web worker when triggered from the UI, so fail fast
-    REQUEST_TIMEOUT = 60
 
     IGNORED_ERROR_CODES: ClassVar[dict] = {
         "238": "Invalid auth token",

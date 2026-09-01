@@ -473,10 +473,7 @@ class TestEWaybill(IntegrationTestCase):
 
         # scheduled to run only after the cancel commits
         mock_enqueue.assert_called_once()
-        self.assertEqual(
-            mock_enqueue.call_args.args[0],
-            "india_compliance.gst_india.utils.e_invoice.auto_cancel_e_invoice_e_waybill",
-        )
+        self.assertEqual(mock_enqueue.call_args.args[0], auto_cancel_e_invoice_e_waybill)
         self.assertTrue(mock_enqueue.call_args.kwargs.get("enqueue_after_commit"))
 
     @change_settings(

@@ -4,6 +4,7 @@ import functools
 import inspect
 import io
 import tarfile
+from collections.abc import Callable
 
 import frappe
 from dateutil import parser
@@ -107,7 +108,7 @@ def is_response_pending():
     return bool(frappe.request) and not frappe.flags.in_after_response
 
 
-def run_after_response_or_enqueue(method, **kwargs):
+def run_after_response_or_enqueue(method: Callable, **kwargs):
     """Run a portal action outside the submit / cancel transaction, without making the user wait.
 
     From a browser: run it right after the response is sent, so the update lands almost instantly.
@@ -124,11 +125,11 @@ def run_after_response_or_enqueue(method, **kwargs):
         frappe.flags.in_after_response = True
 
         try:
-            frappe.call(method, **kwargs)
+            method(**kwargs)
         except Exception:
             # must not raise: frappe rolls back to a savepoint its own commit already dropped
             frappe.log_error(
-                title=_("Failed to run {0} after response").format(method),
+                title=_("Failed to run {0} after response").format(method.__name__),
                 message=frappe.get_traceback(),
             )
         finally:
@@ -162,6 +163,7 @@ def publish_doc_update(doc, message, indicator="green"):
     frappe.publish_realtime(
         "msgprint",
         {"message": _(message), "alert": True, "indicator": indicator},
+        user=frappe.session.user,
         after_commit=True,
     )
 

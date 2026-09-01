@@ -30,7 +30,9 @@ from india_compliance.gst_india.utils import (
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (
+    auto_cancel_e_invoice_e_waybill,
     can_auto_cancel_e_invoice,
+    generate_e_invoice,
     get_e_invoice_info,
     validate_e_invoice_applicability,
     validate_if_e_invoice_can_be_cancelled,
@@ -38,6 +40,7 @@ from india_compliance.gst_india.utils.e_invoice import (
 from india_compliance.gst_india.utils.e_waybill import (
     _get_e_waybill_threshold,
     can_auto_cancel_e_waybill,
+    generate_e_waybill,
     get_e_waybill_info,
 )
 from india_compliance.gst_india.utils.transaction_data import (
@@ -180,7 +183,7 @@ def on_submit(doc, method=None):
             _mark_not_applicable(doc, "einvoice_status", str(e))
         else:
             run_after_response_or_enqueue(
-                "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
+                generate_e_invoice,
                 docname=doc.name,
                 throw=False,
             )
@@ -190,7 +193,7 @@ def on_submit(doc, method=None):
     if gst_settings.auto_generate_e_waybill and not doc.is_debit_note and not doc.is_return:
         if is_e_waybill_applicable(doc, gst_settings):
             run_after_response_or_enqueue(
-                "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
+                generate_e_waybill,
                 doctype=doc.doctype,
                 docname=doc.name,
             )
@@ -258,7 +261,7 @@ def cancel_e_waybill_e_invoice(doc, method=None):
         return
 
     run_after_response_or_enqueue(
-        "india_compliance.gst_india.utils.e_invoice.auto_cancel_e_invoice_e_waybill",
+        auto_cancel_e_invoice_e_waybill,
         docname=doc.name,
     )
 

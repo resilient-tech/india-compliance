@@ -25,7 +25,6 @@ class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
     PLACEHOLDER = "*****"
-    REQUEST_TIMEOUT = 300
     DEFAULT_MASK_MAP: ClassVar[dict] = {
         "headers": [
             "x-api-key",
@@ -138,7 +137,6 @@ class BaseAPI:
                 **self.default_headers,
                 **(headers or {}),
             },
-            timeout=self.REQUEST_TIMEOUT,
         )
 
         log_headers = request_args.headers.copy()
