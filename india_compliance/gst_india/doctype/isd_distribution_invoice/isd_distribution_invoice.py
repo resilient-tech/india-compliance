@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import Coalesce, Sum
-from frappe.utils import flt, get_link_to_form, getdate
+from frappe.utils import cint, flt, get_link_to_form, getdate
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, ISD_GST_CATEGORY
 from india_compliance.gst_india.utils import validate_invoice_number
@@ -112,6 +112,13 @@ class ISDDistributionInvoice(ISDController):
         if pi.company_gstin != frappe.get_cached_value("Address", self.company_address, "gstin"):
             frappe.throw(
                 _("Purchase Invoice {0} is booked under a different Distribution GSTIN.").format(pi_link)
+            )
+
+        if cint(pi.is_return) and not cint(self.is_credit_note):
+            frappe.throw(
+                _("Purchase Invoice {0} is a return, so it can only be distributed as a credit note.").format(
+                    pi_link
+                )
             )
 
     def validate_total_turnover(self):

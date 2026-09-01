@@ -23,5 +23,4 @@ def execute():
         .where(IfNull(pi.ineligibility_reason, "") != "ITC restricted due to PoS rules")
         .where(IfNull(pi.is_opening, "") != "Yes")
         .where(pi.is_reverse_charge == 0)
-        .where(pi.is_return == 0)
     ).run()
