@@ -3,25 +3,49 @@ from typing import ClassVar
 import frappe
 
 from india_compliance.gst_india.utils import parse_datetime
-from india_compliance.gst_india.utils.gstr_2.gstr import (
-    GSTR,
-    ISDSection,
-    get_mapped_value,
-    get_unique_key,
-)
+from india_compliance.gst_india.utils.gstr_2.gstr import GSTR
+from india_compliance.gst_india.utils.gstr_2.sections import GROUPED_SECTIONS, SECTIONS_2B
+from india_compliance.gst_returns.fields.gstr2 import DocField as doc
+from india_compliance.gst_returns.fields.gstr2 import ItemField as item
+from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
+from india_compliance.gst_returns.steps import take
+
+SUPPLIER_KEYS = {
+    raw2b.SUPPLIER_GSTIN: doc.SUPPLIER_GSTIN,
+    raw2b.SUPPLIER_NAME: doc.SUPPLIER_NAME,
+    raw2b.GSTR_1_FILING_DATE: doc.GSTR_1_FILING_DATE,
+    raw2b.SUP_RETURN_PERIOD: doc.SUP_RETURN_PERIOD,
+}
+
+ITEM_KEYS = {
+    raw2b.ITEM_NUMBER: item.ITEM_NUMBER,
+    raw2b.TAX_RATE: item.TAX_RATE,
+    raw2b.TAXABLE_VALUE: item.TAXABLE_VALUE,
+    raw2b.IGST: item.IGST,
+    raw2b.CGST: item.CGST,
+    raw2b.SGST: item.SGST,
+    raw2b.CESS: item.CESS,
+}
 
 
 class GSTR2b(GSTR):
-    def get_existing_transaction(self):
-        gst_is = frappe.qb.DocType("GST Inward Supply")
-        existing_transactions = (
-            frappe.qb.from_(gst_is)
-            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no, gst_is.doc_type)
-            .where(gst_is.return_period_2b == self.return_period)
-            .where(gst_is.classification == self.category)
-        ).run(as_dict=True)
+    SECTIONS: ClassVar[dict] = SECTIONS_2B
+    GROUPED_SECTIONS: ClassVar[dict] = GROUPED_SECTIONS
 
-        return {get_unique_key(transaction): transaction.get("name") for transaction in existing_transactions}
+    def get_supplier_details(self, supplier):
+        details = take(supplier, SUPPLIER_KEYS)
+        details[doc.GSTR_1_FILING_DATE] = parse_datetime(details[doc.GSTR_1_FILING_DATE], day_first=True)
+
+        return details
+
+    def get_items(self, document):
+        return [take(line, ITEM_KEYS) for line in document.get(raw2b.ITEMS, [])]
+
+    def get_transaction(self, details, items=None):
+        return super().get_transaction(details, [] if items is None else items)
+
+    def get_existing_transaction_filter(self, gst_is):
+        return gst_is.return_period_2b == self.return_period
 
     def handle_missing_transactions(self):
         """
@@ -67,195 +91,12 @@ class GSTR2b(GSTR):
             if name:
                 frappe.delete_doc("GST Inward Supply", name, ignore_permissions=True)
 
-    def get_transaction(self, supplier, invoice):
-        transaction = super().get_transaction(supplier, invoice)
-        transaction.return_period_2b = self.return_period
-        transaction.gen_date_2b = parse_datetime(self.gen_date_2b, day_first=True)
-        return transaction
-
-    def get_supplier_details(self, supplier):
-        return {
-            "supplier_gstin": supplier.ctin,
-            "supplier_name": supplier.trdnm,
-            "gstr_1_filing_date": parse_datetime(supplier.supfildt, day_first=True),
-            "sup_return_period": supplier.supprd,
-        }
-
     def get_download_details(self):
-        return {"is_downloaded_from_2b": 1}
-
-    def get_transaction_item(self, item):
         return {
-            "item_number": item.num,
-            "rate": item.rt,
-            "taxable_value": item.txval,
-            "igst": item.igst,
-            "cgst": item.cgst,
-            "sgst": item.sgst,
-            "cess": item.cess,
+            "is_downloaded_from_2b": 1,
+            "return_period_2b": self.return_period,
+            "gen_date_2b": parse_datetime(self.gen_date_2b, day_first=True),
         }
 
 
-class GSTR2bB2B(GSTR2b):
-    def setup(self):
-        super().setup()
-        self.set_key("invoice_key", "inv")
-        self.set_key("items_key", "items")
-
-    def get_invoice_details(self, invoice):
-        return {
-            "bill_no": invoice.inum,
-            "supply_type": get_mapped_value(invoice.typ, self.VALUE_MAPS.gst_category),
-            "bill_date": parse_datetime(invoice.dt, day_first=True),
-            "taxable_value": invoice.txval,
-            "igst": invoice.igst,
-            "cgst": invoice.cgst,
-            "sgst": invoice.sgst,
-            "cess": invoice.cess,
-            "document_value": invoice.val,
-            "place_of_supply": get_mapped_value(invoice.pos, self.VALUE_MAPS.states),
-            "is_reverse_charge": get_mapped_value(invoice.rev, self.VALUE_MAPS.Y_N_to_check),
-            "itc_availability": get_mapped_value(
-                invoice.itcavl, {**self.VALUE_MAPS.yes_no, "T": "Temporary"}
-            ),
-            "reason_itc_unavailability": get_mapped_value(
-                invoice.rsn,
-                {
-                    "P": ("POS and supplier state are same but recipient state is different"),
-                    "C": "Return filed post annual cut-off",
-                },
-            ),
-            "diffprcnt": get_mapped_value(invoice.diffprcnt, {1: 1, 0.65: 0.65, None: 1}),
-            "irn_source": invoice.srctyp,
-            "irn_number": invoice.irn,
-            "irn_gen_date": parse_datetime(invoice.irngendate, day_first=True),
-            "doc_type": "Invoice",  # Custom Field
-        }
-
-
-class GSTR2bB2BA(GSTR2bB2B):
-    def get_invoice_details(self, invoice):
-        invoice_details = super().get_invoice_details(invoice)
-        invoice_details.update(
-            {
-                "original_bill_no": invoice.oinum,
-                "original_bill_date": parse_datetime(invoice.oidt, day_first=True),
-            }
-        )
-        return invoice_details
-
-
-class GSTR2bCDNR(GSTR2bB2B):
-    def setup(self):
-        super().setup()
-        self.set_key("invoice_key", "nt")
-
-    def get_invoice_details(self, invoice):
-        invoice_details = super().get_invoice_details(invoice)
-        invoice_details.update(
-            {
-                "bill_no": invoice.ntnum,
-                "doc_type": get_mapped_value(invoice.typ, self.VALUE_MAPS.note_type),
-                "supply_type": get_mapped_value(invoice.suptyp, self.VALUE_MAPS.gst_category),
-            }
-        )
-        return invoice_details
-
-
-class GSTR2bCDNRA(GSTR2bCDNR):
-    def get_invoice_details(self, invoice):
-        invoice_details = super().get_invoice_details(invoice)
-        invoice_details.update(
-            {
-                "original_bill_no": invoice.ontnum,
-                "original_bill_date": parse_datetime(invoice.ontdt, day_first=True),
-                "original_doc_type": get_mapped_value(invoice.onttyp, self.VALUE_MAPS.note_type),
-            }
-        )
-        return invoice_details
-
-
-class GSTR2bISD(ISDSection, GSTR2b):
-    ITEM_FIELDS: ClassVar[dict] = {
-        "igst": "igst",
-        "cgst": "cgst",
-        "sgst": "sgst",
-        "cess": "cess",
-        "itcelg": "itcelg",
-    }
-
-    def setup(self):
-        super().setup()
-        self.set_key("invoice_key", "doclist")
-
-    def get_invoice_details(self, invoice):
-        return {
-            "doc_type": get_mapped_value(invoice.doctyp, self.VALUE_MAPS.isd_type_2b),
-            "bill_no": invoice.docnum,
-            "bill_date": parse_datetime(invoice.docdt, day_first=True),
-            "itc_availability": None,
-            "igst": invoice.igst,
-            "cgst": invoice.cgst,
-            "sgst": invoice.sgst,
-            "cess": invoice.cess,
-            "document_value": invoice.igst + invoice.cgst + invoice.sgst + invoice.cess,
-        }
-
-
-class GSTR2bISDA(GSTR2bISD):
-    def get_invoice_details(self, invoice):
-        invoice_details = super().get_invoice_details(invoice)
-        invoice_details.update(
-            {
-                "original_bill_no": invoice.odocnum,
-                "original_bill_date": parse_datetime(invoice.odocdt, day_first=True),
-                "original_doc_type": get_mapped_value(invoice.odoctyp, self.VALUE_MAPS.isd_type_2b),
-            }
-        )
-        return invoice_details
-
-
-# E-commerce operator supplies u/s 9(5). Same structure as B2B/B2BA.
-class GSTR2bECOM(GSTR2bB2B):
-    pass
-
-
-class GSTR2bECOMA(GSTR2bECOM):
-    def get_invoice_details(self, invoice):
-        invoice_details = super().get_invoice_details(invoice)
-        invoice_details.update(
-            {
-                "original_bill_no": invoice.oinum,
-                "original_bill_date": parse_datetime(invoice.oidt, day_first=True),
-            }
-        )
-        return invoice_details
-
-
-class GSTR2bIMPGSEZ(GSTR2b):
-    def setup(self):
-        super().setup()
-        self.set_key("invoice_key", "boe")
-
-    def get_invoice_details(self, invoice):
-        return {
-            "doc_type": "Bill of Entry",  # custom field
-            "bill_no": invoice.boenum,
-            "bill_date": parse_datetime(invoice.boedt, day_first=True),
-            "is_amended": get_mapped_value(invoice.isamd, self.VALUE_MAPS.Y_N_to_check),
-            "port_code": invoice.portcode,
-            "taxable_value": invoice.txval,
-            "igst": invoice.igst,
-            "cess": invoice.cess,
-            "document_value": invoice.txval + invoice.igst + invoice.cess,
-            "itc_availability": "Yes",  # always available
-        }
-
-
-class GSTR2bIMPG(GSTR2bIMPGSEZ):
-    def get_supplier_details(self, supplier):
-        return {}
-
-    # invoice details are included in supplier details
-    def get_supplier_transactions(self, supplier):
-        return [self.get_transaction(frappe._dict(supplier), frappe._dict(supplier))]
+get_data_handler = GSTR2b.get_data_handler

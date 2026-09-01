@@ -209,6 +209,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         row = rows[0]
 
         self.assertEqual(row.purchase_doctype, "Bill of Entry")
+        self.assertEqual(row.supplier, invoices[0].supplier)
         self.assertEqual(row.supplier_name, invoices[0].supplier_name)
         self.assertEqual(row.bill_no, boe.bill_of_entry_no)
         self.assertEqual(row.classification, "IMPG")
@@ -228,6 +229,52 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertIsNone(purchase.supplier_gstin)
         self.assertIsNone(purchase.gst_category)
         self.assertIsNone(purchase.place_of_supply)
+
+    @change_settings("Buying Settings", {"supp_master_name": "Naming Series"})
+    def test_supplier_name_of_unbooked_invoice_is_the_supplier_title(self):
+        """
+        A row with no Purchase Invoice takes its supplier name from the GSTIN.
+        That must be the supplier's name, as on every other row, not its docname.
+        """
+        supplier = frappe.get_doc(
+            {
+                "doctype": "Supplier",
+                "supplier_name": "_Test Series Named Supplier",
+                "supplier_type": "Company",
+                "gstin": "24AANFA2641L1ZF",
+                "gst_category": "Registered Regular",
+            }
+        ).insert()
+
+        # else the test proves nothing: the docname must differ from the supplier name
+        self.assertNotEqual(supplier.name, supplier.supplier_name)
+
+        # 2A/2B need not report the supplier's name, which is what makes the guess necessary
+        gst_is = create_gst_inward_supply(
+            supplier_name="",
+            supplier_gstin=supplier.gstin,
+            bill_no="RECO-NAME-001",
+            bill_date="2024-02-10",
+            return_period_2b="022024",
+            gen_date_2b="2024-02-14",
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2024-02-01",
+                "to_date": "2024-02-29",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        rows = [row for row in prt.reconcile_and_generate_data() if row.inward_supply_name == gst_is.name]
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].match_status, "Only in 2A/2B")
+        self.assertEqual(rows[0].supplier, supplier.name)
+        self.assertEqual(rows[0].supplier_name, supplier.supplier_name)
 
     def test_itc_claim_period_on_reconciliation_match(self):
         """

@@ -5,6 +5,7 @@ blanks go at the JSON boundary.
 """
 
 from datetime import datetime
+from itertools import chain
 
 import frappe
 from frappe import _
@@ -16,9 +17,41 @@ from india_compliance.gst_india.constants import (
     UOM_MAP,
 )
 from india_compliance.gst_india.utils import get_party_for_gstin
+from india_compliance.gst_returns.fields.gstr1 import CreditDebitNoteType
 from india_compliance.gst_returns.fields.gstr1 import DocField as doc
 from india_compliance.gst_returns.fields.gstr1 import ItemField as item
 from india_compliance.gst_returns.fields.gstr1 import RawField as raw
+
+# generic steps live with the pure package; re-exported so sections keep one import
+from india_compliance.gst_returns.steps import (
+    add_item_totals,
+    convert,
+    flip,
+    groups_from_rows,
+    invert,
+    is_blank,
+    pick,
+    pick_back,
+    remap,
+    rows_from_groups,
+    strip_empty,
+    with_defaults,
+)
+
+__all__ = [
+    "add_item_totals",
+    "convert",
+    "flip",
+    "groups_from_rows",
+    "invert",
+    "is_blank",
+    "pick",
+    "pick_back",
+    "remap",
+    "rows_from_groups",
+    "strip_empty",
+    "with_defaults",
+]
 
 # state number -> state name
 STATE_NAMES = {number: name for name, number in STATE_NUMBERS.items()}
@@ -32,6 +65,21 @@ ITEM_TOTALS = {
     item.CESS: doc.CESS,
 }
 
+# the same five amounts as the books query names them
+BOOKS_COLUMNS = {
+    doc.TAXABLE_VALUE: "taxable_value",
+    doc.IGST: "igst_amount",
+    doc.CGST: "cgst_amount",
+    doc.SGST: "sgst_amount",
+    doc.CESS: "total_cess_amount",
+}
+
+# and as an item names them
+ITEM_COLUMNS = {line: BOOKS_COLUMNS[total] for line, total in ITEM_TOTALS.items()}
+
+# a books row that is not a note is an invoice; the portal has codes only for the notes
+INVOICE = "Invoice"
+
 # inter-state: no central or state tax
 ITEM_TOTALS_IGST = {
     item.TAXABLE_VALUE: doc.TAXABLE_VALUE,
@@ -41,51 +89,6 @@ ITEM_TOTALS_IGST = {
 
 
 # ── keys ──────────────────────────────────────────────────────────────────────
-
-
-def pick(src, keys):
-    """Portal row -> our row, table order. Unlisted keys go, blanks stay."""
-    return {new: src[old] for old, new in keys.items() if old in src}
-
-
-def pick_back(src, keys):
-    """Our row -> portal row. Same table, other way."""
-    return {old: src[new] for old, new in keys.items() if new in src}
-
-
-def flip(mapping):
-    """Reverse a lookup table."""
-    return {value: key for key, value in mapping.items()}
-
-
-def invert(keys):
-    """Reverse a key table. Refuses to lose a key."""
-    flipped = flip(keys)
-    if len(flipped) != len(keys):
-        raise ValueError("key table is not reversible")
-
-    return flipped
-
-
-def with_defaults(row, defaults):
-    """Fixed fields in front of a row. Blank ones are dropped."""
-    return {**{k: v for k, v in defaults.items() if v or v == 0}, **row}
-
-
-def convert(row, field, using):
-    """Rewrite one field. Blanks pass through, zero does not -- it is a real amount."""
-    if field in row and not is_blank(row[field]):
-        row[field] = using(row[field])
-
-    return row
-
-
-def remap(row, field, table):
-    """Swap one coded value using the given table, if the row has it."""
-    if field in row:
-        row[field] = table.get(row[field], row[field])
-
-    return row
 
 
 def drop_flag(row):
@@ -207,16 +210,6 @@ def split(total, weights):
     return pieces
 
 
-def add_item_totals(row, items, totals):
-    """Item amounts into the invoice totals. Adds up, so call once per invoice."""
-    for line in items or []:
-        for field, total in totals.items():
-            if not is_blank(line.get(field)):
-                row[total] = (row.get(total) or 0) + line[field]
-
-    return row
-
-
 def flip_signs(row, multiplier, fields):
     """Negate the named amounts. Notes and adjustments reduce liability."""
     if multiplier == 1:
@@ -245,6 +238,77 @@ def supply_type(pos, company_gstin):
     return "INTRA" if pos == company_gstin[:2] else "INTER"
 
 
+# ── books ─────────────────────────────────────────────────────────────────────
+
+
+def transaction_type(row):
+    """What kind of document a books row came from."""
+    if row.is_debit_note:
+        return CreditDebitNoteType.D.value
+
+    if row.is_return:
+        return CreditDebitNoteType.C.value
+
+    return INVOICE
+
+
+def zero_totals():
+    """A fresh set of invoice totals, all at nothing."""
+    return dict.fromkeys(BOOKS_COLUMNS, 0)
+
+
+def invoice_rows_from_books(grouped_rows, subcategories):
+    """One canonical row per invoice, for the subcategories the caller reports.
+
+    B2B, B2CL, exports and both kinds of credit note all report invoice by invoice, so they share
+    this builder and each passes the subcategories it owns. The row is a superset -- shipping
+    fields, buyer GSTIN and reverse charge are always written, and each category's key table drops
+    whatever it does not report.
+
+        {("B2B Regular", "S008400"): {18.0: [item rows]}}
+     -> {"B2B Regular": {"S008400": {document_number: "S008400", items: [{tax_rate: 18.0}]}}}
+    """
+    output = {}
+
+    for (subcategory, invoice_no), rows_by_rate in grouped_rows.items():
+        if subcategory not in subcategories:
+            continue
+
+        first = next(iter(chain(*rows_by_rate.values())))
+
+        row = {
+            doc.TRANSACTION_TYPE: transaction_type(first),
+            doc.CUST_GSTIN: first.billing_address_gstin,
+            doc.CUST_NAME: first.customer_name,
+            doc.DOC_DATE: first.posting_date,
+            doc.DOC_NUMBER: first.invoice_no,
+            doc.DOC_VALUE: first.invoice_total,
+            doc.POS: first.place_of_supply,
+            doc.REVERSE_CHARGE: ("Y" if first.is_reverse_charge else "N"),
+            doc.DOC_TYPE: first.invoice_type,
+            **zero_totals(),
+            doc.DIFF_PERCENTAGE: 0,
+            doc.SHIPPING_PORT_CODE: first.shipping_port_code,
+            doc.SHIPPING_BILL_NUMBER: first.shipping_bill_number,
+            doc.SHIPPING_BILL_DATE: first.shipping_bill_date,
+            "items": [],
+        }
+
+        # one item per tax rate, because that is how the portal wants a return reported
+        for rate, rows in rows_by_rate.items():
+            line = {field: sum_column(rows, column) for field, column in ITEM_COLUMNS.items()}
+            line[item.TAX_RATE] = rate
+            row["items"].append(line)
+
+        # amounts arrive settled to two decimals, so the totals only have to add up
+        for field, total in ITEM_TOTALS.items():
+            row[total] = sum_column(row["items"], field)
+
+        output.setdefault(subcategory, {})[invoice_no] = row
+
+    return output
+
+
 # ── items ─────────────────────────────────────────────────────────────────────
 
 
@@ -270,41 +334,3 @@ def flat_items_from_gov(items, keys, defaults):
 
 def flat_items_to_gov(items, keys, money_fields):
     return [round_money(pick_back(line, keys), money_fields) for line in items]
-
-
-# ── shapes ────────────────────────────────────────────────────────────────────
-
-
-def groups_from_rows(rows, group_key, group_header, rows_field, write_row):
-    """Our rows -> the portal's groups. First row of a key writes the header."""
-    groups = {}
-
-    for row in rows:
-        group = groups.setdefault(group_key(row), {**group_header(row), rows_field: []})
-        group[rows_field].append(write_row(row))
-
-    return list(groups.values())
-
-
-def rows_from_groups(groups, rows_field, group_header, read_row):
-    """The portal's groups -> our rows, group fields copied onto each."""
-    for group in groups:
-        header = group_header(group)
-
-        for row in group.get(rows_field) or []:
-            yield read_row(row, header)
-
-
-def strip_empty(value):
-    """Drop the blanks the portal rejects. Zero and False stay."""
-    if isinstance(value, dict):
-        return {k: strip_empty(v) for k, v in value.items() if not is_blank(v)}
-
-    if isinstance(value, list):
-        return [strip_empty(v) for v in value]
-
-    return value
-
-
-def is_blank(value):
-    return value is None or value == "" or value == {} or value == []
