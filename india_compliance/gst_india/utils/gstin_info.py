@@ -37,6 +37,9 @@ GST_CATEGORIES = {
     "URP": "Unregistered",
 }
 
+# business types (constitution of business) where trade name is preferred over legal name
+TRADE_NAME_BUSINESS_TYPES = frozenset(("Proprietorship", "Hindu Undivided Family"))
+
 # order of address keys is important
 KEYS_TO_SANITIZE = ("dst", "stcd", "pncd", "bno", "flno", "bnm", "st", "loc", "city")
 KEYS_TO_FILTER_DUPLICATES = frozenset(("dst", "bnm", "st", "loc", "city"))
@@ -85,9 +88,9 @@ def _get_gstin_info(gstin, *, doc=None, throw_error=True):
             frappe.clear_last_message()
             return frappe._dict()
 
-    business_name = (
-        response.tradeNam if response.ctb in ["Proprietorship", "Hindu Undivided Family"] else response.lgnm
-    )
+    business_name = response.lgnm
+    if response.ctb in TRADE_NAME_BUSINESS_TYPES and response.tradeNam:
+        business_name = response.tradeNam
 
     gstin_info = frappe._dict(
         gstin=response.gstin,
