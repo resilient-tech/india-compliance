@@ -20,19 +20,9 @@ frappe.ui.form.on("Sales Invoice", {
         // portal cancel is open for 24h, invoice cancelled or not
         if (frm.doc.docstatus === 2) {
             if (can_cancel_irn(frm)) {
-                frm.dashboard
-                    .set_headline_alert(
-                        __("IRN is still active and cancellable. {0}", [
-                            `<a href="#">${__("Cancel it")}</a>`,
-                        ]),
-                        "red",
-                        true,
-                    )
-                    .find("a")
-                    .on("click", (e) => {
-                        e.preventDefault();
-                        show_cancel_e_invoice_dialog(frm);
-                    });
+                india_compliance.show_cancel_headline(frm, __("IRN is still active and cancellable."), () =>
+                    show_cancel_e_invoice_dialog(frm),
+                );
             }
 
             add_cancel_e_invoice_button(frm);

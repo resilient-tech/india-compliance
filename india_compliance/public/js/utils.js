@@ -580,6 +580,16 @@ Object.assign(india_compliance, {
         return { options, current_year };
     },
 
+    show_cancel_headline(frm, message, on_click) {
+        frm.dashboard
+            .set_headline_alert(`${message} <a href="#">${__("Cancel it")}</a>`, "red", true)
+            .find("a")
+            .on("click", (e) => {
+                e.preventDefault();
+                on_click();
+            });
+    },
+
     primary_to_danger_btn(parent) {
         parent.$wrapper.find(".btn-primary").removeClass("btn-primary").addClass("btn-danger");
     },

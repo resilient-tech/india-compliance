@@ -98,11 +98,6 @@ def update_onload(doc, key, value):
         onload[key].update(value)
 
 
-def is_ui_request():
-    """from a browser (desk / portal)? not a worker, CLI or REST client."""
-    return bool(frappe.request) and getattr(frappe.local, "is_ajax", False)
-
-
 def is_response_pending():
     """can we still reply to the user? no once the response is out."""
     return bool(frappe.request) and not frappe.flags.in_after_response
@@ -115,21 +110,18 @@ def run_after_response_or_enqueue(method: Callable, **kwargs):
     - anything else (worker, REST, CLI): the queue
     - either way only after commit -> a rolled back submit / cancel never reaches the portal
     """
-    if not is_ui_request():
+    is_ui_request = bool(frappe.request) and getattr(frappe.local, "is_ajax", False)
+
+    if not is_ui_request:
         frappe.enqueue(method, enqueue_after_commit=True, queue="short", **kwargs)
         return
 
     def run():
+        # on failure, frappe rolls back to its savepoint and logs the error
         frappe.flags.in_after_response = True
 
         try:
             method(**kwargs)
-        except Exception:
-            # must not raise: the savepoint frappe would roll back to is already gone
-            frappe.log_error(
-                title=_("Failed to run {0} after response").format(method.__name__),
-                message=frappe.get_traceback(),
-            )
         finally:
             frappe.flags.in_after_response = False
 

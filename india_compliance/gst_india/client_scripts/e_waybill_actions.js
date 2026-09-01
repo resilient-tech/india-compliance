@@ -55,19 +55,11 @@ function setup_e_waybill_actions(doctype) {
                     is_e_waybill_cancellable(frm) &&
                     frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
                 ) {
-                    frm.dashboard
-                        .set_headline_alert(
-                            __("e-Waybill is still active and cancellable. {0}", [
-                                `<a href="#">${__("Cancel it")}</a>`,
-                            ]),
-                            "red",
-                            true,
-                        )
-                        .find("a")
-                        .on("click", (e) => {
-                            e.preventDefault();
-                            show_cancel_e_waybill_dialog(frm);
-                        });
+                    india_compliance.show_cancel_headline(
+                        frm,
+                        __("e-Waybill is still active and cancellable."),
+                        () => show_cancel_e_waybill_dialog(frm),
+                    );
 
                     add_cancel_e_waybill_button(frm);
                 }
