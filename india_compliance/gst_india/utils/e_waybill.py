@@ -65,6 +65,7 @@ from india_compliance.gst_india.utils import (
     notify_action_failure,
     parse_datetime,
     publish_doc_update,
+    run_after_response_or_enqueue,
     send_updated_doc,
     set_ewaybill_status,
     update_onload,
@@ -1951,17 +1952,32 @@ class EWaybillData(GSTTransactionData):
 
 
 def before_cancel(doc, method=None):
-    if not doc.get("ewaybill"):
+    """portal cancel can't be undone -> only once the doc cancel is saved."""
+    if not doc.get("ewaybill") or not is_api_enabled():
         return
 
-    gst_settings = frappe.get_cached_doc("GST Settings")
+    run_onload(doc)  # can_auto_cancel_e_waybill reads e_waybill_info
 
-    if not is_api_enabled(gst_settings):
+    if not can_auto_cancel_e_waybill(doc):
         return
 
-    run_onload(doc)
+    run_after_response_or_enqueue(
+        auto_cancel_e_waybill_for_doc,
+        doctype=doc.doctype,
+        docname=doc.name,
+    )
 
-    auto_cancel_e_waybill(doc, gst_settings=gst_settings)
+
+def auto_cancel_e_waybill_for_doc(doctype: str, docname: str):
+    doc = load_doc(doctype, docname, "cancel")
+
+    if not doc.ewaybill:
+        return
+
+    try:
+        auto_cancel_e_waybill(doc)
+    except Exception:
+        notify_action_failure(doc, "e-Waybill cancellation failed")
 
 
 def can_auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):

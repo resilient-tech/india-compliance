@@ -41,6 +41,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
     _generate_e_waybill,
     _get_e_waybill_threshold,
+    auto_cancel_e_waybill_for_doc,
     cancel_e_waybill,
     fetch_e_waybill_data,
     generate_e_waybill,
@@ -535,6 +536,13 @@ class TestEWaybill(IntegrationTestCase):
         si.reload()
         self.assertNotEqual(si.ewaybill, "")
 
+    def _cancel_and_run_portal_cancel(self, doc):
+        """portal cancel is deferred: run it inline, so its writes are visible to the assertions"""
+        with patch("frappe.enqueue"):
+            doc.cancel()
+
+        auto_cancel_e_waybill_for_doc(doc.doctype, doc.name)
+
     @change_settings(
         "GST Settings",
         {
@@ -576,7 +584,7 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         dn.reload()
-        dn.cancel()
+        self._cancel_and_run_portal_cancel(dn)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -630,7 +638,7 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         pr.reload()
-        pr.cancel()
+        self._cancel_and_run_portal_cancel(pr)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -685,7 +693,7 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         pi.reload()
-        pi.cancel()
+        self._cancel_and_run_portal_cancel(pi)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -736,7 +744,7 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         se.reload()
-        se.cancel()
+        self._cancel_and_run_portal_cancel(se)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -814,7 +822,7 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         asset_movement.reload()
-        asset_movement.cancel()
+        self._cancel_and_run_portal_cancel(asset_movement)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
