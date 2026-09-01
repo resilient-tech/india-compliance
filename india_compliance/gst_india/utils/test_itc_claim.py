@@ -318,7 +318,7 @@ class TestITCClaim(IntegrationTestCase):
 
         self.assertIn(current_period, values)
         self.assertEqual(filed_periods, [current_period])
-        self.assertEqual(values[-1], current_period)
+        self.assertEqual(values[1:], sorted(values[1:], key=period_sort_key, reverse=True))
 
         # cleanup
         update_gstr3b_filing_status(

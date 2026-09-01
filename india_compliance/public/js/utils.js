@@ -433,6 +433,9 @@ Object.assign(india_compliance, {
         }));
 
         frappe.meta.get_docfield(frm.doctype, "itc_claim_period").ignore_validation = 1;
+
+        // options label the period with a status badge; the input shows the period alone
+        frm.get_field("itc_claim_period").format_for_input = (value) => value;
     },
 
     set_reconciliation_status(frm, field) {
