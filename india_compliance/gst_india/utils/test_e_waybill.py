@@ -498,19 +498,19 @@ class TestEWaybill(IntegrationTestCase):
         api_calls_before = len(responses.calls)
 
         with (
-            patch("frappe.enqueue") as mock_enqueue,
             patch.object(frappe.local, "request", frappe._dict(method="POST"), create=True),
             patch.object(frappe.local, "is_ajax", True, create=True),
         ):
-            cancel_e_waybill_e_invoice(si)
+            # mock only the scheduling: the cancel itself enqueues its own logging
+            with patch("frappe.enqueue") as mock_enqueue:
+                cancel_e_waybill_e_invoice(si)
 
-            # nothing on the portal until the cancel itself commits
+            # not handed to a worker, and nothing on the portal until the cancel commits
+            mock_enqueue.assert_not_called()
             self.assertEqual(len(responses.calls), api_calls_before)
 
             # commit_after_response runs inline in tests
             frappe.db.after_commit.run()
-
-        mock_enqueue.assert_not_called()
 
         si.reload()
         self.assertEqual(si.ewaybill, "")
