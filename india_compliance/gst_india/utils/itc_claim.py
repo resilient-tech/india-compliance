@@ -133,27 +133,23 @@ def get_itc_period_options(company_gstin: str | None = None, posting_date: str |
     end_date = min(get_last_day(today), deadline_date)
 
     filed = _get_filed_periods(company_gstin)
-    filed_indicator = f'<span class="indicator amber">{_("GSTR-3B Filed")}</span>'
+    filed_badge = f'<span class="es-badge" data-theme="amber">{_("Filed")}</span>'
 
-    periods = []
-    filed_periods = []
+    periods = [{"value": ITC_CLAIM_PERIOD_DEFERRED, "label": ITC_CLAIM_PERIOD_DEFERRED}]
     current = end_date
     while current >= start_date:
         period = format_period(current)
-        if period in filed:
-            filed_periods.append(
-                {"value": period, "label": period, "filed": 1, "description": filed_indicator}
-            )
-        else:
-            periods.append({"value": period, "label": period, "filed": 0})
-
+        is_filed = period in filed
+        periods.append(
+            {
+                "value": period,
+                "label": f"{period} {filed_badge}" if is_filed else period,
+                "filed": int(is_filed),
+            }
+        )
         current = add_months(current, -1)
 
-    return [
-        {"value": ITC_CLAIM_PERIOD_DEFERRED, "label": ITC_CLAIM_PERIOD_DEFERRED},
-        *periods,
-        *filed_periods,
-    ]
+    return periods
 
 
 @frappe.whitelist()
