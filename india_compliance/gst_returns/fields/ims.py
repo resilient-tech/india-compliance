@@ -1,6 +1,6 @@
 """IMS constants. Categories come from gstr2.Category. Pure, no frappe."""
 
-from india_compliance.gst_returns.fields import gstr2
+from . import gstr2
 
 
 class DocField(gstr2.DocField):
