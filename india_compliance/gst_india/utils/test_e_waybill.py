@@ -500,7 +500,7 @@ class TestEWaybill(IntegrationTestCase):
 
         with (
             patch("frappe.enqueue") as mock_enqueue,
-            patch.object(frappe.local, "request", frappe._dict(), create=True),
+            patch.object(frappe.local, "request", frappe._dict(method="POST"), create=True),
             patch.object(frappe.local, "is_ajax", True, create=True),
         ):
             cancel_e_waybill_e_invoice(si)
