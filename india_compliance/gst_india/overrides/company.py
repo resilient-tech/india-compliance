@@ -7,19 +7,86 @@ from frappe.utils import flt
 
 from india_compliance.gst_india.utils import get_data_file_path
 
+SINGLE_DOCTYPES_WITH_COMPANY_FIELD = (
+    "GST Invoice Management System",
+    "GSTR-1",
+    "Purchase Reconciliation Tool",
+)
 
-def delete_gst_settings_for_company(doc, method=None):
+GST_SETTINGS_CHILD_TABLES_WITH_COMPANY = (
+    "gst_accounts",
+    "credentials",
+    "e_invoice_applicable_companies",
+)
+
+
+def on_trash(doc, method=None):
     if doc.country != "India":
         return
 
+    clear_company_from_single_doctypes(doc.name)
+    remove_gst_settings_for_company(doc.name)
+
+
+def clear_company_from_single_doctypes(company):
+    """Clear the deleted company from Single DocTypes, since these aren't cleared on delete."""
+    singles = frappe.qb.DocType("Singles")
+
+    doctypes = (
+        frappe.qb.from_(singles)
+        .select(singles["doctype"])
+        .where(
+            singles["doctype"].isin(SINGLE_DOCTYPES_WITH_COMPANY_FIELD)
+            & (singles.field == "company")
+            & (singles.value == company)
+        )
+    ).run(pluck=True)
+
+    if not doctypes:
+        return
+
+    (
+        frappe.qb.update(singles)
+        .set(singles.value, "")
+        .where(singles["doctype"].isin(doctypes) & singles.field.isin(("company", "company_gstin")))
+    ).run()
+
+    for doctype in doctypes:
+        frappe.clear_document_cache(doctype, doctype)
+
+
+def remove_gst_settings_for_company(company):
     gst_settings = frappe.get_doc("GST Settings")
 
-    gst_settings.gst_accounts = [
-        row for row in gst_settings.get("gst_accounts", []) if row.company != doc.name
-    ]
+    e_invoice_companies_count = len(gst_settings.e_invoice_applicable_companies)
+
+    for fieldname in GST_SETTINGS_CHILD_TABLES_WITH_COMPANY:
+        gst_settings.set(
+            fieldname, [row for row in gst_settings.get(fieldname, []) if row.company != company]
+        )
+
+    if len(gst_settings.e_invoice_applicable_companies) != e_invoice_companies_count:
+        disable_e_invoice_if_not_applicable(gst_settings, company)
 
     gst_settings.flags.ignore_mandatory = True
     gst_settings.save()
+
+
+def disable_e_invoice_if_not_applicable(gst_settings, company):
+    if not (
+        gst_settings.enable_api
+        and gst_settings.enable_e_invoice
+        and not gst_settings.e_invoice_applicable_companies
+        and gst_settings.apply_e_invoice_only_for_selected_companies
+    ):
+        return
+
+    gst_settings.enable_e_invoice = 0
+    frappe.msgprint(
+        _("e-Invoice disabled: {0} was the only applicable company").format(frappe.bold(company)),
+        alert=True,
+        indicator="orange",
+    )
 
 
 def make_company_fixtures(doc, method=None):

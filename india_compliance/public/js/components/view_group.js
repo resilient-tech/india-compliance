@@ -8,21 +8,10 @@ india_compliance.ViewGroup = class ViewGroup {
     }
 
     render() {
-        $(this.$wrapper).append(
-            `
-            <div class= "view-group">
-                <div class="view-switch"></div>
-            </div>
-            `,
-        );
-
-        this.view_group_container = $(`
-            <ul
-                class= "nav custom-tabs rounded-sm border d-inline-flex"
-                id = "custom-tabs"
-                role = "tablist"
-            ></ul>
-        `).appendTo(this.$wrapper.find(`.view-switch`));
+        // frappe's segmented control: a rail with one pressed pill
+        this.view_group_container = $(
+            `<div class="view-group es-tab-buttons" role="radiogroup"></div>`,
+        ).appendTo(this.$wrapper);
 
         this.make_views();
         this.setup_events();
@@ -30,39 +19,41 @@ india_compliance.ViewGroup = class ViewGroup {
 
     set_active_view(view) {
         this.active_view = view;
-        this.views[`${view}_view`].children().tab("show");
+
+        Object.entries(this.views).forEach(([name, $pill]) => {
+            const active = name === `${view}_view`;
+            $pill.attr("data-state", active ? "active" : "inactive").attr("aria-checked", active);
+        });
     }
 
     make_views() {
         this.view_names.forEach((view) => {
-            this.views[`${view}_view`] = $(
-                `
-                <li class="nav-item show">
-                    <a
-                        class="nav-link ${this.active_view === view ? "active" : ""}"
-                        id = "gstr-1-__${view}-view"
-                        data-toggle="tab"
-                        data-fieldname="${view}"
-                        href="#gstr-1-__${view}-view"
-                        role="tab"
-                        aria-controls="gstr-1-__${view}-view"
-                        aria-selected="true"
-            >
-            ${frappe.unscrub(view)}
-                    </a>
-                </li>
-            `,
-            ).appendTo(this.view_group_container);
+            const active = this.active_view === view;
+
+            this.views[`${view}_view`] = $(`
+                <button
+                    class="es-pill"
+                    role="radio"
+                    data-fieldname="${view}"
+                    data-state="${active ? "active" : "inactive"}"
+                    aria-checked="${active}"
+                >
+                    ${frappe.unscrub(view)}
+                </button>
+            `).appendTo(this.view_group_container);
         });
     }
 
     setup_events() {
-        this.view_group_container.off("click").on("click", ".nav-link", (e) => {
+        this.view_group_container.off("click").on("click", ".es-pill", (e) => {
             e.preventDefault();
             e.stopImmediatePropagation();
 
-            this.target = $(e.currentTarget);
-            const target_view = this.target.attr("data-fieldname");
+            const $pill = $(e.currentTarget);
+            // css alone only stops the mouse, keyboard still gets through
+            if ($pill.is("[data-disabled]")) return;
+
+            const target_view = $pill.attr("data-fieldname");
 
             this.set_active_view(target_view);
             this.callback && this.callback(target_view);
@@ -70,12 +61,13 @@ india_compliance.ViewGroup = class ViewGroup {
     }
 
     disable_view(view, title) {
-        this.views[`${view}_view`].attr("title", title);
-        this.views[`${view}_view`].find(".nav-link").addClass("disabled");
+        this.views[`${view}_view`].attr({ title, "data-disabled": "", "aria-disabled": "true" });
     }
 
     enable_view(view) {
-        this.views[`${view}_view`].removeAttr("title");
-        this.views[`${view}_view`].find(".nav-link").removeClass("disabled");
+        this.views[`${view}_view`]
+            .removeAttr("title")
+            .removeAttr("data-disabled")
+            .removeAttr("aria-disabled");
     }
 };

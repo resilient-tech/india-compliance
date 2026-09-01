@@ -5,6 +5,7 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Sum
+from frappe.utils import flt
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
@@ -46,7 +47,20 @@ class InwardSupply:
         self.IMS = frappe.qb.DocType("GST Inward Supply")
 
     def get_all(self, company_gstin, names=None):
-        query = self.get_query(company_gstin, ["action", "doc_type"])
+        query = self.get_query(
+            company_gstin,
+            [
+                "action",
+                "doc_type",
+                "is_amended",
+                "is_itc_reduction_blocked",
+                "declared_igst",
+                "declared_cgst",
+                "declared_sgst",
+                "declared_cess",
+                "remarks",
+            ],
+        )
 
         if names:
             query = query.where(self.IMS.name.isin(names))
@@ -75,8 +89,20 @@ class InwardSupply:
                 "is_amended",
                 "sup_return_period",
                 "document_value",
+                "itc_reduction_required",
+                "is_itc_reduction_blocked",
+                "declared_igst",
+                "declared_cgst",
+                "declared_sgst",
+                "declared_cess",
+                "remarks",
+                "is_remarks_blocked",
             ],
-        ).where(self.IMS.ims_action != self.IMS.previous_ims_action)
+        ).where(
+            (self.IMS.ims_action != self.IMS.previous_ims_action)
+            # declared ITC changed after upload; re-send even though the action is unchanged
+            | (self.IMS.is_declaration_pending_upload == 1)
+        )
 
     def get_unmatched(self, filters):
         query = self.get_query(filters.company_gstin)
@@ -101,7 +127,8 @@ class InwardSupply:
                 ConstantColumn("GST Inward Supply").as_("doctype"),
                 Case()
                 .when(
-                    (self.IMS.ims_action == self.IMS.previous_ims_action),
+                    (self.IMS.ims_action == self.IMS.previous_ims_action)
+                    & (IfNull(self.IMS.is_declaration_pending_upload, 0) == 0),
                     False,
                 )
                 .else_(True)
@@ -180,7 +207,7 @@ class PurchaseInvoice:
             .where(self.PI.gst_category.isin(gst_category))
             .where(self.PI.reconciliation_status == "Unreconciled")
             .where(self.PI.is_return == is_return)
-            .where(self.PI.ineligibility_reason != "ITC restricted due to PoS rules")
+            .where(IfNull(self.PI.ineligibility_reason, "") != "ITC restricted due to PoS rules")
             .run(as_dict=True)
         )
 
@@ -225,6 +252,7 @@ class PurchaseInvoice:
 
     def get_fields(self, additional_fields=None, is_return=False):
         fields = [
+            "supplier",
             "supplier_gstin",
             "supplier_name",
             "bill_no",
@@ -264,3 +292,75 @@ class PurchaseInvoice:
 
     def query_tax_amount(self, field):
         return Abs(Sum(getattr(self.PI_ITEM, field)))
+
+
+# declared ITC reduction on specified records
+
+DECLARED_FIELDS = (
+    "itc_reduction_required",
+    "declared_igst",
+    "declared_cgst",
+    "declared_sgst",
+    "declared_cess",
+)
+
+# fields needed from the stored record
+DECLARATION_ROW_FIELDS = (
+    "name",
+    "is_itc_reduction_blocked",
+    "remarks",
+    "igst",
+    "cgst",
+    "sgst",
+    "cess",
+    *DECLARED_FIELDS,
+)
+
+
+def _declaration_changed(stored, declared):
+    # changed -> caller re-flags for upload (action stays put, flag carries the dirty signal)
+    # remarks travel with the declaration, so a remarks-only edit counts as a change too
+    if (stored.get("remarks") or "") != (declared.get("remarks") or ""):
+        return True
+    return any(flt(stored.get(field)) != flt(declared.get(field)) for field in DECLARED_FIELDS)
+
+
+def apply_declared_overrides(overrides):
+    """Save user-confirmed declared ITC (and remarks) from the review dialog."""
+    rows = frappe.get_all(
+        "GST Inward Supply",
+        filters={"name": ["in", list(overrides)]},
+        fields=list(DECLARATION_ROW_FIELDS),
+    )
+    # blocked -> read-only declaration, skip
+    document = {row.name: row for row in rows if not row.is_itc_reduction_blocked}
+
+    for name, override in overrides.items():
+        if not (doc := document.get(name)):
+            continue
+
+        declared = _clean_declared(doc, override)
+        declared["remarks"] = override.get("remarks") or ""
+
+        if not _declaration_changed(doc, declared):
+            continue
+
+        declared["is_declaration_pending_upload"] = 1
+        frappe.db.set_value("GST Inward Supply", name, declared)
+
+
+def _clean_declared(document, declared):
+    values = {
+        # clamp to [0, document]
+        head: max(0, min(flt(declared.get(head)), flt(document.get(head))))
+        for head in ("igst", "cgst", "sgst", "cess")
+    }
+    values["cgst"] = values["sgst"] = min(values["cgst"], values["sgst"])  # govt: CGST must equal SGST
+
+    return {
+        "itc_reduction_required": 1 if any(values.values()) else 0,
+        "declared_igst": values["igst"],
+        "declared_cgst": values["cgst"],
+        "declared_sgst": values["sgst"],
+        "declared_cess": values["cess"],
+    }

@@ -1,3 +1,5 @@
+from unittest import mock
+
 import frappe
 from erpnext.accounts.doctype.sales_invoice.mapper import make_sales_return
 from frappe.tests import IntegrationTestCase, change_settings
@@ -8,17 +10,19 @@ from india_compliance.gst_india.doctype.gstr_1.gstr_1_export import GovExcel
 from india_compliance.gst_india.overrides.company import create_default_company_account
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import (
-    GovJsonKey,
-    GSTR1_B2B_InvoiceType,
-    GSTR1_SubCategory,
+    B2BInvoiceType,
+    JsonKey,
+    SubCategory,
 )
 from india_compliance.gst_india.utils.gstr_1 import (
-    GSTR1_DataField as inv_f,
+    DocField as doc,
 )
-from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
-    BooksDataMapper,
+from india_compliance.gst_india.utils.gstr_1.gstr_1_books_map import (
     GSTR1BooksData,
 )
+from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
+from india_compliance.gst_india.utils.gstr_1.sections import supecom
+from india_compliance.gst_india.utils.gstr_1.sections._shared import BOOKS_COLUMNS
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
@@ -90,7 +94,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "document_value": 120.0,
                 "place_of_supply": "24-Gujarat",
                 "reverse_charge": "N",
-                "document_type": GSTR1_B2B_InvoiceType.R.value,
+                "document_type": B2BInvoiceType.R.value,
                 "total_taxable_value": 100.0,
                 "total_igst_amount": 0.0,
                 "total_cgst_amount": 9.0,
@@ -107,7 +111,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     }
                 ],
             },
-            data[GSTR1_SubCategory.B2B_REGULAR.value][si.name],
+            data[SubCategory.B2B_REGULAR.value][si.name],
         )
 
     def test_b2b_regular_transaction_with_gst_inclusive_price(self):
@@ -125,7 +129,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "document_value": 100.0,
                 "place_of_supply": "24-Gujarat",
                 "reverse_charge": "N",
-                "document_type": GSTR1_B2B_InvoiceType.R.value,
+                "document_type": B2BInvoiceType.R.value,
                 "total_taxable_value": 83.33,
                 "total_igst_amount": 0.0,
                 "total_cgst_amount": 7.5,
@@ -142,7 +146,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     }
                 ],
             },
-            data[GSTR1_SubCategory.B2B_REGULAR.value][si.name],
+            data[SubCategory.B2B_REGULAR.value][si.name],
         )
 
     @change_settings("System Settings", {"currency_precision": 3})
@@ -183,13 +187,13 @@ class TestGSTR1BooksData(IntegrationTestCase):
         )
 
         # Check if HSN Summary is same as Invoice Summary
-        for key in _class.DATA_TO_ITEM_FIELD_MAPPING:
+        for key in BOOKS_COLUMNS:
             invoice_total = 0
-            for row in data[GSTR1_SubCategory.B2B_REGULAR.value].values():
+            for row in data[SubCategory.B2B_REGULAR.value].values():
                 invoice_total += row.get(key, 0.0)
 
             hsn_total = 0
-            for row in data[GSTR1_SubCategory.HSN_B2B.value].values():
+            for row in data[SubCategory.HSN_B2B.value].values():
                 hsn_total += row.get(key, 0.0)
 
             self.assertEqual(flt(hsn_total, 2), flt(invoice_total, 2))
@@ -232,14 +236,14 @@ class TestGSTR1BooksData(IntegrationTestCase):
         )
 
         # Check if HSN Summary is same as Invoice Summary
-        for key in _class.DATA_TO_ITEM_FIELD_MAPPING:
+        for key in BOOKS_COLUMNS:
             invoice_total = 0
-            for invoices in data[GSTR1_SubCategory.B2CS.value].values():
+            for invoices in data[SubCategory.B2CS.value].values():
                 for row in invoices:
                     invoice_total += row.get(key, 0.0)
 
             hsn_total = 0
-            for row in data[GSTR1_SubCategory.HSN_B2C.value].values():
+            for row in data[SubCategory.HSN_B2C.value].values():
                 hsn_total += row.get(key, 0.0)
 
             self.assertEqual(flt(hsn_total, 2), flt(invoice_total, 2))
@@ -279,20 +283,24 @@ class TestGSTR1BooksData(IntegrationTestCase):
             {
                 "rounding_difference": {
                     "total_taxable_value": -0.022,
+                    "total_igst_amount": 0.0,
+                    "total_cgst_amount": 0.0,
+                    "total_sgst_amount": 0.0,
+                    "total_cess_amount": 0.0,
                 }
             },
             data["rounding_difference"],
         )
 
         # Check if HSN Summary is same as Invoice Summary
-        for key in _class.DATA_TO_ITEM_FIELD_MAPPING:
+        for key in BOOKS_COLUMNS:
             invoice_total = 0
-            for invoices in data[GSTR1_SubCategory.NIL_EXEMPT.value].values():
+            for invoices in data[SubCategory.NIL_EXEMPT.value].values():
                 for row in invoices:
                     invoice_total += row.get(key, 0.0)
 
             hsn_total = 0
-            for row in data[GSTR1_SubCategory.HSN_B2C.value].values():
+            for row in data[SubCategory.HSN_B2C.value].values():
                 hsn_total += row.get(key, 0.0)
 
             self.assertEqual(flt(hsn_total, 2), flt(invoice_total, 2))
@@ -312,7 +320,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "transaction_type": "Invoice",
                 "document_value": 100.0,  # Unchanged for RCM
                 "reverse_charge": "Y",
-                "document_type": GSTR1_B2B_InvoiceType.R.value,
+                "document_type": B2BInvoiceType.R.value,
                 "total_taxable_value": 100.0,
                 "total_igst_amount": 0.0,
                 "total_cgst_amount": 9.0,
@@ -329,7 +337,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     }
                 ],
             },
-            data[GSTR1_SubCategory.B2B_REVERSE_CHARGE.value][si.name],
+            data[SubCategory.B2B_REVERSE_CHARGE.value][si.name],
         )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
@@ -345,7 +353,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "transaction_type": "Invoice",
                 "document_value": 100.0,
                 "reverse_charge": "N",
-                "document_type": GSTR1_B2B_InvoiceType.SEWOP.value,
+                "document_type": B2BInvoiceType.SEWOP.value,
                 "total_taxable_value": 100.0,
                 "total_igst_amount": 0.0,
                 "total_cgst_amount": 0.0,
@@ -362,7 +370,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     }
                 ],
             },
-            data[GSTR1_SubCategory.SEZWOP.value][si.name],
+            data[SubCategory.SEZWOP.value][si.name],
         )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
@@ -380,7 +388,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "transaction_type": "Invoice",
                 "document_value": 118.0,
                 "reverse_charge": "N",
-                "document_type": GSTR1_B2B_InvoiceType.SEWP.value,
+                "document_type": B2BInvoiceType.SEWP.value,
                 "total_taxable_value": 100.0,
                 "total_igst_amount": 18.0,
                 "total_cgst_amount": 0.0,
@@ -397,7 +405,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     }
                 ],
             },
-            data[GSTR1_SubCategory.SEZWP.value][si.name],
+            data[SubCategory.SEZWP.value][si.name],
         )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
@@ -415,7 +423,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "transaction_type": "Invoice",
                 "document_value": 118.0,
                 "reverse_charge": "N",
-                "document_type": GSTR1_B2B_InvoiceType.DE.value,
+                "document_type": B2BInvoiceType.DE.value,
                 "total_taxable_value": 100.0,
                 "total_igst_amount": 0.0,
                 "total_cgst_amount": 9.0,
@@ -432,7 +440,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     }
                 ],
             },
-            data[GSTR1_SubCategory.DE.value][si.name],
+            data[SubCategory.DE.value][si.name],
         )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
@@ -465,7 +473,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     }
                 ],
             },
-            data[GSTR1_SubCategory.EXPWOP.value][si.name],
+            data[SubCategory.EXPWOP.value][si.name],
         )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
@@ -501,7 +509,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     }
                 ],
             },
-            data[GSTR1_SubCategory.EXPWP.value][si.name],
+            data[SubCategory.EXPWP.value][si.name],
         )
 
     def test_b2cl_transaction(self):
@@ -537,7 +545,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     }
                 ],
             },
-            data[GSTR1_SubCategory.B2CL.value][si.name],
+            data[SubCategory.B2CL.value][si.name],
         )
 
     def test_cdnr_transaction(self):
@@ -556,7 +564,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "transaction_type": "Credit Note",
                 "document_value": -118.0,
                 "reverse_charge": "N",
-                "document_type": GSTR1_B2B_InvoiceType.R.value,
+                "document_type": B2BInvoiceType.R.value,
                 "total_taxable_value": -100.0,
                 "total_igst_amount": 0.0,
                 "total_cgst_amount": -9.0,
@@ -573,7 +581,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     }
                 ],
             },
-            data[GSTR1_SubCategory.CDNR.value][cn.name],
+            data[SubCategory.CDNR.value][cn.name],
         )
 
         self.assertDictEq(
@@ -581,7 +589,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "transaction_type": "Invoice",
                 "document_value": 118.0,
                 "reverse_charge": "N",
-                "document_type": GSTR1_B2B_InvoiceType.R.value,
+                "document_type": B2BInvoiceType.R.value,
                 "total_taxable_value": 100.0,
                 "total_igst_amount": 0.0,
                 "total_cgst_amount": 9.0,
@@ -598,7 +606,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     }
                 ],
             },
-            data[GSTR1_SubCategory.B2B_REGULAR.value][si.name],
+            data[SubCategory.B2B_REGULAR.value][si.name],
         )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
@@ -638,7 +646,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     }
                 ],
             },
-            data[GSTR1_SubCategory.CDNUR.value][cn.name],
+            data[SubCategory.CDNUR.value][cn.name],
         )
 
     def test_nil_exempt_transaction(self):
@@ -668,7 +676,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "exempted_amount": 0.0,
                 "non_gst_amount": 0.0,
             },
-            data[GSTR1_SubCategory.NIL_EXEMPT.value]["Intra-State supplies to registered persons"][0],
+            data[SubCategory.NIL_EXEMPT.value]["Intra-State supplies to registered persons"][0],
         )
 
         self.assertDictEq(
@@ -683,7 +691,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "exempted_amount": 0.0,
                 "non_gst_amount": 0.0,
             },
-            data[GSTR1_SubCategory.NIL_EXEMPT.value]["Intra-State supplies to unregistered persons"][0],
+            data[SubCategory.NIL_EXEMPT.value]["Intra-State supplies to unregistered persons"][0],
         )
 
     def test_b2cs_transaction(self):
@@ -743,7 +751,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     "total_sgst_amount": sgst_rate,
                     "total_cess_amount": 0.0,
                 },
-                data[GSTR1_SubCategory.B2CS.value][f"{si.place_of_supply} - 18.0"][0],
+                data[SubCategory.B2CS.value][f"{si.place_of_supply} - 18.0"][0],
             )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
@@ -765,7 +773,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
 
         data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
 
-        b2cs_rows = data[GSTR1_SubCategory.B2CS.value]["24-Gujarat - 18.0"]
+        b2cs_rows = data[SubCategory.B2CS.value]["24-Gujarat - 18.0"]
         by_doc = {row["document_number"]: row for row in b2cs_rows}
 
         # Both SI and CN land in B2CS under the same POS + rate key
@@ -777,7 +785,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
             0.0,
         )
 
-        self.assertNotIn(cn.name, data.get(GSTR1_SubCategory.CDNUR.value, {}))
+        self.assertNotIn(cn.name, data.get(SubCategory.CDNUR.value, {}))
 
     def test_cdnur_credit_note_not_double_counted_in_b2cs(self):
         # Inter-state B2C (Unregistered) invoice ABOVE the B2CL threshold (> 1 lakh),
@@ -799,10 +807,10 @@ class TestGSTR1BooksData(IntegrationTestCase):
         data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
 
         # CN must appear in CDNUR
-        self.assertIn(cn.name, data.get(GSTR1_SubCategory.CDNUR.value, {}))
+        self.assertIn(cn.name, data.get(SubCategory.CDNUR.value, {}))
 
         # CN must NOT also appear anywhere in B2CS (any POS + rate list)
-        b2cs = data.get(GSTR1_SubCategory.B2CS.value, {})
+        b2cs = data.get(SubCategory.B2CS.value, {})
         b2cs_docs = {row["document_number"] for rows in b2cs.values() for row in rows}
         self.assertNotIn(cn.name, b2cs_docs)
 
@@ -821,7 +829,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
         data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
 
         # CN lands in B2CS under the POS + rate key, with negative (return) values
-        b2cs_rows = data[GSTR1_SubCategory.B2CS.value]["27-Maharashtra - 18.0"]
+        b2cs_rows = data[SubCategory.B2CS.value]["27-Maharashtra - 18.0"]
         cn_row = next(row for row in b2cs_rows if row["document_number"] == cn.name)
         self.assertDictEq(
             {
@@ -836,7 +844,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
         )
 
         # CN must NOT leak into CDNUR
-        self.assertNotIn(cn.name, data.get(GSTR1_SubCategory.CDNUR.value, {}))
+        self.assertNotIn(cn.name, data.get(SubCategory.CDNUR.value, {}))
 
     def test_cdnur_full_value_b2cl_credit_note(self):
         # Full credit note of an inter-state B2C (Unregistered) invoice ABOVE the B2CL
@@ -865,11 +873,11 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "total_cgst_amount": 0.0,
                 "total_sgst_amount": 0.0,
             },
-            data[GSTR1_SubCategory.CDNUR.value][cn.name],
+            data[SubCategory.CDNUR.value][cn.name],
         )
 
         # CN must NOT also appear anywhere in B2CS
-        b2cs = data.get(GSTR1_SubCategory.B2CS.value, {})
+        b2cs = data.get(SubCategory.B2CS.value, {})
         b2cs_docs = {row["document_number"] for rows in b2cs.values() for row in rows}
         self.assertNotIn(cn.name, b2cs_docs)
 
@@ -903,11 +911,11 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "total_taxable_value": 200000.0,
                 "total_igst_amount": 36000.0,
             },
-            data[GSTR1_SubCategory.CDNUR.value][dn.name],
+            data[SubCategory.CDNUR.value][dn.name],
         )
 
         # DN must NOT appear in B2CS
-        b2cs = data.get(GSTR1_SubCategory.B2CS.value, {})
+        b2cs = data.get(SubCategory.B2CS.value, {})
         b2cs_docs = {row["document_number"] for rows in b2cs.values() for row in rows}
         self.assertNotIn(dn.name, b2cs_docs)
 
@@ -934,7 +942,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "total_taxable_value": -100.0,
                 "total_igst_amount": 0.0,
             },
-            data[GSTR1_SubCategory.CDNUR.value][cn.name],
+            data[SubCategory.CDNUR.value][cn.name],
         )
 
     def test_ecommerce_invoices_aggregate_under_supecom(self):
@@ -964,8 +972,8 @@ class TestGSTR1BooksData(IntegrationTestCase):
 
         data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
 
-        self.assertIn(GSTR1_SubCategory.SUPECOM_52.value, data)
-        supecom_rows = data[GSTR1_SubCategory.SUPECOM_52.value]
+        self.assertIn(SubCategory.SUPECOM_52.value, data)
+        supecom_rows = data[SubCategory.SUPECOM_52.value]
         self.assertIn(ecommerce_gstin_1, supecom_rows)
         self.assertIn(ecommerce_gstin_2, supecom_rows)
         self.assertEqual(len(supecom_rows), 2)
@@ -974,21 +982,70 @@ class TestGSTR1BooksData(IntegrationTestCase):
         row_2 = supecom_rows[ecommerce_gstin_2]
 
         for row, gstin in ((row_1, ecommerce_gstin_1), (row_2, ecommerce_gstin_2)):
-            self.assertEqual(row[inv_f.DOC_TYPE], GSTR1_SubCategory.SUPECOM_52.value)
-            self.assertEqual(row[inv_f.ECOMMERCE_GSTIN], gstin)
-            self.assertIn(inv_f.ECOMMERCE_OPERATOR_NAME, row)
+            self.assertEqual(row[doc.DOC_TYPE], SubCategory.SUPECOM_52.value)
+            self.assertEqual(row[doc.ECOMMERCE_GSTIN], gstin)
+            self.assertIn(doc.ECOMMERCE_OPERATOR_NAME, row)
             self.assertNotIn("no_of_records", row)
-            self.assertGreater(row[inv_f.TAXABLE_VALUE], 0)
+            self.assertGreater(row[doc.TAXABLE_VALUE], 0)
             # Frontend summary/detail reads invoice-level total tax fields.
-            self.assertIn(inv_f.IGST, row)
-            self.assertIn(inv_f.CGST, row)
-            self.assertIn(inv_f.SGST, row)
+            self.assertIn(doc.IGST, row)
+            self.assertIn(doc.CGST, row)
+            self.assertIn(doc.SGST, row)
 
         # Operator 1 has in-state + out-state invoices, so it should have both
         # IGST and CGST/SGST in aggregate.
-        self.assertGreater(row_1[inv_f.IGST], 0)
-        self.assertGreater(row_1[inv_f.CGST], 0)
-        self.assertGreater(row_1[inv_f.SGST], 0)
+        self.assertGreater(row_1[doc.IGST], 0)
+        self.assertGreater(row_1[doc.CGST], 0)
+        self.assertGreater(row_1[doc.SGST], 0)
+
+    @change_settings(
+        "GST Settings",
+        {
+            "enable_reverse_charge_in_sales": 1,
+            "enable_sales_through_ecommerce_operators": 1,
+        },
+    )
+    def test_9_5_reported_only_in_supecom(self):
+        si = create_sales_invoice(
+            customer="_Test Registered Customer",
+            is_reverse_charge=True,
+            is_in_state=True,
+            is_in_state_rcm=True,
+            ecommerce_gstin="20ALYPD6528PQC5",
+        )
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        self.assertIn(SubCategory.SUPECOM_9_5.value, data)
+        supecom = data[SubCategory.SUPECOM_9_5.value]
+        self.assertIn("20ALYPD6528PQC5", supecom)
+        self.assertGreater(supecom["20ALYPD6528PQC5"][doc.TAXABLE_VALUE], 0)
+
+        self.assertNotIn(si.name, data.get(SubCategory.B2B_REVERSE_CHARGE.value, {}))
+        for hsn in (
+            SubCategory.HSN_B2B.value,
+            SubCategory.HSN_B2C.value,
+            SubCategory.HSN.value,
+        ):
+            self.assertNotIn(hsn, data)
+
+        overview = {row["description"]: row for row in GSTR1Invoices(FILTERS).get_overview()}
+        self.assertNotIn(si.name, overview[SubCategory.B2B_REVERSE_CHARGE.value]["unique_records"])
+        self.assertIn(si.name, overview[SubCategory.SUPECOM_9_5.value]["unique_records"])
+
+    @change_settings("GST Settings", {"enable_sales_through_ecommerce_operators": 1})
+    def test_52_reported_in_both_primary_and_supecom(self):
+        si = create_sales_invoice(
+            customer="_Test Registered Customer",
+            is_in_state=True,
+            ecommerce_gstin="20ALYPD6528PQC5",
+        )
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        self.assertIn(si.name, data.get(SubCategory.B2B_REGULAR.value, {}))
+        self.assertIn(SubCategory.SUPECOM_52.value, data)
+        self.assertIn("20ALYPD6528PQC5", data[SubCategory.SUPECOM_52.value])
 
     def test_supecom_rounding_at_invoice_level(self):
         """
@@ -996,7 +1053,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
         invoices for the same operator. Without invoice-level rounding the
         operator total diverges from the sum of per-invoice rounded amounts.
         """
-        supply_type = GSTR1_SubCategory.SUPECOM_52.value
+        supply_type = SubCategory.SUPECOM_52.value
         eco_gstin = "20ALYPD6528PQC5"
 
         def make_item(invoice_no, igst):
@@ -1017,73 +1074,72 @@ class TestGSTR1BooksData(IntegrationTestCase):
             }
         }
 
-        prepared_data = {}
-        BooksDataMapper().process_data_for_supecom(grouped_data, prepared_data)
+        prepared_data = supecom.from_books(grouped_data, lambda gstin: "")
 
         row = prepared_data[supply_type][eco_gstin]
         # Each invoice rounds to 0.01; two invoices → 0.02
-        self.assertEqual(row[inv_f.IGST], flt(0.01 + 0.01, 2))
+        self.assertEqual(row[doc.IGST], flt(0.01 + 0.01, 2))
 
     def test_gov_excel_process_data_keeps_supecom_rows(self):
         ecommerce_gstin = "20ALYPD6528PQC5"
 
         books_data = {
             "aggregate_data": {},
-            GSTR1_SubCategory.SUPECOM_52.value: [
+            SubCategory.SUPECOM_52.value: [
                 {
-                    inv_f.DOC_TYPE: GSTR1_SubCategory.SUPECOM_52.value,
-                    inv_f.ECOMMERCE_GSTIN: ecommerce_gstin,
-                    inv_f.ECOMMERCE_OPERATOR_NAME: "Test Operator",
-                    inv_f.TAXABLE_VALUE: 100.0,
-                    inv_f.IGST: 18.0,
-                    inv_f.CGST: 0.0,
-                    inv_f.SGST: 0.0,
-                    inv_f.CESS: 0.0,
+                    doc.DOC_TYPE: SubCategory.SUPECOM_52.value,
+                    doc.ECOMMERCE_GSTIN: ecommerce_gstin,
+                    doc.ECOMMERCE_OPERATOR_NAME: "Test Operator",
+                    doc.TAXABLE_VALUE: 100.0,
+                    doc.IGST: 18.0,
+                    doc.CGST: 0.0,
+                    doc.SGST: 0.0,
+                    doc.CESS: 0.0,
                 }
             ],
         }
         processed = GovExcel().process_data(books_data)
 
-        self.assertIn(GovJsonKey.SUPECOM.value, processed)
-        self.assertTrue(processed[GovJsonKey.SUPECOM.value])
+        self.assertIn(JsonKey.SUPECOM.value, processed)
+        self.assertTrue(processed[JsonKey.SUPECOM.value])
 
-        supecom_row = processed[GovJsonKey.SUPECOM.value][0]
-        self.assertEqual(supecom_row[inv_f.ECOMMERCE_GSTIN], ecommerce_gstin)
-        self.assertEqual(supecom_row[inv_f.ECOMMERCE_OPERATOR_NAME], "Test Operator")
-        self.assertGreater(supecom_row[inv_f.TAXABLE_VALUE], 0)
+        supecom_row = processed[JsonKey.SUPECOM.value][0]
+        self.assertEqual(supecom_row[doc.ECOMMERCE_GSTIN], ecommerce_gstin)
+        self.assertEqual(supecom_row[doc.ECOMMERCE_OPERATOR_NAME], "Test Operator")
+        self.assertGreater(supecom_row[doc.TAXABLE_VALUE], 0)
 
     def test_supecom_excel_headers_include_operator_name(self):
-        headers = GovExcel().get_category_headers(GovJsonKey.SUPECOM.value)
+        headers = GovExcel().get_category_headers(JsonKey.SUPECOM.value)
 
         operator_name_header = next(
             header for header in headers if header.get("label") == "E-Commerce Operator Name"
         )
-        self.assertEqual(operator_name_header.get("fieldname"), inv_f.ECOMMERCE_OPERATOR_NAME)
+        self.assertEqual(operator_name_header.get("fieldname"), doc.ECOMMERCE_OPERATOR_NAME)
 
     def test_supecom_summary_counts_rows(self):
         for subcategory in (
-            GSTR1_SubCategory.SUPECOM_52.value,
-            GSTR1_SubCategory.SUPECOM_9_5.value,
+            SubCategory.SUPECOM_52.value,
+            SubCategory.SUPECOM_9_5.value,
         ):
             data = {
                 subcategory: [
                     {
-                        inv_f.DOC_TYPE: subcategory,
-                        inv_f.ECOMMERCE_GSTIN: "20ALYPD6528PQC5",
-                        inv_f.TAXABLE_VALUE: 100.0,
-                        inv_f.IGST: 18.0,
-                        inv_f.CGST: 0.0,
-                        inv_f.SGST: 0.0,
-                        inv_f.CESS: 0.0,
+                        doc.DOC_TYPE: subcategory,
+                        doc.ECOMMERCE_GSTIN: "20ALYPD6528PQC5",
+                        doc.TAXABLE_VALUE: 100.0,
+                        doc.IGST: 18.0,
+                        doc.CGST: 0.0,
+                        doc.SGST: 0.0,
+                        doc.CESS: 0.0,
                     },
                     {
-                        inv_f.DOC_TYPE: subcategory,
-                        inv_f.ECOMMERCE_GSTIN: "29AABCF8078M1C8",
-                        inv_f.TAXABLE_VALUE: 200.0,
-                        inv_f.IGST: 0.0,
-                        inv_f.CGST: 18.0,
-                        inv_f.SGST: 18.0,
-                        inv_f.CESS: 0.0,
+                        doc.DOC_TYPE: subcategory,
+                        doc.ECOMMERCE_GSTIN: "29AABCF8078M1C8",
+                        doc.TAXABLE_VALUE: 200.0,
+                        doc.IGST: 0.0,
+                        doc.CGST: 18.0,
+                        doc.SGST: 18.0,
+                        doc.CESS: 0.0,
                     },
                 ]
             }
@@ -1091,8 +1147,13 @@ class TestGSTR1BooksData(IntegrationTestCase):
             summary_row = SummarizeGSTR1().get_subcategory_summary(data)[subcategory]
 
             self.assertEqual(summary_row["no_of_records"], 2)
-            self.assertEqual(summary_row[inv_f.TAXABLE_VALUE], 300.0)
-            self.assertFalse(summary_row["consider_in_total_taxable_value"])
+            self.assertEqual(summary_row[doc.TAXABLE_VALUE], 300.0)
+
+            if subcategory == SubCategory.SUPECOM_52.value:
+                self.assertFalse(summary_row["consider_in_total_taxable_value"])
+            else:
+                self.assertTrue(summary_row["consider_in_total_taxable_value"])
+
             self.assertFalse(summary_row["consider_in_total_tax"])
 
     def test_document_issued_summary(self):
@@ -1134,7 +1195,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "document_value": 218.0,
                 "place_of_supply": "24-Gujarat",
                 "reverse_charge": "N",
-                "document_type": GSTR1_B2B_InvoiceType.R.value,
+                "document_type": B2BInvoiceType.R.value,
                 "total_taxable_value": 100.0,
                 "total_igst_amount": 0.0,
                 "total_cgst_amount": 9.0,
@@ -1151,7 +1212,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                     },
                 ],
             },
-            data[GSTR1_SubCategory.B2B_REGULAR.value][si.name],
+            data[SubCategory.B2B_REGULAR.value][si.name],
         )
 
         self.assertDictEq(
@@ -1166,7 +1227,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "exempted_amount": 0.0,
                 "non_gst_amount": 0.0,
             },
-            data[GSTR1_SubCategory.NIL_EXEMPT.value]["Intra-State supplies to registered persons"][0],
+            data[SubCategory.NIL_EXEMPT.value]["Intra-State supplies to registered persons"][0],
         )
 
     def test_hsn_summary_with_bifurcation(self):
@@ -1196,7 +1257,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "document_value": 118.0,
                 "document_type": "HSN Summary - B2B",
             },
-            data[GSTR1_SubCategory.HSN_B2B.value][key],
+            data[SubCategory.HSN_B2B.value][key],
         )
 
     def test_hsn_summary_without_bifurcation(self):
@@ -1264,7 +1325,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "total_cess_amount": 0.0,
                 "document_value": 118.0,
             },
-            data[GSTR1_SubCategory.HSN.value][key],
+            data[SubCategory.HSN.value][key],
         )
 
         item = si.items[1]
@@ -1284,8 +1345,29 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "total_cess_amount": 0.0,
                 "document_value": 100.0,
             },
-            data[GSTR1_SubCategory.HSN.value][key],
+            data[SubCategory.HSN.value][key],
         )
+
+    def test_hsn_descriptions_are_asked_for_only_the_codes_in_the_return(self):
+        """The master runs to tens of thousands of rows; a return names a handful."""
+        code = "99999999"
+        frappe.get_doc({"doctype": "GST HSN Code", "hsn_code": code, "description": "Test HSN"}).insert(
+            ignore_if_duplicate=True
+        )
+
+        rows = {
+            SubCategory.HSN.value: {f"{code} - NOS-NUMBERS - 18.0": [frappe._dict({"gst_hsn_code": code})]}
+        }
+        descriptions = GSTR1BooksData(frappe._dict()).hsn_descriptions(rows)
+
+        self.assertEqual(set(descriptions), {code})
+        self.assertEqual(descriptions[code], "Test HSN")
+
+    def test_hsn_descriptions_asks_nothing_when_there_are_no_rows(self):
+        with mock.patch.object(frappe, "get_all") as get_all:
+            self.assertEqual(GSTR1BooksData(frappe._dict()).hsn_descriptions({}), {})
+
+        get_all.assert_not_called()
 
 
 def setup_cess_account(company="_Test Indian Registered Company"):

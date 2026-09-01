@@ -16,14 +16,18 @@ from frappe.www.printview import get_html_and_style
 from responses import matchers
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
-from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
-from india_compliance.gst_india.constants.e_waybill import (
-    E_WAYBILL_CHANGES_APPLICABLE_DATE,
-    SUB_SUPPLY_TYPES,
+from india_compliance.gst_india.constants import (
+    SERVICE_HSN_PREFIX,
+    SHIP_TO_GSTIN_APPLICABLE_DATE,
 )
+from india_compliance.gst_india.constants.e_waybill import SUB_SUPPLY_TYPES
 from india_compliance.gst_india.overrides.sales_invoice import (
     cancel_e_waybill_e_invoice,
     is_e_waybill_applicable,
+)
+from india_compliance.gst_india.overrides.test_asset_movement import (
+    create_asset_movement,
+    get_test_asset,
 )
 from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
     create_subcontracting_data,
@@ -740,6 +744,84 @@ class TestEWaybill(IntegrationTestCase):
         se.reload()
         self.assertEqual(se.ewaybill, "")
 
+    @change_settings("GST Settings", {"enable_e_waybill_from_asset_movement": 1})
+    @responses.activate
+    def test_e_waybill_for_asset_movement(self):
+        """Test to generate e-waybill for Asset Movement"""
+        am_data = self.e_waybill_test_data.get("asset_movement")
+
+        asset_movement = self._create_asset_movement("asset_movement")
+
+        self._generate_e_waybill(asset_movement.name, "Asset Movement", am_data)
+
+        self.assertDocumentEqual(
+            {"name": am_data.get("response_data").get("result").get("ewayBillNo")},
+            frappe.get_doc("e-Waybill Log", {"reference_name": asset_movement.name}),
+        )
+
+        asset_movement = load_doc("Asset Movement", asset_movement.name, "submit")
+
+        e_waybill_info = asset_movement.get("__onload").e_waybill_info
+
+        self.assertEqual(
+            e_waybill_info.valid_upto,
+            parse_datetime(
+                am_data.get("response_data").get("result").get("validUpto"),
+                day_first=True,
+            ),
+        )
+
+    @change_settings(
+        "GST Settings",
+        {
+            "auto_cancel_e_waybill": 1,
+            "reason_for_e_waybill_cancellation": "Data Entry Mistake",
+            "enable_e_waybill_from_asset_movement": 1,
+        },
+    )
+    @responses.activate
+    def test_auto_cancel_e_waybill_on_asset_movement_cancel(self):
+        """Test that e-waybill is automatically cancelled when asset movement is cancelled and auto_cancel_e_waybill is enabled"""
+        asset_movement = self._create_asset_movement("asset_movement")
+        am_test_data = self.e_waybill_test_data.get("asset_movement")
+
+        self._generate_e_waybill(asset_movement.name, "Asset Movement", am_test_data)
+
+        ewaybill_log = frappe.get_doc("e-Waybill Log", {"reference_name": asset_movement.name})
+        self.assertFalse(ewaybill_log.is_cancelled)
+
+        e_waybill_cancel_data = self.e_waybill_test_data.get("cancel_e_waybill")
+
+        actual_ewaybill_no = ewaybill_log.name
+
+        cancel_response_data = copy.deepcopy(e_waybill_cancel_data.get("response_data"))
+        cancel_response_data["result"]["ewayBillNo"] = actual_ewaybill_no
+
+        self._mock_e_waybill_response(
+            data=cancel_response_data,
+            match_list=[
+                matchers.query_string_matcher(e_waybill_cancel_data.get("params")),
+                matchers.json_params_matcher(
+                    {
+                        "ewbNo": actual_ewaybill_no,
+                        "cancelRsnCode": "3",  # Data Entry Mistake
+                        "cancelRmrk": "Data Entry Mistake",
+                    }
+                ),
+            ],
+        )
+
+        asset_movement.reload()
+        asset_movement.cancel()
+
+        ewaybill_log.reload()
+        self.assertTrue(ewaybill_log.is_cancelled)
+        self.assertEqual(ewaybill_log.cancel_reason_code, "3")  # Data Entry Mistake
+        self.assertEqual(ewaybill_log.cancel_remark, "Data Entry Mistake")
+
+        asset_movement.reload()
+        self.assertEqual(asset_movement.ewaybill, "")
+
     def test_get_source_destination_address_for_stock_entry(self):
         """Test get_source_destination_address function with Stock Entry doctype"""
 
@@ -1412,7 +1494,7 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         self.assertEqual(e_waybill_data.get("transactionType"), 2)
-        self.assertEqual(e_waybill_data.get("shipToGSTIN"), "05AAACG2140A1ZL")
+        self.assertEqual(e_waybill_data.get("shipToGSTIN"), "02AMBPG7773M002")
         self.assertEqual(e_waybill_data.get("shipToTradeName"), "Test Foreign Customer-1")
 
         expected_request_data = test_data.get("request_data")
@@ -1424,14 +1506,12 @@ class TestEWaybill(IntegrationTestCase):
         """
         shipToGSTIN must be 'URP' when the Ship-To consignee is unregistered.
         """
-        shipping_address = self._create_unregistered_shipping_address()
-
         si = create_sales_invoice(
             vehicle_no="GJ07DL9009",
             company_address="_Test Indian Registered Company-Billing",
             customer="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
-            shipping_address_name=shipping_address,
+            shipping_address_name="_Test Unregistered Consignee-Shipping",
             is_in_state=1,
             distance=10,
             transporter="_Test Common Supplier",
@@ -1451,15 +1531,13 @@ class TestEWaybill(IntegrationTestCase):
     @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_ship_to_gstin_for_transaction_type_4(self):
         # ship to GSTIN is mandatory in transaction type 4.
-        shipping_address = self._create_unregistered_shipping_address()
-
         si = create_sales_invoice(
             vehicle_no="GJ07DL9009",
             company_address="_Test Indian Registered Company-Billing",
-            dispatch_address_name="_Test Indian Registered Company-Shipping",  # ship-from differs
+            dispatch_address_name="_Test Indian Registered Company-Shipping",
             customer="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
-            shipping_address_name=shipping_address,  # ship-to differs
+            shipping_address_name="_Test Unregistered Consignee-Shipping",
             is_in_state=1,
             distance=10,
             transporter="_Test Common Supplier",
@@ -1475,15 +1553,102 @@ class TestEWaybill(IntegrationTestCase):
         self.assertTrue(e_waybill_data.get("shipToGSTIN"))
         self.assertTrue(e_waybill_data.get("shipToTradeName"))
 
+    @change_settings("GST Settings", {"sandbox_mode": 1})
+    def test_e_waybill_for_same_bill_to_and_ship_to_gstin(self):
+        """
+        Two addresses of the same party is a Regular transaction, since NIC rejects
+        an e-Waybill where Ship To GSTIN equals Bill To GSTIN. ERROR CODE: 618
+        """
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            # different address, same GSTIN as the billing address
+            shipping_address_name="_Test Registered Customer Warehouse-Shipping",
+            is_in_state=1,
+            distance=10,
+            transporter="_Test Common Supplier",
+            mode_of_transport="Road",
+            do_not_submit=True,
+        )
+        si.gst_transporter_id = ""
+        si.submit()
+
+        e_waybill_data = EWaybillData(si).get_data()
+
+        self.assertEqual(e_waybill_data.get("transactionType"), 1)
+        self.assertNotIn("shipToGSTIN", e_waybill_data)
+        self.assertNotIn("shipToTradeName", e_waybill_data)
+
+        # goods still move to the shipping address
+        self.assertEqual(e_waybill_data.get("toAddr1"), "Test Address - Customer Warehouse")
+
+    @change_settings("GST Settings", {"sandbox_mode": 1})
+    def test_e_waybill_for_same_bill_to_and_ship_to_gstin_with_dispatch_from(self):
+        """Same party for Bill To and Ship To, with a different Dispatch From."""
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            dispatch_address_name="_Test Indian Registered Company-Shipping",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            # different address, same GSTIN as the billing address
+            shipping_address_name="_Test Registered Customer Warehouse-Shipping",
+            is_in_state=1,
+            distance=10,
+            transporter="_Test Common Supplier",
+            mode_of_transport="Road",
+            do_not_submit=True,
+        )
+        si.gst_transporter_id = ""
+        si.submit()
+
+        e_waybill_data = EWaybillData(si).get_data()
+
+        self.assertEqual(e_waybill_data.get("transactionType"), 3)
+        self.assertNotIn("shipToGSTIN", e_waybill_data)
+        self.assertNotIn("shipToTradeName", e_waybill_data)
+
+    @change_settings("GST Settings", {"sandbox_mode": 1})
+    def test_e_waybill_ship_to_gstin_for_unregistered_bill_to_and_ship_to(self):
+        """
+        "URP" denotes a missing GSTIN rather than an identity, so an unregistered
+        consignee remains distinct from an unregistered buyer.
+        """
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Unregistered Customer-1",
+            customer_address="_Test Unregistered Customer-1-Billing",
+            shipping_address_name="_Test Unregistered Customer-1 Consignee-Shipping",
+            is_in_state=1,
+            distance=10,
+            transporter="_Test Common Supplier",
+            mode_of_transport="Road",
+            do_not_submit=True,
+        )
+        si.gst_transporter_id = ""
+        si.submit()
+
+        e_waybill_data = EWaybillData(si).get_data()
+
+        self.assertEqual(e_waybill_data.get("toGstin"), "URP")
+        self.assertEqual(e_waybill_data.get("transactionType"), 2)
+        self.assertEqual(e_waybill_data.get("toAddr1"), "Test Address - Unregistered Customer Consignee")
+        self.assertEqual(e_waybill_data.get("shipToGSTIN"), "URP")
+        self.assertEqual(e_waybill_data.get("shipToTradeName"), "_Test Unregistered Customer-1")
+
     @change_settings("GST Settings", {"sandbox_mode": 0})
     def test_ship_to_gstin_gated_by_rollout_date(self):
-        day_before_rollout = get_datetime(add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1))
-        rollout_date = get_datetime(E_WAYBILL_CHANGES_APPLICABLE_DATE)
+        day_before_rollout = get_datetime(add_to_date(SHIP_TO_GSTIN_APPLICABLE_DATE, days=-1))
+        rollout_date = get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE)
+
+        # created outside the travel, as only the payload depends on the rollout date
+        si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")  # type 2
 
         # before rollout -> omitted from payload and offline JSON
         with time_machine.travel(day_before_rollout, tick=True):
-            si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")  # type 2
-
             data = EWaybillData(si).get_data()
             self.assertEqual(data.get("transactionType"), 2)
             self.assertNotIn("shipToGSTIN", data)
@@ -1504,32 +1669,40 @@ class TestEWaybill(IntegrationTestCase):
             self.assertTrue(json_data.get("shipToGSTIN"))
             self.assertTrue(json_data.get("shipToTradeName"))
 
-    @staticmethod
-    def _create_unregistered_shipping_address():
-        """Create (once) an unregistered, India-based Shipping address for URP tests."""
-        name = "_Test Unregistered Consignee-Shipping"
-        if frappe.db.exists("Address", name):
-            return name
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    def test_same_bill_to_and_ship_to_gstin_gated_by_rollout_date(self):
+        """Two addresses of the same party stay a Bill To - Ship To transaction until
+        Ship To GSTIN is sent, as 618 isn't reachable before that."""
+        day_before_rollout = get_datetime(add_to_date(SHIP_TO_GSTIN_APPLICABLE_DATE, days=-1))
+        rollout_date = get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE)
 
-        return (
-            frappe.get_doc(
-                {
-                    "doctype": "Address",
-                    "address_title": "_Test Unregistered Consignee",
-                    "address_type": "Shipping",
-                    "address_line1": "Test Address - Unregistered Consignee",
-                    "city": "Test City",
-                    "state": "Gujarat",
-                    "pincode": "380015",
-                    "country": "India",
-                    "gstin": "",
-                    "gst_category": "Unregistered",
-                    "links": [{"link_doctype": "Customer", "link_name": "_Test Registered Customer"}],
-                }
-            )
-            .insert(ignore_if_duplicate=True)
-            .name
+        # created outside the travel, as only the payload depends on the rollout date
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name="_Test Registered Customer Warehouse-Shipping",
+            is_in_state=1,
+            distance=10,
+            transporter="_Test Common Supplier",
+            mode_of_transport="Road",
+            do_not_submit=True,
         )
+        si.gst_transporter_id = ""
+        si.submit()
+
+        with time_machine.travel(day_before_rollout, tick=True):
+            self.assertEqual(EWaybillData(si).get_data().get("transactionType"), 2)
+
+        # on/after rollout -> degrades to Regular. ERROR CODE: 618
+        with time_machine.travel(rollout_date, tick=False):
+            data = EWaybillData(si).get_data()
+            self.assertEqual(data.get("transactionType"), 1)
+            self.assertNotIn("shipToGSTIN", data)
+
+            # goods still move to the shipping address
+            self.assertEqual(data.get("toAddr1"), "Test Address - Customer Warehouse")
 
     def test_e_waybill_for_inter_state_sales_return(self):
         """Test e-waybill generation for inter-state sales return.
@@ -1738,7 +1911,8 @@ class TestEWaybill(IntegrationTestCase):
         invoice_args = self.e_waybill_test_data.get(test_case).get("kwargs")
         invoice_args.update(
             {
-                "transporter": "_Test Common Supplier",
+                # used this supplier to match the mocked response without `transporterId`
+                "transporter": "_Test Transporter Without GST ID",
                 "distance": 10,
                 "mode_of_transport": "Road",
             }
@@ -1748,7 +1922,6 @@ class TestEWaybill(IntegrationTestCase):
         update_dates_for_test_data(self.e_waybill_test_data)
 
         si = create_sales_invoice(**invoice_args, do_not_submit=True)
-        si.gst_transporter_id = ""
         si.submit()
 
         return si
@@ -1772,6 +1945,18 @@ class TestEWaybill(IntegrationTestCase):
 
         doc_args["doctype"] = "Stock Entry"
         return create_transaction(**doc_args)
+
+    def _create_asset_movement(self, test_case):
+        """Generate Asset Movement to test e-Waybill functionalities"""
+        doc_args = self.e_waybill_test_data.get(test_case).get("kwargs")
+
+        # Assets are auto-named, so the fixture can only be resolved at runtime
+        doc = create_asset_movement(asset=get_test_asset(), do_not_save=True, **doc_args)
+        _append_taxes(doc, ["CGST", "SGST"], rate=9)
+        doc.insert()
+        doc.submit()
+
+        return doc
 
     def _create_purchase_receipt(self, test_case):
         """Generate Purchase Receipt to test e-Waybill functionalities"""

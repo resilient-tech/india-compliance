@@ -21,25 +21,32 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
 )
 from frappe.model.mapper import get_mapped_doc
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import add_days, flt, getdate, today
+from frappe.utils import add_days, add_to_date, flt, getdate, now_datetime, today
 from parameterized import parameterized_class
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
+from india_compliance.gst_india.constants import (
+    GST_TAX_TYPES,
+    SALES_DOCTYPES,
+)
+from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_FIELDS
 from india_compliance.gst_india.overrides.transaction import (
     ADDRESS_DEPENDENT_FIELDS,
     DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
     _is_multicurrency_doc,
-    sync_address_dependent_fields_on_submit,
+    sync_address_dependent_fields_after_submit,
     sync_gst_details_from_address,
     validate_gst_refund_accounts,
     validate_item_tax_template,
 )
-from india_compliance.gst_india.setup.property_setters import (
-    ADDRESS_FIELDS_BY_DOCTYPE,
+from india_compliance.gst_india.setup.property_setters import ADDRESS_FIELDS_BY_DOCTYPE
+from india_compliance.gst_india.utils.e_waybill import (
+    mark_e_waybill_as_cancelled,
+    mark_e_waybill_as_generated,
 )
 from india_compliance.gst_india.utils.jinja import get_gst_breakup
 from india_compliance.gst_india.utils.tests import (
+    TRANSPORTER_DETAILS,
     _append_taxes,
     append_item,
     create_purchase_invoice,
@@ -287,7 +294,7 @@ class TestTransaction(IntegrationTestCase):
                 msg=f"{self.doctype}.{company_address_field} must stay locked so company_gstin can't change",
             )
 
-    def test_sync_address_dependent_fields_on_submit(self):
+    def test_sync_address_dependent_fields_after_submit(self):
         """Tax-neutral address change is allowed; party GSTIN/category re-sync."""
         doc = create_transaction(**self.transaction_details)
 
@@ -310,7 +317,7 @@ class TestTransaction(IntegrationTestCase):
 
         doc.load_doc_before_save()
         doc.set(address_field, new_address)
-        sync_address_dependent_fields_on_submit(doc)
+        sync_address_dependent_fields_after_submit(doc)
 
         self.assertEqual(doc.get(gstin_field), expected_gstin)
         self.assertEqual(doc.get("gst_category"), expected_category)
@@ -470,6 +477,75 @@ class TestTransaction(IntegrationTestCase):
             "Cannot change the Place of Supply or address after the e-Waybill",
             doc.save,
         )
+
+    def test_transporter_details_after_submit(self):
+        """Transporter details stay editable after submit, until an e-Waybill is generated."""
+        if self.doctype not in E_WAYBILL_FIELDS:
+            return
+
+        doc = create_transaction(**self.transaction_details)
+        self.assertFalse(doc.ewaybill)
+
+        # editable as long as no e-Waybill is generated
+        doc.update(TRANSPORTER_DETAILS)
+        doc.save()
+
+        doc.reload()
+        for fieldname, value in TRANSPORTER_DETAILS.items():
+            self.assertEqual(
+                doc.get(fieldname),
+                getdate(value) if fieldname == "lr_date" else value,
+                msg=f"{self.doctype}.{fieldname} must be editable after submit",
+            )
+
+        # transporter_name follows transporter, even though it isn't set explicitly
+        self.assertEqual(doc.transporter_name, TRANSPORTER_DETAILS["transporter"])
+
+        # validate isn't run after submit, and hence validated by the guard
+        doc.gst_transporter_id = "05AAACG2140A1Z"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            "GST Transporter ID.*must have 15 characters",
+            doc.save,
+        )
+
+        doc.reload()
+        mark_e_waybill_as_generated(
+            doc.doctype,
+            doc.name,
+            values={
+                "ewaybill": "351002721233",
+                "e_waybill_date": str(now_datetime()),
+                "valid_upto": str(add_to_date(now_datetime(), days=1)),
+            },
+        )
+
+        # locked once the e-Waybill is generated
+        doc.reload()
+        doc.vehicle_no = "GJ01AA5678"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            "Cannot change transporter details after the e-Waybill",
+            doc.save,
+        )
+
+        mark_e_waybill_as_cancelled(
+            doc.doctype,
+            doc.name,
+            values={
+                "reason": "Data Entry Mistake",
+                "remark": "Manually Cancelled",
+                "cancelled_on": str(now_datetime()),
+            },
+        )
+
+        # editable again, as the e-Waybill is cancelled
+        doc.reload()
+        doc.vehicle_no = "GJ01AA5678"
+        doc.save()
+
+        doc.reload()
+        self.assertEqual(doc.vehicle_no, "GJ01AA5678")
 
     def test_validate_mandatory_gst_category(self):
         doc = create_transaction(**self.transaction_details, do_not_submit=True)
@@ -1410,7 +1486,7 @@ class TestTransaction(IntegrationTestCase):
         for item in doc.items:
             item.taxable_value = None
 
-        ItemGSTDetails().update(doc)
+        ItemGSTDetails(doc).update()
 
     def test_none_tax_amount_after_discount_amount(self):
         """
@@ -1429,7 +1505,7 @@ class TestTransaction(IntegrationTestCase):
             tax.tax_amount_after_discount_amount = None
             tax.base_tax_amount_after_discount_amount = None
 
-        ItemGSTDetails().update(doc)
+        ItemGSTDetails(doc).update()
 
 
 def create_refund_transaction():
@@ -1749,7 +1825,7 @@ class TestSpecificTransactions(IntegrationTestCase):
             self.assertRaisesRegex(
                 frappe.exceptions.ValidationError,
                 re.compile(r"You are not allowed to update Sales Invoice"),
-                sync_address_dependent_fields_on_submit,
+                sync_address_dependent_fields_after_submit,
                 si,
             )
 
@@ -2247,3 +2323,23 @@ class TestPlaceOfSupply(IntegrationTestCase):
         # Customer is in Karnataka (29). place_of_supply on the DN must reflect
         # that, not the PR's "24-Gujarat".
         self.assertEqual(dn.place_of_supply, "29-Karnataka")
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_pos_payment_entry_for_overseas_customer(self):
+        # Payment Entry has no shipping address field, so the overseas branch must not
+        # assume one. An advance from an overseas customer is 96-Other Countries.
+        doc = create_transaction(
+            doctype="Payment Entry",
+            payment_type="Receive",
+            mode_of_payment="Cash",
+            company_address="_Test Indian Registered Company-Billing",
+            party_type="Customer",
+            party="_Test Foreign Customer",
+            customer_address="_Test Foreign Customer-Billing",
+            paid_to="Cash - _TIRC",
+            paid_amount=500,
+            received_amount=500,
+            is_out_state=1,
+        )
+
+        self.assertEqual(doc.place_of_supply, "96-Other Countries")

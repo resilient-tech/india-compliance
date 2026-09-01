@@ -1,0 +1,17 @@
+// styles the detail view dialog in js/reconciliation_components/tabs.js
+
+.modal-dialog [data-fieldname="detail_table"] .table > tbody > tr > td {
+    text-align: center;
+    width: 30%;
+}
+
+// row where books and the portal do not agree. on the cells, a row tint hides behind them
+tr.not-matched > th,
+tr.not-matched > td {
+    background-color: color-mix(in srgb, var(--surface-red-2) 50%, transparent);
+}
+
+// gstr-1 marks cells, not rows
+td.not-matched {
+    color: var(--red-500);
+}

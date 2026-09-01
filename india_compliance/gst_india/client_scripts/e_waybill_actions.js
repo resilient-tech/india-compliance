@@ -5,6 +5,7 @@ const E_WAYBILL_CLASS = {
     "Purchase Receipt": PurchaseReceiptEwaybill,
     "Stock Entry": StockEntryEwaybill,
     "Subcontracting Receipt": SubcontractingReceiptEwaybill,
+    "Asset Movement": AssetMovementEwaybill,
 };
 
 function setup_e_waybill_actions(doctype) {
@@ -13,6 +14,16 @@ function setup_e_waybill_actions(doctype) {
     frappe.ui.form.on(doctype, {
         mode_of_transport(frm) {
             frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
+        },
+        // these fields are fetch_if_empty, so clear them explicitly on removal
+        transporter(frm) {
+            if (frm.doc.transporter) return;
+
+            frm.set_value("gst_transporter_id", "");
+            frm.set_value("transporter_name", "");
+        },
+        driver(frm) {
+            if (!frm.doc.driver) frm.set_value("driver_name", "");
         },
         setup(frm) {
             if (!india_compliance.is_api_enabled()) return;
@@ -45,7 +56,9 @@ function setup_e_waybill_actions(doctype) {
                 frm.doc.e_waybill_status === "Not Applicable"
             ) {
                 if (frm.doc.e_waybill_status === "Not Applicable" && is_ewb_generatable) {
-                    frm._ewb_message = "To generate e-Waybill, change e-Waybill Status to Pending.";
+                    frm._ewb_message_list = [
+                        __("To generate e-Waybill, change e-Waybill Status to Pending."),
+                    ];
                 }
 
                 frm.add_custom_button(
@@ -541,6 +554,16 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
                 sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
             }
         }
+    } else if (frm.doctype === "Asset Movement") {
+        // NIC allows "For Own Use" only when both sides share the same GSTIN
+        const same_gstin = frm.doc.bill_from_gstin === frm.doc.bill_to_gstin;
+        const is_inward = frm.doc.purpose === "Receipt";
+
+        document_type = "Delivery Challan";
+        supply_type = is_inward ? "Inward" : "Outward";
+        sub_supply_type = same_gstin
+            ? ["For Own Use", "Exhibition or Fairs", "Others"]
+            : [is_inward ? "Job Work Returns" : "Job Work", "SKD/CKD", "Others"];
     } else if (frm.doctype === "Sales Invoice" && frm.doc.is_return === 0 && is_foreign_transaction) {
         supply_type = "Outward";
         sub_supply_type = ["Export"];
@@ -1322,12 +1345,13 @@ function get_transit_type(dialog) {
 
 function show_e_waybill_generatable_status(frm, is_ewb_generatable) {
     if (frm.doc.docstatus === 0 && is_ewb_generatable) {
-        frm._ewb_message = __("Please submit the doc to generate e-Waybill.");
+        frm._ewb_message_list = [__("Please submit the doc to generate e-Waybill.")];
     }
 
     frappe.msgprint({
         title: is_ewb_generatable ? __("e-Waybill can be generated") : __("e-Waybill cannot be generated"),
-        message: frm._ewb_message,
+        message: frm._ewb_message_list,
+        as_list: true,
         indicator: is_ewb_generatable ? "green" : "red",
     });
 }

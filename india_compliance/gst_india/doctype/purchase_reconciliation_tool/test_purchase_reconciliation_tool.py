@@ -89,12 +89,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             {
                 # Reconcile all companies
                 "company_gstin": "All",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-11-01",
-                "purchase_to_date": "2023-12-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-11-01",
-                "inward_supply_to_date": "2023-12-31",
+                "period": "Custom",
+                "from_date": "2023-11-01",
+                "to_date": "2023-12-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -180,12 +177,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             {
                 "company": "_Test Indian Registered Company",
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-08-01",
-                "purchase_to_date": "2023-08-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-08-01",
-                "inward_supply_to_date": "2023-08-31",
+                "period": "Custom",
+                "from_date": "2023-08-01",
+                "to_date": "2023-08-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -195,10 +189,11 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         row = rows[0]
 
         self.assertEqual(row.purchase_doctype, "Bill of Entry")
+        self.assertEqual(row.supplier, invoices[0].supplier)
         self.assertEqual(row.supplier_name, invoices[0].supplier_name)
         self.assertEqual(row.bill_no, boe.bill_of_entry_no)
         self.assertEqual(row.classification, "IMPG")
-        self.assertEqual(row.match_status, "Missing in 2A/2B")
+        self.assertEqual(row.match_status, "Only in Books")
 
         # nothing to reconcile against, so the differences are the BoE's own totals, summed
         # over every item of both invoices rather than taken from one of them
@@ -214,6 +209,52 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertIsNone(purchase.supplier_gstin)
         self.assertIsNone(purchase.gst_category)
         self.assertIsNone(purchase.place_of_supply)
+
+    @change_settings("Buying Settings", {"supp_master_name": "Naming Series"})
+    def test_supplier_name_of_unbooked_invoice_is_the_supplier_title(self):
+        """
+        A row with no Purchase Invoice takes its supplier name from the GSTIN.
+        That must be the supplier's name, as on every other row, not its docname.
+        """
+        supplier = frappe.get_doc(
+            {
+                "doctype": "Supplier",
+                "supplier_name": "_Test Series Named Supplier",
+                "supplier_type": "Company",
+                "gstin": "24AANFA2641L1ZF",
+                "gst_category": "Registered Regular",
+            }
+        ).insert()
+
+        # else the test proves nothing: the docname must differ from the supplier name
+        self.assertNotEqual(supplier.name, supplier.supplier_name)
+
+        # 2A/2B need not report the supplier's name, which is what makes the guess necessary
+        gst_is = create_gst_inward_supply(
+            supplier_name="",
+            supplier_gstin=supplier.gstin,
+            bill_no="RECO-NAME-001",
+            bill_date="2024-02-10",
+            return_period_2b="022024",
+            gen_date_2b="2024-02-14",
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2024-02-01",
+                "to_date": "2024-02-29",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        rows = [row for row in prt.reconcile_and_generate_data() if row.inward_supply_name == gst_is.name]
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].match_status, "Only in 2A/2B")
+        self.assertEqual(rows[0].supplier, supplier.name)
+        self.assertEqual(rows[0].supplier_name, supplier.supplier_name)
 
     def test_itc_claim_period_on_reconciliation_match(self):
         """
@@ -236,12 +277,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-09-01",
-                "purchase_to_date": "2023-09-30",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-09-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2023-09-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -272,12 +310,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-10-01",
-                "purchase_to_date": "2023-10-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-10-01",
-                "inward_supply_to_date": "2023-10-31",
+                "period": "Custom",
+                "from_date": "2023-10-01",
+                "to_date": "2023-10-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -307,12 +342,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-10-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2023-10-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -344,12 +376,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-10-01",
-                "purchase_to_date": "2023-10-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-10-01",
-                "inward_supply_to_date": "2023-10-31",
+                "period": "Custom",
+                "from_date": "2023-10-01",
+                "to_date": "2023-10-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -390,12 +419,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2023-08-01",
-                "purchase_to_date": "2023-08-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-08-01",
-                "inward_supply_to_date": "2023-09-30",
+                "period": "Custom",
+                "from_date": "2023-08-01",
+                "to_date": "2023-09-30",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -427,12 +453,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -444,7 +467,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         )
 
         self.assertEqual(result.purchase_invoice_name, pinv.name)
-        self.assertEqual(result.match_status, "Missing in 2A/2B")
+        self.assertEqual(result.match_status, "Only in Books")
         self.assertIsNone(result.inward_supply_name)
 
     def test_get_invoice_details_with_none_purchase_name(self):
@@ -461,12 +484,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -478,8 +498,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         )
 
         self.assertEqual(result.inward_supply_name, gst_is.name)
-        self.assertEqual(result.match_status, "Missing in PI")
+        self.assertEqual(result.match_status, "Only in 2A/2B")
         self.assertIsNone(result.purchase_invoice_name)
+        self.assertEqual(result._inward_supply.doc_type, "Invoice")
 
     def test_link_documents_with_none_inward_supply_name(self):
         """
@@ -495,12 +516,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -526,12 +544,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -562,12 +577,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.update(
             {
                 "company_gstin": "24AAQCA8719H1ZC",
-                "purchase_period": "Custom",
-                "purchase_from_date": "2024-01-01",
-                "purchase_to_date": "2024-01-31",
-                "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2024-01-01",
-                "inward_supply_to_date": "2024-01-31",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -578,6 +590,138 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             link_doctype=None,
         )
         self.assertIsInstance(result, list)
+
+    def test_unlink_documents_skips_rows_with_nothing_to_unlink(self):
+        """
+        A batch with unlinked rows must still unlink the linked ones and return both sides.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="GID-006",
+            bill_date="2024-01-01",
+            posting_date="2024-01-01",
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="GID-006",
+            bill_date="2024-01-01",
+            return_period_2b="012024",
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        prt.reconcile_and_generate_data()
+        self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+
+        result = prt.unlink_documents(
+            [
+                {
+                    "purchase_invoice_name": pinv.name,
+                    "inward_supply_name": gst_is.name,
+                    "purchase_doctype": "Purchase Invoice",
+                },
+                # nothing to unlink, must be skipped
+                {
+                    "purchase_invoice_name": "",
+                    "inward_supply_name": gst_is.name,
+                    "purchase_doctype": "Purchase Invoice",
+                },
+            ]
+        )
+
+        self.assertFalse(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv.name, "reconciliation_status"),
+            "Unreconciled",
+        )
+
+        # both sides come back so the list can be refreshed
+        names = {row.purchase_invoice_name for row in result} | {row.inward_supply_name for row in result}
+        self.assertIn(pinv.name, names)
+        self.assertIn(gst_is.name, names)
+
+    def test_cdnr_debit_note_matches_regular_purchase_invoice(self):
+        """
+        A supplier's debit note is booked as a regular purchase invoice (not a
+        return), so CDNR must not be limited to purchase returns.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="DN-23-00001",
+            bill_date="2023-07-15",
+            posting_date="2023-07-15",
+        )
+
+        gst_is = create_gst_inward_supply(
+            bill_no="DN-23-00001",
+            bill_date="2023-07-15",
+            classification="CDNR",
+            doc_type="Debit Note",
+            return_period_2b="072023",
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2023-07-01",
+                "to_date": "2023-07-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        prt.reconcile_and_generate_data()
+
+        self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+
+    def test_purchase_posted_after_period_is_not_matched(self):
+        """
+        A purchase booked after the period ends must stay out of that period's run.
+        It matches once the period covers its posting date.
+        """
+        # own amounts, so no other invoice can claim these by a residual match
+        pinv = create_purchase_invoice(
+            bill_no="LATE-ENTRY-001",
+            bill_date="2024-01-15",
+            posting_date="2024-02-05",
+            qty=3,
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="LATE-ENTRY-001",
+            bill_date="2024-01-15",
+            return_period_2b="012024",
+            items=[{"taxable_value": 3000, "rate": 18, "sgst": 270, "cgst": 270}],
+            document_value=3540,
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2024-01-01",
+                "to_date": "2024-01-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        prt.reconcile_and_generate_data()
+
+        self.assertFalse(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv.name, "reconciliation_status"),
+            "Unreconciled",
+        )
+
+        # stretch the period past the posting date, now it is in scope
+        prt.to_date = "2024-02-29"
+        prt.reconcile_and_generate_data()
+
+        self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
 
 
 def create_purchase_invoice(**kwargs):

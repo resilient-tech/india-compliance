@@ -6,6 +6,9 @@ from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 from frappe.utils import get_datetime
 
+from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+    get_raw_return_data,
+)
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import (
     GSTRCategory,
@@ -81,6 +84,12 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
         mock_gstr_2a_api.return_value.get_data.side_effect = mock_get_data
         mock_save_gstr.side_effect = mock_save_gstr_func
         download_gstr_2a(self.gstin, (self.return_period,))
+
+    def test_raw_stored_before_rename(self):
+        raw = get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, self.return_period)
+        self.assertIn("cdn", raw)
+        self.assertNotIn("cdnr", raw)
+        self.assertListEqual(raw["cdn"], self.test_data.cdn)
 
     def test_gstr2a_b2b(self):
         doc = self.get_doc(GSTRCategory.B2B)
@@ -246,6 +255,22 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
             },
             doc,
         )
+
+    def test_blanks_from_the_portal(self):
+        from india_compliance.gst_india.utils.gstr_2.gstr_2a import GSTR2a
+
+        handler = GSTR2a(None, self.gstin, "042020", "B2B")
+        transactions = handler.get_all_transactions(
+            [{"ctin": self.gstin, "inv": [{"inum": "NO-ITEMS-1", "idt": "24-11-2016", "val": 100}]}]
+        )
+        self.assertEqual(len(transactions), 1)
+        self.assertFalse(transactions[0]["items"])
+
+        handler = GSTR2a(None, self.gstin, "042020", "ISD")
+        transactions = handler.get_all_transactions(
+            [{"ctin": self.gstin, "doclist": [{"docnum": "ISD-NC-1", "iamt": 10, "camt": 5, "samt": 5}]}]
+        )
+        self.assertEqual(transactions[0].document_value, 20)
 
     def test_gstr2a_isd(self):
         doc = self.get_doc(GSTRCategory.ISD)

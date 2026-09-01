@@ -15,11 +15,16 @@ from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order im
 )
 from frappe.contacts.doctype.address.address import get_default_address
 from frappe.tests import IntegrationTestCase, UnitTestCase, change_settings
-from frappe.utils import flt
+from frappe.utils import add_to_date, flt, getdate, now_datetime
 
-from india_compliance.gst_india.overrides.subcontracting_transaction import (
+from india_compliance.gst_india.overrides.stock_entry import (
     is_e_waybill_applicable,
 )
+from india_compliance.gst_india.overrides.stock_entry import (
+    onload as run_stock_entry_onload,
+)
+from india_compliance.gst_india.utils import get_items_fieldname
+from india_compliance.gst_india.utils.e_waybill import mark_e_waybill_as_generated
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
     set_item_wise_tax_rates,
@@ -32,6 +37,7 @@ from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_RM_ITEM_1,
     SUBCONTRACTING_TEST_RM_ITEM_2,
     SUBCONTRACTING_TEST_SERVICE_ITEM,
+    TRANSPORTER_DETAILS,
     create_subcontracting_inward_order,
     create_transaction,
     make_subcontracting_inward_delivery,
@@ -280,6 +286,57 @@ class TestSubcontractingTransaction(IntegrationTestCase):
 
         self.assertEqual(stock_entry.select_print_heading, "Credit Note")
 
+    def _make_submitted_subcontracting_receipt(self):
+        sco = make_sco()
+        make_stock_transfer_entry(sco_no=sco.name, rm_items=get_rm_items(sco.supplied_items))
+
+        scr = make_subcontracting_receipt(sco.name)
+        scr.submit()
+
+        return scr
+
+    def test_transporter_details_after_submit(self):
+        """Transporter details stay editable after submit, until an e-Waybill is generated."""
+        for doc in (
+            make_subcontracting_stock_entry(),
+            self._make_submitted_subcontracting_receipt(),
+        ):
+            with self.subTest(doctype=doc.doctype):
+                doc.reload()
+                self.assertFalse(doc.ewaybill)
+
+                # editable as long as no e-Waybill is generated
+                doc.update(TRANSPORTER_DETAILS)
+                doc.save()
+
+                doc.reload()
+                for fieldname, value in TRANSPORTER_DETAILS.items():
+                    self.assertEqual(
+                        doc.get(fieldname),
+                        getdate(value) if fieldname == "lr_date" else value,
+                        msg=f"{doc.doctype}.{fieldname} must be editable after submit",
+                    )
+
+                mark_e_waybill_as_generated(
+                    doc.doctype,
+                    doc.name,
+                    values={
+                        "ewaybill": "351002721233",
+                        "e_waybill_date": str(now_datetime()),
+                        "valid_upto": str(add_to_date(now_datetime(), days=1)),
+                    },
+                )
+
+                # locked once the e-Waybill is generated
+                doc.reload()
+                doc.vehicle_no = "GJ01AA5678"
+
+                self.assertRaisesRegex(
+                    frappe.ValidationError,
+                    "Cannot change transporter details after the e-Waybill",
+                    doc.save,
+                )
+
     def test_for_unregistered_company(self):
         po = create_purchase_order(
             company="_Test Indian Unregistered Company",
@@ -493,8 +550,9 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertEqual(se.ship_from_address, sco.shipping_address)
         self.assertIsNone(se.ship_to_address)
 
-    def test_sco_to_se_material_transfer_return(self):
-        sco = make_sco()
+    @staticmethod
+    def _make_material_transfer_return(sco):
+        """Return of inputs from the subcontractor: SE "Material Transfer" with is_return."""
         rm_items = get_rm_items(sco.supplied_items)
 
         # Materials must reach the supplier warehouse before they can be returned.
@@ -511,9 +569,14 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
             order_doctype=sco.doctype,
         )
         try:
-            return_se = get_materials_from_supplier(sco.name)
+            return get_materials_from_supplier(sco.name)
         finally:
             frappe.flags.args = None
+
+    def test_sco_to_se_material_transfer_return(self):
+        sco = make_sco()
+
+        return_se = self._make_material_transfer_return(sco)
 
         self.assertEqual(return_se.purpose, "Material Transfer")
         self.assertTrue(return_se.is_return)
@@ -525,6 +588,36 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         # SCO has no dispatch_address; ship_from stays empty, ship_to=shipping_address (not reversed)
         self.assertIsNone(return_se.ship_from_address)
         self.assertEqual(return_se.ship_to_address, sco.shipping_address)
+
+    def test_onload_gstins_for_material_transfer_return(self):
+        """A return Stock Entry is inward: the company is Bill To, so the e-Waybill is
+        generated on bill_to_gstin. Setting bill_from_gstin here would send NIC the
+        subcontractor's GSTIN as userGstin."""
+        sco = make_sco()
+        return_se = self._make_material_transfer_return(sco)
+
+        return_se.run_method("onload")
+
+        self.assertTrue(return_se.bill_from_gstin)
+        self.assertTrue(return_se.bill_to_gstin)
+        self.assertNotEqual(return_se.bill_from_gstin, return_se.bill_to_gstin)
+
+        self.assertEqual(return_se.company_gstin, return_se.bill_to_gstin)
+        self.assertEqual(return_se.supplier_gstin, return_se.bill_from_gstin)
+        self.assertEqual(return_se.gst_category, return_se.bill_from_gst_category)
+
+    def test_onload_gstins_for_send_to_subcontractor(self):
+        """The outward counterpart: company is Bill From."""
+        sco = make_sco()
+        se = make_rm_stock_entry(sco.name, get_rm_items(sco.supplied_items))
+
+        # Call the hook directly: erpnext's own onload reads bin details, which the
+        # mapped Stock Entry only carries once saved.
+        run_stock_entry_onload(se)
+
+        self.assertEqual(se.company_gstin, se.bill_from_gstin)
+        self.assertEqual(se.supplier_gstin, se.bill_to_gstin)
+        self.assertEqual(se.gst_category, se.bill_to_gst_category)
 
     def test_pr_to_se_material_transfer(self):
         pr = create_transaction(doctype="Purchase Receipt")
@@ -579,11 +672,13 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertEqual(target_se.ship_to_address, source_se.ship_to_address)
 
 
-def _make_taxes_controller_doc(items=None, taxes=None):
+def _make_taxes_controller_doc(items=None, taxes=None, doctype="Subcontracting Order", assets=None):
     """Build a client-style _dict doc as produced by json.loads(..., object_hook=_dict)."""
-    data = {"doctype": "Subcontracting Order"}
+    data = {"doctype": doctype}
     if items is not None:
         data["items"] = items
+    if assets is not None:
+        data["assets"] = assets
     if taxes is not None:
         data["taxes"] = taxes
     return json.loads(json.dumps(data), object_hook=frappe._dict)
@@ -644,6 +739,24 @@ class TestCustomTaxController(UnitTestCase):
         echoed = frappe.response.docs[0]
         edited_row = next(tax for tax in echoed.taxes if tax.name == edited_tax)
         self.assertEqual(edited_row.get("item_wise_tax_rates"), "{}")
+
+    def test_get_items_fieldname_defaults_to_items(self):
+        self.assertEqual(get_items_fieldname("Sales Invoice"), "items")
+        self.assertEqual(get_items_fieldname("Subcontracting Order"), "items")
+
+    def test_get_items_fieldname_for_asset_movement(self):
+        self.assertEqual(get_items_fieldname("Asset Movement"), "assets")
+
+    def test_get_rows_to_update_reads_assets_for_asset_movement(self):
+        doc = _make_taxes_controller_doc(
+            doctype="Asset Movement",
+            assets=[{"name": "asset_row_1"}],
+            taxes=[{"name": "tax1"}],
+        )
+
+        items, taxes = CustomTaxController(doc).get_rows_to_update()
+        self.assertEqual([item.name for item in items], ["asset_row_1"])
+        self.assertEqual(len(taxes), 1)
 
 
 class TestSubcontractingInwardOrder(IntegrationTestCase):

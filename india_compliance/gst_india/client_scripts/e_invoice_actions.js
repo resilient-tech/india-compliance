@@ -289,13 +289,15 @@ function is_e_invoice_generatable(frm, show_message = false) {
 
     if (is_invalid_invoice_number.length > 0) {
         is_einv_applicable = false;
-        frm._einv_message += is_invalid_invoice_number.map((message) => `<li>${__(message)}</li>`).join("");
+        frm._einv_message_list.push(...is_invalid_invoice_number);
     }
 
     return is_einv_applicable;
 }
 
 function is_e_invoice_applicable(frm, show_message = false) {
+    frm._einv_message_list = [];
+
     if (
         !india_compliance.is_e_invoice_enabled() ||
         (!show_message && frm.doc.docstatus != 1) ||
@@ -308,17 +310,17 @@ function is_e_invoice_applicable(frm, show_message = false) {
 
     if (!frm.doc.company_gstin) {
         is_einv_applicable = false;
-        message_list.push("Company GSTIN is not set. Ensure its set in Company Address.");
+        message_list.push(__("Company GSTIN is not set. Ensure it's set in Company Address."));
     }
 
     if (frm.doc.company_gstin == frm.doc.billing_address_gstin) {
         is_einv_applicable = false;
-        message_list.push("Company GSTIN and Billing Address GSTIN cannot be same.");
+        message_list.push(__("Company GSTIN and Billing Address GSTIN cannot be same."));
     }
 
     if (frm.doc.place_of_supply != "96-Other Countries" && !frm.doc.billing_address_gstin) {
         is_einv_applicable = false;
-        message_list.push("Billing Address GSTIN is required for B2B categorization");
+        message_list.push(__("Billing Address GSTIN is required for B2B categorization"));
     }
 
     if (
@@ -327,24 +329,26 @@ function is_e_invoice_applicable(frm, show_message = false) {
     ) {
         is_einv_applicable = false;
         message_list.push(
-            "All items are either Nil-Rated/Exempted/Non-GST. At least one item must be taxable or the transaction should be categorised as export.",
+            __(
+                "All items are either Nil-Rated/Exempted/Non-GST. At least one item must be taxable or the transaction should be categorised as export.",
+            ),
         );
     }
 
-    frm._einv_message = "";
-    if (show_message) frm._einv_message = message_list.map((message) => `<li>${__(message)}</li>`).join("");
+    if (show_message) frm._einv_message_list.push(...message_list);
 
     return is_einv_applicable;
 }
 
 function show_e_invoice_applicability_status(frm, is_einv_applicable) {
     if (frm.doc.docstatus == 0 && is_einv_applicable) {
-        frm._einv_message = __("Please submit the doc to generate e-Invoice.");
+        frm._einv_message_list = [__("Please submit the doc to generate e-Invoice.")];
     }
 
     frappe.msgprint({
         title: is_einv_applicable ? __("e-Invoice can be generated") : __("e-Invoice cannot be generated"),
-        message: frm._einv_message,
+        message: frm._einv_message_list,
+        as_list: true,
         indicator: is_einv_applicable ? "green" : "red",
     });
 }

@@ -1,12 +1,15 @@
 import re
-from datetime import date
+from datetime import date, datetime, time, timedelta, timezone
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 import frappe
-from frappe.tests import IntegrationTestCase
+import time_machine
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import getdate
 
-from india_compliance.gst_india.utils import validate_pincode
+from india_compliance.gst_india.constants import SHIP_TO_GSTIN_APPLICABLE_DATE, TIMEZONE
+from india_compliance.gst_india.utils import is_ship_to_gstin_applicable, validate_pincode
 
 
 class TestUtils(IntegrationTestCase):
@@ -49,6 +52,21 @@ class TestUtils(IntegrationTestCase):
 
             for i, expected_date in enumerate(expected_date_range):
                 self.assertEqual(expected_date, actual_date_range[i])
+
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    def test_is_ship_to_gstin_applicable_rolls_over_in_ist(self):
+        """NIC rolls over at midnight IST, whatever the site's own timezone is."""
+        rollover = datetime.combine(
+            SHIP_TO_GSTIN_APPLICABLE_DATE, time(), tzinfo=ZoneInfo(TIMEZONE)
+        ).astimezone(timezone.utc)
+
+        for time_zone in ("UTC", "Pacific/Kiritimati"):  # behind IST, then ahead of it
+            with change_settings("System Settings", {"time_zone": time_zone}):
+                with time_machine.travel(rollover - timedelta(minutes=1), tick=False):
+                    self.assertFalse(is_ship_to_gstin_applicable(), time_zone)
+
+                with time_machine.travel(rollover, tick=False):
+                    self.assertTrue(is_ship_to_gstin_applicable(), time_zone)
 
     def test_validate_pincode(self):
         def make_address(state, pincode):

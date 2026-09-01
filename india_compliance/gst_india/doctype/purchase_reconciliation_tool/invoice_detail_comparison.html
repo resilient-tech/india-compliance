@@ -4,16 +4,16 @@
 			<tr class="text-center">
 				<th></th>
 				<th>2A / 2B</th>
-				<th>{{ purchase.doctype }}</th>
+				<th>{{ purchase_label }}</th>
 			</tr>
 		</thead>
 		<tbody data-label="detail-view-content">
-			<tr>
+			<tr data-compare="company_gstin">
 				<th>Company GSTIN</th>
 				<td data-label="company_gstin">{{ inward_supply.company_gstin || '-' }}</td>
 				<td data-label="company_gstin">{{ purchase.company_gstin || '-' }}</td>
 			</tr>
-			<tr>
+			<tr data-compare="supplier_gstin">
 				<th>Supplier GSTIN</th>
 				<td data-label="supplier_gstin">
 					{{ inward_supply.supplier_gstin || '-' }}
@@ -38,13 +38,13 @@
 				<td data-label="name">-</td>
 				{% endif %}
 			</tr>
-			<tr>
-				<th>Bill No</td>
+			<tr data-compare="bill_no">
+				<th>Bill No</th>
 				<td data-label="bill_no">{{ inward_supply.bill_no || '-' }}</td>
 				<td data-label="bill_no">{{ purchase.bill_no || '-' }}</td>
 			</tr>
-			<tr>
-				<th>Bill Date</td>
+			<tr data-compare="bill_date">
+				<th>Bill Date</th>
 				<td data-label="bill_date">
 					{{ frappe.format(inward_supply.bill_date, {'fieldtype': 'Date'}) || '-' }}
 				</td>
@@ -52,48 +52,48 @@
 					{{ frappe.format(purchase.bill_date, {'fieldtype': 'Date'}) || '-' }}
 				</td>
 			</tr>
-			<tr>
+			<tr data-compare="place_of_supply">
 				<th>Place of Supply</th>
 				<td data-label="place_of_supply">{{ inward_supply.place_of_supply || '-' }}</td>
 				<td data-label="place_of_supply">{{ purchase.place_of_supply || '-' }}</td>
 			</tr>
-			<tr>
+			<tr data-compare="is_reverse_charge">
 				<th>Reverse Charge</th>
 				<td data-label="is_reverse_charge">{{ inward_supply.is_reverse_charge || '-' }}</td>
 				<td data-label="is_reverse_charge">{{ purchase.is_reverse_charge || '-' }}</td>
 			</tr>
 			{% if purchase.cgst || inward_supply.cgst %}
-			<tr>
-				<th>CGST</td>
-				<td>{{ inward_supply.cgst || '-' }}</td>
-				<td>{{ purchase.cgst || '-' }}</td>
+			<tr data-compare="cgst">
+				<th>CGST</th>
+				<td data-label="cgst">{{ inward_supply.cgst ? format_number(inward_supply.cgst, null, 2) : '-' }}</td>
+				<td data-label="cgst">{{ purchase.cgst ? format_number(purchase.cgst, null, 2) : '-' }}</td>
 			</tr>
 			{% endif %}
 			{% if purchase.sgst || inward_supply.sgst %}
-			<tr>
-				<th>SGST</td>
-				<td>{{ inward_supply.sgst || '-' }}</td>
-				<td>{{ purchase.sgst || '-' }}</td>
+			<tr data-compare="sgst">
+				<th>SGST</th>
+				<td data-label="sgst">{{ inward_supply.sgst ? format_number(inward_supply.sgst, null, 2) : '-' }}</td>
+				<td data-label="sgst">{{ purchase.sgst ? format_number(purchase.sgst, null, 2) : '-' }}</td>
 			</tr>
 			{% endif %}
 			{% if purchase.igst || inward_supply.igst %}
-			<tr>
-				<th>IGST</td>
-				<td>{{ inward_supply.igst || '-' }}</td>
-				<td>{{ purchase.igst || '-' }}</td>
+			<tr data-compare="igst">
+				<th>IGST</th>
+				<td data-label="igst">{{ inward_supply.igst ? format_number(inward_supply.igst, null, 2) : '-' }}</td>
+				<td data-label="igst">{{ purchase.igst ? format_number(purchase.igst, null, 2) : '-' }}</td>
 			</tr>
 			{% endif %}
 			{% if purchase.cess || inward_supply.cess %}
-			<tr>
-				<th>CESS</td>
-				<td>{{ inward_supply.cess || '-' }}</td>
-				<td>{{ purchase.cess || '-' }}</td>
+			<tr data-compare="cess">
+				<th>CESS</th>
+				<td data-label="cess">{{ inward_supply.cess ? format_number(inward_supply.cess, null, 2) : '-' }}</td>
+				<td data-label="cess">{{ purchase.cess ? format_number(purchase.cess, null, 2) : '-' }}</td>
 			</tr>
 			{% endif %}
-			<tr>
-				<th>Taxable Amount</td>
-				<td>{{ inward_supply.taxable_value || '-' }}</td>
-				<td>{{ purchase.taxable_value || '-' }}</td>
+			<tr data-compare="taxable_value">
+				<th>Taxable Amount</th>
+				<td data-label="taxable_value">{{ inward_supply.taxable_value ? format_number(inward_supply.taxable_value, null, 2) : '-' }}</td>
+				<td data-label="taxable_value">{{ purchase.taxable_value ? format_number(purchase.taxable_value, null, 2) : '-' }}</td>
 			</tr>
 			{% if inward_supply.reason_itc_unavailability %}
 			<tr>
@@ -119,23 +119,11 @@
 			</tr>
 			{% endif %}
 
-			{% if inward_supply.irn_source || inward_supply.irn_number || inward_supply.irn_gen_date %}
+			{% if inward_supply.name %}
 			<tr>
-				<th>IRN Source</th>
-				<td data-label="irn_source">{{ inward_supply.irn_source || '-' }}</td>
-				<td data-label="irn_source">-</td>
-			</tr>
-			<tr>
-				<th>IRN Number</th>
-				<td data-label="irn_number" style="word-break: break-all;">{{ inward_supply.irn_number || '-' }}</td>
-				<td data-label="irn_number">-</td>
-			</tr>
-			<tr>
-				<th>IRN Generation Date</th>
-				<td data-label="irn_gen_date">
-					{{ frappe.format(inward_supply.irn_gen_date, {'fieldtype': 'Date'}) || '-' }}
-				</td>
-				<td data-label="irn_gen_date">-</td>
+				<th>IRN</th>
+				<td data-label="irn">{{ inward_supply.irn_number ? 'Yes' : 'No' }}</td>
+				<td data-label="irn">-</td>
 			</tr>
 			{% endif %}
 		</tbody>
