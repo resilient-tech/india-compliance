@@ -123,6 +123,15 @@ class TestGstinInfo(IntegrationTestCase):
             },
         )
 
+    def test_business_name_falls_back_to_legal_name(self):
+        """Trade name is preferred for Proprietorship / HUF, but may be empty"""
+        self.mock_public_api.return_value = Mock()
+        self.mock_public_api.return_value.get_gstin_info.return_value = frappe._dict(
+            {**self.MOCK_GSTIN_INFO, "tradeNam": ""}
+        )
+        gstin_info = get_gstin_info(self.gstin)
+        self.assertEqual(gstin_info.business_name, "Nalin Vora")
+
     def test_tcs_gstin_info(self):
         self.mock_public_api.return_value = Mock()
         self.mock_public_api.return_value.get_gstin_info.return_value = frappe._dict(
