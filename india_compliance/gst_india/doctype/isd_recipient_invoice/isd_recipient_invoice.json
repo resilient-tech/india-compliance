@@ -203,7 +203,8 @@
   {
    "fieldname": "branch_turnover",
    "fieldtype": "Currency",
-   "label": "Recipient Branch Turnover"
+   "label": "Recipient Branch Turnover",
+   "non_negative": 1
   },
   {
    "fieldname": "column_break_tjri",
@@ -212,7 +213,8 @@
   {
    "fieldname": "total_turnover",
    "fieldtype": "Currency",
-   "label": "Total Turnover"
+   "label": "Total Turnover",
+   "non_negative": 1
   },
   {
    "fieldname": "column_break_mael",
@@ -222,6 +224,7 @@
    "fieldname": "distribution_ratio",
    "fieldtype": "Float",
    "label": "Distribution Ratio(%)",
+   "non_negative": 1,
    "read_only": 1
   },
   {
@@ -460,7 +463,7 @@
    "link_fieldname": "link_name"
   }
  ],
- "modified": "2026-08-03 18:15:57.233192",
+ "modified": "2026-09-01 12:00:01.000000",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Recipient Invoice",

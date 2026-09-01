@@ -186,6 +186,11 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                 return;
             }
 
+            if (rows.some((row) => parseFloat(row.turnover_amount) < 0)) {
+                frappe.msgprint(__("Turnover cannot be negative."));
+                return;
+            }
+
             dialog.hide();
 
             const payload = rows.map((row) => ({
@@ -581,6 +586,10 @@ india_compliance.ISDController = class ISDController {
     calculate_distribution_ratio() {
         const { branch_turnover, total_turnover } = this.frm.doc;
 
+        if (flt(branch_turnover) < 0 || flt(total_turnover) < 0) {
+            frappe.throw(__("Turnover cannot be negative"));
+        }
+
         const distribution_ratio = total_turnover ? (flt(branch_turnover) / flt(total_turnover)) * 100 : 0;
         if (distribution_ratio > 100) {
             frappe.throw(__("Distribution Ratio cannot be greater than 100%"));
@@ -604,21 +613,26 @@ india_compliance.ISDController = class ISDController {
         if (inter_state) {
             // inter-state -> everything collapses to IGST (Rule 39(1)(e), (g))
             row.distributed_igst = flt(
-                ((row.total_igst || 0) + (row.total_cgst || 0) + (row.total_sgst || 0)) * ratio,
+                (Math.abs(flt(row.total_igst)) +
+                    Math.abs(flt(row.total_cgst)) +
+                    Math.abs(flt(row.total_sgst))) *
+                    ratio,
                 _p,
             );
             row.distributed_cgst = 0;
             row.distributed_sgst = 0;
         } else {
             // intra-state -> each credit keeps its type (Rule 39(1)(e), (f))
-            row.distributed_igst = flt((row.total_igst || 0) * ratio, _p);
-            row.distributed_cgst = flt((row.total_cgst || 0) * ratio, _p);
-            row.distributed_sgst = flt((row.total_sgst || 0) * ratio, _p);
+            row.distributed_igst = flt(Math.abs(flt(row.total_igst)) * ratio, _p);
+            row.distributed_cgst = flt(Math.abs(flt(row.total_cgst)) * ratio, _p);
+            row.distributed_sgst = flt(Math.abs(flt(row.total_sgst)) * ratio, _p);
         }
 
-        row.distributed_cess = flt((row.total_cess || 0) * ratio, _p);
-        row.distributed_cess_non_advol = flt((row.total_cess_non_advol || 0) * ratio, _p);
-        row.distributed_expense = this.distribute_expense ? flt((row.total_expense || 0) * ratio, _pe) : 0;
+        row.distributed_cess = flt(Math.abs(flt(row.total_cess)) * ratio, _p);
+        row.distributed_cess_non_advol = flt(Math.abs(flt(row.total_cess_non_advol)) * ratio, _p);
+        row.distributed_expense = this.distribute_expense
+            ? flt(Math.abs(flt(row.total_expense)) * ratio, _pe)
+            : 0;
     }
 
     async recalculate() {
@@ -651,7 +665,7 @@ india_compliance.ISDController = class ISDController {
                 row_total += r[`distributed_${t}`] || 0;
 
                 totals[t] += distribution_side
-                    ? flt((r[`total_${t}`] || 0) * ratio, _p)
+                    ? flt(Math.abs(flt(r[`total_${t}`])) * ratio, _p)
                     : r[`distributed_${t}`] || 0;
             }
             if (r.is_ineligible_for_itc) total_ineligible += row_total;

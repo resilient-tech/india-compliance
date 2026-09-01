@@ -10,12 +10,14 @@ from frappe.utils import add_months, flt, today
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.doctype.isd_distribution_invoice.isd_distribution_invoice import (
     _create_isd_recipient_invoice,
+    create_credit_note,
 )
 from india_compliance.gst_india.doctype.turnover_record.turnover_record import get_relevant_period
 from india_compliance.gst_india.utils.isd import (
     bulk_create_isd_distribution_invoices,
     get_input_gst_accounts,
     get_isd_autofill_values,
+    get_source_items_from_purchase_invoice,
     sum_row_tax_by_type,
 )
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
@@ -142,7 +144,7 @@ def make_source_item(pi, ratio=1.0, is_credit_note=0):
     for item in pi.items:
         totals = {f"total_{tax}": flt(item.get(f"{tax}_amount")) for tax in GST_TAX_TYPES}
         distributed = {
-            f"distributed_{tax}": sign * flt(item.get(f"{tax}_amount")) * ratio for tax in GST_TAX_TYPES
+            f"distributed_{tax}": sign * abs(flt(item.get(f"{tax}_amount"))) * ratio for tax in GST_TAX_TYPES
         }
         rows.append(
             {
@@ -151,7 +153,7 @@ def make_source_item(pi, ratio=1.0, is_credit_note=0):
                 "is_ineligible_for_itc": item.get("is_ineligible_for_itc") or 0,
                 "expense_head": item.expense_account,
                 "total_expense": flt(item.base_net_amount),
-                "distributed_expense": sign * flt(item.base_net_amount) * ratio,
+                "distributed_expense": sign * abs(flt(item.base_net_amount)) * ratio,
                 **totals,
                 **distributed,
             }
@@ -368,6 +370,19 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             VALIDATION_ERROR,
             "Recipient Branch Turnover must be greater than zero",
             doc.validate_turnover_and_ratio,
+        )
+
+        # negative turnover is not a way to reverse credit -- the credit note flag carries that sign
+        doc = make_distribution_invoice(total_turnover=100, branch_turnover=-25)
+        self.assertRaisesRegex(
+            VALIDATION_ERROR,
+            "Recipient Branch Turnover must be greater than zero",
+            doc.validate_turnover_and_ratio,
+        )
+
+        doc = make_distribution_invoice(total_turnover=-100, branch_turnover=-25)
+        self.assertRaisesRegex(
+            VALIDATION_ERROR, "Total Turnover must be greater than zero", doc.validate_turnover_and_ratio
         )
 
         # branch turnover cannot exceed total turnover
@@ -871,6 +886,109 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
 
         reversed_itc = sum(sum_row_tax_by_type(row, "distributed") for row in exact.source_items)
         self.assertAlmostEqual(reversed_itc, -distributed, places=2)
+
+    def _return_pi(self):
+        """A purchase return against the shared fixture invoice, carrying negative tax."""
+        return make_isd_pi(self.isd_address.name, is_return=1, return_against=self.pi.name, qty=-1)
+
+    def _from_purchase_invoice(self, pi, **kwargs):
+        """Built the way the form and the bulk dialog build it -- source items come from the
+        server helper, not from a test-local mirror of it."""
+        kwargs.setdefault("company_address", self.isd_address.name)
+        kwargs.setdefault("party_address", self.recipient_address.name)
+        kwargs.setdefault("do_not_save", True)
+        return create_distribution_invoice(
+            purchase_invoice=pi,
+            branch_turnover=100,
+            total_turnover=100,
+            source_items=get_source_items_from_purchase_invoice(pi.name),
+            **kwargs,
+        )
+
+    def test_return_purchase_invoice_is_distributed_as_a_credit_note(self):
+        """A purchase return takes credit back, so distributing it hands that reversal on to the
+        branch. Its tax is negative on the invoice but the source totals are stored positive, the
+        same way every other credit note stores them."""
+        pi_return = self._return_pi()
+        available = abs(
+            sum(
+                flt(item.igst_amount) + flt(item.cgst_amount) + flt(item.sgst_amount)
+                for item in pi_return.items
+            )
+        )
+        self.assertTrue(available)
+
+        doc = self._from_purchase_invoice(pi_return, is_credit_note=1)
+        doc.insert()
+        doc.submit()
+
+        self.assertAlmostEqual(
+            sum(sum_row_tax_by_type(row, "total") for row in doc.source_items), -available, places=2
+        )
+        self.assertAlmostEqual(
+            sum(sum_row_tax_by_type(row, "distributed") for row in doc.source_items), -available, places=2
+        )
+
+    def test_return_and_credit_note_must_agree(self):
+        """get_source_items_from_purchase_invoice stores the totals positive, so a return no longer
+        looks negative on the form: leaving Is Credit Note unticked distributes credit the return
+        was giving back, inflating 4(A)(4) instead of reducing it. Only this direction is one-way --
+        a forward invoice is legitimately both distributed and reversed by a credit note."""
+        pi_return = self._return_pi()
+        self.assertRaisesRegex(
+            VALIDATION_ERROR,
+            "can only be distributed as a credit note",
+            self._from_purchase_invoice(pi_return).insert,
+        )
+
+    def test_unlinked_credit_notes_cannot_exceed_the_invoice(self):
+        """A credit note with no credit_note_against is capped by the invoice it reverses, the way
+        a distribution is -- otherwise nothing bounds how many times the same credit is handed
+        back, since the one-credit-note rule only applies to linked ones."""
+        pi_return = self._return_pi()
+
+        first = self._from_purchase_invoice(pi_return, is_credit_note=1)
+        first.insert()
+        first.submit()
+
+        second = self._from_purchase_invoice(pi_return, is_credit_note=1)
+        self.assertRaisesRegex(VALIDATION_ERROR, "more than Purchase Invoice", second.insert)
+
+    def test_credit_note_totals_follow_the_source_document(self):
+        """total_* mirrors the document the source items came from and keeps its sign: negative off
+        a return, positive off a distribution of a forward invoice. What reverses in both is
+        distributed_*, which is what every consumer reads."""
+        distribution = create_distribution_invoice(
+            purchase_invoice=self.pi,
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
+            branch_turnover=100,
+            total_turnover=100,
+        )
+
+        for doc, total_is_negative in (
+            (self._from_purchase_invoice(self._return_pi(), is_credit_note=1), True),
+            (create_credit_note(distribution.name), False),
+        ):
+            doc.insert()
+            for row in doc.source_items:
+                for gst_tax_type in GST_TAX_TYPES:
+                    total = flt(row.get(f"total_{gst_tax_type}"))
+                    if total_is_negative:
+                        self.assertLessEqual(total, 0, f"total_{gst_tax_type} row {row.idx}")
+                    else:
+                        self.assertGreaterEqual(total, 0, f"total_{gst_tax_type} row {row.idx}")
+
+                    self.assertLessEqual(flt(row.get(f"distributed_{gst_tax_type}")), 0)
+
+                self.assertLessEqual(flt(row.distributed_expense), 0)
+
+            for tax in doc.taxes:
+                self.assertLess(flt(tax.tax_amount), 0, tax.gst_tax_type)
+
+            self.assertLess(flt(doc.total_eligible) + flt(doc.total_ineligible), 0)
+            # the displayed percentage stays a plain proportion
+            self.assertGreater(flt(doc.distribution_ratio), 0)
 
     def test_only_one_credit_note_per_distribution(self):
         """The reversal limit comes from what the distribution passed on, so a second credit note

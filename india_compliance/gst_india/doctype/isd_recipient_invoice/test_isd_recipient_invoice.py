@@ -369,6 +369,16 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         doc.insert()
         self.assertLess(sum(sum_row_tax_by_type(row, "distributed") for row in doc.source_items), 0)
 
+    def test_turnover_cannot_be_negative(self):
+        # the ratio is only informational here, so nothing recomputes it -- a negative turnover
+        # would be stored as a negative ratio if the field itself did not refuse it
+        doc = self._recipient(
+            branch_turnover=-25,
+            external_isd_invoice_number="ISD-EXT-NEG-001",
+            source_items=make_source_item(self.pi, ratio=0.25),
+        )
+        self.assertRaises(frappe.NonNegativeError, doc.insert)
+
     def test_recipient_ineligible_gl_entries(self):
         # ineligible ITC on the recipient side is reversed through the GST Expense account, then
         # transferred to the item's expense head (cost of goods)
@@ -632,3 +642,55 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
             external_isd_invoice_number=number,
             source_items=make_source_item(self.pi, ratio=0.25, is_credit_note=1),
         ).insert()
+
+    def test_credit_note_reverses_every_distributed_amount(self):
+        """total_* mirrors the document the credit came from and keeps that document's sign, so a
+        credit note off a forward invoice carries positive totals. What reverses is distributed_* --
+        the amounts every consumer reads -- and the header totals built from them."""
+        doc = self._recipient(
+            is_credit_note=1,
+            external_isd_invoice_number=frappe.generate_hash(length=8),
+            source_items=make_source_item(self.pi, ratio=0.25, is_credit_note=1),
+        )
+        doc.insert()
+
+        for row in doc.source_items:
+            for gst_tax_type in GST_TAX_TYPES:
+                self.assertLessEqual(
+                    flt(row.get(f"distributed_{gst_tax_type}")), 0, f"distributed_{gst_tax_type}"
+                )
+                self.assertGreaterEqual(flt(row.get(f"total_{gst_tax_type}")), 0, f"total_{gst_tax_type}")
+
+            self.assertGreaterEqual(flt(row.total_expense), 0)
+            self.assertLessEqual(flt(row.distributed_expense), 0)
+
+        self.assertLess(flt(doc.total_eligible) + flt(doc.total_ineligible), 0)
+
+    def test_credit_note_direction_is_checked_row_by_row(self):
+        """ERPNext checks the sign per row (validate_quantity), not on the net: a positive row
+        hidden behind a larger negative one still claims credit the credit note is giving back."""
+        items = [
+            {
+                "item_code": "_Test Service Item",
+                "qty": 1,
+                "rate": rate,
+                "gst_hsn_code": "999900",
+                "cost_center": "Main - _TIRC",
+            }
+            for rate in (10000, 20000)
+        ]
+        pi = make_isd_pi(self.isd_address.name, items=items)
+
+        source_items = make_source_item(pi, ratio=0.25, is_credit_note=1)
+        for fieldname in (*(f"distributed_{tax}" for tax in GST_TAX_TYPES), "distributed_expense"):
+            source_items[0][fieldname] = abs(flt(source_items[0][fieldname]))
+
+        doc = self._recipient(
+            is_credit_note=1,
+            external_isd_invoice_number=frappe.generate_hash(length=8),
+            source_items=source_items,
+        )
+
+        # the net is still negative, so a summed check waves this through
+        self.assertLess(sum(flt(row["distributed_cgst"]) for row in source_items), 0)
+        self.assertRaisesRegex(VALIDATION_ERROR, "must be negative in credit note", doc.insert)

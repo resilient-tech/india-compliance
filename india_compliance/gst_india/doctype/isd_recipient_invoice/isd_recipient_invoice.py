@@ -66,16 +66,21 @@ class ISDRecipientInvoice(ISDController):
         )
 
     def validate_credit_note_direction(self):
-        for gst_tax_type in (*GST_TAX_TYPES, "expense"):
-            fieldname = f"distributed_{gst_tax_type}"
-            amount = sum(flt(row.get(fieldname)) for row in self.source_items)
-            label = fieldname.replace("_", " ").title()
+        """Per row, the way ERPNext checks a return (validate_quantity): on the net, a positive row
+        hides behind a larger negative one and claims credit the document is giving back."""
+        for row in self.source_items:
+            for gst_tax_type in (*GST_TAX_TYPES, "expense"):
+                fieldname = f"distributed_{gst_tax_type}"
+                amount = flt(row.get(fieldname))
+                label = row.meta.get_label(fieldname)
 
-            if self.is_credit_note and amount > 0:
-                frappe.throw(_("{0} must be negative in credit note").format(label))
+                if self.is_credit_note and amount > 0:
+                    frappe.throw(_("Row #{0}: {1} must be negative in credit note").format(row.idx, label))
 
-            if not self.is_credit_note and amount < 0:
-                frappe.throw(_("{0} must be positive in distribution document").format(label))
+                if not self.is_credit_note and amount < 0:
+                    frappe.throw(
+                        _("Row #{0}: {1} must be positive in distribution document").format(row.idx, label)
+                    )
 
     def validate_credit_note_against(self):
         if not self.credit_note_against:

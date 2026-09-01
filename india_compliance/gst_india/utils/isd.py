@@ -117,7 +117,7 @@ def get_row_itc(row, is_distribution, precision, ratio=None):
     """
     if is_distribution:
         return {
-            gst_tax_type: flt(flt(row.get(f"total_{gst_tax_type}")) * ratio, precision)
+            gst_tax_type: flt(abs(flt(row.get(f"total_{gst_tax_type}"))) * ratio, precision)
             for gst_tax_type in GST_TAX_TYPES
         }
     return {
@@ -153,7 +153,7 @@ def calculate_distribution(doc):
         row.distributed_cess = credit["cess"]
         row.distributed_cess_non_advol = credit["cess_non_advol"]
         row.distributed_expense = (
-            flt(flt(row.total_expense) * ratio, expense_precision) if distribute_expense else 0.0
+            flt(abs(flt(row.total_expense)) * ratio, expense_precision) if distribute_expense else 0.0
         )
 
 
@@ -186,10 +186,6 @@ def get_source_items_from_purchase_invoice(purchase_invoice: str):
         ],
         order_by="idx",
     )
-
-    for row in source_items:
-        for fieldname in ("total_expense", *(f"total_{tax_type}" for tax_type in GST_TAX_TYPES)):
-            row[fieldname] = abs(flt(row[fieldname]))
 
     return source_items
 

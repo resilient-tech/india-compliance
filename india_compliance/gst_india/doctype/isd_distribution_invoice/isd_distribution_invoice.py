@@ -214,12 +214,12 @@ class ISDDistributionInvoice(ISDController):
 
             # validate totals
             for gst_tax_type in GST_TAX_TYPES:
-                if (expected := flt(abs(flt(pi_item.get(f"{gst_tax_type}_amount"))), precision)) != (
+                if (expected := flt(pi_item.get(f"{gst_tax_type}_amount"), precision)) != (
                     given := flt(row.get(f"total_{gst_tax_type}"), precision)
                 ):
                     invalid_totals.append([str(row.idx), gst_tax_type.upper(), expected, given])
 
-            if (expected := flt(abs(flt(pi_item.base_net_amount)), precision)) != (
+            if (expected := flt(pi_item.base_net_amount, precision)) != (
                 given := flt(row.total_expense, precision)
             ):
                 invalid_totals.append([str(row.idx), _("Expense"), expected, given])
@@ -297,29 +297,29 @@ class ISDDistributionInvoice(ISDController):
         current_itc = sum(sum_row_tax_by_type(row, "distributed") for row in self.source_items)
         current_expense = sum(flt(row.distributed_expense) for row in self.source_items)
 
-        if self.is_credit_note:
-            if self.credit_note_against:
-                # a credit note reverses one distribution: what that document passed on is the limit
-                against = frappe.get_value(
-                    "ISD Distribution Invoice",
-                    self.credit_note_against,
-                    ["total_eligible", "total_ineligible", "total_expense"],
-                    as_dict=True,
-                )
-                allowed_itc = flt(against.total_eligible + against.total_ineligible, precision)
-                allowed_expense = flt(against.total_expense, precision)
-            else:
-                # unlinked, so no limit applied by government
-                return 0, 0
-            itc_surplus = min(0.0, flt(allowed_itc + current_itc, precision))
-            expense_surplus = min(0.0, flt(allowed_expense + current_expense, precision))
+        if self.is_credit_note and self.credit_note_against:
+            # a credit note reverses one distribution: what that document passed on is the limit
+            against = frappe.get_value(
+                "ISD Distribution Invoice",
+                self.credit_note_against,
+                ["total_eligible", "total_ineligible", "total_expense"],
+                as_dict=True,
+            )
+            available_itc = flt(against.total_eligible + against.total_ineligible)
+            available_expense = flt(against.total_expense)
+            already = frappe._dict(itc=0, expense=0)
         else:
+            # the source invoice is the limit, whichever way this document moves the credit
             already = self.get_distributed_for_purchase_invoice()
             available_itc = sum(sum_row_tax_by_type(row, "total") for row in self.source_items)
             available_expense = sum(flt(row.total_expense) for row in self.source_items)
 
-            itc_surplus = max(0.0, flt(already.itc + current_itc - available_itc, precision))
-            expense_surplus = max(0.0, flt(already.expense + current_expense - available_expense, precision))
+        # compare how much, then hand the surplus back pointing the way this document does
+        sign = -1 if self.is_credit_note else 1
+        itc_surplus = sign * flt(max(0.0, abs(already.itc + current_itc) - abs(available_itc)), precision)
+        expense_surplus = sign * flt(
+            max(0.0, abs(already.expense + current_expense) - abs(available_expense)), precision
+        )
 
         if not distribute_expense_with_isd_credit():
             expense_surplus = 0.0
