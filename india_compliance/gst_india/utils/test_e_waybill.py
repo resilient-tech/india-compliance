@@ -499,13 +499,20 @@ class TestEWaybill(IntegrationTestCase):
             match_list=[matchers.query_string_matcher(e_waybill_cancel_data.get("params"))],
         )
 
+        api_calls_before = len(responses.calls)
+
         with (
             patch("frappe.enqueue") as mock_enqueue,
             patch.object(frappe.local, "request", frappe._dict(), create=True),
             patch.object(frappe.local, "is_ajax", True, create=True),
         ):
-            # commit_after_response runs its callback inline in tests
             cancel_e_waybill_e_invoice(si)
+
+            # nothing on the portal until the cancel itself commits
+            self.assertEqual(len(responses.calls), api_calls_before)
+
+            # commit_after_response then runs its callback inline in tests
+            frappe.db.after_commit.run()
 
         mock_enqueue.assert_not_called()
 

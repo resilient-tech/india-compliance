@@ -113,7 +113,7 @@ def run_after_response_or_enqueue(method, **kwargs):
     From a browser: run it right after the response is sent, so the update lands almost instantly.
     Anything else (workers, background submission, REST, CLI): the regular queue.
 
-    Either way the document is committed first, so a rolled back submit / cancel never
+    Either way it is scheduled on `after_commit`, so a rolled back submit / cancel never
     reaches the portal (where it could not be undone).
     """
     if not is_ui_request():
@@ -134,7 +134,7 @@ def run_after_response_or_enqueue(method, **kwargs):
         finally:
             frappe.flags.in_after_response = False
 
-    commit_after_response(run)
+    frappe.db.after_commit.add(lambda: commit_after_response(run))
 
 
 def send_updated_doc(doc, set_docinfo=False):
@@ -167,13 +167,20 @@ def publish_doc_update(doc, message, indicator="green"):
 
 
 def notify_action_failure(doc, message):
-    """job broke -> log it + red alert for the user. call inside except."""
-    frappe.log_error(
+    """job broke -> log it, leave a trail on the doc + red alert for the user. call inside except."""
+    log = frappe.log_error(
         title=message,
         message=frappe.get_traceback(),
         reference_doctype=doc.doctype,
         reference_name=doc.name,
     )
+
+    comment = f"<b>{_(message)}</b>"
+
+    if log and log.name:
+        comment += "<br>" + _("Error Log: {0}").format(get_link_to_form("Error Log", log.name))
+
+    doc.add_comment(text=comment)
     publish_doc_update(doc, message, indicator="red")
 
 
