@@ -93,6 +93,38 @@ def to_canonical(gov_data):
     return output
 
 
+def from_books(grouped_rows, describe):
+    """Books rows -> one row per product code, unit and rate.
+
+        {"HSN Summary - B2B": {"1102 - BOX-BOX - 1.0": [item rows]}}
+     -> {"HSN Summary - B2B": {"1102 - BOX-BOX - 1.0": {quantity: 2, total_taxable_value: 100}}}
+
+    `describe` supplies the code's description; the lookup is a query, so the caller owns it.
+    """
+    output = {}
+
+    for subcategory, rows_by_key in grouped_rows.items():
+        rows_out = output.setdefault(subcategory, {})
+
+        for key, rows in rows_by_key.items():
+            first = rows[0]
+
+            row = {
+                doc.DOC_TYPE: subcategory,
+                doc.HSN_CODE: first.gst_hsn_code,
+                doc.DESCRIPTION: describe(first.gst_hsn_code),
+                doc.UOM: first.uom,
+                doc.QUANTITY: s.sum_column(rows, "qty"),
+                doc.TAX_RATE: first.gst_rate,
+                **{total: s.sum_column(rows, column) for total, column in s.BOOKS_COLUMNS.items()},
+            }
+            row[doc.DOC_VALUE] = s.sum_money(row, VALUE_PARTS)
+
+            rows_out[key] = row
+
+    return output
+
+
 def to_gov(rows, company_gstin=""):
     output = {}
     counts = {}

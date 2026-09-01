@@ -5,6 +5,7 @@ blanks go at the JSON boundary.
 """
 
 from datetime import datetime
+from itertools import chain
 
 import frappe
 from frappe import _
@@ -16,6 +17,7 @@ from india_compliance.gst_india.constants import (
     UOM_MAP,
 )
 from india_compliance.gst_india.utils import get_party_for_gstin
+from india_compliance.gst_returns.fields.gstr1 import CreditDebitNoteType
 from india_compliance.gst_returns.fields.gstr1 import DocField as doc
 from india_compliance.gst_returns.fields.gstr1 import ItemField as item
 from india_compliance.gst_returns.fields.gstr1 import RawField as raw
@@ -31,6 +33,21 @@ ITEM_TOTALS = {
     item.SGST: doc.SGST,
     item.CESS: doc.CESS,
 }
+
+# the same five amounts as the books query names them
+BOOKS_COLUMNS = {
+    doc.TAXABLE_VALUE: "taxable_value",
+    doc.IGST: "igst_amount",
+    doc.CGST: "cgst_amount",
+    doc.SGST: "sgst_amount",
+    doc.CESS: "total_cess_amount",
+}
+
+# and as an item names them
+ITEM_COLUMNS = {line: BOOKS_COLUMNS[total] for line, total in ITEM_TOTALS.items()}
+
+# a books row that is not a note is an invoice; the portal has codes only for the notes
+INVOICE = "Invoice"
 
 # inter-state: no central or state tax
 ITEM_TOTALS_IGST = {
@@ -243,6 +260,77 @@ def supply_type(pos, company_gstin):
         frappe.throw(_("Company GSTIN is needed to tell an intra-state supply from an inter-state one"))
 
     return "INTRA" if pos == company_gstin[:2] else "INTER"
+
+
+# ── books ─────────────────────────────────────────────────────────────────────
+
+
+def transaction_type(row):
+    """What kind of document a books row came from."""
+    if row.is_debit_note:
+        return CreditDebitNoteType.D.value
+
+    if row.is_return:
+        return CreditDebitNoteType.C.value
+
+    return INVOICE
+
+
+def zero_totals():
+    """A fresh set of invoice totals, all at nothing."""
+    return dict.fromkeys(BOOKS_COLUMNS, 0)
+
+
+def invoice_rows_from_books(grouped_rows, subcategories):
+    """One canonical row per invoice, for the subcategories the caller reports.
+
+    B2B, B2CL, exports and both kinds of credit note all report invoice by invoice, so they share
+    this builder and each passes the subcategories it owns. The row is a superset -- shipping
+    fields, buyer GSTIN and reverse charge are always written, and each category's key table drops
+    whatever it does not report.
+
+        {("B2B Regular", "S008400"): {18.0: [item rows]}}
+     -> {"B2B Regular": {"S008400": {document_number: "S008400", items: [{tax_rate: 18.0}]}}}
+    """
+    output = {}
+
+    for (subcategory, invoice_no), rows_by_rate in grouped_rows.items():
+        if subcategory not in subcategories:
+            continue
+
+        first = next(iter(chain(*rows_by_rate.values())))
+
+        row = {
+            doc.TRANSACTION_TYPE: transaction_type(first),
+            doc.CUST_GSTIN: first.billing_address_gstin,
+            doc.CUST_NAME: first.customer_name,
+            doc.DOC_DATE: first.posting_date,
+            doc.DOC_NUMBER: first.invoice_no,
+            doc.DOC_VALUE: first.invoice_total,
+            doc.POS: first.place_of_supply,
+            doc.REVERSE_CHARGE: ("Y" if first.is_reverse_charge else "N"),
+            doc.DOC_TYPE: first.invoice_type,
+            **zero_totals(),
+            doc.DIFF_PERCENTAGE: 0,
+            doc.SHIPPING_PORT_CODE: first.shipping_port_code,
+            doc.SHIPPING_BILL_NUMBER: first.shipping_bill_number,
+            doc.SHIPPING_BILL_DATE: first.shipping_bill_date,
+            "items": [],
+        }
+
+        # one item per tax rate, because that is how the portal wants a return reported
+        for rate, rows in rows_by_rate.items():
+            line = {field: sum_column(rows, column) for field, column in ITEM_COLUMNS.items()}
+            line[item.TAX_RATE] = rate
+            row["items"].append(line)
+
+        # amounts arrive settled to two decimals, so the totals only have to add up
+        for field, total in ITEM_TOTALS.items():
+            row[total] = sum_column(row["items"], field)
+
+        output.setdefault(subcategory, {})[invoice_no] = row
+
+    return output
 
 
 # ── items ─────────────────────────────────────────────────────────────────────

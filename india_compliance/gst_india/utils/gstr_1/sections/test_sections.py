@@ -12,7 +12,9 @@ import frappe
 from frappe.utils import flt
 
 from india_compliance.gst_returns.fields.gstr1 import (
+    CATEGORY_SUB_CATEGORY_MAPPING,
     B2BInvoiceType,
+    Category,
     DocumentNature,
     SubCategory,
 )
@@ -79,6 +81,35 @@ class TestKeyTables(unittest.TestCase):
         # two portal keys, one description. Summary is never filed back
         with self.assertRaises(ValueError):
             s.invert(summary.KEYS)
+
+    def test_every_category_reads_from_both_sources_and_writes_back(self):
+        """One category, one file, the same three functions -- whichever way the data flows."""
+        for module in (b2b, b2cl, exports, b2cs, nil_rated, cdnr, cdnur, hsn, doc_issue, supecom):
+            with self.subTest(module.__name__):
+                for name in ("to_canonical", "from_books", "to_gov"):
+                    self.assertTrue(callable(getattr(module, name, None)), f"missing {name}")
+
+        # advances read and write per direction, because received and adjusted differ only in sign;
+        for name in (
+            "from_books",
+            "received_to_canonical",
+            "adjusted_to_canonical",
+            "received_to_gov",
+            "adjusted_to_gov",
+        ):
+            self.assertTrue(callable(getattr(advances, name, None)), f"missing {name}")
+
+    def test_invoice_categories_claim_every_subcategory_between_them(self):
+        # the books query hands all five one bucket, so their claims must not overlap or leave gaps
+        claimed = [sub for m in (b2b, b2cl, exports, cdnr, cdnur) for sub in m.SUBCATEGORIES]
+        self.assertEqual(len(claimed), len(set(claimed)), "two categories claim the same subcategory")
+
+        reported = {
+            sub.value
+            for category in (Category.B2B, Category.B2CL, Category.EXP, Category.CDNR, Category.CDNUR)
+            for sub in CATEGORY_SUB_CATEGORY_MAPPING[category]
+        }
+        self.assertEqual(set(claimed), reported, "a subcategory no category claims")
 
     def test_every_category_is_registered(self):
         self.assertEqual(len(SECTIONS), 13)
@@ -781,6 +812,57 @@ class TestCategoryRules(unittest.TestCase):
 
         self.assertEqual(len(details), 1)
         self.assertEqual(details[0][raw.DOC_ISSUE_LIST][0][raw.FROM_SR], "3")
+
+    def test_an_advance_rate_snaps_to_the_nearest_notified_rate(self):
+        """Worked back from paisa-rounded amounts, the rate carries noise no return may file."""
+
+        def entry(taxable, tax):
+            return {
+                "party": "X",
+                "name": "PE-1",
+                "posting_date": "2026-08-01",
+                "place_of_supply": "27-Maharashtra",
+                "company_gstin": "27ZZRML1234R1Z4",
+                "taxable_value": taxable,
+                "tax_amount": tax,
+                "cess_amount": 0,
+            }
+
+        # a fractional rate is a real rate, not zero
+        self.assertEqual(list(advances.from_books([entry(10000, 25)])), ["27-Maharashtra - 0.25"])
+
+        # a ten-rupee advance works back to 18.05; that is noise, not a rate of its own
+        rows = advances.from_books([entry(10.03, 1.81)])
+        self.assertEqual(list(rows), ["27-Maharashtra - 18.0"])
+        self.assertEqual(rows["27-Maharashtra - 18.0"][0][doc.TAX_RATE], 18.0)
+
+    def test_nil_rated_books_and_portal_rows_group_under_the_same_key(self):
+        """Books rows already carry the readable supply type, so both sides key alike."""
+        line = frappe._dict(
+            billing_address_gstin="24AANFA2641L1ZF",
+            customer_name="X",
+            invoice_no="SINV-1",
+            posting_date="2026-08-01",
+            invoice_total=100,
+            place_of_supply="24-Gujarat",
+            is_reverse_charge=0,
+            is_debit_note=0,
+            is_return=0,
+            invoice_type=nil_rated.SUPPLY_TYPES["INTRB2B"],
+            gst_treatment="Nil-Rated",
+            taxable_value=100,
+        )
+
+        books = nil_rated.from_books({(nil_rated.SUBCATEGORY, "SINV-1"): {0.0: [line]}})
+        portal = nil_rated.to_canonical(
+            {raw.INVOICES: [{raw.SUPPLY_TYPE: "INTRB2B", raw.NIL_RATED_AMOUNT: 100}]}
+        )
+
+        self.assertEqual(
+            set(books[nil_rated.SUBCATEGORY]),
+            set(portal[nil_rated.SUBCATEGORY]),
+        )
+        self.assertEqual(list(books[nil_rated.SUBCATEGORY]), ["Inter-State supplies to registered persons"])
 
     def test_a_nil_rated_line_with_nothing_in_it_is_dropped(self):
         payload = {raw.INVOICES: [{raw.SUPPLY_TYPE: "INTRB2B", raw.EXEMPTED_AMOUNT: 0}]}
