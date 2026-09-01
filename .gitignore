@@ -12,3 +12,10 @@ india_compliance/docs/current
 # JS
 dist/
 node_modules
+
+# Cypress
+cypress/videos
+cypress/screenshots
+cypress/downloads
+coverage/
+.nyc_output/

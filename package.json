@@ -2,5 +2,9 @@
   "dependencies": {
     "vue-router": "^4.1.5",
     "vuex": "4.0.2"
+  },
+  "devDependencies": {
+    "@cypress/code-coverage": "3.14.7",
+    "cypress": "13.17.0"
   }
 }
