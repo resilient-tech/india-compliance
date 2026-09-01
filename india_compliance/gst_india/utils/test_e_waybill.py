@@ -433,8 +433,7 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         si.reload()
-        # cancel the SI without dispatching the deferred job to a worker, then run it in this
-        # transaction so its writes (clearing si.ewaybill) are visible to the assertions below
+        # run the deferred portal cancel here, so its writes are visible below
         with patch("frappe.enqueue"):
             si.cancel()
         auto_cancel_e_invoice_e_waybill(si.name)
@@ -457,8 +456,7 @@ class TestEWaybill(IntegrationTestCase):
     )
     @responses.activate
     def test_portal_cancel_is_deferred_to_after_commit(self):
-        """Portal cancel is deferred to an after-commit job (so a rolled-back SI cancel discards it),
-        never run synchronously inside before_cancel."""
+        """portal cancel waits for the SI cancel to commit, never runs inside before_cancel."""
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
         self._generate_e_waybill(si.name)
         si = load_doc("Sales Invoice", si.name, "cancel")
@@ -508,7 +506,7 @@ class TestEWaybill(IntegrationTestCase):
             # nothing on the portal until the cancel itself commits
             self.assertEqual(len(responses.calls), api_calls_before)
 
-            # commit_after_response then runs its callback inline in tests
+            # commit_after_response runs inline in tests
             frappe.db.after_commit.run()
 
         mock_enqueue.assert_not_called()

@@ -99,23 +99,21 @@ def update_onload(doc, key, value):
 
 
 def is_ui_request():
-    """Triggered from a browser (desk / portal), as opposed to a worker, the CLI or a REST client."""
+    """from a browser (desk / portal)? not a worker, CLI or REST client."""
     return bool(frappe.request) and getattr(frappe.local, "is_ajax", False)
 
 
 def is_response_pending():
-    """Can we still write to the HTTP response? False once it has been sent to the client."""
+    """can we still reply to the user? no once the response is out."""
     return bool(frappe.request) and not frappe.flags.in_after_response
 
 
 def run_after_response_or_enqueue(method: Callable, **kwargs):
-    """Run a portal action outside the submit / cancel transaction, without making the user wait.
+    """Run a portal action after the doc is saved, without making the user wait.
 
-    From a browser: run it right after the response is sent, so the update lands almost instantly.
-    Anything else (workers, background submission, REST, CLI): the regular queue.
-
-    Either way it is scheduled on `after_commit`, so a rolled back submit / cancel never
-    reaches the portal (where it could not be undone).
+    - from a browser: right after the response -> lands almost instantly
+    - anything else (worker, REST, CLI): the queue
+    - either way only after commit -> a rolled back submit / cancel never reaches the portal
     """
     if not is_ui_request():
         frappe.enqueue(method, enqueue_after_commit=True, queue="short", **kwargs)
@@ -127,7 +125,7 @@ def run_after_response_or_enqueue(method: Callable, **kwargs):
         try:
             method(**kwargs)
         except Exception:
-            # must not raise: frappe rolls back to a savepoint its own commit already dropped
+            # must not raise: the savepoint frappe would roll back to is already gone
             frappe.log_error(
                 title=_("Failed to run {0} after response").format(method.__name__),
                 message=frappe.get_traceback(),
@@ -153,11 +151,11 @@ def send_updated_doc(doc, set_docinfo=False):
 
 
 def publish_doc_update(doc, message, indicator="green"):
-    """Response is already sent: refresh open forms and alert whoever triggered the action."""
+    """response already sent -> refresh open forms + alert the user."""
     doc.notify_update()
 
     if frappe.flags.in_bulk_generation:
-        # one alert per document would bury the screen
+        # one alert per doc would bury the screen
         return
 
     frappe.publish_realtime(
@@ -169,7 +167,7 @@ def publish_doc_update(doc, message, indicator="green"):
 
 
 def notify_action_failure(doc, message):
-    """job broke -> log it, leave a trail on the doc + red alert for the user. call inside except."""
+    """job broke -> error log + comment on the doc + red alert. call inside except."""
     log = frappe.log_error(
         title=message,
         message=frappe.get_traceback(),

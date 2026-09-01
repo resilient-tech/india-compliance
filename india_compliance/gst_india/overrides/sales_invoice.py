@@ -179,7 +179,6 @@ def on_submit(doc, method=None):
         except AlreadyGeneratedError:
             return
         except NotApplicableError as e:
-            # not needed here -> mark it, tell user, let submit go through
             _mark_not_applicable(doc, "einvoice_status", str(e))
         else:
             run_after_response_or_enqueue(
@@ -202,7 +201,7 @@ def on_submit(doc, method=None):
 
 
 def _mark_not_applicable(doc, status_field, message):
-    """not needed -> mark it + tell user. don't block submit."""
+    """mark it, tell the user, don't block submit."""
     doc.db_set(status_field, "Not Applicable")
 
     frappe.msgprint(message, indicator="orange", alert=True)
@@ -251,7 +250,7 @@ def validate_cancellation_based_on_e_invoice(doc):
 
 
 def cancel_e_waybill_e_invoice(doc, method=None):
-    """portal cancel can't be undone. do it after commit, so a rolled-back cancel drops it too."""
+    """portal cancel can't be undone -> only once the SI cancel is saved."""
     if not (doc.irn or doc.ewaybill) or not is_api_enabled():
         return
 

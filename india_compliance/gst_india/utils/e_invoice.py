@@ -442,7 +442,7 @@ def _cancel_e_invoice(doc, values):
     if doc.get("ewaybill"):
         _cancel_e_waybill(doc, values)
 
-        # e-Waybill gone from portal for good -> save it now, so a later IRN fail can't undo it
+        # e-Waybill gone from portal for good -> save now, a later IRN fail can't undo it
         if not frappe.flags.in_test:
             frappe.db.commit()  # nosemgrep
 
@@ -1031,7 +1031,6 @@ class EInvoiceData(GSTTransactionData):
 
 
 def auto_cancel_e_invoice_e_waybill(docname: str):
-    """Cancel IRN / e-Waybill on the portal, once the Sales Invoice cancellation is committed."""
     doc = load_doc("Sales Invoice", docname, "cancel")
 
     if not (doc.irn or doc.ewaybill):
@@ -1043,7 +1042,7 @@ def auto_cancel_e_invoice_e_waybill(docname: str):
         return
 
     try:
-        # IRN cancel takes its e-Waybill with it; else cancel e-Waybill alone
+        # IRN cancel takes its e-Waybill with it
         if not auto_cancel_e_invoice(doc, gst_settings=gst_settings):
             auto_cancel_e_waybill(doc, gst_settings=gst_settings)
     except Exception:
