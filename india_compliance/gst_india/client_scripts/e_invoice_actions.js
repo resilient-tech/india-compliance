@@ -68,17 +68,6 @@ frappe.ui.form.on("Sales Invoice", {
             india_compliance.make_text_red("e-Invoice", "Cancel");
         }
     },
-    async on_submit(frm) {
-        if (frm.doc.irn || !is_e_invoice_applicable(frm) || !gst_settings.auto_generate_e_invoice) return;
-
-        await india_compliance.alert_if_pending(
-            frappe.xcall("india_compliance.gst_india.utils.e_invoice.generate_e_invoice", {
-                docname: frm.doc.name,
-                throw: false,
-            }),
-            __("Generating e-Invoice..."),
-        );
-    },
     before_cancel(frm) {
         if (!frm.doc.irn) return;
 

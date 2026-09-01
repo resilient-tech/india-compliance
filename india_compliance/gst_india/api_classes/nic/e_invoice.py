@@ -12,6 +12,8 @@ from india_compliance.gst_india.constants import DISTANCE_REGEX
 
 class EInvoiceAPI(BaseAPI):
     API_NAME = "e-Invoice"
+    # runs on a web worker when triggered from the UI, so fail fast
+    REQUEST_TIMEOUT = 60
 
     IGNORED_ERROR_CODES: ClassVar[dict] = {
         "1005": "Invalid Token",

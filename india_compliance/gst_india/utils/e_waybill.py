@@ -58,6 +58,7 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     is_foreign_doc,
     is_outward_stock_entry,
+    is_response_pending,
     load_doc,
     notify_action_failure,
     parse_datetime,
@@ -137,6 +138,7 @@ def generate_e_waybills(doctype, docnames, force=False):
     """
     Bulk generate e-Waybill for the given documents.
     """
+    frappe.flags.in_bulk_generation = True
 
     for docname in docnames:
         try:
@@ -245,7 +247,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
         if throw:
             raise
 
-        if frappe.request:
+        if is_response_pending():
             frappe.clear_last_message()
             frappe.msgprint(str(e), _("Warning"), indicator="yellow", alert=True)
 
@@ -265,7 +267,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
         if throw:
             raise
 
-        if frappe.request:
+        if is_response_pending():
             frappe.clear_last_message()
             frappe.msgprint(str(e), _("e-Waybill Not Applicable"))
         else:
@@ -287,7 +289,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
         if throw:
             raise
 
-        if frappe.request:
+        if is_response_pending():
             frappe.clear_last_message()
             frappe.msgprint(
                 _(
@@ -313,7 +315,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
             notify=bool(frappe.request),
         )
 
-        if throw or frappe.request:
+        if throw or is_response_pending():
             raise
 
         notify_action_failure(doc, "e-Waybill generation failed")
@@ -334,7 +336,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
         else "e-Waybill (Part A) generated successfully"
     )
 
-    if not frappe.request:
+    if not is_response_pending():
         return publish_doc_update(doc, message)
 
     frappe.msgprint(_(message), indicator="green", alert=True)
@@ -416,7 +418,7 @@ def _cancel_e_waybill(doc, values):
 
     message = "e-Waybill cancelled successfully"
 
-    if not frappe.request:
+    if not is_response_pending():
         return publish_doc_update(doc, message)
 
     frappe.msgprint(_(message), indicator="green", alert=True)
@@ -927,7 +929,7 @@ def publish_pdf_update(doc, pdf_deleted=False):
     get_docinfo(doc)
 
     # if it's a request, frappe.response["docinfo"] will get synced automatically
-    if frappe.request:
+    if is_response_pending():
         return
 
     frappe.publish_realtime(

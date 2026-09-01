@@ -348,15 +348,6 @@ Object.assign(india_compliance, {
         return india_compliance.is_api_enabled() && gst_settings.enable_e_invoice;
     },
 
-    async alert_if_pending(promise, message, delay = 2000) {
-        const timer = setTimeout(() => frappe.show_alert(message), delay);
-        try {
-            return await promise;
-        } finally {
-            clearTimeout(timer);
-        }
-    },
-
     validate_pan(pan) {
         if (!pan) return;
 

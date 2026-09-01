@@ -30,7 +30,7 @@ from india_compliance.gst_india.overrides.test_subcontracting_transaction import
 )
 from india_compliance.gst_india.utils import load_doc, parse_datetime
 from india_compliance.gst_india.utils.e_invoice import (
-    cancel_e_invoice_e_waybill_after_commit,
+    auto_cancel_e_invoice_e_waybill,
     retry_e_invoice_e_waybill_generation,
 )
 from india_compliance.gst_india.utils.e_waybill import (
@@ -433,7 +433,7 @@ class TestEWaybill(IntegrationTestCase):
         # transaction so its writes (clearing si.ewaybill) are visible to the assertions below
         with patch("frappe.enqueue"):
             si.cancel()
-        cancel_e_invoice_e_waybill_after_commit(si.name)
+        auto_cancel_e_invoice_e_waybill(si.name)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -471,9 +471,44 @@ class TestEWaybill(IntegrationTestCase):
         mock_enqueue.assert_called_once()
         self.assertEqual(
             mock_enqueue.call_args.args[0],
-            "india_compliance.gst_india.utils.e_invoice.cancel_e_invoice_e_waybill_after_commit",
+            "india_compliance.gst_india.utils.e_invoice.auto_cancel_e_invoice_e_waybill",
         )
         self.assertTrue(mock_enqueue.call_args.kwargs.get("enqueue_after_commit"))
+
+    @change_settings(
+        "GST Settings",
+        {
+            "auto_cancel_e_waybill": 1,
+            "reason_for_e_waybill_cancellation": "Data Entry Mistake",
+        },
+    )
+    @responses.activate
+    def test_portal_cancel_runs_after_response_when_triggered_from_ui(self):
+        """From the desk the portal cancel runs right after the response, not on the queue."""
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        self._generate_e_waybill(si.name)
+        si = load_doc("Sales Invoice", si.name, "cancel")
+
+        e_waybill_cancel_data = self.e_waybill_test_data.get("cancel_e_waybill")
+        self._mock_e_waybill_response(
+            data=e_waybill_cancel_data.get("response_data"),
+            match_list=[matchers.query_string_matcher(e_waybill_cancel_data.get("params"))],
+        )
+
+        with (
+            patch("frappe.enqueue") as mock_enqueue,
+            patch.object(frappe.local, "request", frappe._dict(), create=True),
+            patch.object(frappe.local, "is_ajax", True, create=True),
+        ):
+            # commit_after_response runs its callback inline in tests
+            cancel_e_waybill_e_invoice(si)
+
+        mock_enqueue.assert_not_called()
+
+        si.reload()
+        self.assertEqual(si.ewaybill, "")
+        self.assertEqual(si.e_waybill_status, "Cancelled")
+        self.assertFalse(frappe.flags.in_after_response)
 
     @change_settings("GST Settings", {"auto_cancel_e_waybill": 0})
     @responses.activate

@@ -12,6 +12,7 @@ from erpnext.accounts.utils import get_fiscal_year
 from erpnext.stock.get_item_details import purchase_doctypes
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
+from frappe.database.utils import commit_after_response
 from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.utils import (
     add_months,
@@ -85,10 +86,50 @@ def update_onload(doc, key, value):
         onload[key].update(value)
 
 
+def is_ui_request():
+    """Triggered from a browser (desk / portal), as opposed to a worker, the CLI or a REST client."""
+    return bool(frappe.request) and getattr(frappe.local, "is_ajax", False)
+
+
+def is_response_pending():
+    """Can we still write to the HTTP response? False once it has been sent to the client."""
+    return bool(frappe.request) and not frappe.flags.in_after_response
+
+
+def run_after_response_or_enqueue(method, **kwargs):
+    """Run a portal action outside the submit / cancel transaction, without making the user wait.
+
+    From a browser: run it right after the response is sent, so the update lands almost instantly.
+    Anything else (workers, background submission, REST, CLI): the regular queue.
+
+    Either way the document is committed first, so a rolled back submit / cancel never
+    reaches the portal (where it could not be undone).
+    """
+    if not is_ui_request():
+        frappe.enqueue(method, enqueue_after_commit=True, queue="short", **kwargs)
+        return
+
+    def run():
+        frappe.flags.in_after_response = True
+
+        try:
+            frappe.call(method, **kwargs)
+        except Exception:
+            # must not raise: frappe rolls back to a savepoint its own commit already dropped
+            frappe.log_error(
+                title=_("Failed to run {0} after response").format(method),
+                message=frappe.get_traceback(),
+            )
+        finally:
+            frappe.flags.in_after_response = False
+
+    commit_after_response(run)
+
+
 def send_updated_doc(doc, set_docinfo=False):
     """Apply fieldlevel perms and send doc if called while handling a request"""
 
-    if not frappe.request:
+    if not is_response_pending():
         return
 
     doc.apply_fieldlevel_read_permissions()
@@ -100,20 +141,22 @@ def send_updated_doc(doc, set_docinfo=False):
 
 
 def publish_doc_update(doc, message, indicator="green"):
-    """job done -> ping + refresh everyone looking at doc."""
+    """Response is already sent: refresh open forms and alert whoever triggered the action."""
     doc.notify_update()
 
+    if frappe.flags.in_bulk_generation:
+        # one alert per document would bury the screen
+        return
+
     frappe.publish_realtime(
-        "ic_doc_update",
-        {"message": message, "indicator": indicator},
-        doctype=doc.doctype,
-        docname=doc.name,
+        "msgprint",
+        {"message": _(message), "alert": True, "indicator": indicator},
         after_commit=True,
     )
 
 
 def notify_action_failure(doc, message):
-    """job broke -> log it + red ping to everyone looking at doc. call inside except."""
+    """job broke -> log it + red alert for the user. call inside except."""
     frappe.log_error(
         title=message,
         message=frappe.get_traceback(),
