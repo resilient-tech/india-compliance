@@ -139,7 +139,3 @@ div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .reconcile-row {
     left: 50%;
     transform: translate(-50%, -50%);
 }
-
-.not-matched {
-    color: red;
-}

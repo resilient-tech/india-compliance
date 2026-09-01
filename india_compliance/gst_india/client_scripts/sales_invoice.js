@@ -88,7 +88,7 @@ function is_gst_invoice(frm) {
         !frm.doc.items.some((item) => item.gst_treatment == "Non-GST") &&
         !frm.doc.items.every((item) => item.gst_treatment == "Nil-Rated" || item.gst_treatment == "Exempted");
 
-    if (frm.doc.items[0].gst_treatment === "Zero-Rated")
+    if (frm.doc.items.length > 0 && frm.doc.items[0].gst_treatment === "Zero-Rated")
         return gst_invoice_conditions && frm.doc.is_export_with_gst;
     else return gst_invoice_conditions;
 }

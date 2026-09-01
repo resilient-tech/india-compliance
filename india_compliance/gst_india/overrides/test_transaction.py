@@ -2413,3 +2413,23 @@ class TestPlaceOfSupply(FrappeTestCase):
 
         self.assertIsNotNone(si)
         self.assertEqual(si.doctype, "Sales Invoice")
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_pos_payment_entry_for_overseas_customer(self):
+        # Payment Entry has no shipping address field, so the overseas branch must not
+        # assume one. An advance from an overseas customer is 96-Other Countries.
+        doc = create_transaction(
+            doctype="Payment Entry",
+            payment_type="Receive",
+            mode_of_payment="Cash",
+            company_address="_Test Indian Registered Company-Billing",
+            party_type="Customer",
+            party="_Test Foreign Customer",
+            customer_address="_Test Foreign Customer-Billing",
+            paid_to="Cash - _TIRC",
+            paid_amount=500,
+            received_amount=500,
+            is_out_state=1,
+        )
+
+        self.assertEqual(doc.place_of_supply, "96-Other Countries")

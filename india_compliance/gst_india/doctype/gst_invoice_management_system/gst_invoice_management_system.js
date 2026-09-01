@@ -21,7 +21,7 @@ const ACTION_MAP = {
 
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
-        await frappe.require("ims.bundle.js");
+        await frappe.require(["ims.bundle.js", "india_compliance.bundle.css"]);
 
         frm.reconciliation_tabs = new IMS(
             frm,
@@ -361,11 +361,11 @@ class IMS extends reconciliation.reconciliation_tabs {
             },
             {
                 label: "Linked Voucher",
-                fieldname: "linked_doc",
+                fieldname: "purchase_invoice_name",
                 align: "center",
                 width: 150,
                 fieldtype: "Dynamic Link",
-                options: "linked_voucher_type",
+                options: "purchase_doctype",
             },
             {
                 label: "Posting Date",
@@ -413,13 +413,13 @@ class IMS extends reconciliation.reconciliation_tabs {
                 classification: row._inward_supply.classification,
                 ims_action: row.ims_action || "",
                 match_status: row.match_status,
-                linked_doc: row.purchase_invoice_name,
+                purchase_invoice_name: row.purchase_invoice_name,
                 tax_difference: row.tax_difference,
                 taxable_value_difference: row.taxable_value_difference,
                 inward_supply_name: row.inward_supply_name,
                 pending_upload: row.pending_upload,
                 is_supplier_return_filed: row.is_supplier_return_filed,
-                linked_voucher_type: row._purchase_invoice.doctype,
+                purchase_doctype: row._purchase_invoice.doctype,
                 posting_date: row.posting_date,
             });
         });
@@ -878,7 +878,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         if (action == "Reject") return "btn-danger not-grey";
         if (action == "Pending") return "btn-warning not-grey";
         if (action == "Create") return "btn-primary not-grey";
-        if (action == "Link") return "btn-primary not-grey btn-link disabled";
+        if (action == "Link") return "btn-primary not-grey link-document-btn disabled";
     }
 
     _set_missing_doctype() {

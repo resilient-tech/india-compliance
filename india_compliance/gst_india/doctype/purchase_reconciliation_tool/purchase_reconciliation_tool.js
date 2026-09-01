@@ -63,7 +63,7 @@ frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
         patch_set_active_tab(frm);
 
-        await frappe.require("purchase_reconciliation_tool.bundle.js");
+        await frappe.require(["purchase_reconciliation_tool.bundle.js", "india_compliance.bundle.css"]);
 
         frm.doc.company = frappe.defaults.get_user_default("Company");
         frm.trigger("company");
@@ -454,6 +454,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             if (!new_row) {
                 new_row = data[row.supplier_gstin] = {
                     supplier_name_gstin: this.get_supplier_name_gstin(row),
+                    supplier: row.supplier,
                     supplier_name: row.supplier_name,
                     supplier_gstin: row.supplier_gstin,
                     inward_supply_count: 0,
@@ -761,7 +762,7 @@ class PurchaseReconciliationToolAction {
 
 class DetailViewDialog extends reconciliation.detail_view_dialog {
     _get_custom_actions() {
-        const doctype = this.dialog.get_value("doctype");
+        const doctype = this.dialog.get_value("doctype") || this.missing_doctype;
         if (this.row.match_status == "Only in Books") return ["Link", "Ignore"];
         else if (this.row.match_status == "Only in 2A/2B")
             if (doctype == "Purchase Invoice") return ["Create", "Link", "Pending", "Ignore"];
@@ -797,7 +798,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         if (action == "Pending") return "btn-secondary";
         if (action == "Ignore") return "btn-secondary";
         if (action == "Create") return "btn-primary not-grey";
-        if (action == "Link") return "btn-primary not-grey btn-link disabled";
+        if (action == "Link") return "btn-primary not-grey link-document-btn disabled";
         if (action == "Accept") return "btn-primary not-grey";
     }
 
@@ -1178,12 +1179,12 @@ class EmailDialog {
     }
 
     async get_recipients() {
-        if (!this.data) return [];
+        if (!this.data?.supplier) return [];
 
         const { message } = await frappe.call({
             method: "india_compliance.gst_india.utils.get_party_contact_details",
             args: {
-                party: this.data.supplier_name,
+                party: this.data.supplier,
             },
         });
 
