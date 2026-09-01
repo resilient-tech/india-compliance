@@ -5,6 +5,7 @@ const E_WAYBILL_CLASS = {
     "Purchase Receipt": PurchaseReceiptEwaybill,
     "Stock Entry": StockEntryEwaybill,
     "Subcontracting Receipt": SubcontractingReceiptEwaybill,
+    "Asset Movement": AssetMovementEwaybill,
 };
 
 function setup_e_waybill_actions(doctype) {
@@ -563,6 +564,16 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
                 sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
             }
         }
+    } else if (frm.doctype === "Asset Movement") {
+        // NIC allows "For Own Use" only when both sides share the same GSTIN
+        const same_gstin = frm.doc.bill_from_gstin === frm.doc.bill_to_gstin;
+        const is_inward = frm.doc.purpose === "Receipt";
+
+        document_type = "Delivery Challan";
+        supply_type = is_inward ? "Inward" : "Outward";
+        sub_supply_type = same_gstin
+            ? ["For Own Use", "Exhibition or Fairs", "Others"]
+            : [is_inward ? "Job Work Returns" : "Job Work", "SKD/CKD", "Others"];
     } else if (frm.doctype === "Sales Invoice" && frm.doc.is_return === 0 && is_foreign_transaction) {
         supply_type = "Outward";
         sub_supply_type = ["Export"];

@@ -611,6 +611,7 @@ Object.assign(india_compliance, {
     is_e_waybill_applicable_for_subcontracting(doc) {
         if (
             !(
+                india_compliance.is_indian_registered_company(doc.company) &&
                 gst_settings.enable_api &&
                 gst_settings.enable_e_waybill &&
                 gst_settings.enable_e_waybill_for_sc
@@ -632,6 +633,43 @@ Object.assign(india_compliance, {
         if (!company) return false;
 
         return frappe.boot.indian_registered_companies?.includes(company);
+    },
+
+    is_e_waybill_applicable_for_asset_movement(doc) {
+        return !!(
+            india_compliance.is_indian_registered_company(doc.company) &&
+            gst_settings.enable_api &&
+            gst_settings.enable_e_waybill &&
+            gst_settings.enable_e_waybill_from_asset_movement
+        );
+    },
+
+    set_address_display_events(doctype) {
+        // Used by Stock Entry and Asset Movement
+        const event_fields = ["bill_from_address", "bill_to_address", "ship_from_address", "ship_to_address"];
+
+        const events = Object.fromEntries(
+            event_fields.map((field) => [
+                field,
+                (frm) => {
+                    erpnext.utils.get_address_display(frm, field, `${field}_display`, false);
+                },
+            ]),
+        );
+
+        frappe.ui.form.on(doctype, events);
+    },
+
+    get_items_fieldname(doctype) {
+        if (doctype == "Asset Movement") {
+            return "assets";
+        }
+
+        return "items";
+    },
+
+    get_items(doc) {
+        return doc[this.get_items_fieldname(doc.doctype)] || [];
     },
 
     get_inward_subcategory_options(sub_section) {

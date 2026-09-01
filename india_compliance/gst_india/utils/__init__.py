@@ -34,6 +34,7 @@ from titlecase import titlecase as _titlecase
 from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
+    CUSTOM_ADDRESS_FIELDS_DOCTYPES,
     E_INVOICE_MASTER_CODES_URL,
     GST_ACCOUNT_FIELDS,
     GST_INVOICE_NUMBER_FORMAT,
@@ -565,7 +566,19 @@ def get_place_of_supply(party_details, doctype):
         # for registered
         pos_gstin = customer_gstin or party_details.company_gstin
 
-    elif doctype == "Stock Entry":
+    elif doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
+        # Place of supply for goods is where the movement terminates (s.10(1)(a)), so
+        # read it off the Bill To address whenever that party has no GSTIN to derive it
+        # from - an unregistered consignee, or one billed as URP.
+        if not party_details.bill_to_gstin and (bill_to_address := party_details.get("bill_to_address")):
+            gst_state_number, gst_state = frappe.db.get_value(
+                "Address",
+                bill_to_address,
+                ("gst_state_number", "gst_state"),
+            )
+            if gst_state_number and gst_state:
+                return f"{gst_state_number}-{gst_state}"
+
         pos_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
     else:
         # for purchase, subcontracting order and receipt
@@ -588,7 +601,8 @@ def get_overseas_place_of_supply(party_details):
     """
     place_of_supply = "96-Other Countries"
 
-    if not party_details.shipping_address_name:
+    # Payment Entry has no shipping address field
+    if not party_details.get("shipping_address_name"):
         return place_of_supply
 
     shipping_address_details = frappe.get_value(
@@ -1165,6 +1179,46 @@ def get_periods_between_dates(
     return periods
 
 
+def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
+    """Add a GST Logs section to a doctype's dashboard.
+
+    Shared by every doctype that can carry an e-Waybill / e-Invoice.
+    """
+    if not is_api_enabled():
+        return data
+
+    data.setdefault("non_standard_fieldnames", {}).update(
+        {
+            "e-Waybill Log": "reference_name",
+            "Integration Request": "reference_docname",
+            "GST Inward Supply": "link_name",
+            "e-Invoice Log": "reference_name",
+        }
+    )
+
+    data.setdefault("dynamic_links", {}).update(
+        reference_docname=[doctype, "reference_doctype"],
+        reference_name=[doctype, "reference_doctype"],
+    )
+
+    transactions = data.setdefault("transactions", [])
+
+    # GST Logs section looks best at the 3rd position
+    # If there are less than 2 transactions, insert will be equivalent to append
+    transactions.insert(2, {"label": _("GST Logs"), "items": log_doctypes})
+
+    return data
+
+
+def get_items_fieldname(doctype):
+    return "assets" if doctype == "Asset Movement" else "items"
+
+
+def get_items(doc):
+    """Rows of the doctype's item table, which isn't always called `items`."""
+    return doc.get(get_items_fieldname(doc.doctype)) or []
+
+
 def is_outward_stock_entry(doc):
     if (
         doc.doctype == "Stock Entry"
@@ -1172,6 +1226,27 @@ def is_outward_stock_entry(doc):
         and not doc.is_return
     ):
         return True
+
+
+def is_inward_transaction(doc):
+    """True when the goods flow towards the company, ie Bill To is the company's side.
+
+    Everywhere else this is `is_return`; Asset Movement has no such field and states the
+    direction through `purpose` instead.
+    """
+    if doc.get("doctype") == "Asset Movement":
+        return doc.get("purpose") == "Receipt"
+
+    return bool(doc.get("is_return"))
+
+
+def is_same_gstin_allowed(doc):
+    """Whether both sides of the transaction may carry the same GSTIN.
+
+    The company is moving its own goods, so no supply takes place between distinct
+    persons and NIC accepts the e-Waybill as Self -> Self ("For Own Use" and friends).
+    """
+    return bool(is_outward_stock_entry(doc)) or doc.get("doctype") == "Asset Movement"
 
 
 def create_notification(message_content, document_type, document_name=None, request_id=None):

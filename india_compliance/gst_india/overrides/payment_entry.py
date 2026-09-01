@@ -4,8 +4,10 @@ from erpnext.accounts.utils import create_payment_ledger_entry
 from erpnext.controllers.accounts_controller import get_advance_payment_entries
 from frappe import _
 from frappe.contacts.doctype.address.address import get_default_address
+from frappe.model.meta import get_field_precision
 from frappe.query_builder.functions import Sum
 from frappe.utils import flt, getdate
+from pypika.terms import Case
 
 from india_compliance.gst_india.constants import TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import (
@@ -186,6 +188,11 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row, via_reconcili
 
     total_amount = sum(taxes.values())
 
+    exchange_rate = flt(payment_entry.get_exchange_rate()) or 1
+    total_amount_in_account_currency = flt(
+        total_amount / exchange_rate, reference_row.precision("allocated_amount")
+    )
+
     args = {
         "posting_date": posting_date,
         "voucher_detail_no": reference_row.name,
@@ -198,7 +205,7 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row, via_reconcili
         {
             "account": reference_row.account,
             "credit": total_amount,
-            "credit_in_account_currency": total_amount,
+            "credit_in_account_currency": total_amount_in_account_currency,
             "party_type": payment_entry.party_type,
             "party": payment_entry.party,
             "against_voucher_type": reference_row.reference_doctype,
@@ -219,19 +226,35 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row, via_reconcili
         return gl_dicts
 
     outstanding_amount = reference_row.outstanding_amount
-    if via_reconciliation:
+    if outstanding_amount is None:
+        # erpnext stops refreshing the row's reference details once exchange_gain_loss is set on
+        # it, so resolve them the way it would have. Journal Entry has no outstanding_amount
+        # field, hence get_reference_details rather than a direct read. Not reduced by this
+        # allocation yet, so it needs no adding back.
+        from erpnext.accounts.doctype.payment_entry.payment_entry import get_reference_details
+
+        outstanding_amount = get_reference_details(
+            reference_row.reference_doctype,
+            reference_row.reference_name,
+            payment_entry.party_account_currency,
+            payment_entry.party_type,
+            payment_entry.party,
+        ).outstanding_amount
+    elif via_reconciliation:
         # add back allocated_amount to outstanding_amount for comparison
         outstanding_amount += reference_row.allocated_amount
 
-    total_allocation = total_amount + reference_row.allocated_amount
+    total_allocation = total_amount_in_account_currency + reference_row.allocated_amount
     excess_allocation = total_allocation - outstanding_amount
 
     if excess_allocation > 1:
         frappe.throw(
             _(
-                "Outstanding amount {0} is less than the total allocated amount with taxes {1} for {2} {3}"
+                "Outstanding amount {0} {1} is less than the total allocated amount with taxes {2} {1}"
+                " for {3} {4}"
             ).format(
                 outstanding_amount,
+                payment_entry.party_account_currency,
                 total_allocation,
                 reference_row.reference_doctype,
                 reference_row.reference_name,
@@ -313,7 +336,7 @@ def balance_taxes(payment_entry, reference_row, taxes):
     base_amount = get_taxable_base_amount(payment_entry)
     for account, amount in taxes.items():
         for allocation_row in payment_entry.references:
-            if allocation_row.reference_name == reference_row.reference_name:
+            if allocation_row.name == reference_row.name:
                 continue
 
             taxes[account] = taxes[account] - get_proportionate_tax(
@@ -364,12 +387,32 @@ def get_advance_payment_entries_for_regional(
     if not taxes:
         return payment_entries
 
+    precision = get_field_precision(frappe.get_meta("Sales Invoice").get_field("outstanding_amount"))
+
+    rows_of_payment = {}
     for pe in payment_entries:
-        tax_row = taxes.get(
-            pe.reference_name,
-            frappe._dict(paid_amount=1, tax_amount=0, tax_amount_reversed=0),
+        rows_of_payment.setdefault(pe.reference_name, []).append(pe)
+
+    for payment_entry, rows in rows_of_payment.items():
+        tax_row = taxes.get(payment_entry)
+        total_amount = sum(row.amount for row in rows)
+
+        if not tax_row or not total_amount:
+            continue
+
+        # pending GST is company currency, row.amount is the party account currency
+        pending_taxes = flt(
+            (tax_row.tax_amount - tax_row.tax_amount_reversed) / flt(tax_row.exchange_rate),
+            precision,
         )
-        pe.amount += tax_row.tax_amount - tax_row.tax_amount_reversed
+        running_amount = 0
+        running_share = 0
+
+        for row in rows:
+            running_amount += row.amount
+            share = flt(pending_taxes * running_amount / total_amount, precision)
+            row.amount += share - running_share
+            running_share = share
 
     return payment_entries
 
@@ -401,7 +444,10 @@ def adjust_allocations_for_taxes_in_payment_reconciliation(doc):
         row.update(
             {
                 "amount": tax_row.unallocated_amount,
-                "allocated_amount": flt(row.get("allocated_amount", 0) * tax_row.paid_proportion, 2),
+                "allocated_amount": flt(
+                    row.get("allocated_amount", 0) * tax_row.paid_proportion,
+                    row.precision("allocated_amount"),
+                ),
                 "unreconciled_amount": tax_row.unallocated_amount,
             }
         )
@@ -431,6 +477,14 @@ def get_included_taxes_query(gst_accounts, payment_entries=None):
     return query
 
 
+def get_payment_exchange_rate(pe):
+    """
+    Party-side exchange rate of a Payment Entry, as a query expression.
+    Mirrors PaymentEntry.get_exchange_rate()
+    """
+    return Case().when(pe.payment_type == "Receive", pe.source_exchange_rate).else_(pe.target_exchange_rate)
+
+
 def get_taxes_summary(company, payment_entries):
     gst_accounts = get_all_gst_accounts(company)
     if not gst_accounts:
@@ -453,8 +507,9 @@ def get_taxes_summary(company, payment_entries):
             Sum(gl_entry.credit_in_account_currency).as_("tax_amount"),
             Sum(gl_entry.debit_in_account_currency).as_("tax_amount_reversed"),
             pe.name.as_("payment_entry"),
-            pe.paid_amount,
+            pe.base_paid_amount.as_("paid_amount"),
             pe.unallocated_amount,
+            get_payment_exchange_rate(pe).as_("exchange_rate"),
         )
         .where(gl_entry.is_cancelled == 0)
         .where(gl_entry.voucher_type == "Payment Entry")
