@@ -360,3 +360,7 @@ class IMSB2BCNA(IMSB2BDNA):
             }
         )
         return invoice_details
+
+
+def get_data_handler(category):
+    return globals().get(f"IMS{category}")
