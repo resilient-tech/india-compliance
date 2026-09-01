@@ -140,15 +140,12 @@ def get_itc_period_options(company_gstin: str | None = None, posting_date: str |
     current = end_date
     while current >= start_date:
         period = format_period(current)
-
-        label = f"{_(current.strftime('%B'))} {current.year}"
-
         if period in filed:
             filed_periods.append(
-                {"value": period, "label": label, "filed": 1, "description": filed_indicator}
+                {"value": period, "label": period, "filed": 1, "description": filed_indicator}
             )
         else:
-            periods.append({"value": period, "label": label, "filed": 0})
+            periods.append({"value": period, "label": period, "filed": 0})
 
         current = add_months(current, -1)
 
