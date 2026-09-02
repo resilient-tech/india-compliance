@@ -13,9 +13,9 @@ india_compliance/docs/current
 dist/
 node_modules
 
-# Cypress
-cypress/videos
-cypress/screenshots
-cypress/downloads
-coverage/
-.nyc_output/
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.auth/
+/playwright/.cache/
