@@ -274,12 +274,18 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
         frappe.db.commit()  # nosemgrep
 
-    def test_auto_gen_ui_unhandled_exception_still_raises(self):
+    @check_error_logged_for_doc("Sales Invoice", "Unexpected")
+    def test_auto_gen_ui_unhandled_exception_logs_and_sets_failed(self):
+        """throw=False never raises: the failure is logged, commented and reported, not thrown."""
         with patch(E_INVOICE_DATA) as mock_data:
             mock_data.side_effect = RuntimeError("Unexpected")
             response = self._post_e_invoice(self.si.name, throw=False)
 
-        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(_response_message_contains(response, "e-Invoice generation failed"))
+
+        self.si.reload()
+        self.assertEqual(self.si.einvoice_status, "Failed")
 
     # =====================================================================
     # Auto-generation Server Workflow  (throw=False, NO request context)

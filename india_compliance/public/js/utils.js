@@ -580,6 +580,15 @@ Object.assign(india_compliance, {
         return { options, current_year };
     },
 
+    // frappe.warn as a promise: Yes -> true, No / close -> false
+    warn(title, message) {
+        return new Promise((resolve) => {
+            let proceed = false;
+            const d = frappe.warn(title, message, () => (proceed = true), __("Yes"), false, __("No"));
+            d.onhide = () => resolve(proceed);
+        });
+    },
+
     show_cancel_headline(frm, message, on_click) {
         frm.dashboard
             .set_headline_alert(`${message} <a href="#">${__("Cancel")}</a>`, "red", true)

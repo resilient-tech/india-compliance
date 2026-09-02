@@ -10,6 +10,7 @@ const E_WAYBILL_CLASS = {
 
 function setup_e_waybill_actions(doctype) {
     setup_gst_update_notifications(doctype);
+    setup_cancel_confirmation(doctype);
 
     if (!gst_settings.enable_e_waybill) return;
 
@@ -202,36 +203,6 @@ function setup_e_waybill_actions(doctype) {
 
                 india_compliance.make_text_red("e-Waybill", "Mark as Cancelled");
             }
-        },
-        before_cancel(frm) {
-            // if IRN is present, e-Waybill gets cancelled in e-Invoice action
-            if (!india_compliance.is_api_enabled() || frm.doc.irn || !frm.doc.ewaybill) return;
-
-            // still cancellable -> e-Waybill is cancelled after this, automatically or by the user
-            if (is_e_waybill_cancellable(frm)) return;
-
-            frappe.validated = false;
-
-            return new Promise((resolve) => {
-                const continueCancellation = () => {
-                    frappe.validated = true;
-                    resolve();
-                };
-
-                const d = frappe.warn(
-                    __("Cannot Cancel e-Waybill"),
-                    __(
-                        `The e-Waybill created against this invoice cannot be
-                        cancelled.<br><br>
-
-                        Do you want to continue anyway?`,
-                    ),
-                    continueCancellation,
-                    __("Yes"),
-                );
-
-                d.set_secondary_action_label(__("No"));
-            });
         },
     });
 }
@@ -713,27 +684,83 @@ function add_cancel_e_waybill_button(frm) {
     india_compliance.make_text_red("e-Waybill", "Cancel");
 }
 
-function show_cancel_e_waybill_dialog(frm) {
-    const d = new frappe.ui.Dialog({
-        title: __("Cancel e-Waybill"),
-        fields: get_cancel_e_waybill_dialog_fields(frm),
-        primary_action_label: __("Cancel"),
-        primary_action(values) {
-            d.hide();
-            frappe.call({
-                method: "india_compliance.gst_india.utils.e_waybill.cancel_e_waybill",
-                args: {
-                    doctype: frm.doctype,
-                    docname: frm.doc.name,
-                    values,
-                },
-                callback: () => frm.refresh(),
-            });
-        },
-    });
+// resolves true to proceed with the document cancellation, false to stop
+function confirm_portal_cancellation(frm) {
+    // IRN cancel takes its e-Waybill with it
+    if (frm.doc.irn) return confirm_irn_cancellation(frm);
 
-    india_compliance.primary_to_danger_btn(d);
-    d.show();
+    if (frm.doc.ewaybill && india_compliance.is_api_enabled() && gst_settings.enable_e_waybill)
+        return confirm_e_waybill_cancellation(frm);
+
+    return Promise.resolve(true);
+}
+
+function confirm_e_waybill_cancellation(frm) {
+    if (!is_e_waybill_cancellable(frm))
+        return india_compliance.warn(
+            __("Cannot Cancel e-Waybill"),
+            __(
+                `The e-Waybill created against this invoice cannot be
+                        cancelled.<br><br>
+
+                        Do you want to continue anyway?`,
+            ),
+        );
+
+    // cancelled on the portal once the document cancellation is committed
+    if (gst_settings.auto_cancel_e_waybill) return Promise.resolve(true);
+
+    return show_cancel_e_waybill_dialog(frm, { before_doc_cancel: true });
+}
+
+// true once the portal accepted the cancellation; on failure frappe shows the error and the doc is left as is
+function cancel_on_portal(frm, method, args, btn) {
+    return frappe.xcall(method, args, null, { btn }).then(
+        () => {
+            frm.refresh();
+            return true;
+        },
+        () => false,
+    );
+}
+
+// resolves true once the e-Waybill is cancelled (or the user chose to skip it), false otherwise
+function show_cancel_e_waybill_dialog(frm, { before_doc_cancel = false } = {}) {
+    return new Promise((resolve) => {
+        const d = new frappe.ui.Dialog({
+            title: __("Cancel e-Waybill"),
+            fields: get_cancel_e_waybill_dialog_fields(frm),
+            primary_action_label: __("Cancel"),
+            async primary_action(values) {
+                const cancelled = await cancel_on_portal(
+                    frm,
+                    "india_compliance.gst_india.utils.e_waybill.cancel_e_waybill",
+                    { doctype: frm.doctype, docname: frm.doc.name, values },
+                    d.get_primary_btn(),
+                );
+
+                // failed: the dialog stays open behind the error, to retry, skip or close
+                if (!cancelled) return;
+
+                d.onhide = null;
+                d.hide();
+                resolve(true);
+            },
+            onhide: () => resolve(false), // closed without acting
+        });
+
+        if (before_doc_cancel) {
+            d.set_secondary_action_label(__("Cancel Document Only"));
+            d.set_secondary_action(() => {
+                d.onhide = null;
+                d.hide();
+                resolve(true);
+            });
+        }
+
+        india_compliance.primary_to_danger_btn(d);
+        d.show();
+    });
 }
 
 function show_mark_e_waybill_as_cancelled_dialog(frm) {
@@ -1399,6 +1426,44 @@ async function get_source_destination_address(frm, address_type) {
     });
 
     return address?.message;
+}
+
+// frappe awaits before_cancel (and honours frappe.validated) and before_workflow_action
+// (and does not); route one "may this doc be cancelled?" confirmation into both
+function setup_cancel_confirmation(doctype) {
+    frappe.ui.form.on(doctype, {
+        before_cancel(frm) {
+            return confirm_portal_cancellation(frm).then((proceed) => {
+                if (!proceed) frappe.validated = false;
+            });
+        },
+
+        before_workflow_action(frm) {
+            if (!is_cancel_transition(frm)) return;
+
+            // dialogs sit below the freeze overlay; workflow.js unfreezes once the action completes
+            frappe.dom.unfreeze();
+
+            return confirm_portal_cancellation(frm).then((proceed) => {
+                if (!proceed) return new Promise(() => {}); // never resolves: the action is dropped
+
+                frappe.dom.freeze();
+            });
+        },
+    });
+}
+
+function is_cancel_transition(frm) {
+    const state_field = frappe.workflow.get_state_fieldname(frm.doctype); // also loads the workflow
+    const workflow = frappe.workflow.workflows[frm.doctype];
+    if (!workflow || !frm.selected_workflow_action) return false;
+
+    const transition = workflow.transitions.find(
+        (t) => t.action === frm.selected_workflow_action && t.state === frm.doc[state_field],
+    );
+    const next_state = workflow.states.find((s) => s.state === transition?.next_state);
+
+    return cint(next_state?.doc_status) === 2;
 }
 
 function setup_gst_update_notifications(doctype) {
