@@ -14,7 +14,6 @@ from erpnext.accounts.utils import get_fiscal_year
 from erpnext.stock.get_item_details import purchase_doctypes
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
-from frappe.database.utils import commit_after_response
 from frappe.desk.form.load import run_onload
 from frappe.query_builder.functions import Length
 from frappe.utils import (
@@ -57,6 +56,11 @@ from india_compliance.gst_india.constants import (
     UOM_MAP,
     VALID_HSN_LENGTHS,
 )
+
+try:
+    from frappe.database.utils import commit_after_response
+except ImportError:  # frappe < 16: no after-response hook, portal actions take the queue
+    commit_after_response = None
 
 
 def get_state(state_number):
@@ -113,12 +117,12 @@ def run_after_response_or_enqueue(method: Callable, **kwargs):
     """
     is_ui_request = bool(frappe.request) and getattr(frappe.local, "is_ajax", False)
 
-    if not is_ui_request:
+    if not (is_ui_request and commit_after_response):
         frappe.enqueue(method, enqueue_after_commit=True, queue="short", **kwargs)
         return
 
     def run():
-        # on failure, frappe rolls back to its savepoint and logs the error
+        # frappe logs any failure here
         frappe.flags.in_after_response = True
 
         try:
@@ -131,8 +135,7 @@ def run_after_response_or_enqueue(method: Callable, **kwargs):
 
 @contextmanager
 def isolated(title, doc):
-    """Run a side task the way a background job would: a failure inside is rolled back (to a
-    savepoint), logged against the doc and swallowed, so the main flow carries on."""
+    """A failure inside is undone and logged; the main job goes on."""
     frappe.db.savepoint("isolated")
 
     try:
@@ -158,10 +161,10 @@ def send_updated_doc(doc):
 
 
 def publish_doc_update(doc):
-    """response already sent -> push the fresh doc to the acting user; other viewers refetch."""
+    """Send the updated doc to the user's open form."""
     if not frappe.flags.in_bulk_generation:
         if not doc.get("__onload"):
-            run_onload(doc)  # like getdoc: the client syncs __onload too (a missing one would wipe it)
+            run_onload(doc)  # the form needs onload info too
 
         doc.apply_fieldlevel_read_permissions()
         frappe.publish_realtime(
@@ -177,7 +180,7 @@ def publish_doc_update(doc):
 def notify_user(message, title=None, indicator=None, alert=False, doc=None):
     pending = is_response_pending()
 
-    if not frappe.flags.in_bulk_generation:  # one alert per doc would bury the screen
+    if not frappe.flags.in_bulk_generation:  # no alert per doc in bulk
         frappe.msgprint(message, title=title, indicator=indicator, alert=alert, realtime=not pending)
 
     if not doc:
@@ -187,7 +190,7 @@ def notify_user(message, title=None, indicator=None, alert=False, doc=None):
 
 
 def notify_action_failure(doc, message):
-    """unexpected failure in a background action -> error log + comment on the doc + red alert."""
+    """Log the error, note it on the doc, alert the user."""
     log = frappe.log_error(
         title=message,
         message=frappe.get_traceback(),

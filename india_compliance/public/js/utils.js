@@ -580,7 +580,7 @@ Object.assign(india_compliance, {
         return { options, current_year };
     },
 
-    // frappe.warn as a promise: Yes -> true, No / close -> false
+    // Yes: true, No or close: false
     warn(title, message) {
         return new Promise((resolve) => {
             let proceed = false;
@@ -590,13 +590,17 @@ Object.assign(india_compliance, {
     },
 
     show_cancel_headline(frm, message, on_click) {
-        frm.dashboard
-            .set_headline_alert(`${message} <a href="#">${__("Cancel")}</a>`, "red", true)
-            .find("a")
+        frm.dashboard.set_headline_alert(message, "red", true);
+
+        const link = $('<a href="#"></a>')
+            .text(__("Cancel"))
             .on("click", (e) => {
                 e.preventDefault();
                 on_click();
             });
+
+        // set_headline_alert returns the block only on frappe >= 17; the container works everywhere
+        frm.layout.message.children().last().append(" ", link);
     },
 
     primary_to_danger_btn(parent) {

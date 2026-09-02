@@ -684,7 +684,7 @@ function add_cancel_e_waybill_button(frm) {
     india_compliance.make_text_red("e-Waybill", "Cancel");
 }
 
-// resolves true to proceed with the document cancellation, false to stop
+// true: go ahead with the cancel, false: stop
 function confirm_portal_cancellation(frm) {
     // IRN cancel takes its e-Waybill with it
     if (frm.doc.irn) return confirm_irn_cancellation(frm);
@@ -707,13 +707,13 @@ function confirm_e_waybill_cancellation(frm) {
             ),
         );
 
-    // cancelled on the portal once the document cancellation is committed
+    // auto-cancelled after the document is cancelled
     if (gst_settings.auto_cancel_e_waybill) return Promise.resolve(true);
 
     return show_cancel_e_waybill_dialog(frm, { before_doc_cancel: true });
 }
 
-// true once the portal accepted the cancellation; on failure frappe shows the error and the doc is left as is
+// true if the portal cancelled it; frappe shows any error
 function cancel_on_portal(frm, method, args, btn) {
     return frappe.xcall(method, args, null, { btn }).then(
         () => {
@@ -724,7 +724,7 @@ function cancel_on_portal(frm, method, args, btn) {
     );
 }
 
-// resolves true once the e-Waybill is cancelled (or the user chose to skip it), false otherwise
+// true: e-Waybill cancelled or skipped, false: backed out
 function show_cancel_e_waybill_dialog(frm, { before_doc_cancel = false } = {}) {
     return new Promise((resolve) => {
         const d = new frappe.ui.Dialog({
@@ -739,7 +739,7 @@ function show_cancel_e_waybill_dialog(frm, { before_doc_cancel = false } = {}) {
                     d.get_primary_btn(),
                 );
 
-                // failed: the dialog stays open behind the error, to retry, skip or close
+                // failed: keep the dialog open to retry, skip or close
                 if (!cancelled) return;
 
                 d.onhide = null;
@@ -1428,8 +1428,7 @@ async function get_source_destination_address(frm, address_type) {
     return address?.message;
 }
 
-// frappe awaits before_cancel (and honours frappe.validated) and before_workflow_action
-// (and does not); route one "may this doc be cancelled?" confirmation into both
+// ask before cancelling: from the Cancel button or a workflow action
 function setup_cancel_confirmation(doctype) {
     frappe.ui.form.on(doctype, {
         before_cancel(frm) {
@@ -1441,11 +1440,11 @@ function setup_cancel_confirmation(doctype) {
         before_workflow_action(frm) {
             if (!is_cancel_transition(frm)) return;
 
-            // dialogs sit below the freeze overlay; workflow.js unfreezes once the action completes
+            // unfreeze for the dialog; freeze again before frappe continues
             frappe.dom.unfreeze();
 
             return confirm_portal_cancellation(frm).then((proceed) => {
-                if (!proceed) return new Promise(() => {}); // never resolves: the action is dropped
+                if (!proceed) return new Promise(() => {}); // stop the action
 
                 frappe.dom.freeze();
             });
@@ -1474,7 +1473,7 @@ function setup_gst_update_notifications(doctype) {
             frappe.realtime.on("ic_doc_sync", (doc) => {
                 if (doc.doctype !== frm.doctype || doc.name !== frm.doc?.name) return;
 
-                // unsaved local changes: let frappe's doc_update conflict handling take over
+                // unsaved changes: leave it to frappe
                 if (frm.is_dirty()) return;
 
                 frappe.model.sync(doc);

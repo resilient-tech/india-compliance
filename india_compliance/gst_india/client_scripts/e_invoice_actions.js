@@ -94,12 +94,12 @@ function add_cancel_e_invoice_button(frm) {
     india_compliance.make_text_red("e-Invoice", "Cancel");
 }
 
-// resolves true to proceed with the invoice cancellation, false to stop
+// true: go ahead with the cancel, false: stop
 function confirm_irn_cancellation(frm) {
     if (!is_irn_cancellable(frm) || !india_compliance.is_e_invoice_enabled())
         return india_compliance.warn(__("Cannot Cancel IRN"), get_irn_not_cancellable_message(frm));
 
-    // cancelled on the portal once the invoice cancellation is committed
+    // auto-cancelled after the invoice is cancelled
     if (gst_settings.auto_cancel_e_invoice) return Promise.resolve(true);
 
     return show_cancel_e_invoice_dialog(frm, { before_doc_cancel: true });
@@ -135,7 +135,7 @@ function get_irn_not_cancellable_message(frm) {
     );
 }
 
-// resolves true once the IRN is cancelled (or the user chose to skip it), false otherwise
+// true: IRN cancelled or skipped, false: backed out
 function show_cancel_e_invoice_dialog(frm, { before_doc_cancel = false } = {}) {
     return new Promise((resolve) => {
         const d = new frappe.ui.Dialog({
@@ -150,7 +150,7 @@ function show_cancel_e_invoice_dialog(frm, { before_doc_cancel = false } = {}) {
                     d.get_primary_btn(),
                 );
 
-                // failed: the dialog stays open behind the error, to retry, skip or close
+                // failed: keep the dialog open to retry, skip or close
                 if (!cancelled) return;
 
                 d.onhide = null;
