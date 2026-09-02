@@ -143,12 +143,20 @@ def send_updated_doc(doc, set_docinfo=False):
 
 
 def publish_doc_update(doc, message, indicator="green"):
-    """response already sent -> refresh open forms + alert the user."""
-    doc.notify_update()
-
+    """response already sent -> push updated doc + alert to the user; other viewers refetch."""
     if frappe.flags.in_bulk_generation:
-        # one alert per doc would bury the screen
+        doc.notify_update()
         return
+
+    doc.apply_fieldlevel_read_permissions()
+    frappe.publish_realtime(
+        "ic_doc_sync",
+        doc.as_dict(),  # send updated doc to the user
+        user=frappe.session.user,
+        after_commit=True,
+    )
+
+    doc.notify_update()  # notify other viewers
 
     frappe.publish_realtime(
         "msgprint",
