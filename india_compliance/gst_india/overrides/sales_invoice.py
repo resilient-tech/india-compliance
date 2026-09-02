@@ -4,7 +4,6 @@ from frappe import _, bold
 from frappe.desk.form.load import run_onload
 from frappe.utils import flt, fmt_money
 
-from india_compliance.exceptions import AlreadyGeneratedError, NotApplicableError
 from india_compliance.gst_india.constants import VALID_HSN_LENGTHS
 from india_compliance.gst_india.overrides.payment_entry import (
     get_proportionate_tax,
@@ -173,38 +172,18 @@ def on_submit(doc, method=None):
     if not is_api_enabled(gst_settings):
         return
 
-    if gst_settings.auto_generate_e_invoice:
-        try:
-            validate_e_invoice_applicability(doc, gst_settings)
-        except AlreadyGeneratedError:
-            return
-        except NotApplicableError as e:
-            _mark_not_applicable(doc, "einvoice_status", str(e))
-        else:
-            run_after_response_or_enqueue(
-                generate_e_invoice,
-                docname=doc.name,
-                throw=False,
-            )
+    # applicability is settled in validate: the status says what is still pending
+    if gst_settings.auto_generate_e_invoice and doc.einvoice_status == "Pending":
+        run_after_response_or_enqueue(generate_e_invoice, docname=doc.name, throw=False)
+        return
 
-            return
-
-    if gst_settings.auto_generate_e_waybill and not doc.is_debit_note and not doc.is_return:
-        if is_e_waybill_applicable(doc, gst_settings):
-            run_after_response_or_enqueue(
-                generate_e_waybill,
-                doctype=doc.doctype,
-                docname=doc.name,
-            )
-        else:
-            _mark_not_applicable(doc, "e_waybill_status", _("e-Waybill is not applicable for this invoice"))
-
-
-def _mark_not_applicable(doc, status_field, message):
-    """mark it, tell the user, don't block submit."""
-    doc.db_set(status_field, "Not Applicable")
-
-    frappe.msgprint(message, indicator="orange", alert=True)
+    if (
+        gst_settings.auto_generate_e_waybill
+        and doc.e_waybill_status == "Pending"
+        and not doc.is_debit_note
+        and not doc.is_return
+    ):
+        run_after_response_or_enqueue(generate_e_waybill, doctype=doc.doctype, docname=doc.name)
 
 
 def before_cancel(doc, method=None):
@@ -251,18 +230,12 @@ def validate_cancellation_based_on_e_invoice(doc):
 
 def cancel_e_waybill_e_invoice(doc, method=None):
     """portal cancel can't be undone -> only once the SI cancel is saved."""
-    if not (doc.irn or doc.ewaybill) or not is_api_enabled():
-        return
-
     gst_settings = frappe.get_cached_doc("GST Settings")
-
-    if not (can_auto_cancel_e_invoice(doc, gst_settings) or can_auto_cancel_e_waybill(doc, gst_settings)):
+    if not is_api_enabled(gst_settings):
         return
 
-    run_after_response_or_enqueue(
-        auto_cancel_e_invoice_e_waybill,
-        docname=doc.name,
-    )
+    if can_auto_cancel_e_invoice(doc, gst_settings) or can_auto_cancel_e_waybill(doc, gst_settings):
+        run_after_response_or_enqueue(auto_cancel_e_invoice_e_waybill, docname=doc.name)
 
 
 def is_e_waybill_applicable(doc, gst_settings=None):
