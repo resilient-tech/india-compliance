@@ -51,11 +51,6 @@ setup("authenticate and prepare the desk", async ({ page, baseURL }) => {
             "`allow_tests` on the site plus DEV_SERVER=true, or CI set in the " +
             `server's environment. Response: ${await suppressed.text()}`,
     ).toBeTruthy();
-
-    // frappe evicts the stalest sessions past `simultaneous_sessions` (default 2)
-    // on every login — see frappe/sessions.py get_sessions_to_clear. A spec that
-    // drives the real login page opens its own session; without headroom it
-    // silently kills this one and every later spec 403s.
     const headroom = await call("frappe.client.set_value", {
         doctype: "User",
         name: USER,

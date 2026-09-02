@@ -30,7 +30,7 @@ def set_gst_settings(**kwargs):
 
 
 @whitelist_for_tests(methods=["POST"])
-def delete_documents(doctype, names):
+def delete_documents(doctype: str, names: str | list):
     """Cancel-then-delete the named documents"""
     names = frappe.parse_json(names) if isinstance(names, str) else names
 

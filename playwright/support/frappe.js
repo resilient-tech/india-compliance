@@ -1,18 +1,10 @@
-// Replacements for the frappe Cypress commands this app used to inherit from
-// apps/frappe/cypress/support/commands.js. Nothing here is app-specific: it is
-// the Frappe Desk driven through Playwright.
-
 import { expect } from "@playwright/test";
 
+// frappe cypress functions replciated here for playwright
 export function slug(doctype) {
     return doctype.toLowerCase().replace(/ /g, "-");
 }
 
-/**
- * cy.desk_ready(). Stricter than the original: `ajax_count === 0` is also true in
- * the gap before a request starts, so we additionally require that request.js has
- * not just flipped body[data-ajax-state] to "triggered".
- */
 export async function deskReady(page) {
     await page.waitForFunction(
         () => {
@@ -56,27 +48,12 @@ const INPUT_SELECTOR = {
 
 const DEFAULT_INPUT = (f) => `[data-fieldname="${f}"]:not(.search) input:visible`;
 
-/**
- * cy.get_field(). `scope` is a Page or any Locator, so the same call works inside
- * an open grid row — that is what replaces cy.within().
- */
 export function fieldInput(scope, fieldname, fieldtype = "Data") {
     const build = INPUT_SELECTOR[fieldtype] || DEFAULT_INPUT;
 
     return scope.locator(build(fieldname)).first();
 }
 
-/**
- * Link / Dynamic Link. Awesomplete wraps the input in <div class="awesomplete">
- * and puts a <ul role="listbox"> of <div role="option"> beside it, so the dropdown
- * is always `input.parent > [role=listbox]`.
- *
- * frappe debounces the search by 500ms (form/controls/link.js), so this never
- * sleeps: it types, then waits for the *result* to name the value we typed.
- * Matching the full typed string is what makes a stale debounce benign — a
- * neighbouring record cannot contain it. The final toHaveValue is the real guard:
- * it fails loudly if Enter picked the wrong option.
- */
 async function fillLink(input, value) {
     const term = String(value);
     const dropdown = input.locator("xpath=..").getByRole("listbox");
@@ -126,7 +103,6 @@ export async function fillField(scope, fieldname, value, fieldtype = "Data") {
     return input;
 }
 
-/** cy.get_table_field(). */
 export function tableField(page, tablefieldname, rowIdx, fieldname, fieldtype = "Data") {
     const row = page.locator(`.frappe-control[data-fieldname="${tablefieldname}"] [data-idx="${rowIdx}"]`);
     const cell = row.locator(`[data-fieldname="${fieldname}"]`);
@@ -144,21 +120,6 @@ export async function clickActionButton(page, name) {
     await page.locator('.es-menu [role="menuitem"]', { hasText: name }).first().click();
 }
 
-/**
- * cy.call() / cy.insert_doc() / cy.get_doc() / cy.get_list(), bound to a live
- * desk page.
- *
- * `page.request` shares the browser context's cookie jar, so the storageState
- * `sid` authenticates every call with no second login. The CSRF token is read out
- * of the page on each call rather than cached: it belongs to the session, and a
- * spec that logs out and back in would otherwise poison a cache and produce
- * opaque 417s.
- *
- * This deliberately does not go through `page.evaluate(() => frappe.call(...))`:
- * a fixture that fails server-side would render an error dialog over the form and
- * the *next* assertion would fail with an unrelated message, and the request
- * would be invisible in the trace.
- */
 export function createApi(page) {
     async function csrfToken() {
         const token = await page.evaluate(() => window.frappe?.csrf_token);

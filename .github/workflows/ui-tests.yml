@@ -20,10 +20,9 @@ on:
 env:
   BRANCH: ${{ github.base_ref || github.ref_name }}
   SITE: test_site
-  UI_PORT: "8000"
 
 concurrency:
-  group: ui-tests-${{ github.event_name }}-${{ github.event.number || github.ref || github.run_id }}
+  group: ui-tests-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event.number || github.ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -68,6 +67,8 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v7
+        with:
+          persist-credentials: true
 
       - name: Setup Python
         uses: actions/setup-python@v7
@@ -108,7 +109,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package.json') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-playwright-
 
@@ -117,6 +118,13 @@ jobs:
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
         env:
           BRANCH_TO_CLONE: ${{ env.BRANCH }}
+
+      - name: Resolve dev server port
+        working-directory: /home/runner/frappe-bench
+        run: |
+          PORT=$(awk '/^web:/ { for (i = 1; i < NF; i++) if ($i == "--port") print $(i + 1) }' Procfile)
+          echo "UI_PORT=${PORT:-8000}" >> "$GITHUB_ENV"
+          echo "dev server port: ${PORT:-8000}"
 
       - name: Configure site and seed test records
         working-directory: /home/runner/frappe-bench
@@ -174,5 +182,8 @@ jobs:
         if: failure()
         working-directory: /home/runner/frappe-bench
         run: |
-          echo "=== bench start (serves :8000) ==="; cat bench_start.log || true
-          echo "=== site logs ==="; cat logs/*.log || true
+          echo "=== Error Log (unhandled server exceptions) ==="
+          bench --site "$SITE" execute frappe.client.get_list --kwargs \
+            "{'doctype':'Error Log','fields':['creation','method','error'],'limit_page_length':20,'order_by':'creation desc'}" || true
+          echo "=== frappe.log ==="; tail -n 200 logs/frappe.log || true
+          echo "=== worker.error.log ==="; tail -n 100 logs/worker.error.log || true
