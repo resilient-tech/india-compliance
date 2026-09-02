@@ -4,9 +4,14 @@ import frappe
 from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 
-from india_compliance.gst_india.utils import get_data_file_path, merge_dicts
+from india_compliance.gst_india.utils import (
+    get_data_file_path,
+    get_party_for_gstin,
+    merge_dicts,
+)
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
+from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
 
 
@@ -360,6 +365,50 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         self.assertEqual(credit_note.bill_no, "S9001")
         self.assertEqual(credit_note.cgst, 50)
         self.assertEqual(credit_note.sgst, 50)
+
+    def test_gstr2b_isd_keeps_two_distributors_apart(self):
+        """Two ISDs number their documents from their own series, so the same number, type and date
+        can arrive from both in one 2B. Folding the parts of one document together must not fold two
+        suppliers' documents into one, or one distributor is credited with the other's ITC."""
+        credit = {"29AABCE2207R1Z5": 100, "24AABCE2207R1Z5": 250}
+        suppliers = [
+            {
+                "ctin": supplier_gstin,
+                "trdnm": f"Distributor {supplier_gstin}",
+                "supprd": "022020",
+                "supfildt": "02-03-2020",
+                "doclist": [
+                    {
+                        "doctyp": "ISDI",
+                        "docnum": "ISD-77",
+                        "docdt": "03-03-2016",
+                        "igst": 0,
+                        "cgst": cgst,
+                        "sgst": cgst,
+                        "cess": 0,
+                        "itcelg": "Y",
+                    }
+                ],
+            }
+            for supplier_gstin, cgst in credit.items()
+        ]
+
+        gstr = GSTR2b(
+            get_party_for_gstin(self.gstin, "Company"),
+            self.gstin,
+            self.return_period,
+            GSTRCategory.ISD.value,
+        )
+        transactions = {t.supplier_gstin: t for t in gstr.get_all_transactions(suppliers)}
+
+        self.assertEqual(set(transactions), set(credit))
+
+        for supplier_gstin, cgst in credit.items():
+            transaction = transactions[supplier_gstin]
+            self.assertEqual(transaction.bill_no, "ISD-77")
+            self.assertEqual(transaction.cgst, cgst)
+            self.assertEqual(transaction.sgst, cgst)
+            self.assertEqual(transaction.document_value, cgst * 2)
 
     def test_gstr2b_impg(self):
         doc = self.get_doc(GSTRCategory.IMPG)

@@ -107,7 +107,12 @@ def group_documents(transactions):
 
     for transaction in transactions:
         transaction[doc.ITEMS] = [as_item(transaction)]
-        key = (transaction.get(doc.BILL_NO), transaction.get(doc.DOC_TYPE), transaction.get(doc.BILL_DATE))
+        key = (
+            transaction.get(doc.SUPPLIER_GSTIN),
+            transaction.get(doc.BILL_NO),
+            transaction.get(doc.DOC_TYPE),
+            transaction.get(doc.BILL_DATE),
+        )
 
         if existing := grouped.get(key):
             existing[doc.ITEMS].extend(transaction[doc.ITEMS])
