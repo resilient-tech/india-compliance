@@ -14,7 +14,7 @@ from erpnext.stock.get_item_details import purchase_doctypes
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.database.utils import commit_after_response
-from frappe.desk.form.load import get_docinfo, run_onload
+from frappe.desk.form.load import run_onload
 from frappe.query_builder.functions import Length
 from frappe.utils import (
     add_months,
@@ -128,46 +128,47 @@ def run_after_response_or_enqueue(method: Callable, **kwargs):
     frappe.db.after_commit.add(lambda: commit_after_response(run))
 
 
-def send_updated_doc(doc, set_docinfo=False):
+def send_updated_doc(doc):
     """Apply fieldlevel perms and send doc if called while handling a request"""
 
-    if not is_response_pending():
+    if not is_response_pending() or doc in frappe.response.docs:
         return
 
     doc.apply_fieldlevel_read_permissions()
-
-    if set_docinfo:
-        get_docinfo(doc)
-
     frappe.response.docs.append(doc)
 
 
-def publish_doc_update(doc, message, indicator="green"):
-    """response already sent -> push updated doc + alert to the user; other viewers refetch."""
-    if frappe.flags.in_bulk_generation:
-        doc.notify_update()
+def publish_doc_update(doc):
+    """response already sent -> push the fresh doc to the acting user; other viewers refetch."""
+    if not frappe.flags.in_bulk_generation:
+        if not doc.get("__onload"):
+            run_onload(doc)  # like getdoc: the client syncs __onload too (a missing one would wipe it)
+
+        doc.apply_fieldlevel_read_permissions()
+        frappe.publish_realtime(
+            "ic_doc_sync",
+            doc.as_dict(),
+            user=frappe.session.user,
+            after_commit=True,
+        )
+
+    doc.notify_update()
+
+
+def notify_user(message, title=None, indicator=None, alert=False, doc=None):
+    pending = is_response_pending()
+
+    if not frappe.flags.in_bulk_generation:  # one alert per doc would bury the screen
+        frappe.msgprint(message, title=title, indicator=indicator, alert=alert, realtime=not pending)
+
+    if not doc:
         return
 
-    doc.apply_fieldlevel_read_permissions()
-    frappe.publish_realtime(
-        "ic_doc_sync",
-        doc.as_dict(),  # send updated doc to the user
-        user=frappe.session.user,
-        after_commit=True,
-    )
-
-    doc.notify_update()  # notify other viewers
-
-    frappe.publish_realtime(
-        "msgprint",
-        {"message": _(message), "alert": True, "indicator": indicator},
-        user=frappe.session.user,
-        after_commit=True,
-    )
+    return send_updated_doc(doc) if pending else publish_doc_update(doc)
 
 
 def notify_action_failure(doc, message):
-    """job broke -> error log + comment on the doc + red alert. call inside except."""
+    """unexpected failure in a background action -> error log + comment on the doc + red alert."""
     log = frappe.log_error(
         title=message,
         message=frappe.get_traceback(),
@@ -175,13 +176,13 @@ def notify_action_failure(doc, message):
         reference_name=doc.name,
     )
 
-    comment = f"<b>{_(message)}</b>"
+    comment = f"<b>{message}</b>"
 
-    if log and log.name:
+    if log:
         comment += "<br>" + _("Error Log: {0}").format(get_link_to_form("Error Log", log.name))
 
     doc.add_comment(text=comment)
-    publish_doc_update(doc, message, indicator="red")
+    notify_user(message, indicator="red", alert=True, doc=doc)
 
 
 @frappe.whitelist()
@@ -1170,7 +1171,9 @@ def handle_server_errors(settings, doc, document_type, error):
     if not doc.doctype == "Sales Invoice":
         return
 
-    error_message = "Government services are currently slow/down. We apologize for the inconvenience caused."
+    error_message = _(
+        "Government services are currently slow/down. We apologize for the inconvenience caused."
+    )
 
     error_message_title = {
         GatewayTimeoutError: _("Gateway Timeout Error"),
@@ -1184,17 +1187,15 @@ def handle_server_errors(settings, doc, document_type, error):
     if settings.enable_retry_einv_ewb_generation and (not settings.sandbox_mode or frappe.flags.in_test):
         document_status = "Auto-Retry"
         settings.db_set("is_retry_einv_ewb_generation_pending", 1, update_modified=False)
-        error_message += f" Your {document_type} generation will be automatically retried every 5 minutes."
+        error_message += " " + _("Your {0} generation will be automatically retried every 5 minutes.").format(
+            document_type
+        )
     else:
-        error_message += " Please try again after some time."
+        error_message += " " + _("Please try again after some time.")
 
     doc.db_set({document_status_field: document_status})
 
-    frappe.msgprint(
-        msg=_(error_message),
-        title=error_message_title.get(type(error)),
-        indicator="yellow",
-    )
+    notify_user(error_message, title=error_message_title.get(type(error)), indicator="yellow", doc=doc)
 
 
 def get_month_or_quarter_dict():

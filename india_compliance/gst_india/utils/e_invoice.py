@@ -53,9 +53,8 @@ from india_compliance.gst_india.utils import (
     is_ship_to_gstin_applicable,
     load_doc,
     notify_action_failure,
+    notify_user,
     parse_datetime,
-    publish_doc_update,
-    send_updated_doc,
     set_einvoice_status,
     update_onload,
 )
@@ -98,14 +97,6 @@ def generate_e_invoices(docnames, force=False):
     Permission checks are done in the `generate_e_invoice` function.
     """
 
-    def log_error(docname=None):
-        frappe.log_error(
-            title=_("e-Invoice generation failed for Sales Invoice {0}").format(docname),
-            message=frappe.get_traceback(),
-            reference_doctype="Sales Invoice",
-            reference_name=docname,
-        )
-
     frappe.flags.in_bulk_generation = True
 
     for docname in docnames:
@@ -113,7 +104,10 @@ def generate_e_invoices(docnames, force=False):
             generate_e_invoice(docname, force=force)
 
         except Exception:
-            log_error(docname=docname)
+            notify_action_failure(
+                frappe.get_doc("Sales Invoice", docname),
+                _("e-Invoice generation failed for Sales Invoice {0}").format(docname),
+            )
             frappe.clear_last_message()
 
         finally:
@@ -201,10 +195,8 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
         if throw:
             raise
 
-        if is_response_pending():
-            frappe.clear_last_message()
-            frappe.msgprint(str(e), _("Warning"), indicator="yellow", alert=True)
-
+        frappe.clear_last_message()
+        notify_user(str(e), _("Warning"), indicator="yellow", alert=True)
         return
 
     except NotApplicableError as e:
@@ -215,18 +207,14 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
             doc,
             "Not Applicable",
             commit=not frappe.flags.in_test,
-            notify=bool(frappe.request),
+            notify=is_response_pending(),
         )
 
         if throw:
             raise
 
-        if is_response_pending():
-            frappe.clear_last_message()
-            frappe.msgprint(str(e), _("e-Invoice Not Applicable"))
-        else:
-            publish_doc_update(doc, "e-Invoice not applicable", indicator="orange")
-
+        frappe.clear_last_message()
+        notify_user(str(e), _("e-Invoice Not Applicable"), doc=doc)
         return
 
     except (frappe.ValidationError, frappe.MandatoryError) as e:
@@ -237,25 +225,23 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
             doc,
             "Failed",
             commit=not frappe.flags.in_test,
-            notify=bool(frappe.request),
+            notify=is_response_pending(),
         )
 
         if throw:
             raise
 
-        if is_response_pending():
-            frappe.clear_last_message()
-            frappe.msgprint(
-                _(
-                    "e-Invoice auto-generation failed with error:<br>{0}<br><br>"
-                    "Please rectify this issue and generate e-Invoice manually."
-                ).format(str(e)),
-                _("Error Generating e-Invoice"),
-                indicator="red",
-            )
-        else:
-            notify_action_failure(doc, "e-Invoice generation failed")
-
+        frappe.clear_last_message()
+        doc.add_comment(text=_("e-Invoice auto-generation failed: {0}").format(str(e)))
+        notify_user(
+            _(
+                "e-Invoice auto-generation failed with error:<br>{0}<br><br>"
+                "Please rectify this issue and generate e-Invoice manually."
+            ).format(str(e)),
+            _("Error Generating e-Invoice"),
+            indicator="red",
+            doc=doc,
+        )
         return
 
     except Exception:
@@ -266,13 +252,13 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
             doc,
             "Failed",
             commit=not frappe.flags.in_test,
-            notify=bool(frappe.request),
+            notify=is_response_pending(),
         )
 
         if throw or is_response_pending():
             raise
 
-        notify_action_failure(doc, "e-Invoice generation failed")
+        notify_action_failure(doc, _("e-Invoice generation failed"))
         return
 
     return log_and_process_e_invoice_generation(doc, result, api.sandbox_mode)
@@ -415,15 +401,9 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
     if result.EwbNo:
         log_and_process_e_waybill_generation(doc, result, with_irn=True)
 
-    if not message:
-        message = "e-Invoice generated successfully"
-
-    if not is_response_pending():
-        return publish_doc_update(doc, message)
-
-    frappe.msgprint(_(message), indicator="green", alert=True)
-
-    return send_updated_doc(doc)
+    return notify_user(
+        message or _("e-Invoice generated successfully"), indicator="green", alert=True, doc=doc
+    )
 
 
 @frappe.whitelist()
@@ -432,8 +412,6 @@ def cancel_e_invoice(docname: str, values: str | dict | frappe._dict):
     values = frappe.parse_json(values)
 
     _cancel_e_invoice(doc, values)
-
-    return send_updated_doc(doc)
 
 
 def _cancel_e_invoice(doc, values):
@@ -454,7 +432,7 @@ def _cancel_e_invoice(doc, values):
 
     result = EInvoiceAPI.create(doc).cancel_irn(data)
 
-    log_and_process_e_invoice_cancellation(doc, values, result, "e-Invoice cancelled successfully")
+    log_and_process_e_invoice_cancellation(doc, values, result, _("e-Invoice cancelled successfully"))
 
 
 def log_and_process_e_invoice_cancellation(doc, values, result, message):
@@ -480,10 +458,7 @@ def log_and_process_e_invoice_cancellation(doc, values, result, message):
         }
     )
 
-    if not is_response_pending():
-        return publish_doc_update(doc, message)
-
-    frappe.msgprint(_(message), indicator="green", alert=True)
+    return notify_user(message, indicator="green", alert=True, doc=doc)
 
 
 @frappe.whitelist()
@@ -500,7 +475,7 @@ def mark_e_invoice_as_generated(doctype: str, docname: str, values: str | dict |
         }
     )
 
-    return log_and_process_e_invoice_generation(doc, result, message="e-Invoice updated successfully")
+    return log_and_process_e_invoice_generation(doc, result, message=_("e-Invoice updated successfully"))
 
 
 @frappe.whitelist()
@@ -518,9 +493,9 @@ def mark_e_invoice_as_cancelled(doctype: str, docname: str, values: str | dict |
         }
     )
 
-    log_and_process_e_invoice_cancellation(doc, values, result, "e-Invoice marked as cancelled successfully")
-
-    return send_updated_doc(doc)
+    log_and_process_e_invoice_cancellation(
+        doc, values, result, _("e-Invoice marked as cancelled successfully")
+    )
 
 
 def log_e_invoice(doc, log_data):
@@ -1046,7 +1021,7 @@ def auto_cancel_e_invoice_e_waybill(docname: str):
         if not auto_cancel_e_invoice(doc, gst_settings=gst_settings):
             auto_cancel_e_waybill(doc, gst_settings=gst_settings)
     except Exception:
-        notify_action_failure(doc, "e-Invoice / e-Waybill cancellation failed")
+        notify_action_failure(doc, _("e-Invoice / e-Waybill cancellation failed"))
 
 
 def can_auto_cancel_e_invoice(doc, gst_settings=None):
