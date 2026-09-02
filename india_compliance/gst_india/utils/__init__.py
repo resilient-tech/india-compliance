@@ -5,6 +5,7 @@ import inspect
 import io
 import tarfile
 from collections.abc import Callable
+from contextlib import contextmanager
 
 import frappe
 from dateutil import parser
@@ -126,6 +127,24 @@ def run_after_response_or_enqueue(method: Callable, **kwargs):
             frappe.flags.in_after_response = False
 
     frappe.db.after_commit.add(lambda: commit_after_response(run))
+
+
+@contextmanager
+def isolated(title, doc):
+    """Run a side task the way a background job would: a failure inside is rolled back (to a
+    savepoint), logged against the doc and swallowed, so the main flow carries on."""
+    frappe.db.savepoint("isolated")
+
+    try:
+        yield
+    except Exception:
+        frappe.db.rollback(save_point="isolated")
+        frappe.log_error(
+            title=title,
+            message=frappe.get_traceback(),
+            reference_doctype=doc.doctype,
+            reference_name=doc.name,
+        )
 
 
 def send_updated_doc(doc):

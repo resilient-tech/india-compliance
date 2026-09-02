@@ -50,6 +50,7 @@ from india_compliance.gst_india.utils import (
     is_foreign_doc,
     is_overseas_doc,
     is_ship_to_gstin_applicable,
+    isolated,
     load_doc,
     notify_action_failure,
     notify_user,
@@ -103,10 +104,7 @@ def generate_e_invoices(docnames, force=False):
             generate_e_invoice(docname, force=force)
 
         except Exception:
-            notify_action_failure(
-                frappe.get_doc("Sales Invoice", docname),
-                _("e-Invoice generation failed for Sales Invoice {0}").format(docname),
-            )
+            notify_action_failure(frappe.get_doc("Sales Invoice", docname), _("e-Invoice generation failed"))
             frappe.clear_last_message()
 
         finally:
@@ -474,12 +472,8 @@ def mark_e_invoice_as_cancelled(doctype: str, docname: str, values: str | dict |
 
 
 def log_e_invoice(doc, log_data):
-    frappe.enqueue(
-        _log_e_invoice,
-        queue="short",
-        at_front=True,
-        log_data=log_data,
-    )
+    with isolated(_("e-Invoice Log update failed"), doc):
+        _log_e_invoice(log_data)
 
     update_onload(doc, "e_invoice_info", log_data)
 

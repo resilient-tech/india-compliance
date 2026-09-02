@@ -61,6 +61,7 @@ from india_compliance.gst_india.utils import (
     is_response_pending,
     is_same_gstin_allowed,
     is_ship_to_gstin_applicable,
+    isolated,
     load_doc,
     notify_action_failure,
     notify_user,
@@ -148,10 +149,7 @@ def generate_e_waybills(doctype, docnames, force=False):
             doc = load_doc(doctype, docname, "submit")
             _generate_e_waybill(doc, force=force)
         except Exception:
-            notify_action_failure(
-                frappe.get_doc(doctype, docname),
-                _("e-Waybill generation failed for {0} {1}").format(doctype, docname),
-            )
+            notify_action_failure(frappe.get_doc(doctype, docname), _("e-Waybill generation failed"))
 
         finally:
             if not frappe.flags.in_test:
@@ -957,22 +955,26 @@ def get_valid_and_invalid_e_waybill_log(
 
 
 def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
-    frappe.enqueue(
-        _log_and_process_e_waybill,
-        queue="short",
-        at_front=True,
-        doc=doc,
-        log_data=log_data,
-        fetch=fetch,
-        comment=comment,
-    )
+    log = None
+    with isolated(_("e-Waybill Log update failed"), doc):
+        log = log_e_waybill(log_data, comment)
 
     update_onload(doc, "e_waybill_info", log_data)
 
+    if log and (log.is_cancelled or fetch):
+        # the slow bits stay on the queue
+        frappe.enqueue(
+            _process_e_waybill,
+            queue="short",
+            at_front=True,
+            enqueue_after_commit=True,
+            doc=doc,
+            log_name=log.name,
+            fetch=fetch,
+        )
 
-def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
-    ### Log e-Waybill
 
+def log_e_waybill(log_data, comment=None):
     #  fallback to e-Waybill number to avoid duplicate entry error
     log_name = log_data.pop("name", log_data.get("e_waybill_number"))
     try:
@@ -987,8 +989,11 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
     if comment:
         log.add_comment(text=comment)
 
-    if not frappe.flags.in_test:
-        frappe.db.commit()  # nosemgrep # before delete
+    return log
+
+
+def _process_e_waybill(doc, log_name, fetch=False):
+    log = frappe.get_doc("e-Waybill Log", log_name)
 
     if log.is_cancelled:
         delete_file(doc, get_pdf_filename(log.name))
@@ -1005,11 +1010,7 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
 
     ### Attach PDF
 
-    if not frappe.get_cached_value(
-        "GST Settings",
-        "GST Settings",
-        "attach_e_waybill_print",
-    ):
+    if not frappe.get_cached_value("GST Settings", "GST Settings", "attach_e_waybill_print"):
         return
 
     attach_e_waybill_pdf(doc, log)
