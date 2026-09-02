@@ -253,15 +253,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
         return
 
     except NotApplicableError as e:
-        if not frappe.flags.in_test:
-            frappe.db.rollback()
-
-        set_ewaybill_status(
-            doc,
-            "Not Applicable",
-            commit=not frappe.flags.in_test,
-            notify=is_response_pending(),
-        )
+        set_ewaybill_status(doc, "Not Applicable")
 
         if throw:
             raise
@@ -271,15 +263,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
         return
 
     except (frappe.ValidationError, frappe.MandatoryError) as e:
-        if not frappe.flags.in_test:
-            frappe.db.rollback()
-
-        set_ewaybill_status(
-            doc,
-            "Failed",
-            commit=not frappe.flags.in_test,
-            notify=is_response_pending(),
-        )
+        set_ewaybill_status(doc, "Failed")
 
         if throw:
             raise
@@ -298,17 +282,9 @@ def _generate_e_waybill(doc, throw=True, force=False):
         return
 
     except Exception:
-        if not frappe.flags.in_test:
-            frappe.db.rollback()
+        set_ewaybill_status(doc, "Failed")
 
-        set_ewaybill_status(
-            doc,
-            "Failed",
-            commit=not frappe.flags.in_test,
-            notify=is_response_pending(),
-        )
-
-        if throw or is_response_pending():
+        if throw:
             raise
 
         notify_action_failure(doc, _("e-Waybill generation failed"))

@@ -49,7 +49,6 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     is_foreign_doc,
     is_overseas_doc,
-    is_response_pending,
     is_ship_to_gstin_applicable,
     load_doc,
     notify_action_failure,
@@ -200,15 +199,7 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
         return
 
     except NotApplicableError as e:
-        if not frappe.flags.in_test:
-            frappe.db.rollback()
-
-        set_einvoice_status(
-            doc,
-            "Not Applicable",
-            commit=not frappe.flags.in_test,
-            notify=is_response_pending(),
-        )
+        set_einvoice_status(doc, "Not Applicable")
 
         if throw:
             raise
@@ -218,15 +209,7 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
         return
 
     except (frappe.ValidationError, frappe.MandatoryError) as e:
-        if not frappe.flags.in_test:
-            frappe.db.rollback()
-
-        set_einvoice_status(
-            doc,
-            "Failed",
-            commit=not frappe.flags.in_test,
-            notify=is_response_pending(),
-        )
+        set_einvoice_status(doc, "Failed")
 
         if throw:
             raise
@@ -245,17 +228,9 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
         return
 
     except Exception:
-        if not frappe.flags.in_test:
-            frappe.db.rollback()
+        set_einvoice_status(doc, "Failed")
 
-        set_einvoice_status(
-            doc,
-            "Failed",
-            commit=not frappe.flags.in_test,
-            notify=is_response_pending(),
-        )
-
-        if throw or is_response_pending():
+        if throw:
             raise
 
         notify_action_failure(doc, _("e-Invoice generation failed"))

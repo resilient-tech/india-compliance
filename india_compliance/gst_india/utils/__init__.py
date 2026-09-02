@@ -1501,30 +1501,24 @@ def _get_duplicate_gstin_party(gstin, party_type, party=None):
     return list(duplicates_dict.values())
 
 
-def set_einvoice_status(
-    doc,
-    status,
-    *,
-    commit=False,
-    notify=True,
-):
+def set_einvoice_status(doc, status):
+    _set_status_after_failure(doc, "einvoice_status", status)
+
+
+def set_ewaybill_status(doc, status):
+    _set_status_after_failure(doc, "e_waybill_status", status)
+
+
+def _set_status_after_failure(doc, fieldname, status):
+    if not frappe.flags.in_test:
+        frappe.db.rollback()
+
     if doc.doctype != "Sales Invoice":
         return
 
-    doc.db_set("einvoice_status", status, commit=commit, notify=notify)
-
-
-def set_ewaybill_status(
-    doc,
-    status,
-    *,
-    commit=False,
-    notify=True,
-):
-    if doc.doctype != "Sales Invoice":
-        return
-
-    doc.db_set("e_waybill_status", status, commit=commit, notify=notify)
+    # if response is pending, other viewers refetch on doc_update;
+    # else the pushed doc (publish_doc_update) notifies them
+    doc.db_set(fieldname, status, commit=not frappe.flags.in_test, notify=is_response_pending())
 
 
 def has_gst_taxes(doc):
