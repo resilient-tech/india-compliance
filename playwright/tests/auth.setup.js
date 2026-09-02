@@ -21,7 +21,7 @@ setup("authenticate and prepare the desk", async ({ page, baseURL }) => {
     expect(
         ping?.ok(),
         `No Frappe server at ${baseURL}. Start one with:\n\n` +
-            "    cd <bench> && DEV_SERVER=true bench serve --port 8001\n\n" +
+            "    cd <bench> && DEV_SERVER=true bench serve --port 8000\n\n" +
             "It must be a single-process dev server: server-side mocks in " +
             "ui_test_helpers.py keep their state in the serving process.",
     ).toBeTruthy();

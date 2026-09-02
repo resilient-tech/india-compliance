@@ -20,7 +20,7 @@ on:
 env:
   BRANCH: ${{ github.base_ref || github.ref_name }}
   SITE: test_site
-  UI_PORT: "8001"
+  UI_PORT: "8000"
 
 concurrency:
   group: ui-tests-${{ github.event_name }}-${{ github.event.number || github.ref || github.run_id }}
@@ -135,15 +135,8 @@ jobs:
         working-directory: /home/runner/frappe-bench
         run: bench build
 
-      # A second, SINGLE-PROCESS server alongside the honcho stack. Server-side
-      # mocks in ui_test_helpers.py keep their interception in module-level state,
-      # so they only patch the worker that served the request; under gunicorn's
-      # multiple workers a mock would apply to a random subset of calls. Playwright
-      # talks only to :8001, so all such state lives in one process.
-      - name: Start single-process dev server
-        working-directory: /home/runner/frappe-bench
+      - name: Wait for the dev server
         run: |
-          DEV_SERVER=true nohup bench serve --port "$UI_PORT" > ui_server.log 2>&1 &
           timeout 120 bash -c \
             "until curl -sf http://$SITE:$UI_PORT/api/method/ping > /dev/null; do sleep 2; done"
           echo "UI test server ready on :$UI_PORT"
@@ -156,7 +149,7 @@ jobs:
       - name: Run Playwright tests
         run: yarn test:e2e
         env:
-          BASE_URL: http://test_site:8001
+          BASE_URL: http://test_site:8000
           FRAPPE_USER: Administrator
           ADMIN_PASSWORD: admin
 
@@ -180,6 +173,5 @@ jobs:
         if: failure()
         working-directory: /home/runner/frappe-bench
         run: |
-          echo "=== bench serve (:8001) ==="; cat ui_server.log || true
-          echo "=== bench start ==="; cat bench_start.log || true
+          echo "=== bench start (serves :8000) ==="; cat bench_start.log || true
           echo "=== site logs ==="; cat logs/*.log || true
