@@ -582,7 +582,7 @@ Object.assign(india_compliance, {
 
     show_cancel_headline(frm, message, on_click) {
         frm.dashboard
-            .set_headline_alert(`${message} <a href="#">${__("Cancel it")}</a>`, "red", true)
+            .set_headline_alert(`${message} <a href="#">${__("Cancel")}</a>`, "red", true)
             .find("a")
             .on("click", (e) => {
                 e.preventDefault();
