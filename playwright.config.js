@@ -10,9 +10,6 @@ export default defineConfig({
     testDir: "./playwright/tests",
     outputDir: "test-results",
 
-    // Desk specs share server state that cannot be partitioned: the GST Settings
-    // single and the seeded test records. They also run against a single-process
-    // `bench serve`. One worker, in file order.
     fullyParallel: false,
     workers: 1,
 
@@ -34,19 +31,15 @@ export default defineConfig({
         trace: "on-first-retry",
         video: "retain-on-failure",
         screenshot: "only-on-failure",
-        launchOptions: {
-            args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-        },
+        ...(process.env.CI
+            ? {
+                  launchOptions: {
+                      args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+                  },
+              }
+            : {}),
     },
 
-    // There is deliberately no `webServer`: `bench serve` runs from the bench
-    // root two levels up and needs MariaDB and Redis already running, so this
-    // suite expects `bench start` to be up. auth.setup.js pings the server
-    // instead and fails with the command to run.
-    //
-    // The bench must NOT set `serve_default_site`: that pins the dev server to
-    // one site whatever the Host header says, and every spec would silently run
-    // against the default site instead of the test site.
     projects: [
         { name: "setup", testMatch: /.*\.setup\.js/ },
         {
