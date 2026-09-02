@@ -52,10 +52,6 @@ class GSTR:
     # category -> (get_details, list the documents sit in or None for flat records, has items)
     SECTIONS: ClassVar[dict] = {}
 
-    # category -> callable folding the rows of one document together, for the categories the
-    # portal reports in parts
-    GROUPED_SECTIONS: ClassVar[dict] = {}
-
     def __init__(self, company, gstin, return_period, category, gen_date_2b=None):
         self.company = company
         self.gstin = gstin
@@ -100,17 +96,14 @@ class GSTR:
         self.handle_missing_transactions()
 
     def get_all_transactions(self, suppliers):
-        get_details, docs_key, has_items = self.SECTIONS[self.category]
+        get_details, docs_key, has_items, *fold = self.SECTIONS[self.category]
 
         if not docs_key:
             return [self.get_transaction(get_details(record, self)) for record in suppliers]
 
         transactions = list(self.read_suppliers(suppliers, docs_key, get_details, has_items))
 
-        if group_documents := self.GROUPED_SECTIONS.get(self.category):
-            transactions = group_documents(transactions)
-
-        return transactions
+        return fold[0](transactions) if fold else transactions
 
     def read_suppliers(self, suppliers, docs_key, get_details, has_items):
         for supplier in suppliers:

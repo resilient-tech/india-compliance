@@ -358,7 +358,8 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         self.assertEqual(invoice.cgst, 300)
         self.assertEqual(invoice.sgst, 300)
         self.assertEqual(invoice.document_value, 600)
-        # any eligible row makes the document's credit available
+        # the rows carry the eligibility; the document keeps what the portal reported for the part
+        # it arrived under
         self.assertEqual(invoice.itc_availability, "Yes")
 
         credit_note = stored["ISD Credit Note"]

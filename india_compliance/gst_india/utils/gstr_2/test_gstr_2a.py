@@ -271,6 +271,49 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
             [{"ctin": self.gstin, "doclist": [{"docnum": "ISD-NC-1", "iamt": 10, "camt": 5, "samt": 5}]}]
         )
         self.assertEqual(transactions[0].document_value, 20)
+        # no part reported an eligibility, so the document claims neither
+        self.assertIsNone(transactions[0].itc_availability)
+
+    def test_gstr2a_isd_folds_the_parts_of_one_document(self):
+        """2A reports ISD the same way 2B does -- one row per part, under the same number -- so the
+        fold has to hold for both."""
+        from india_compliance.gst_india.utils.gstr_2.gstr_2a import GSTR2a
+
+        handler = GSTR2a(None, self.gstin, "042020", "ISD")
+        transactions = handler.get_all_transactions(
+            [
+                {
+                    "ctin": self.gstin,
+                    "doclist": [
+                        {
+                            "isd_docty": "ISD",
+                            "docnum": "ISD-77",
+                            "docdt": "03-03-2016",
+                            "camt": 200,
+                            "samt": 200,
+                            "itc_elg": "Y",
+                        },
+                        {
+                            "isd_docty": "ISD",
+                            "docnum": "ISD-77",
+                            "docdt": "03-03-2016",
+                            "camt": 100,
+                            "samt": 100,
+                            "itc_elg": "N",
+                        },
+                    ],
+                }
+            ]
+        )
+
+        self.assertEqual(len(transactions), 1)
+        transaction = transactions[0]
+        self.assertEqual(len(transaction["items"]), 2)
+        self.assertEqual({row["itcelg"] for row in transaction["items"]}, {"Y", "N"})
+        self.assertEqual(transaction.cgst, 300)
+        self.assertEqual(transaction.sgst, 300)
+        self.assertEqual(transaction.document_value, 600)
+        self.assertEqual(transaction.itc_availability, "Yes")
 
     def test_gstr2a_isd(self):
         doc = self.get_doc(GSTRCategory.ISD)

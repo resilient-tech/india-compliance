@@ -9,14 +9,15 @@ from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
 
 from . import b2b, cdnr, impg, isd, tds_tcs
 
-# category: (get_details, list the documents sit in or None for flat records, has items)
+# category: (get_details, list the documents sit in or None for flat records, has items), and a
+# fourth element where the portal reports one document in parts that have to fold back together
 SECTIONS_2A = {
     "B2B": (b2b.get_invoice_details_2a, raw2a.INVOICES, True),
     "B2BA": (b2b.get_amended_invoice_details_2a, raw2a.INVOICES, True),
     "CDNR": (cdnr.get_note_details_2a, raw2a.NOTES, True),
     "CDNRA": (cdnr.get_amended_note_details_2a, raw2a.NOTES, True),
-    "ISD": (isd.get_document_details_2a, raw2a.ISD_DOCS, False),
-    "ISDA": (isd.get_document_details_2a, raw2a.ISD_DOCS, False),
+    "ISD": (isd.get_document_details_2a, raw2a.ISD_DOCS, False, isd.fold_parts),
+    "ISDA": (isd.get_document_details_2a, raw2a.ISD_DOCS, False, isd.fold_parts),
     "IMPG": (impg.get_entry_details_2a, None, False),
     "IMPGSEZ": (impg.get_sez_entry_details_2a, None, False),
     "ECOM": (b2b.get_invoice_details_2a, raw2a.INVOICES, True),
@@ -25,16 +26,13 @@ SECTIONS_2A = {
     "TCS": (tds_tcs.get_tcs_details, None, False),
 }
 
-# an ISD reports the eligible and the ineligible half of one document as separate rows
-GROUPED_SECTIONS = dict.fromkeys(("ISD", "ISDA"), isd.group_documents)
-
 SECTIONS_2B = {
     "B2B": (b2b.get_invoice_details_2b, raw2b.INVOICES, True),
     "B2BA": (b2b.get_amended_invoice_details_2b, raw2b.INVOICES, True),
     "CDNR": (cdnr.get_note_details_2b, raw2b.NOTES, True),
     "CDNRA": (cdnr.get_amended_note_details_2b, raw2b.NOTES, True),
-    "ISD": (isd.get_document_details_2b, raw2b.ISD_DOCS, False),
-    "ISDA": (isd.get_amended_document_details_2b, raw2b.ISD_DOCS, False),
+    "ISD": (isd.get_document_details_2b, raw2b.ISD_DOCS, False, isd.fold_parts),
+    "ISDA": (isd.get_amended_document_details_2b, raw2b.ISD_DOCS, False, isd.fold_parts),
     "ECOM": (b2b.get_invoice_details_2b, raw2b.INVOICES, True),
     "ECOMA": (b2b.get_amended_invoice_details_2b, raw2b.INVOICES, True),
     "IMPG": (impg.get_entry_details_2b, None, False),

@@ -4,7 +4,7 @@ import frappe
 
 from india_compliance.gst_india.utils import get_datetime, parse_datetime
 from india_compliance.gst_india.utils.gstr_2.gstr import GSTR, to_period
-from india_compliance.gst_india.utils.gstr_2.sections import GROUPED_SECTIONS, SECTIONS_2A
+from india_compliance.gst_india.utils.gstr_2.sections import SECTIONS_2A
 from india_compliance.gst_returns.fields.gstr2 import Y_N_TO_CHECK
 from india_compliance.gst_returns.fields.gstr2 import DocField as doc
 from india_compliance.gst_returns.fields.gstr2 import ItemField as item
@@ -31,7 +31,6 @@ ITEM_KEYS = {
 
 class GSTR2a(GSTR):
     SECTIONS: ClassVar[dict] = SECTIONS_2A
-    GROUPED_SECTIONS: ClassVar[dict] = GROUPED_SECTIONS
 
     def setup(self):
         super().setup()
