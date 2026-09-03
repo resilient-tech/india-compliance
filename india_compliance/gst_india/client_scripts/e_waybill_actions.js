@@ -51,13 +51,8 @@ function setup_e_waybill_actions(doctype) {
 
             // portal cancel is open for 24h, doc cancelled or not
             if (frm.doc.docstatus === 2) {
-                // if IRN is present, e-Waybill gets cancelled in e-Invoice action
-                if (
-                    !frm.doc.irn &&
-                    frm.doc.ewaybill &&
-                    is_e_waybill_cancellable(frm) &&
-                    frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
-                ) {
+                // with an IRN the e-Waybill goes with it: cancel from the e-Invoice side
+                if (!frm.doc.irn && can_cancel_e_waybill(frm)) {
                     india_compliance.show_cancel_headline(
                         frm,
                         __("e-Waybill is still active and cancellable."),
@@ -189,7 +184,7 @@ function setup_e_waybill_actions(doctype) {
             }
 
             if (frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)) {
-                if (is_e_waybill_cancellable(frm)) {
+                if (can_cancel_e_waybill(frm)) {
                     india_compliance.add_divider_to_btn_group("e-Waybill");
 
                     add_cancel_e_waybill_button(frm);
@@ -679,6 +674,8 @@ function show_mark_e_waybill_as_generated_dialog(frm) {
 }
 
 function add_cancel_e_waybill_button(frm) {
+    if (!can_cancel_e_waybill(frm)) return;
+
     frm.add_custom_button(__("Cancel"), () => show_cancel_e_waybill_dialog(frm), "e-Waybill");
 
     india_compliance.make_text_red("e-Waybill", "Cancel");
@@ -1302,6 +1299,14 @@ function is_e_waybill_cancellable(frm) {
     return (
         e_waybill_info &&
         frappe.datetime.convert_to_user_tz(e_waybill_info.created_on, false).add("days", 1).diff() > 0
+    );
+}
+
+function can_cancel_e_waybill(frm) {
+    return (
+        frm.doc.ewaybill &&
+        is_e_waybill_cancellable(frm) &&
+        frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
     );
 }
 
