@@ -32,7 +32,7 @@ from india_compliance.gst_india.overrides.test_asset_movement import (
 from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
     create_subcontracting_data,
 )
-from india_compliance.gst_india.utils import load_doc, parse_datetime
+from india_compliance.gst_india.utils import load_doc, parse_datetime, run_or_report_failure
 from india_compliance.gst_india.utils.e_invoice import (
     auto_cancel_e_invoice_e_waybill,
     retry_e_invoice_e_waybill_generation,
@@ -435,8 +435,7 @@ class TestEWaybill(IntegrationTestCase):
 
         si.reload()
         # run the deferred portal cancel here, so its writes are visible below
-        with patch("frappe.enqueue"):
-            si.cancel()
+        si.cancel()
         auto_cancel_e_invoice_e_waybill(si.name)
 
         ewaybill_log.reload()
@@ -462,18 +461,27 @@ class TestEWaybill(IntegrationTestCase):
         self._generate_e_waybill(si.name)
         si = load_doc("Sales Invoice", si.name, "cancel")
 
+        e_waybill_cancel_data = self.e_waybill_test_data.get("cancel_e_waybill")
+        self._mock_e_waybill_response(
+            data=e_waybill_cancel_data.get("response_data"),
+            match_list=[matchers.query_string_matcher(e_waybill_cancel_data.get("params"))],
+        )
+
         api_calls_before = len(responses.calls)
 
-        with patch("frappe.enqueue") as mock_enqueue:
+        with patch.object(frappe.local, "is_ajax", True, create=True):  # from the desk
             cancel_e_waybill_e_invoice(si)
 
-        # nothing cancelled on the portal synchronously
-        self.assertEqual(len(responses.calls), api_calls_before)
+            # nothing cancelled on the portal synchronously
+            self.assertEqual(len(responses.calls), api_calls_before)
 
-        # scheduled to run only after the cancel commits
-        mock_enqueue.assert_called_once()
-        self.assertEqual(mock_enqueue.call_args.args[0], auto_cancel_e_invoice_e_waybill)
-        self.assertTrue(mock_enqueue.call_args.kwargs.get("enqueue_after_commit"))
+            # runs once the cancel commits (commit_after_response is inline in tests)
+            frappe.db.after_commit.run()
+
+        si.reload()
+        self.assertEqual(si.ewaybill, "")
+        self.assertEqual(si.e_waybill_status, "Cancelled")
+        self.assertFalse(frappe.flags.in_after_response)
 
     @change_settings(
         "GST Settings",
@@ -483,39 +491,19 @@ class TestEWaybill(IntegrationTestCase):
         },
     )
     @responses.activate
-    def test_portal_cancel_runs_after_response_when_triggered_from_ui(self):
-        """From the desk the portal cancel runs right after the response, not on the queue."""
+    def test_portal_cancel_is_enqueued_outside_the_desk(self):
+        """not an ajax request (REST, worker): the portal cancel goes to the queue, after commit."""
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
         self._generate_e_waybill(si.name)
         si = load_doc("Sales Invoice", si.name, "cancel")
 
-        e_waybill_cancel_data = self.e_waybill_test_data.get("cancel_e_waybill")
-        self._mock_e_waybill_response(
-            data=e_waybill_cancel_data.get("response_data"),
-            match_list=[matchers.query_string_matcher(e_waybill_cancel_data.get("params"))],
-        )
+        with patch("frappe.enqueue") as mock_enqueue:
+            cancel_e_waybill_e_invoice(si)
 
-        api_calls_before = len(responses.calls)
-
-        with (
-            patch.object(frappe.local, "request", frappe._dict(method="POST"), create=True),
-            patch.object(frappe.local, "is_ajax", True, create=True),
-        ):
-            # mock only the scheduling: the cancel itself enqueues its own logging
-            with patch("frappe.enqueue") as mock_enqueue:
-                cancel_e_waybill_e_invoice(si)
-
-            # not handed to a worker, and nothing on the portal until the cancel commits
-            mock_enqueue.assert_not_called()
-            self.assertEqual(len(responses.calls), api_calls_before)
-
-            # commit_after_response runs inline in tests
-            frappe.db.after_commit.run()
-
-        si.reload()
-        self.assertEqual(si.ewaybill, "")
-        self.assertEqual(si.e_waybill_status, "Cancelled")
-        self.assertFalse(frappe.flags.in_after_response)
+        mock_enqueue.assert_called_once()
+        self.assertEqual(mock_enqueue.call_args.args[0], run_or_report_failure)
+        self.assertEqual(mock_enqueue.call_args.kwargs["action"], auto_cancel_e_invoice_e_waybill)
+        self.assertTrue(mock_enqueue.call_args.kwargs["enqueue_after_commit"])
 
     @change_settings("GST Settings", {"auto_cancel_e_waybill": 0})
     @responses.activate
@@ -538,9 +526,7 @@ class TestEWaybill(IntegrationTestCase):
 
     def _cancel_and_run_portal_cancel(self, doc):
         """portal cancel is deferred: run it inline, so its writes are visible to the assertions"""
-        with patch("frappe.enqueue"):
-            doc.cancel()
-
+        doc.cancel()
         auto_cancel_e_waybill_for_doc(doc.doctype, doc.name)
 
     @change_settings(

@@ -45,17 +45,17 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
 from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
 from india_compliance.gst_india.utils import (
     are_goods_supplied,
+    commit,
     handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
     is_overseas_doc,
     is_ship_to_gstin_applicable,
-    isolated,
     load_doc,
-    notify_action_failure,
     notify_user,
     parse_datetime,
-    set_einvoice_status,
+    rollback_and_set_einvoice_status,
+    run_or_report_failure,
     update_onload,
 )
 from india_compliance.gst_india.utils.e_waybill import (
@@ -100,17 +100,14 @@ def generate_e_invoices(docnames, force=False):
     frappe.flags.in_bulk_generation = True
 
     for docname in docnames:
-        try:
-            generate_e_invoice(docname, force=force)
-
-        except Exception:
-            notify_action_failure(frappe.get_doc("Sales Invoice", docname), _("e-Invoice generation failed"))
-            frappe.clear_last_message()
-
-        finally:
-            if not frappe.flags.in_test:
-                # each e-Invoice needs to be committed individually
-                frappe.db.commit()  # nosemgrep
+        run_or_report_failure(
+            generate_e_invoice,
+            "Sales Invoice",
+            docname,
+            _("e-Invoice generation failed"),
+            docname=docname,
+            force=force,
+        )
 
 
 @frappe.whitelist()
@@ -197,7 +194,7 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
         return
 
     except NotApplicableError as e:
-        set_einvoice_status(doc, "Not Applicable")
+        rollback_and_set_einvoice_status(doc, "Not Applicable")
 
         if throw:
             raise
@@ -207,13 +204,12 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
         return
 
     except (frappe.ValidationError, frappe.MandatoryError) as e:
-        set_einvoice_status(doc, "Failed")
+        rollback_and_set_einvoice_status(doc, "Failed")
 
         if throw:
             raise
 
         frappe.clear_last_message()
-        doc.add_comment(text=_("e-Invoice auto-generation failed: {0}").format(str(e)))
         notify_user(
             _(
                 "e-Invoice auto-generation failed with error:<br>{0}<br><br>"
@@ -226,13 +222,8 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
         return
 
     except Exception:
-        set_einvoice_status(doc, "Failed")
-
-        if throw:
-            raise
-
-        notify_action_failure(doc, _("e-Invoice generation failed"))
-        return
+        rollback_and_set_einvoice_status(doc, "Failed")
+        raise
 
     return log_and_process_e_invoice_generation(doc, result, api.sandbox_mode)
 
@@ -393,9 +384,7 @@ def _cancel_e_invoice(doc, values):
     if doc.get("ewaybill"):
         _cancel_e_waybill(doc, values)
 
-        # e-Waybill gone from portal for good -> save now, a later IRN fail can't undo it
-        if not frappe.flags.in_test:
-            frappe.db.commit()  # nosemgrep
+        commit()  # e-Waybill gone from portal for good: a later IRN failure can't undo it
 
     data = {
         "Irn": doc.irn,
@@ -472,13 +461,6 @@ def mark_e_invoice_as_cancelled(doctype: str, docname: str, values: str | dict |
 
 
 def log_e_invoice(doc, log_data):
-    with isolated(_("e-Invoice Log update failed"), doc):
-        _log_e_invoice(log_data)
-
-    update_onload(doc, "e_invoice_info", log_data)
-
-
-def _log_e_invoice(log_data):
     #  fallback to IRN to avoid duplicate entry error
     log_name = log_data.pop("name", log_data.get("irn"))
     try:
@@ -489,6 +471,8 @@ def _log_e_invoice(log_data):
 
     log.update(log_data)
     log.save(ignore_permissions=True)
+
+    update_onload(doc, "e_invoice_info", log_data)
 
 
 def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
@@ -985,12 +969,9 @@ def auto_cancel_e_invoice_e_waybill(docname: str):
     if not is_api_enabled(gst_settings):
         return
 
-    try:
-        # IRN cancel takes its e-Waybill with it
-        if not auto_cancel_e_invoice(doc, gst_settings=gst_settings):
-            auto_cancel_e_waybill(doc, gst_settings=gst_settings)
-    except Exception:
-        notify_action_failure(doc, _("e-Invoice / e-Waybill cancellation failed"))
+    # IRN cancel takes its e-Waybill with it
+    if not auto_cancel_e_invoice(doc, gst_settings=gst_settings):
+        auto_cancel_e_waybill(doc, gst_settings=gst_settings)
 
 
 def can_auto_cancel_e_invoice(doc, gst_settings=None):

@@ -174,7 +174,9 @@ def on_submit(doc, method=None):
 
     # applicability is settled in validate: the status says what is still pending
     if gst_settings.auto_generate_e_invoice and doc.einvoice_status == "Pending":
-        run_after_response_or_enqueue(generate_e_invoice, docname=doc.name, throw=False)
+        run_after_response_or_enqueue(
+            generate_e_invoice, doc, _("e-Invoice generation failed"), docname=doc.name, throw=False
+        )
         return
 
     if (
@@ -183,7 +185,9 @@ def on_submit(doc, method=None):
         and not doc.is_debit_note
         and not doc.is_return
     ):
-        run_after_response_or_enqueue(generate_e_waybill, doctype=doc.doctype, docname=doc.name)
+        run_after_response_or_enqueue(
+            generate_e_waybill, doc, _("e-Waybill generation failed"), doctype=doc.doctype, docname=doc.name
+        )
 
 
 def before_cancel(doc, method=None):
@@ -235,7 +239,12 @@ def cancel_e_waybill_e_invoice(doc, method=None):
         return
 
     if can_auto_cancel_e_invoice(doc, gst_settings) or can_auto_cancel_e_waybill(doc, gst_settings):
-        run_after_response_or_enqueue(auto_cancel_e_invoice_e_waybill, docname=doc.name)
+        run_after_response_or_enqueue(
+            auto_cancel_e_invoice_e_waybill,
+            doc,
+            _("e-Invoice / e-Waybill cancellation failed"),
+            docname=doc.name,
+        )
 
 
 def is_e_waybill_applicable(doc, gst_settings=None):

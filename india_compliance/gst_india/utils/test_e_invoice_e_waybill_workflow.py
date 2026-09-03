@@ -9,6 +9,7 @@ from india_compliance.exceptions import (
     GSPServerError,
     NotApplicableError,
 )
+from india_compliance.gst_india.utils import run_or_report_failure
 from india_compliance.gst_india.utils.e_invoice import (
     generate_e_invoice,
     generate_e_invoices,
@@ -470,7 +471,15 @@ class TestEWaybillWorkflow(WorkflowTestBase):
     def test_auto_gen_unhandled_exception_logs_and_sets_failed(self):
         with patch(E_WAYBILL_DATA) as mock_data:
             mock_data.side_effect = RuntimeError("Unexpected")
-            _generate_e_waybill(self.si, throw=False)
+            # the after-response runner catches, logs and reports it
+            run_or_report_failure(
+                _generate_e_waybill,
+                "Sales Invoice",
+                self.si.name,
+                "e-Waybill generation failed",
+                doc=self.si,
+                throw=False,
+            )
 
         self.si.reload()
         self.assertEqual(self.si.e_waybill_status, "Failed")

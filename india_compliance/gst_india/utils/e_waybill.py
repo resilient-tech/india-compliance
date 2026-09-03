@@ -53,6 +53,7 @@ from india_compliance.gst_india.overrides.transaction import (
     is_inter_state_supply,
 )
 from india_compliance.gst_india.utils import (
+    commit,
     get_items,
     handle_server_errors,
     is_api_enabled,
@@ -61,14 +62,13 @@ from india_compliance.gst_india.utils import (
     is_response_pending,
     is_same_gstin_allowed,
     is_ship_to_gstin_applicable,
-    isolated,
     load_doc,
-    notify_action_failure,
     notify_user,
     parse_datetime,
+    rollback_and_set_ewaybill_status,
     run_after_response_or_enqueue,
+    run_or_report_failure,
     send_updated_doc,
-    set_ewaybill_status,
     update_onload,
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
@@ -145,16 +145,12 @@ def generate_e_waybills(doctype, docnames, force=False):
     frappe.flags.in_bulk_generation = True
 
     for docname in docnames:
-        try:
-            doc = load_doc(doctype, docname, "submit")
-            _generate_e_waybill(doc, force=force)
-        except Exception:
-            notify_action_failure(frappe.get_doc(doctype, docname), _("e-Waybill generation failed"))
-
-        finally:
-            if not frappe.flags.in_test:
-                # each e-Waybill needs to be committed individually
-                frappe.db.commit()  # nosemgrep
+        run_or_report_failure(
+            lambda: _generate_e_waybill(load_doc(doctype, docname, "submit"), force=force),
+            doctype,
+            docname,
+            _("e-Waybill generation failed"),
+        )
 
 
 # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
@@ -164,8 +160,7 @@ def generate_e_waybill(*, doctype: str, docname: str, values: str | dict | None 
     doc = load_doc(doctype, docname, "submit")
     if values:
         update_transaction(doc, frappe.parse_json(values))
-        if not frappe.flags.in_test:
-            frappe.db.commit()  # save details even if generation fails: nosemgrep
+        commit()  # save details even if generation fails
 
     _generate_e_waybill(doc, throw=True if values else False, force=force)
 
@@ -251,7 +246,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
         return
 
     except NotApplicableError as e:
-        set_ewaybill_status(doc, "Not Applicable")
+        rollback_and_set_ewaybill_status(doc, "Not Applicable")
 
         if throw:
             raise
@@ -261,13 +256,12 @@ def _generate_e_waybill(doc, throw=True, force=False):
         return
 
     except (frappe.ValidationError, frappe.MandatoryError) as e:
-        set_ewaybill_status(doc, "Failed")
+        rollback_and_set_ewaybill_status(doc, "Failed")
 
         if throw:
             raise
 
         frappe.clear_last_message()
-        doc.add_comment(text=_("e-Waybill auto-generation failed: {0}").format(str(e)))
         notify_user(
             _(
                 "e-Waybill auto-generation failed with error:<br>{0}<br><br>"
@@ -280,13 +274,8 @@ def _generate_e_waybill(doc, throw=True, force=False):
         return
 
     except Exception:
-        set_ewaybill_status(doc, "Failed")
-
-        if throw:
-            raise
-
-        notify_action_failure(doc, _("e-Waybill generation failed"))
-        return
+        rollback_and_set_ewaybill_status(doc, "Failed")
+        raise
 
     if result.error_code == "604":
         error_message = (
@@ -955,15 +944,14 @@ def get_valid_and_invalid_e_waybill_log(
 
 
 def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
-    log = None
-    with isolated(_("e-Waybill Log update failed"), doc):
-        log = log_e_waybill(log_data, comment)
-
+    log = log_e_waybill(log_data, comment)
     update_onload(doc, "e_waybill_info", log_data)
 
-    if log and (log.is_cancelled or fetch):
+    if log.is_cancelled or fetch:
         # the slow bits: after the response
-        run_after_response_or_enqueue(_process_e_waybill, doc=doc, log_name=log.name, fetch=fetch)
+        run_after_response_or_enqueue(
+            _process_e_waybill, doc, _("e-Waybill fetch / attach failed"), doc=doc, log=log, fetch=fetch
+        )
 
 
 def log_e_waybill(log_data, comment=None):
@@ -984,9 +972,7 @@ def log_e_waybill(log_data, comment=None):
     return log
 
 
-def _process_e_waybill(doc, log_name, fetch=False):
-    log = frappe.get_doc("e-Waybill Log", log_name)
-
+def _process_e_waybill(doc, log, fetch=False):
     if log.is_cancelled:
         delete_file(doc, get_pdf_filename(log.name))
         publish_pdf_update(doc, pdf_deleted=True)
@@ -997,6 +983,7 @@ def _process_e_waybill(doc, log_name, fetch=False):
         return
 
     _fetch_e_waybill_data(doc, log)
+    commit()  # after fetch
 
     ### Attach PDF
 
@@ -1895,6 +1882,8 @@ def before_cancel(doc, method=None):
 
     run_after_response_or_enqueue(
         auto_cancel_e_waybill_for_doc,
+        doc,
+        _("e-Waybill cancellation failed"),
         doctype=doc.doctype,
         docname=doc.name,
     )
@@ -1906,10 +1895,7 @@ def auto_cancel_e_waybill_for_doc(doctype: str, docname: str):
     if not doc.ewaybill:
         return
 
-    try:
-        auto_cancel_e_waybill(doc)
-    except Exception:
-        notify_action_failure(doc, _("e-Waybill cancellation failed"))
+    auto_cancel_e_waybill(doc)
 
 
 def can_auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
