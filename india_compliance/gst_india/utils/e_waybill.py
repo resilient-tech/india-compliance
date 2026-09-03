@@ -53,17 +53,22 @@ from india_compliance.gst_india.overrides.transaction import (
     is_inter_state_supply,
 )
 from india_compliance.gst_india.utils import (
+    commit,
     get_items,
     handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
     is_inward_transaction,
+    is_response_pending,
     is_same_gstin_allowed,
     is_ship_to_gstin_applicable,
     load_doc,
+    notify_user,
     parse_datetime,
+    rollback_and_set_ewaybill_status,
+    run_after_response_or_enqueue,
+    run_or_report_failure,
     send_updated_doc,
-    set_ewaybill_status,
     update_onload,
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
@@ -137,23 +142,15 @@ def generate_e_waybills(doctype, docnames, force=False):
     """
     Bulk generate e-Waybill for the given documents.
     """
+    frappe.flags.in_bulk_generation = True
 
     for docname in docnames:
-        try:
-            doc = load_doc(doctype, docname, "submit")
-            _generate_e_waybill(doc, force=force)
-        except Exception:
-            frappe.log_error(
-                title=_("e-Waybill generation failed for {0} {1}").format(doctype, docname),
-                message=frappe.get_traceback(),
-                reference_doctype=doctype,
-                reference_name=docname,
-            )
-
-        finally:
-            if not frappe.flags.in_test:
-                # each e-Waybill needs to be committed individually
-                frappe.db.commit()  # nosemgrep
+        run_or_report_failure(
+            lambda: _generate_e_waybill(load_doc(doctype, docname, "submit"), force=force),
+            doctype,
+            docname,
+            _("e-Waybill generation failed"),
+        )
 
 
 # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
@@ -163,6 +160,7 @@ def generate_e_waybill(*, doctype: str, docname: str, values: str | dict | None 
     doc = load_doc(doctype, docname, "submit")
     if values:
         update_transaction(doc, frappe.parse_json(values))
+        commit()  # save details even if generation fails
 
     _generate_e_waybill(doc, throw=True if values else False, force=force)
 
@@ -243,70 +241,40 @@ def _generate_e_waybill(doc, throw=True, force=False):
         if throw:
             raise
 
-        if frappe.request:
-            frappe.clear_last_message()
-            frappe.msgprint(str(e), _("Warning"), indicator="yellow", alert=True)
-
+        frappe.clear_last_message()
+        notify_user(str(e), _("Warning"), indicator="yellow", alert=True)
         return
 
     except NotApplicableError as e:
-        if not frappe.flags.in_test:
-            frappe.db.rollback()
-
-        set_ewaybill_status(
-            doc,
-            "Not Applicable",
-            commit=not frappe.flags.in_test,
-            notify=bool(frappe.request),
-        )
+        rollback_and_set_ewaybill_status(doc, "Not Applicable")
 
         if throw:
             raise
 
-        if frappe.request:
-            frappe.clear_last_message()
-            frappe.msgprint(str(e), _("e-Waybill Not Applicable"))
-
+        frappe.clear_last_message()
+        notify_user(str(e), _("e-Waybill Not Applicable"), doc=doc)
         return
 
     except (frappe.ValidationError, frappe.MandatoryError) as e:
-        if not frappe.flags.in_test:
-            frappe.db.rollback()
-
-        set_ewaybill_status(
-            doc,
-            "Failed",
-            commit=not frappe.flags.in_test,
-            notify=bool(frappe.request),
-        )
+        rollback_and_set_ewaybill_status(doc, "Failed")
 
         if throw:
             raise
 
-        if frappe.request:
-            frappe.clear_last_message()
-            frappe.msgprint(
-                _(
-                    "e-Waybill auto-generation failed with error:<br>{0}<br><br>"
-                    "Please rectify this issue and generate e-Waybill manually."
-                ).format(str(e)),
-                _("Warning"),
-                indicator="yellow",
-            )
-
+        frappe.clear_last_message()
+        notify_user(
+            _(
+                "e-Waybill auto-generation failed with error:<br>{0}<br><br>"
+                "Please rectify this issue and generate e-Waybill manually."
+            ).format(str(e)),
+            _("Warning"),
+            indicator="yellow",
+            doc=doc,
+        )
         return
 
     except Exception:
-        if not frappe.flags.in_test:
-            frappe.db.rollback()
-
-        set_ewaybill_status(
-            doc,
-            "Failed",
-            commit=not frappe.flags.in_test,
-            notify=bool(frappe.request),
-        )
-
+        rollback_and_set_ewaybill_status(doc, "Failed")
         raise
 
     if result.error_code == "604":
@@ -318,20 +286,13 @@ def _generate_e_waybill(doc, throw=True, force=False):
 
     log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
 
-    if not frappe.request:
-        return
-
-    frappe.msgprint(
-        (
-            _("e-Waybill generated successfully")
-            if result.validUpto or result.EwbValidTill
-            else _("e-Waybill (Part A) generated successfully")
-        ),
-        indicator="green",
-        alert=True,
+    message = (
+        _("e-Waybill generated successfully")
+        if result.validUpto or result.EwbValidTill
+        else _("e-Waybill (Part A) generated successfully")
     )
 
-    return send_updated_doc(doc)
+    return notify_user(message, indicator="green", alert=True, doc=doc)
 
 
 def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
@@ -384,8 +345,6 @@ def cancel_e_waybill(*, doctype: str, docname: str, values: str | dict | frappe.
     values = frappe.parse_json(values)
     _cancel_e_waybill(doc, values)
 
-    return send_updated_doc(doc)
-
 
 def _cancel_e_waybill(doc, values):
     """Separate function, since called in backend from e-invoice utils"""
@@ -406,11 +365,7 @@ def _cancel_e_waybill(doc, values):
 
     log_and_process_e_waybill_cancellation(doc, values, result)
 
-    frappe.msgprint(
-        _("e-Waybill cancelled successfully"),
-        indicator="green",
-        alert=True,
-    )
+    return notify_user(_("e-Waybill cancelled successfully"), indicator="green", alert=True, doc=doc)
 
 
 def log_and_process_e_waybill_cancellation(doc, values, result):
@@ -471,12 +426,6 @@ def update_vehicle_info(*, doctype: str, docname: str, values: str | dict | frap
     data = EWaybillData(doc).get_update_vehicle_data(values)
     result = EWaybillAPI.create(doc).update_vehicle_info(data)
 
-    frappe.msgprint(
-        _("Vehicle Info updated successfully"),
-        indicator="green",
-        alert=True,
-    )
-
     # Vehicle Info update labels and date fields for change log
     VEHICLE_INFO_LABEL_MAP = {
         "vehicle_no": "Vehicle No",
@@ -509,7 +458,7 @@ def update_vehicle_info(*, doctype: str, docname: str, values: str | dict | frap
         comment=comment,
     )
 
-    return send_updated_doc(doc)
+    return notify_user(_("Vehicle Info updated successfully"), indicator="green", alert=True, doc=doc)
 
 
 def _bulk_update_transporter_in_docs(doctype, docnames, values):
@@ -580,12 +529,6 @@ def update_transporter(*, doctype: str, docname: str, values: str | dict | frapp
     data = EWaybillData(doc).get_update_transporter_data(values)
     EWaybillAPI.create(doc).update_transporter(data)
 
-    frappe.msgprint(
-        _("Transporter Info updated successfully"),
-        indicator="green",
-        alert=True,
-    )
-
     # Transporter Name can be different from Transporter
     transporter_name = (
         frappe.db.get_value("Supplier", values.transporter, "supplier_name") if values.transporter else None
@@ -618,7 +561,7 @@ def update_transporter(*, doctype: str, docname: str, values: str | dict | frapp
         comment=comment,
     )
 
-    return send_updated_doc(doc)
+    return notify_user(_("Transporter Info updated successfully"), indicator="green", alert=True, doc=doc)
 
 
 # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
@@ -753,15 +696,14 @@ def schedule_ewaybill_for_extension(
         scheduled_time=scheduled_time,
     )
 
-    frappe.msgprint(
+    return notify_user(
         _("e-Waybill successfully scheduled for extension at {scheduled_time}").format(
             scheduled_time=scheduled_time
         ),
         indicator="green",
         alert=True,
+        doc=doc,
     )
-
-    return send_updated_doc(doc)
 
 
 def generate_pending_e_waybills():
@@ -918,7 +860,7 @@ def publish_pdf_update(doc, pdf_deleted=False):
     get_docinfo(doc)
 
     # if it's a request, frappe.response["docinfo"] will get synced automatically
-    if frappe.request:
+    if is_response_pending():
         return
 
     frappe.publish_realtime(
@@ -1002,22 +944,17 @@ def get_valid_and_invalid_e_waybill_log(
 
 
 def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
-    frappe.enqueue(
-        _log_and_process_e_waybill,
-        queue="short",
-        at_front=True,
-        doc=doc,
-        log_data=log_data,
-        fetch=fetch,
-        comment=comment,
-    )
-
+    log = log_e_waybill(log_data, comment)
     update_onload(doc, "e_waybill_info", log_data)
 
+    if log.is_cancelled or fetch:
+        # the slow bits: after the response
+        run_after_response_or_enqueue(
+            _process_e_waybill, doc, _("e-Waybill fetch / attach failed"), doc=doc, log=log, fetch=fetch
+        )
 
-def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
-    ### Log e-Waybill
 
+def log_e_waybill(log_data, comment=None):
     #  fallback to e-Waybill number to avoid duplicate entry error
     log_name = log_data.pop("name", log_data.get("e_waybill_number"))
     try:
@@ -1032,9 +969,10 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
     if comment:
         log.add_comment(text=comment)
 
-    if not frappe.flags.in_test:
-        frappe.db.commit()  # nosemgrep # before delete
+    return log
 
+
+def _process_e_waybill(doc, log, fetch=False):
     if log.is_cancelled:
         delete_file(doc, get_pdf_filename(log.name))
         publish_pdf_update(doc, pdf_deleted=True)
@@ -1045,16 +983,11 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         return
 
     _fetch_e_waybill_data(doc, log)
-    if not frappe.flags.in_test:
-        frappe.db.commit()  # nosemgrep # after fetch
+    commit()  # after fetch
 
     ### Attach PDF
 
-    if not frappe.get_cached_value(
-        "GST Settings",
-        "GST Settings",
-        "attach_e_waybill_print",
-    ):
+    if not frappe.get_cached_value("GST Settings", "GST Settings", "attach_e_waybill_print"):
         return
 
     attach_e_waybill_pdf(doc, log)
@@ -1938,35 +1871,54 @@ class EWaybillData(GSTTransactionData):
 
 
 def before_cancel(doc, method=None):
-    if not doc.get("ewaybill"):
+    """portal cancel can't be undone -> only once the doc cancel is saved."""
+    if not doc.get("ewaybill") or not is_api_enabled():
         return
 
-    gst_settings = frappe.get_cached_doc("GST Settings")
+    run_onload(doc)  # can_auto_cancel_e_waybill reads e_waybill_info
 
-    if not is_api_enabled(gst_settings):
+    if not can_auto_cancel_e_waybill(doc):
         return
 
-    run_onload(doc)
+    run_after_response_or_enqueue(
+        auto_cancel_e_waybill_for_doc,
+        doc,
+        _("e-Waybill cancellation failed"),
+        doctype=doc.doctype,
+        docname=doc.name,
+    )
 
-    auto_cancel_e_waybill(doc, gst_settings=gst_settings)
+
+def auto_cancel_e_waybill_for_doc(doctype: str, docname: str):
+    doc = load_doc(doctype, docname, "cancel")
+
+    if not doc.ewaybill:
+        return
+
+    auto_cancel_e_waybill(doc)
+
+
+def can_auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
+    """auto-cancel setting on + e-Waybill still within the 24h cancel window?"""
+    gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
+
+    if not (doc.ewaybill and gst_settings.enable_e_waybill and gst_settings.auto_cancel_e_waybill):
+        return False
+
+    e_waybill_info = e_waybill_info or doc.get_onload().get("e_waybill_info", {})
+    generated_on = e_waybill_info.get("created_on")
+    return bool(generated_on) and add_days(generated_on, 1) >= get_datetime()
 
 
 def auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
     gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
 
-    if not (doc.ewaybill and gst_settings.enable_e_waybill and gst_settings.auto_cancel_e_waybill):
-        return
-
-    e_waybill_info = e_waybill_info or doc.get_onload().get("e_waybill_info", {})
-    generated_on = e_waybill_info.get("created_on")
-    reason = gst_settings.reason_for_e_waybill_cancellation
-
-    if not generated_on or (add_days(generated_on, 1) < get_datetime()):
+    if not can_auto_cancel_e_waybill(doc, gst_settings, e_waybill_info):
         return
 
     values = frappe._dict(
         {
-            "reason": reason,
+            "reason": gst_settings.reason_for_e_waybill_cancellation,
             "remark": "",
         }
     )

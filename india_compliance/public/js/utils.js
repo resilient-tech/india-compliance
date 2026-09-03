@@ -580,6 +580,28 @@ Object.assign(india_compliance, {
         return { options, current_year };
     },
 
+    // Yes: true, No or close: false
+    warn(title, message) {
+        return new Promise((resolve) => {
+            let proceed = false;
+            const d = frappe.warn(title, message, () => (proceed = true), __("Yes"), false, __("No"));
+            d.onhide = () => resolve(proceed);
+        });
+    },
+
+    show_cancel_headline(frm, message, on_click) {
+        frm.dashboard.set_headline_alert(
+            `${message} <a class="ic-cancel-link" href="#">${__("Cancel")}</a>`,
+            "red",
+            true,
+        );
+
+        frm.layout.message.find(".ic-cancel-link").on("click", (e) => {
+            e.preventDefault();
+            on_click();
+        });
+    },
+
     primary_to_danger_btn(parent) {
         parent.$wrapper.find(".btn-primary").removeClass("btn-primary").addClass("btn-danger");
     },
