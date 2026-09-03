@@ -275,18 +275,15 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
         frappe.db.commit()  # nosemgrep
 
-    @check_error_logged_for_doc("Sales Invoice", "Unexpected")
-    def test_auto_gen_ui_unhandled_exception_logs_and_sets_failed(self):
-        """throw=False never raises: the failure is logged, commented and reported, not thrown."""
+    def test_auto_gen_ui_unhandled_exception_raises(self):
+        """throw=False covers the known failures; an unexpected one is raised (HTTP 500).
+        The status is saved as Failed before that (see the server test: tests skip commits, so
+        the 500's rollback hides it across the HTTP boundary)."""
         with patch(E_INVOICE_DATA) as mock_data:
             mock_data.side_effect = RuntimeError("Unexpected")
             response = self._post_e_invoice(self.si.name, throw=False)
 
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(_response_message_contains(response, "e-Invoice generation failed"))
-
-        self.si.reload()
-        self.assertEqual(self.si.einvoice_status, "Failed")
+        self.assertEqual(response.status_code, 500)
 
     # =====================================================================
     # Auto-generation Server Workflow  (throw=False, NO request context)
@@ -328,13 +325,13 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         frappe.db.commit()  # nosemgrep
 
     def test_auto_gen_server_unhandled_exception_raises(self):
+        """raised whatever `throw` says, after the status is saved as Failed"""
         with patch(E_INVOICE_DATA) as mock_data:
             mock_data.side_effect = RuntimeError("Unexpected")
-            self.assertRaises(
-                RuntimeError,
-                generate_e_invoice,
-                self.si.name,
-            )
+            self.assertRaises(RuntimeError, generate_e_invoice, self.si.name, throw=False)
+
+        self.si.reload()
+        self.assertEqual(self.si.einvoice_status, "Failed")
 
 
 class TestEWaybillWorkflow(WorkflowTestBase):
@@ -471,7 +468,7 @@ class TestEWaybillWorkflow(WorkflowTestBase):
     def test_auto_gen_unhandled_exception_logs_and_sets_failed(self):
         with patch(E_WAYBILL_DATA) as mock_data:
             mock_data.side_effect = RuntimeError("Unexpected")
-            # the after-response runner catches, logs and reports it
+            # raised by the generator; the after-response runner logs and reports it
             run_or_report_failure(
                 _generate_e_waybill,
                 "Sales Invoice",
