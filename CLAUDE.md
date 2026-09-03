@@ -6,6 +6,7 @@ india_compliance — GST / Income Tax layer on ERPNext. Extends ERPNext, never f
 - If uncertain: say UNKNOWN or omit. Do not guess.
 - Bullets > prose. Prefer deletion over verbosity.
 - Do not rewrite whole files; make surgical edits.
+- **Write ZERO comments** — no one-liners, banners, TODOs, or docstrings. Leave the exsisting comments alone. The only exception: a docstring on a `@frappe.whitelist()` method, and only when I ask for it.
 - Cite as `path/file.py:42`. No summary `.md` files.
 
 ## Setup / Test

@@ -11,6 +11,14 @@
       "Bash(bench --site * run-tests:*)",
       "Bash(bench --site * list-apps)",
       "Bash(bench build --app india_compliance:*)"
+    ],
+    "ask": [
+      "Bash(git commit)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(git push:*)",
+      "Bash(gh pr)",
+      "Bash(gh pr:*)"
     ]
   }
 }
