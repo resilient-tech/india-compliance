@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 
 import FormController from "./form";
-import { placeOfSupplyPattern } from "../test_records";
+import { placeOfSupplyState, stateCode } from "../test_records";
 
 export default class TransactionController extends FormController {
     async setSupplier(supplier) {
@@ -32,9 +32,9 @@ export default class TransactionController extends FormController {
 
     async assertPlaceOfSupplyMatches(gstin) {
         await this.docValue(
-            (doc) => doc.place_of_supply,
+            (doc) => placeOfSupplyState(doc.place_of_supply),
             `place_of_supply should be in the company's state (${gstin})`,
-        ).toMatch(placeOfSupplyPattern(gstin));
+        ).toBe(stateCode(gstin));
 
         return this;
     }

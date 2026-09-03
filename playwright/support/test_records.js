@@ -35,7 +35,7 @@ export function stateCode(gstin) {
     return gstin.slice(0, 2);
 }
 
-/** Matches a `place_of_supply` value ("24-Gujarat") against a GSTIN's state. */
-export function placeOfSupplyPattern(gstin) {
-    return new RegExp(`^${stateCode(gstin)}-`);
+/** The state code half of a `place_of_supply` ("24-Gujarat" -> "24"). */
+export function placeOfSupplyState(placeOfSupply) {
+    return (placeOfSupply || "").split("-")[0];
 }
