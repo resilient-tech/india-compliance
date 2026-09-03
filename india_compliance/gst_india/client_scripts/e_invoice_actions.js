@@ -5,7 +5,7 @@ frappe.ui.form.on("Sales Invoice", {
 
         if (
             frm.doc.irn &&
-            frm.doc.docstatus == 2 &&
+            frm.doc.docstatus === 2 &&
             frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
         ) {
             frm.add_custom_button(

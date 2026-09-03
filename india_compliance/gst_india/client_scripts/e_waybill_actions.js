@@ -49,7 +49,7 @@ function setup_e_waybill_actions(doctype) {
 
             if (
                 frm.doc.ewaybill &&
-                frm.doc.docstatus == 2 &&
+                frm.doc.docstatus === 2 &&
                 frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
             ) {
                 frm.add_custom_button(
