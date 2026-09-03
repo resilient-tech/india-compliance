@@ -47,6 +47,20 @@ function setup_e_waybill_actions(doctype) {
             if (frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode)
                 frm.get_field("ewaybill").set_description("Generated in Sandbox Mode");
 
+            if (
+                frm.doc.ewaybill &&
+                frm.doc.docstatus == 2 &&
+                frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
+            ) {
+                frm.add_custom_button(
+                    __("Mark as Cancelled"),
+                    () => show_mark_e_waybill_as_cancelled_dialog(frm),
+                    "e-Waybill",
+                );
+
+                india_compliance.make_text_red("e-Waybill", "Mark as Cancelled");
+            }
+
             if (!is_e_waybill_api_enabled(frm) || frm.is_dirty()) return;
 
             // portal cancel is open for 24h, doc cancelled or not
@@ -127,6 +141,8 @@ function setup_e_waybill_actions(doctype) {
                         () => show_mark_e_waybill_as_cancelled_dialog(frm),
                         "e-Waybill",
                     );
+
+                    india_compliance.make_text_red("e-Waybill", "Mark as Cancelled");
                 }
                 return;
             }

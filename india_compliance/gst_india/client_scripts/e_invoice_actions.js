@@ -13,9 +13,11 @@ frappe.ui.form.on("Sales Invoice", {
                 () => show_mark_e_invoice_as_cancelled_dialog(frm),
                 "e-Invoice",
             );
+
+            india_compliance.make_text_red("e-Invoice", "Mark as Cancelled");
         }
 
-        if (!india_compliance.is_e_invoice_enabled() || !is_valid_e_invoice_applicability_date(frm)) return;
+        if (!india_compliance.is_e_invoice_enabled()) return;
 
         // portal cancel is open for 24h, invoice cancelled or not
         if (frm.doc.docstatus === 2) {
@@ -29,48 +31,54 @@ frappe.ui.form.on("Sales Invoice", {
             return;
         }
 
-        const is_einv_generatable = is_e_invoice_generatable(frm, true);
+        // the applicability date gates generation only; an existing IRN stays cancellable
+        if (is_valid_e_invoice_applicability_date(frm)) add_e_invoice_generation_buttons(frm);
 
-        if (frm.doc.docstatus === 0 || !is_einv_generatable) {
-            frm.add_custom_button(
-                __("Applicability Status"),
-                () => show_e_invoice_applicability_status(frm, is_einv_generatable),
-                "e-Invoice",
-            );
-
-            return;
-        }
-
-        if (!frm.doc.irn && frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)) {
-            frm.add_custom_button(
-                __("Generate"),
-                () => {
-                    frappe.call({
-                        method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
-                        args: { docname: frm.doc.name, force: true },
-                        callback: async (r) => {
-                            if (r.message?.error_code == "2283") {
-                                await taxpayer_api.call({
-                                    method: "india_compliance.gst_india.utils.e_invoice.handle_duplicate_irn_error",
-                                    args: r.message,
-                                });
-                            }
-                            frm.refresh();
-                        },
-                    });
-                },
-                "e-Invoice",
-            );
-
-            frm.add_custom_button(
-                __("Mark as Generated"),
-                () => show_mark_e_invoice_as_generated_dialog(frm),
-                "e-Invoice",
-            );
-        }
         add_cancel_e_invoice_button(frm);
     },
 });
+
+function add_e_invoice_generation_buttons(frm) {
+    const is_einv_generatable = is_e_invoice_generatable(frm, true);
+
+    if (frm.doc.docstatus === 0 || !is_einv_generatable) {
+        frm.add_custom_button(
+            __("Applicability Status"),
+            () => show_e_invoice_applicability_status(frm, is_einv_generatable),
+            "e-Invoice",
+        );
+
+        return;
+    }
+
+    if (!frm.doc.irn && frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)) {
+        frm.add_custom_button(
+            __("Generate"),
+            () => {
+                frappe.call({
+                    method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
+                    args: { docname: frm.doc.name, force: true },
+                    callback: async (r) => {
+                        if (r.message?.error_code == "2283") {
+                            await taxpayer_api.call({
+                                method: "india_compliance.gst_india.utils.e_invoice.handle_duplicate_irn_error",
+                                args: r.message,
+                            });
+                        }
+                        frm.refresh();
+                    },
+                });
+            },
+            "e-Invoice",
+        );
+
+        frm.add_custom_button(
+            __("Mark as Generated"),
+            () => show_mark_e_invoice_as_generated_dialog(frm),
+            "e-Invoice",
+        );
+    }
+}
 
 function is_irn_cancellable(frm) {
     const e_invoice_info = frm.doc.__onload && frm.doc.__onload.e_invoice_info;
