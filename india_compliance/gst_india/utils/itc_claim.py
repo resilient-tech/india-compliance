@@ -380,7 +380,6 @@ def _warn_if_gstr3b_filed(company_gstin: str, period: str | None) -> None:
     frappe.msgprint(
         _("GSTR-3B is already filed for ITC Claim Period {0}").format(period),
         indicator="orange",
-        alert=True,
     )
 
 
