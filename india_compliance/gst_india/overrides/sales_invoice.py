@@ -23,17 +23,25 @@ from india_compliance.gst_india.utils import (
     get_validated_country_code,
     is_api_enabled,
     is_foreign_doc,
+<<<<<<< HEAD
+=======
+    run_after_response_or_enqueue,
+    update_dashboard_with_gst_logs,
+>>>>>>> a24e8c7 (fix: multiple fixes for e-Invoice e-Waybill workflows (#4621))
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (
-    auto_cancel_e_invoice,
+    auto_cancel_e_invoice_e_waybill,
+    can_auto_cancel_e_invoice,
+    generate_e_invoice,
     get_e_invoice_info,
     validate_e_invoice_applicability,
     validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import (
     _get_e_waybill_threshold,
-    auto_cancel_e_waybill,
+    can_auto_cancel_e_waybill,
+    generate_e_waybill,
     get_e_waybill_info,
 )
 from india_compliance.gst_india.utils.transaction_data import (
@@ -159,38 +167,28 @@ def on_submit(doc, method=None):
     validate_backdated_transaction(doc)
 
     # Checks to validate generation of e-Invoice
-    if getattr(doc, "_submitted_from_ui", None) or validate_transaction(doc) is False:
+    if validate_transaction(doc) is False:
         return
 
     gst_settings = frappe.get_cached_doc("GST Settings")
     if not is_api_enabled(gst_settings):
         return
 
-    if (
-        validate_e_invoice_applicability(doc, gst_settings, throw=False)
-        and gst_settings.auto_generate_e_invoice
-    ):
-        frappe.enqueue(
-            "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
-            enqueue_after_commit=True,
-            queue="short",
-            docname=doc.name,
+    # applicability is settled in validate: the status says what is still pending
+    if gst_settings.auto_generate_e_invoice and doc.einvoice_status == "Pending":
+        run_after_response_or_enqueue(
+            generate_e_invoice, doc, _("e-Invoice generation failed"), docname=doc.name, throw=False
         )
-
         return
 
     if (
         gst_settings.auto_generate_e_waybill
-        and is_e_waybill_applicable(doc, gst_settings)
+        and doc.e_waybill_status == "Pending"
         and not doc.is_debit_note
         and not doc.is_return
     ):
-        frappe.enqueue(
-            "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
-            enqueue_after_commit=True,
-            queue="short",
-            doctype=doc.doctype,
-            docname=doc.name,
+        run_after_response_or_enqueue(
+            generate_e_waybill, doc, _("e-Waybill generation failed"), doctype=doc.doctype, docname=doc.name
         )
 
 
@@ -237,15 +235,18 @@ def validate_cancellation_based_on_e_invoice(doc):
 
 
 def cancel_e_waybill_e_invoice(doc, method=None):
+    """portal cancel can't be undone -> only once the SI cancel is saved."""
     gst_settings = frappe.get_cached_doc("GST Settings")
-
     if not is_api_enabled(gst_settings):
         return
 
-    if auto_cancel_e_invoice(doc, gst_settings=gst_settings):
-        return
-
-    auto_cancel_e_waybill(doc, gst_settings=gst_settings)
+    if can_auto_cancel_e_invoice(doc, gst_settings) or can_auto_cancel_e_waybill(doc, gst_settings):
+        run_after_response_or_enqueue(
+            auto_cancel_e_invoice_e_waybill,
+            doc,
+            _("e-Invoice / e-Waybill cancellation failed"),
+            docname=doc.name,
+        )
 
 
 def is_e_waybill_applicable(doc, gst_settings=None):

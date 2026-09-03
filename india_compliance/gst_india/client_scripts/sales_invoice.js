@@ -24,10 +24,6 @@ frappe.ui.form.on(DOCTYPE, {
         });
     },
 
-    before_submit(frm) {
-        frm.doc._submitted_from_ui = 1;
-    },
-
     refresh(frm) {
         set_e_waybill_status_options(frm);
         gst_invoice_warning(frm);
