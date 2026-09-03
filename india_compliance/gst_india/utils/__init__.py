@@ -122,13 +122,21 @@ def run_after_response_or_enqueue(method: Callable, **kwargs):
         return
 
     def run():
-        # frappe logs any failure here
+        # frappe gives each of these its own savepoint and logs any failure
         frappe.flags.in_after_response = True
 
         try:
             method(**kwargs)
+
+            if not frappe.flags.in_test:
+                frappe.db.commit()  # nosemgrep # realtime updates go out on commit
+
         finally:
             frappe.flags.in_after_response = False
+
+    if frappe.flags.in_after_response:
+        commit_after_response(run)  # already past the response: frappe runs it next
+        return
 
     frappe.db.after_commit.add(lambda: commit_after_response(run))
 

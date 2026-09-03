@@ -962,16 +962,8 @@ def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
     update_onload(doc, "e_waybill_info", log_data)
 
     if log and (log.is_cancelled or fetch):
-        # the slow bits stay on the queue
-        frappe.enqueue(
-            _process_e_waybill,
-            queue="short",
-            at_front=True,
-            enqueue_after_commit=True,
-            doc=doc,
-            log_name=log.name,
-            fetch=fetch,
-        )
+        # the slow bits: after the response
+        run_after_response_or_enqueue(_process_e_waybill, doc=doc, log_name=log.name, fetch=fetch)
 
 
 def log_e_waybill(log_data, comment=None):
@@ -1005,8 +997,6 @@ def _process_e_waybill(doc, log_name, fetch=False):
         return
 
     _fetch_e_waybill_data(doc, log)
-    if not frappe.flags.in_test:
-        frappe.db.commit()  # nosemgrep # after fetch
 
     ### Attach PDF
 

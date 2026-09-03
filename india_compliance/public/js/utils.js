@@ -590,17 +590,16 @@ Object.assign(india_compliance, {
     },
 
     show_cancel_headline(frm, message, on_click) {
-        frm.dashboard.set_headline_alert(message, "red", true);
+        frm.dashboard.set_headline_alert(
+            `${message} <a class="ic-cancel-link" href="#">${__("Cancel")}</a>`,
+            "red",
+            true,
+        );
 
-        const link = $('<a href="#"></a>')
-            .text(__("Cancel"))
-            .on("click", (e) => {
-                e.preventDefault();
-                on_click();
-            });
-
-        // set_headline_alert returns the block only on frappe >= 17; the container works everywhere
-        frm.layout.message.children().last().append(" ", link);
+        frm.layout.message.find(".ic-cancel-link").on("click", (e) => {
+            e.preventDefault();
+            on_click();
+        });
     },
 
     primary_to_danger_btn(parent) {

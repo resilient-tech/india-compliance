@@ -689,18 +689,17 @@ function confirm_portal_cancellation(frm) {
     // IRN cancel takes its e-Waybill with it
     if (frm.doc.irn) return confirm_irn_cancellation(frm);
 
-    if (frm.doc.ewaybill && india_compliance.is_api_enabled() && gst_settings.enable_e_waybill)
-        return confirm_e_waybill_cancellation(frm);
+    if (frm.doc.ewaybill) return confirm_e_waybill_cancellation(frm);
 
     return Promise.resolve(true);
 }
 
 function confirm_e_waybill_cancellation(frm) {
-    if (!is_e_waybill_cancellable(frm))
+    if (!is_e_waybill_api_enabled(frm) || !is_e_waybill_cancellable(frm))
         return india_compliance.warn(
             __("Cannot Cancel e-Waybill"),
             __(
-                `The e-Waybill created against this invoice cannot be
+                `The e-Waybill created against this document cannot be
                         cancelled.<br><br>
 
                         Do you want to continue anyway?`,
@@ -1462,7 +1461,7 @@ function is_cancel_transition(frm) {
     );
     const next_state = workflow.states.find((s) => s.state === transition?.next_state);
 
-    return cint(next_state?.doc_status) === 2;
+    return frm.doc.docstatus === 1 && cint(next_state?.doc_status) === 2;
 }
 
 function setup_gst_update_notifications(doctype) {
