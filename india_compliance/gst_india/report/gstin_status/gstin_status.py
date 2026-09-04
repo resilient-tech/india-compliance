@@ -6,6 +6,8 @@ from frappe import _
 from frappe.query_builder import Case, Order
 from frappe.query_builder.functions import IfNull, LiteralValue
 
+PARTY_TYPES = ("Customer", "Supplier")
+
 
 def execute(filters: dict | None = None):
     report = GSTINDetailedReport(filters=filters)
@@ -18,14 +20,14 @@ def execute(filters: dict | None = None):
 class GSTINDetailedReport:
     def __init__(self, filters: dict | None = None):
         self.filters = frappe._dict(filters or {})
-        if self.filters.party_type and self.filters.party_type not in ["Customer", "Supplier"]:
+        if self.filters.party_type and self.filters.party_type not in PARTY_TYPES:
             frappe.throw(
                 _("Party Type must be either 'Customer' or 'Supplier'. You provided: {0}").format(
                     self.filters.party_type
                 )
             )
 
-        self.doctypes = [self.filters.party_type] if self.filters.party_type else ["Customer", "Supplier"]
+        self.doctypes = (self.filters.party_type,) if self.filters.party_type else PARTY_TYPES
 
         self.is_naming_series = "Naming Series" in (
             frappe.db.get_single_value("Buying Settings", "supp_master_name"),
