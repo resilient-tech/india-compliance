@@ -34,6 +34,9 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
     link_documents as _link_documents,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
+    sync_details as _sync_details,
+)
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     unlink_documents as _unlink_documents,
 )
 from india_compliance.gst_india.utils import (
@@ -278,6 +281,14 @@ class PurchaseReconciliationTool(Document):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         purchases, inward_supplies = _unlink_documents(data, exclude_from_reconciliation)
+
+        return self.ReconciledData.get(purchases, inward_supplies)
+
+    @frappe.whitelist()
+    def sync_details(self, data: str | list, fields: str | list | None = None):
+        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
+        purchases, inward_supplies = _sync_details(data, fields, tool=self.doctype)
 
         return self.ReconciledData.get(purchases, inward_supplies)
 

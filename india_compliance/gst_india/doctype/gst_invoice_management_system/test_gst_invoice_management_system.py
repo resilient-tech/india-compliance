@@ -3,7 +3,7 @@
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import add_to_date
+from frappe.utils import add_to_date, getdate
 
 from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     InwardSupply,
@@ -647,6 +647,79 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         )
 
         self.assertFalse(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
+
+    def test_sync_details(self):
+        """
+        Bill no / date reported in IMS are copied onto the linked Purchase Invoice, and
+        the synced rows come back as IMS invoice data so the grid can be refreshed.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="IMS-SYNC-001",
+            bill_date="2024-12-11",
+            posting_date="2024-12-11",
+            supplier="_Test Registered Supplier",
+            supplier_gstin="24AABCR6898M1ZN",
+            company="_Test Indian Registered Company",
+            company_gstin="24AAQCA8719H1ZC",
+            items=[
+                {
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1,
+                }
+            ],
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="IMS-SYNC-001-A",
+            bill_date="2024-12-15",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-15",
+            previous_ims_action="No Action",
+            ims_action="No Action",
+        )
+        self.addCleanup(self.delete_inward_supply, gst_is.name)
+        frappe.db.set_value(
+            "GST Inward Supply",
+            gst_is.name,
+            {"link_doctype": "Purchase Invoice", "link_name": pinv.name},
+        )
+
+        # the grid sends the row back as it was rendered, purchase_doctype and all
+        row = {
+            "purchase_invoice_name": pinv.name,
+            "inward_supply_name": gst_is.name,
+            "purchase_doctype": "Purchase Invoice",
+        }
+        result = self.gst_ims.sync_details([row], fields=["bill_no", "bill_date"])
+
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv.name, ["bill_no", "bill_date"], as_dict=True),
+            {"bill_no": "IMS-SYNC-001-A", "bill_date": getdate("2024-12-15")},
+        )
+
+        # db.set_value writes no version, so the comment is what shows on the timeline
+        comments = frappe.get_all(
+            "Comment",
+            filters={
+                "reference_doctype": "Purchase Invoice",
+                "reference_name": pinv.name,
+                "comment_type": "Info",
+                "content": ("like", "%GST Invoice Management System%"),
+            },
+            pluck="content",
+        )
+        self.assertEqual(len(comments), 1)
+        self.assertIn("IMS-SYNC-001-A", comments[0])
+
+        # rows come back IMS shaped, with what a re-sync of the same row needs
+        self.assertEqual([synced.inward_supply_name for synced in result], [gst_is.name])
+        self.assertEqual(result[0].purchase_invoice_name, pinv.name)
+        self.assertEqual(result[0].purchase_doctype, "Purchase Invoice")
+        self.assertEqual(result[0].ims_action, "No Action")
+        self.assertEqual(result[0].bill_no, "IMS-SYNC-001-A")
+
+        # now in agreement: nothing left to sync
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            self.gst_ims.sync_details([row], fields=["bill_no", "bill_date"])
 
     def get_periods(self):
         periods = []

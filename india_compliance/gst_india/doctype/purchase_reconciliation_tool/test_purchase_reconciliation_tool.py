@@ -2,10 +2,12 @@
 # See license.txt
 
 import datetime
+import json
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.tests.utils import make_test_objects
+from frappe.utils import getdate
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -645,6 +647,352 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         names = {row.purchase_invoice_name for row in result} | {row.inward_supply_name for row in result}
         self.assertIn(pinv.name, names)
         self.assertIn(gst_is.name, names)
+
+    def test_sync_details_for_purchase_invoice(self):
+        """
+        Bill no / date reported in 2A/2B are copied onto the Purchase Invoice and left on
+        its timeline. A row already in agreement is untouched.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="SYNC-PI-001",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-001-A",
+            bill_date="2024-02-05",
+            return_period_2b="022024",
+        )
+
+        matched_pinv = create_purchase_invoice(
+            bill_no="SYNC-PI-002",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        matched_gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-002",
+            bill_date="2024-02-01",
+            return_period_2b="022024",
+        )
+
+        prt = self.get_reconciliation_tool()
+        for purchase, inward_supply in (
+            (pinv, gst_is),
+            (matched_pinv, matched_gst_is),
+        ):
+            prt.link_documents(purchase.name, inward_supply.name, "Purchase Invoice")
+
+        result = prt.sync_details(
+            [
+                {
+                    "purchase_invoice_name": pinv.name,
+                    "inward_supply_name": gst_is.name,
+                    "purchase_doctype": "Purchase Invoice",
+                },
+                {
+                    "purchase_invoice_name": matched_pinv.name,
+                    "inward_supply_name": matched_gst_is.name,
+                    "purchase_doctype": "Purchase Invoice",
+                },
+            ],
+            fields=["bill_no", "bill_date"],
+        )
+
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv.name, ["bill_no", "bill_date"], as_dict=True),
+            {"bill_no": "SYNC-PI-001-A", "bill_date": getdate("2024-02-05")},
+        )
+
+        # db.set_value writes no version, so the comment is what shows on the timeline
+        comments = frappe.get_all(
+            "Comment",
+            filters={
+                "reference_doctype": "Purchase Invoice",
+                "reference_name": pinv.name,
+                "comment_type": "Info",
+                "content": ("like", "%Purchase Reconciliation Tool%"),
+            },
+            pluck="content",
+        )
+        self.assertEqual(len(comments), 1)
+        self.assertIn("SYNC-PI-001-A", comments[0])
+
+        # set_value adds modified / modified_by to the dict it is given, those are not changes
+        self.assertNotIn("Last Updated", comments[0])
+
+        # nothing changed on the row already in agreement, so it gets no sync comment
+        self.assertFalse(
+            frappe.db.exists(
+                "Comment",
+                {
+                    "reference_doctype": "Purchase Invoice",
+                    "reference_name": matched_pinv.name,
+                    "content": ("like", "%Purchase Reconciliation Tool%"),
+                },
+            )
+        )
+
+        # already in agreement: nothing written, nothing returned
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", matched_pinv.name, "bill_no"), "SYNC-PI-002")
+        self.assertEqual([row.purchase_invoice_name for row in result], [pinv.name])
+
+    def test_sync_details_for_a_single_field(self):
+        """
+        The detail view syncs one field at a time, so the other must be left alone.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="SYNC-PI-003",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-003-A",
+            bill_date="2024-02-07",
+            return_period_2b="022024",
+        )
+
+        prt = self.get_reconciliation_tool()
+        prt.link_documents(pinv.name, gst_is.name, "Purchase Invoice")
+
+        row = {
+            "purchase_invoice_name": pinv.name,
+            "inward_supply_name": gst_is.name,
+            "purchase_doctype": "Purchase Invoice",
+        }
+        # the dialog sends its checked fields over the wire, so they arrive json encoded
+        prt.sync_details(json.dumps([row]), fields=json.dumps(["bill_date"]))
+
+        booked = frappe.db.get_value("Purchase Invoice", pinv.name, ["bill_no", "bill_date"], as_dict=True)
+        self.assertEqual(booked.bill_date, getdate("2024-02-07"))
+        self.assertEqual(booked.bill_no, "SYNC-PI-003")
+
+        # an unrecognised field must throw an error and not fall back to syncing everything
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            prt.sync_details([row], fields=["supplier_gstin"])
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "SYNC-PI-003")
+
+    def test_sync_details_skips_docs_without_differences(self):
+        """
+        A document syncs only when at least one of the requested fields differs.
+        Differences in fields that were not requested don't count.
+        """
+        # all requested fields already in agreement
+        agreed_pinv = create_purchase_invoice(
+            bill_no="SYNC-PI-004",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        agreed_gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-004",
+            bill_date="2024-02-01",
+            return_period_2b="022024",
+        )
+
+        # bill_no differs, but only bill_date will be requested
+        pinv = create_purchase_invoice(
+            bill_no="SYNC-PI-005",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-005-A",
+            bill_date="2024-02-01",
+            return_period_2b="022024",
+        )
+
+        prt = self.get_reconciliation_tool()
+        for purchase, inward_supply in (
+            (agreed_pinv, agreed_gst_is),
+            (pinv, gst_is),
+        ):
+            prt.link_documents(purchase.name, inward_supply.name, "Purchase Invoice")
+
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            prt.sync_details(
+                [
+                    {
+                        "purchase_invoice_name": agreed_pinv.name,
+                        "inward_supply_name": agreed_gst_is.name,
+                        "purchase_doctype": "Purchase Invoice",
+                    },
+                ],
+                fields=["bill_no", "bill_date"],
+            )
+
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            prt.sync_details(
+                [
+                    {
+                        "purchase_invoice_name": pinv.name,
+                        "inward_supply_name": gst_is.name,
+                        "purchase_doctype": "Purchase Invoice",
+                    },
+                ],
+                fields=["bill_date"],
+            )
+
+        # nothing written, nothing logged on either document
+        for purchase_name, bill_no in ((agreed_pinv.name, "SYNC-PI-004"), (pinv.name, "SYNC-PI-005")):
+            self.assertEqual(
+                frappe.db.get_value(
+                    "Purchase Invoice", purchase_name, ["bill_no", "bill_date"], as_dict=True
+                ),
+                {"bill_no": bill_no, "bill_date": getdate("2024-02-01")},
+            )
+            self.assertFalse(
+                frappe.db.exists(
+                    "Comment",
+                    {
+                        "reference_doctype": "Purchase Invoice",
+                        "reference_name": purchase_name,
+                        "comment_type": "Info",
+                        "content": ("like", "%Purchase Reconciliation Tool%"),
+                    },
+                )
+            )
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_sync_details_for_bill_of_entry(self):
+        """
+        A Bill of Entry carries the bill no / date on its own fields, so the sync must
+        write there instead.
+        """
+        boe = create_boe(bill_no="SYNC-BOE-001")
+        gst_is = create_gst_inward_supply(
+            bill_no="SYNC-BOE-001-A",
+            bill_date="2023-12-15",
+            classification="IMPG",
+            return_period_2b="122023",
+        )
+
+        matched_boe = create_boe(bill_no="SYNC-BOE-002")
+        matched_gst_is = create_gst_inward_supply(
+            bill_no="SYNC-BOE-002",
+            bill_date=matched_boe.bill_of_entry_date,
+            classification="IMPG",
+            return_period_2b="122023",
+        )
+
+        prt = self.get_reconciliation_tool()
+        for purchase, inward_supply in (
+            (boe, gst_is),
+            (matched_boe, matched_gst_is),
+        ):
+            prt.link_documents(purchase.name, inward_supply.name, "Bill of Entry")
+
+        result = prt.sync_details(
+            [
+                {
+                    "purchase_invoice_name": boe.name,
+                    "inward_supply_name": gst_is.name,
+                    "purchase_doctype": "Bill of Entry",
+                },
+                {
+                    "purchase_invoice_name": matched_boe.name,
+                    "inward_supply_name": matched_gst_is.name,
+                    "purchase_doctype": "Bill of Entry",
+                },
+            ],
+            fields=["bill_no", "bill_date"],
+        )
+
+        self.assertEqual(
+            frappe.db.get_value(
+                "Bill of Entry",
+                boe.name,
+                ["bill_of_entry_no", "bill_of_entry_date"],
+                as_dict=True,
+            ),
+            {"bill_of_entry_no": "SYNC-BOE-001-A", "bill_of_entry_date": getdate("2023-12-15")},
+        )
+
+        self.assertTrue(
+            frappe.db.exists(
+                "Comment",
+                {
+                    "reference_doctype": "Bill of Entry",
+                    "reference_name": boe.name,
+                    "comment_type": "Info",
+                },
+            )
+        )
+
+        # already in agreement: nothing written, nothing returned
+        self.assertEqual(
+            frappe.db.get_value("Bill of Entry", matched_boe.name, "bill_of_entry_no"),
+            "SYNC-BOE-002",
+        )
+        self.assertEqual([row.purchase_invoice_name for row in result], [boe.name])
+
+    def test_sync_details_does_not_blank_booked_values(self):
+        """
+        The bill no differs but 2A/2B reports no bill date, so only the bill no may be
+        written. Whether a document is worth syncing is a per row question, but what to
+        write is a per field one.
+        """
+        prt = self.get_reconciliation_tool()
+        pinv, gst_is = self.get_fixture_pair("BILL-23-00040")  # reported bill no BILL-23-00045
+
+        frappe.db.set_value("GST Inward Supply", gst_is, "bill_date", None)
+        self.addCleanup(frappe.db.set_value, "GST Inward Supply", gst_is, "bill_date", "2023-12-11")
+
+        prt.sync_details([self.sync_row(pinv, gst_is)], fields=["bill_no", "bill_date"])
+
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv, ["bill_no", "bill_date"], as_dict=True),
+            {"bill_no": "BILL-23-00045", "bill_date": getdate("2023-12-11")},
+        )
+
+    def test_sync_details_uses_the_stored_link_doctype(self):
+        """
+        purchase_doctype comes off a grid row that may be stale or missing. The stored
+        link_doctype is what decides where the values are booked.
+        """
+        prt = self.get_reconciliation_tool()
+        boe, gst_is = self.get_fixture_pair("BILL-23-00011")  # a Bill of Entry pair
+
+        frappe.db.set_value("GST Inward Supply", gst_is, "bill_no", "BILL-23-00011-A")
+        self.addCleanup(frappe.db.set_value, "GST Inward Supply", gst_is, "bill_no", "BILL-23-00011")
+
+        row = self.sync_row(boe, gst_is)
+        row.pop("purchase_doctype")
+
+        result = prt.sync_details([row], fields=["bill_no"])
+
+        self.assertEqual(frappe.db.get_value("Bill of Entry", boe, "bill_of_entry_no"), "BILL-23-00011-A")
+        self.assertEqual([row.purchase_invoice_name for row in result], [boe])
+
+    def get_fixture_pair(self, bill_no):
+        """(purchase, inward supply) of a linked pair created from the shared test json"""
+        for names, row in self.reconciled_data.items():
+            if row.get("bill_no") == bill_no:
+                return names
+
+        self.fail(f"No test fixture with bill no {bill_no}")
+
+    def sync_row(self, purchase_name, inward_supply_name):
+        """a grid row as the client sends it to sync_details"""
+        return {
+            "purchase_invoice_name": purchase_name,
+            "inward_supply_name": inward_supply_name,
+            "purchase_doctype": frappe.db.get_value("GST Inward Supply", inward_supply_name, "link_doctype"),
+        }
+
+    def get_reconciliation_tool(self):
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2023-12-01",
+                "to_date": "2024-02-29",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        # rebuilds ReconciledData for these filters, as the tool does on Generate
+        prt.reconcile_and_generate_data()
+
+        return prt
 
     def test_cdnr_debit_note_matches_regular_purchase_invoice(self):
         """
