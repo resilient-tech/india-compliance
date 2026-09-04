@@ -53,21 +53,12 @@ from india_compliance.gst_india.overrides.transaction import (
     is_inter_state_supply,
 )
 from india_compliance.gst_india.utils import (
-<<<<<<< HEAD
+    commit,
     handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
     is_outward_stock_entry,
-=======
-    commit,
-    get_items,
-    handle_server_errors,
-    is_api_enabled,
-    is_foreign_doc,
-    is_inward_transaction,
     is_response_pending,
-    is_same_gstin_allowed,
->>>>>>> a24e8c7 (fix: multiple fixes for e-Invoice e-Waybill workflows (#4621))
     is_ship_to_gstin_applicable,
     load_doc,
     notify_user,

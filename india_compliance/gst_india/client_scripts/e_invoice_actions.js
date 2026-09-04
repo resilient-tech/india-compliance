@@ -88,44 +88,10 @@ function is_irn_cancellable(frm) {
     );
 }
 
-<<<<<<< HEAD
-function show_cancel_e_invoice_dialog(frm, callback) {
-    const d = new frappe.ui.Dialog({
-        title: frm.doc.ewaybill ? __("Cancel e-Invoice and e-Waybill") : __("Cancel e-Invoice"),
-        fields: get_cancel_e_invoice_dialog_fields(frm),
-        primary_action_label: frm.doc.ewaybill
-            ? __("Cancel IRN, e-Waybill & Invoice")
-            : __("Cancel IRN & Invoice"),
-        primary_action(values) {
-            frappe.call({
-                method: "india_compliance.gst_india.utils.e_invoice.cancel_e_invoice",
-                args: {
-                    docname: frm.doc.name,
-                    values: values,
-                },
-                callback: function () {
-                    frm.refresh();
-                    callback && callback();
-                },
-            });
-            d.hide();
-        },
-    });
-
-    india_compliance.primary_to_danger_btn(d);
-    d.show();
-
-    $(`
-        <div class="alert alert-warning" role="alert">
-            ${__("Sales invoice will be cancelled along with the IRN.")}
-        </div>
-    `).prependTo(d.wrapper);
-=======
 function can_cancel_irn(frm) {
     return (
         frm.doc.irn && is_irn_cancellable(frm) && frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
     );
->>>>>>> a24e8c7 (fix: multiple fixes for e-Invoice e-Waybill workflows (#4621))
 }
 
 function add_cancel_e_invoice_button(frm) {

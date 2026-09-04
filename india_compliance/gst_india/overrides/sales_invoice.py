@@ -23,11 +23,7 @@ from india_compliance.gst_india.utils import (
     get_validated_country_code,
     is_api_enabled,
     is_foreign_doc,
-<<<<<<< HEAD
-=======
     run_after_response_or_enqueue,
-    update_dashboard_with_gst_logs,
->>>>>>> a24e8c7 (fix: multiple fixes for e-Invoice e-Waybill workflows (#4621))
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (

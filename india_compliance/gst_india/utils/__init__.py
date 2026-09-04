@@ -13,7 +13,6 @@ from erpnext.accounts.utils import get_fiscal_year
 from erpnext.stock.get_item_details import purchase_doctypes
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
-from frappe.database.utils import commit_after_response
 from frappe.desk.form.load import run_onload
 from frappe.query_builder.functions import Length
 from frappe.utils import (
@@ -55,6 +54,7 @@ from india_compliance.gst_india.constants import (
     UOM_MAP,
     VALID_HSN_LENGTHS,
 )
+from india_compliance.gst_india.utils.after_response import commit_after_response
 
 
 def get_state(state_number):
