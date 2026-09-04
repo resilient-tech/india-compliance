@@ -32,7 +32,14 @@ from india_compliance.gst_india.overrides.test_asset_movement import (
 from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
     create_subcontracting_data,
 )
-from india_compliance.gst_india.utils import load_doc, parse_datetime, run_or_report_failure
+from india_compliance.gst_india.utils import (
+    clear_server_down,
+    is_server_down,
+    load_doc,
+    mark_server_down,
+    parse_datetime,
+    run_or_report_failure,
+)
 from india_compliance.gst_india.utils.e_invoice import (
     auto_cancel_e_invoice_e_waybill,
     retry_e_invoice_e_waybill_generation,
@@ -98,6 +105,11 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         update_dates_for_test_data(cls.e_waybill_test_data)
+
+    def setUp(self):
+        super().setUp()
+        # server error in one test shouldn't fail fast the next
+        clear_server_down("e-Invoice", "e-Waybill")
 
     def test_get_data(self):
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
@@ -1133,7 +1145,7 @@ class TestEWaybill(IntegrationTestCase):
     @responses.activate
     def test_schedule_e_waybill_for_extension(self):
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
-        self._generate_e_waybill(si.name, force=True)
+        self._generate_e_waybill(si.name)
         doc = load_doc("Sales Invoice", si.name, "submit")
 
         valid_upto = frappe.db.get_value("e-Waybill Log", doc.ewaybill, "valid_upto")
@@ -1317,6 +1329,8 @@ class TestEWaybill(IntegrationTestCase):
             frappe.get_cached_value("GST Settings", "GST Settings", "is_retry_einv_ewb_generation_pending"),
             1,
         )
+        # next requests fail fast, till the retry run probes again
+        self.assertTrue(is_server_down("e-Waybill"))
 
         retry_ewb_test_date = self.e_waybill_test_data.goods_item_with_ewaybill
 
@@ -1332,6 +1346,7 @@ class TestEWaybill(IntegrationTestCase):
         retry_e_invoice_e_waybill_generation()
         si = load_doc("Sales Invoice", si.name, "submit")
 
+        self.assertFalse(is_server_down("e-Waybill"))
         self.assertEqual(si.e_waybill_status, "Generated")
         self.assertEqual(
             si.ewaybill,
@@ -1420,6 +1435,44 @@ class TestEWaybill(IntegrationTestCase):
         with self.assertRaises(frappe.exceptions.ValidationError) as cm:
             doc = load_doc("Sales Invoice", si.name, "submit")
             _generate_e_waybill(doc)
+
+        self.assertIn("GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception))
+
+    @responses.activate
+    @change_settings("GST Settings", {"use_fallback_for_nic": 1, "enable_e_invoice": 1})
+    def test_generate_e_waybill_with_irn_ignores_e_waybill_outage(self):
+        """e-Waybill with Irn goes to the e-Invoice portal, so an e-Waybill outage shouldn't stop it"""
+
+        test_data = self.e_waybill_test_data.get("ewaybill_gstin_error_3029")
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            qty=1000,
+            transporter="_Test Common Supplier",
+            distance=10,
+            mode_of_transport="Road",
+            irn="12345678901234567",
+        )
+
+        responses.add(
+            responses.POST,
+            BASE_URL + "/test/ei/api/ewaybill",
+            json=test_data.get("error_response_enriched"),
+            status=200,
+        )
+
+        responses.add(
+            responses.GET,
+            BASE_URL + "/test/ei/api/master/syncgstin",
+            match=[matchers.query_param_matcher({"gstin": "29AAACI1195H2ZH"})],
+            json=test_data.get("sync_gstin_response_inactive"),
+            status=200,
+        )
+
+        mark_server_down("e-Waybill")
+
+        # error is from the portal, so the request was sent
+        with self.assertRaises(frappe.exceptions.ValidationError) as cm:
+            _generate_e_waybill(load_doc("Sales Invoice", si.name, "submit"))
 
         self.assertIn("GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception))
 
@@ -1831,7 +1884,7 @@ class TestEWaybill(IntegrationTestCase):
         self.assertEqual(e_waybill_data.get("actToStateCode"), 24)
 
     # helper functions
-    def _generate_e_waybill(self, docname=None, doctype="Sales Invoice", test_data=None, force=False):
+    def _generate_e_waybill(self, docname=None, doctype="Sales Invoice", test_data=None):
         """
         Mocks response for generate_e_waybill and get_e_waybill.
         Calls generate_e_waybill function.
@@ -1868,7 +1921,7 @@ class TestEWaybill(IntegrationTestCase):
 
         values = frappe._dict(test_data.get("values")) if test_data.get("values") else None
 
-        generate_e_waybill(doctype=doctype, docname=docname, values=values, force=force)
+        generate_e_waybill(doctype=doctype, docname=docname, values=values)
 
     def _mock_e_waybill_response(self, data, match_list, method="POST", api=None, replace=False):
         """
@@ -2310,6 +2363,10 @@ class TestSubcontractingInwardEWaybill(IntegrationTestCase):
             "GST Settings",
             {"enable_api": 1, "enable_e_waybill": 1, "enable_e_waybill_for_sc": 1},
         )
+
+    def setUp(self):
+        super().setUp()
+        clear_server_down("e-Invoice", "e-Waybill")
 
     @staticmethod
     def _set_transport_details(stock_entry, sub_supply_desc):

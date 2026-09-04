@@ -17,7 +17,7 @@ from india_compliance.gst_india.constants import SHIP_TO_GSTIN_APPLICABLE_DATE
 from india_compliance.gst_india.overrides.test_transaction import (
     create_refund_transaction,
 )
-from india_compliance.gst_india.utils import load_doc
+from india_compliance.gst_india.utils import clear_server_down, load_doc
 from india_compliance.gst_india.utils.e_invoice import (
     EInvoiceData,
     cancel_e_invoice,
@@ -60,6 +60,11 @@ class EInvoiceTestMixin:
             )
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
+
+    def setUp(self):
+        super().setUp()
+        # server error in one test shouldn't fail fast the next
+        clear_server_down("e-Invoice", "e-Waybill")
 
     def _mock_e_invoice_response(self, data, api="ei/api/invoice"):
         """Mock response for e-Invoice API"""

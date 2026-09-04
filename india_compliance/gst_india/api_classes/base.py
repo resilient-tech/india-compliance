@@ -14,7 +14,12 @@ from india_compliance.exceptions import (
     GSPLimitExceededError,
     GSPServerError,
 )
-from india_compliance.gst_india.utils import is_api_enabled
+from india_compliance.gst_india.utils import (
+    SERVER_DOWN_MESSAGE,
+    is_api_enabled,
+    is_server_down,
+    mark_server_down,
+)
 from india_compliance.gst_india.utils.api import enqueue_integration_request
 
 BASE_URL = "https://asp.resilient.tech"
@@ -25,6 +30,13 @@ class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
     PLACEHOLDER = "*****"
+
+    # (connect, read) secs. no read limit, downloads can be slow.
+    REQUEST_TIMEOUT = (10, None)
+
+    # skip request if server was down in the last 2 mins
+    FAIL_FAST_IF_SERVER_DOWN = False
+
     DEFAULT_MASK_MAP: ClassVar[dict] = {
         "headers": [
             "x-api-key",
@@ -130,6 +142,8 @@ class BaseAPI:
         if method not in ("GET", "POST", "PUT"):
             frappe.throw(_("Invalid method {0}").format(method))
 
+        self.check_server_status()
+
         request_args = frappe._dict(
             url=self.get_url(endpoint),
             params=params,
@@ -165,7 +179,14 @@ class BaseAPI:
         try:
             self.before_request(request_args)
 
-            response = requests.request(method, **request_args)
+            # raise known errors, so auto-retry kicks in
+            try:
+                response = requests.request(method, timeout=self.REQUEST_TIMEOUT, **request_args)
+            except requests.exceptions.Timeout as e:
+                raise GatewayTimeoutError(str(e)) from e
+            except requests.exceptions.ConnectionError as e:
+                raise GSPServerError(str(e)) from e
+
             if api_request_id := response.headers.get("x-amzn-RequestId"):
                 self.request_id = api_request_id
                 log.request_id = api_request_id
@@ -198,6 +219,11 @@ class BaseAPI:
 
         except Exception as e:
             log.error = str(e)
+
+            # timeout or server down, next requests will fail too
+            if self.FAIL_FAST_IF_SERVER_DOWN and isinstance(e, GSPServerError):
+                mark_server_down(self.API_NAME)
+
             raise e
 
         finally:
@@ -269,6 +295,18 @@ class BaseAPI:
                         exc=exception,
                         title=exception.title,
                     )
+
+    def check_server_status(self):
+        if not (self.FAIL_FAST_IF_SERVER_DOWN and is_server_down(self.API_NAME)):
+            return
+
+        error_message = f"{SERVER_DOWN_MESSAGE} Please try again after some time."
+
+        frappe.throw(
+            msg=_(error_message),
+            exc=GSPServerError,
+            title=_("GSP/GST Server Down"),
+        )
 
     def is_ignored_error(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw

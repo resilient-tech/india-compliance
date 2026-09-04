@@ -61,6 +61,7 @@ from india_compliance.gst_india.utils import (
     is_inward_transaction,
     is_response_pending,
     is_same_gstin_allowed,
+    is_server_down,
     is_ship_to_gstin_applicable,
     load_doc,
     notify_user,
@@ -138,7 +139,7 @@ def enqueue_bulk_e_waybill_generation(doctype: str, docnames: str):
     return rq_job.id
 
 
-def generate_e_waybills(doctype, docnames, force=False):
+def generate_e_waybills(doctype, docnames):
     """
     Bulk generate e-Waybill for the given documents.
     """
@@ -146,7 +147,7 @@ def generate_e_waybills(doctype, docnames, force=False):
 
     for docname in docnames:
         run_or_report_failure(
-            lambda: _generate_e_waybill(load_doc(doctype, docname, "submit"), force=force),
+            lambda: _generate_e_waybill(load_doc(doctype, docname, "submit")),
             doctype,
             docname,
             _("e-Waybill generation failed"),
@@ -155,17 +156,17 @@ def generate_e_waybills(doctype, docnames, force=False):
 
 # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 @frappe.whitelist()
-def generate_e_waybill(*, doctype: str, docname: str, values: str | dict | None = None, force: bool = False):
+def generate_e_waybill(*, doctype: str, docname: str, values: str | dict | None = None):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "submit")
     if values:
         update_transaction(doc, frappe.parse_json(values))
         commit()  # save details even if generation fails
 
-    _generate_e_waybill(doc, throw=True if values else False, force=force)
+    _generate_e_waybill(doc, throw=True if values else False)
 
 
-def _generate_e_waybill(doc, throw=True, force=False):
+def _generate_e_waybill(doc, throw=True):
     settings = frappe.get_cached_doc("GST Settings")
 
     try:
@@ -176,13 +177,6 @@ def _generate_e_waybill(doc, throw=True, force=False):
                 ),
                 exc=AlreadyGeneratedError,
             )
-
-        if (
-            not force
-            and settings.enable_retry_einv_ewb_generation
-            and settings.is_retry_einv_ewb_generation_pending
-        ):
-            raise GSPServerError
 
         # Via e-Invoice API if not Return or Debit Note
         # Via e-Waybill API if has Non-Taxable items
@@ -195,9 +189,13 @@ def _generate_e_waybill(doc, throw=True, force=False):
             and not (doc.is_return or doc.get("is_debit_note") or is_foreign_doc(doc))
         )
 
+        api = EWaybillAPI if not with_irn else EInvoiceAPI
+
+        if is_server_down(api.API_NAME):
+            raise GSPServerError
+
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
-        api = EWaybillAPI if not with_irn else EInvoiceAPI
         api = api.create(doc)
 
         result = api.generate_e_waybill(data)
@@ -234,6 +232,9 @@ def _generate_e_waybill(doc, throw=True, force=False):
             frappe.throw(_("e-Waybill generation failed"))
 
     except GSPServerError as e:
+        if frappe.request:
+            frappe.clear_last_message()
+
         handle_server_errors(settings, doc, "e-Waybill", e)
         return
 
