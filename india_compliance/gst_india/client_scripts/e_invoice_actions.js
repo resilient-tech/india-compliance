@@ -5,7 +5,7 @@ frappe.ui.form.on("Sales Invoice", {
 
         if (
             frm.doc.irn &&
-            frm.doc.docstatus == 2 &&
+            frm.doc.docstatus === 2 &&
             frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
         ) {
             frm.add_custom_button(
@@ -13,121 +13,72 @@ frappe.ui.form.on("Sales Invoice", {
                 () => show_mark_e_invoice_as_cancelled_dialog(frm),
                 "e-Invoice",
             );
+
+            india_compliance.make_text_red("e-Invoice", "Mark as Cancelled");
         }
 
-        if (!india_compliance.is_e_invoice_enabled() || !is_valid_e_invoice_applicability_date(frm)) return;
+        if (!india_compliance.is_e_invoice_enabled()) return;
 
-        if (frm.doc.docstatus === 2) return;
+        // portal cancel is open for 24h, invoice cancelled or not
+        if (frm.doc.docstatus === 2) {
+            if (can_cancel_irn(frm)) {
+                india_compliance.show_cancel_headline(frm, __("IRN is still active and cancellable."), () =>
+                    show_cancel_e_invoice_dialog(frm),
+                );
+            }
 
-        const is_einv_generatable = is_e_invoice_generatable(frm, true);
-
-        if (frm.doc.docstatus === 0 || !is_einv_generatable) {
-            frm.add_custom_button(
-                __("Applicability Status"),
-                () => show_e_invoice_applicability_status(frm, is_einv_generatable),
-                "e-Invoice",
-            );
-
+            add_cancel_e_invoice_button(frm);
             return;
         }
 
-        if (!frm.doc.irn && frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)) {
-            frm.add_custom_button(
-                __("Generate"),
-                () => {
-                    frappe.call({
-                        method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
-                        args: { docname: frm.doc.name },
-                        callback: async (r) => {
-                            if (r.message?.error_code == "2283") {
-                                await taxpayer_api.call({
-                                    method: "india_compliance.gst_india.utils.e_invoice.handle_duplicate_irn_error",
-                                    args: r.message,
-                                });
-                            }
-                            frm.refresh();
-                        },
-                    });
-                },
-                "e-Invoice",
-            );
+        // the applicability date gates generation only; an existing IRN stays cancellable
+        if (is_valid_e_invoice_applicability_date(frm)) add_e_invoice_generation_buttons(frm);
 
-            frm.add_custom_button(
-                __("Mark as Generated"),
-                () => show_mark_e_invoice_as_generated_dialog(frm),
-                "e-Invoice",
-            );
-        }
-        if (
-            frm.doc.irn &&
-            is_irn_cancellable(frm) &&
-            frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
-        ) {
-            frm.add_custom_button(__("Cancel"), () => show_cancel_e_invoice_dialog(frm), "e-Invoice");
-
-            india_compliance.make_text_red("e-Invoice", "Cancel");
-        }
-    },
-    async on_submit(frm) {
-        if (frm.doc.irn || !is_e_invoice_applicable(frm) || !gst_settings.auto_generate_e_invoice) return;
-
-        frappe.show_alert(__("Attempting to generate e-Invoice"));
-
-        await frappe.xcall("india_compliance.gst_india.utils.e_invoice.generate_e_invoice", {
-            docname: frm.doc.name,
-            throw: false,
-        });
-    },
-    before_cancel(frm) {
-        if (!frm.doc.irn) return;
-
-        frappe.validated = false;
-
-        return new Promise((resolve) => {
-            const continueCancellation = () => {
-                frappe.validated = true;
-                resolve();
-            };
-
-            if (!is_irn_cancellable(frm) || !india_compliance.is_e_invoice_enabled()) {
-                let message = "";
-
-                if (frm.doc.is_return)
-                    message = __(
-                        `You should ideally create a standalone <strong>Debit Note</strong>
-                        against this credit note instead of cancelling it.`,
-                    );
-                else if (frm.doc.is_debit_note)
-                    message = __(
-                        `You should ideally create a standalone <strong>Credit Note</strong>
-                        against this debit note instead of cancelling it.`,
-                    );
-                else
-                    message = __(
-                        `You should ideally create a <strong>Credit Note</strong>
-                    against this invoice instead of cancelling it.`,
-                    );
-
-                message += __(
-                    `<br><br>If you choose to proceed, you'll be required to manually exclude this
-                    IRN when filing GST Returns.<br><br>
-
-                    Are you sure you want to continue?`,
-                );
-                const d = frappe.warn(__("Cannot Cancel IRN"), message, continueCancellation, __("Yes"));
-
-                d.set_secondary_action_label(__("No"));
-                return;
-            }
-
-            if (gst_settings.auto_cancel_e_invoice === 1) {
-                continueCancellation();
-                return;
-            }
-            return show_cancel_e_invoice_dialog(frm, continueCancellation);
-        });
+        add_cancel_e_invoice_button(frm);
     },
 });
+
+function add_e_invoice_generation_buttons(frm) {
+    const is_einv_generatable = is_e_invoice_generatable(frm, true);
+
+    if (frm.doc.docstatus === 0 || !is_einv_generatable) {
+        frm.add_custom_button(
+            __("Applicability Status"),
+            () => show_e_invoice_applicability_status(frm, is_einv_generatable),
+            "e-Invoice",
+        );
+
+        return;
+    }
+
+    if (!frm.doc.irn && frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)) {
+        frm.add_custom_button(
+            __("Generate"),
+            () => {
+                frappe.call({
+                    method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
+                    args: { docname: frm.doc.name },
+                    callback: async (r) => {
+                        if (r.message?.error_code == "2283") {
+                            await taxpayer_api.call({
+                                method: "india_compliance.gst_india.utils.e_invoice.handle_duplicate_irn_error",
+                                args: r.message,
+                            });
+                        }
+                        frm.refresh();
+                    },
+                });
+            },
+            "e-Invoice",
+        );
+
+        frm.add_custom_button(
+            __("Mark as Generated"),
+            () => show_mark_e_invoice_as_generated_dialog(frm),
+            "e-Invoice",
+        );
+    }
+}
 
 function is_irn_cancellable(frm) {
     const e_invoice_info = frm.doc.__onload && frm.doc.__onload.e_invoice_info;
@@ -137,37 +88,98 @@ function is_irn_cancellable(frm) {
     );
 }
 
-function show_cancel_e_invoice_dialog(frm, callback) {
-    const d = new frappe.ui.Dialog({
-        title: frm.doc.ewaybill ? __("Cancel e-Invoice and e-Waybill") : __("Cancel e-Invoice"),
-        fields: get_cancel_e_invoice_dialog_fields(frm),
-        primary_action_label: frm.doc.ewaybill
-            ? __("Cancel IRN, e-Waybill & Invoice")
-            : __("Cancel IRN & Invoice"),
-        primary_action(values) {
-            frappe.call({
-                method: "india_compliance.gst_india.utils.e_invoice.cancel_e_invoice",
-                args: {
-                    docname: frm.doc.name,
-                    values: values,
-                },
-                callback: function () {
-                    frm.refresh();
-                    callback && callback();
-                },
-            });
-            d.hide();
-        },
-    });
-
-    india_compliance.primary_to_danger_btn(d);
-    d.show();
-
-    d.show_message(
-        __("Sales invoice will be cancelled along with the IRN."),
-        "yellow",
-        1, // permanent
+function can_cancel_irn(frm) {
+    return (
+        frm.doc.irn && is_irn_cancellable(frm) && frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
     );
+}
+
+function add_cancel_e_invoice_button(frm) {
+    if (!can_cancel_irn(frm)) return;
+
+    frm.add_custom_button(__("Cancel"), () => show_cancel_e_invoice_dialog(frm), "e-Invoice");
+
+    india_compliance.make_text_red("e-Invoice", "Cancel");
+}
+
+// true: go ahead with the cancel, false: stop
+function confirm_irn_cancellation(frm) {
+    if (!is_irn_cancellable(frm) || !india_compliance.is_e_invoice_enabled())
+        return india_compliance.warn(__("Cannot Cancel IRN"), get_irn_not_cancellable_message(frm));
+
+    // auto-cancelled after the invoice is cancelled
+    if (gst_settings.auto_cancel_e_invoice) return Promise.resolve(true);
+
+    return show_cancel_e_invoice_dialog(frm, { before_doc_cancel: true });
+}
+
+function get_irn_not_cancellable_message(frm) {
+    let message = "";
+
+    if (frm.doc.is_return)
+        message = __(
+            `You should ideally create a standalone <strong>Debit Note</strong>
+                    against this credit note instead of cancelling it.`,
+        );
+    else if (frm.doc.is_debit_note)
+        message = __(
+            `You should ideally create a standalone <strong>Credit Note</strong>
+                    against this debit note instead of cancelling it.`,
+        );
+    else
+        message = __(
+            `You should ideally create a <strong>Credit Note</strong>
+                    against this invoice instead of cancelling it.`,
+        );
+
+    return (
+        message +
+        __(
+            `<br><br>If you choose to proceed, you'll be required to manually exclude this
+                IRN when filing GST Returns.<br><br>
+
+                Are you sure you want to continue?`,
+        )
+    );
+}
+
+// true: IRN cancelled or skipped, false: backed out
+function show_cancel_e_invoice_dialog(frm, { before_doc_cancel = false } = {}) {
+    return new Promise((resolve) => {
+        const d = new frappe.ui.Dialog({
+            title: frm.doc.ewaybill ? __("Cancel e-Invoice and e-Waybill") : __("Cancel e-Invoice"),
+            fields: get_cancel_e_invoice_dialog_fields(frm),
+            primary_action_label: frm.doc.ewaybill ? __("Cancel IRN, e-Waybill") : __("Cancel IRN"),
+            async primary_action(values) {
+                const cancelled = await cancel_on_portal(
+                    frm,
+                    "india_compliance.gst_india.utils.e_invoice.cancel_e_invoice",
+                    { docname: frm.doc.name, values },
+                    d.get_primary_btn(),
+                );
+
+                // failed: keep the dialog open to retry, skip or close
+                if (!cancelled) return;
+
+                d.onhide = null;
+                d.hide();
+                resolve(true);
+            },
+            onhide: () => resolve(false), // closed without acting
+        });
+
+        if (before_doc_cancel) {
+            d.set_secondary_action_label(__("Cancel Invoice Only"));
+            d.set_secondary_action(() => {
+                d.onhide = null;
+                d.hide();
+                resolve(true);
+            });
+        }
+
+        india_compliance.primary_to_danger_btn(d);
+        d.show();
+    });
 }
 
 function show_mark_e_invoice_as_generated_dialog(frm) {

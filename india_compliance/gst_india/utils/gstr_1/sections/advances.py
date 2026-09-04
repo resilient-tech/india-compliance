@@ -6,6 +6,7 @@ Adjustments are the same shape, sign flipped.
 
 from frappe.utils import flt
 
+from india_compliance.gst_india.constants import GST_TAX_RATES
 from india_compliance.gst_returns.fields.gstr1 import DocField as doc
 from india_compliance.gst_returns.fields.gstr1 import ItemField as item
 from india_compliance.gst_returns.fields.gstr1 import RawField as raw
@@ -15,6 +16,8 @@ from . import _shared as s
 
 RECEIVED = 1
 ADJUSTED = -1
+
+NOTIFIED_RATES = sorted(GST_TAX_RATES)
 
 KEYS = {
     raw.FLAG: doc.FLAG,
@@ -92,6 +95,49 @@ def to_gov(rows, company_gstin="", multiplier=RECEIVED):
         by_pos.setdefault(row[doc.POS], out).setdefault(raw.ITEMS, []).append(line)
 
     return list(by_pos.values())
+
+
+def from_books(rows, multiplier=RECEIVED):
+    """Books advance entries -> one row per state and rate.
+
+        [{party: "X", taxable_value: 100, tax_amount: 18, place_of_supply: "05-Uttarakhand"}]
+     -> {"05-Uttarakhand - 18.0": [{total_taxable_value: 100, tax_rate: 18}]}
+
+    The rate is worked back out of the tax, because an advance is taken before any line exists.
+    """
+    output = {}
+
+    for entry in rows:
+        rate = nearest_notified_rate((entry["tax_amount"] / entry["taxable_value"]) * 100)
+        intra_state = entry["place_of_supply"][:2] == entry["company_gstin"][:2]
+
+        row = {
+            doc.CUST_NAME: entry["party"],
+            doc.DOC_NUMBER: entry["name"],
+            doc.DOC_DATE: entry["posting_date"],
+            doc.POS: entry["place_of_supply"],
+            doc.TAXABLE_VALUE: entry["taxable_value"] * multiplier,
+            doc.TAX_RATE: rate,
+            doc.CESS: entry["cess_amount"] * multiplier,
+        }
+
+        if entry.get("reference_name"):
+            row["against_voucher"] = entry["reference_name"]
+
+        # an advance carries no items, so the tax is split here rather than per line
+        half = entry["tax_amount"] / 2 * multiplier
+        row[doc.CGST] = half if intra_state else 0
+        row[doc.SGST] = half if intra_state else 0
+        row[doc.IGST] = 0 if intra_state else entry["tax_amount"] * multiplier
+
+        output.setdefault(group_key(row), []).append(row)
+
+    return output
+
+
+def nearest_notified_rate(derived):
+    """18.05 -> 18.0, 0.24 -> 0.25."""
+    return min(NOTIFIED_RATES, key=lambda rate: abs(rate - derived))
 
 
 def received_to_canonical(gov_data):

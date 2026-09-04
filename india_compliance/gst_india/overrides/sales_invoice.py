@@ -4,7 +4,6 @@ from frappe import _, bold
 from frappe.desk.form.load import run_onload
 from frappe.utils import flt, fmt_money
 
-from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.constants import VALID_HSN_LENGTHS
 from india_compliance.gst_india.overrides.payment_entry import (
     get_proportionate_tax,
@@ -23,21 +22,24 @@ from india_compliance.gst_india.overrides.unreconcile_payment import (
 from india_compliance.gst_india.utils import (
     are_goods_supplied,
     get_validated_country_code,
-    handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
-    is_server_down,
+    run_after_response_or_enqueue,
+    update_dashboard_with_gst_logs,
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (
-    auto_cancel_e_invoice,
+    auto_cancel_e_invoice_e_waybill,
+    can_auto_cancel_e_invoice,
+    generate_e_invoice,
     get_e_invoice_info,
     validate_e_invoice_applicability,
     validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import (
     _get_e_waybill_threshold,
-    auto_cancel_e_waybill,
+    can_auto_cancel_e_waybill,
+    generate_e_waybill,
     get_e_waybill_info,
 )
 from india_compliance.gst_india.utils.transaction_data import (
@@ -163,46 +165,29 @@ def on_submit(doc, method=None):
     validate_backdated_transaction(doc)
 
     # Checks to validate generation of e-Invoice
-    if getattr(doc, "_submitted_from_ui", None) or validate_transaction(doc) is False:
+    if validate_transaction(doc) is False:
         return
 
     gst_settings = frappe.get_cached_doc("GST Settings")
     if not is_api_enabled(gst_settings):
         return
 
-    if (
-        validate_e_invoice_applicability(doc, gst_settings, throw=False)
-        and gst_settings.auto_generate_e_invoice
-    ):
-        # server down: don't queue, handler marks it for the scheduled retry
-        if is_server_down("e-Invoice"):
-            handle_server_errors(gst_settings, doc, "e-Invoice", GSPServerError())
-        else:
-            frappe.enqueue(
-                "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
-                enqueue_after_commit=True,
-                queue="short",
-                docname=doc.name,
-            )
-
+    # applicability is settled in validate: the status says what is still pending
+    if gst_settings.auto_generate_e_invoice and doc.einvoice_status == "Pending":
+        run_after_response_or_enqueue(
+            generate_e_invoice, doc, _("e-Invoice generation failed"), docname=doc.name, throw=False
+        )
         return
 
     if (
         gst_settings.auto_generate_e_waybill
-        and is_e_waybill_applicable(doc, gst_settings)
+        and doc.e_waybill_status == "Pending"
         and not doc.is_debit_note
         and not doc.is_return
     ):
-        if is_server_down("e-Waybill"):
-            handle_server_errors(gst_settings, doc, "e-Waybill", GSPServerError())
-        else:
-            frappe.enqueue(
-                "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
-                enqueue_after_commit=True,
-                queue="short",
-                doctype=doc.doctype,
-                docname=doc.name,
-            )
+        run_after_response_or_enqueue(
+            generate_e_waybill, doc, _("e-Waybill generation failed"), doctype=doc.doctype, docname=doc.name
+        )
 
 
 def before_cancel(doc, method=None):
@@ -248,15 +233,18 @@ def validate_cancellation_based_on_e_invoice(doc):
 
 
 def cancel_e_waybill_e_invoice(doc, method=None):
+    """portal cancel can't be undone -> only once the SI cancel is saved."""
     gst_settings = frappe.get_cached_doc("GST Settings")
-
     if not is_api_enabled(gst_settings):
         return
 
-    if auto_cancel_e_invoice(doc, gst_settings=gst_settings):
-        return
-
-    auto_cancel_e_waybill(doc, gst_settings=gst_settings)
+    if can_auto_cancel_e_invoice(doc, gst_settings) or can_auto_cancel_e_waybill(doc, gst_settings):
+        run_after_response_or_enqueue(
+            auto_cancel_e_invoice_e_waybill,
+            doc,
+            _("e-Invoice / e-Waybill cancellation failed"),
+            docname=doc.name,
+        )
 
 
 def is_e_waybill_applicable(doc, gst_settings=None):
@@ -300,33 +288,6 @@ def get_dashboard_data(data):
     )
 
 
-def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
-    if not is_api_enabled():
-        return data
-
-    data.setdefault("non_standard_fieldnames", {}).update(
-        {
-            "e-Waybill Log": "reference_name",
-            "Integration Request": "reference_docname",
-            "GST Inward Supply": "link_name",
-            "e-Invoice Log": "reference_name",
-        }
-    )
-
-    data.setdefault("dynamic_links", {}).update(
-        reference_docname=[doctype, "reference_doctype"],
-        reference_name=[doctype, "reference_doctype"],
-    )
-
-    transactions = data.setdefault("transactions", [])
-
-    # GST Logs section looks best at the 3rd position
-    # If there are less than 2 transactions, insert will be equivalent to append
-    transactions.insert(2, {"label": _("GST Logs"), "items": log_doctypes})
-
-    return data
-
-
 def set_e_waybill_status(doc, gst_settings=None):
     if doc.docstatus != 1 or doc.e_waybill_status:
         return
@@ -365,10 +326,16 @@ def set_and_validate_advances_with_gst(doc):
         allocated_amount_with_taxes += _tax_amount
         allocated_amount_with_taxes += advance.allocated_amount
 
-    excess_allocation = flt(
-        flt(allocated_amount_with_taxes, 2) - (doc.base_rounded_total or doc.base_grand_total),
-        2,
-    )
+    # allocated_amount is in the party account currency, which is not always the invoice
+    # currency (a USD invoice can be booked to an INR receivable), so the ceiling follows
+    # the receivable. Same branch as erpnext's set_advances.
+    if doc.get("party_account_currency") == doc.company_currency:
+        total = doc.get("base_rounded_total") or doc.base_grand_total
+    else:
+        total = doc.get("rounded_total") or doc.grand_total
+
+    precision = doc.precision("grand_total")
+    excess_allocation = flt(flt(allocated_amount_with_taxes, precision) - total, precision)
     if excess_allocation > 0:
         message = _(
             "Allocated amount with taxes (GST) in advances table cannot be greater than"

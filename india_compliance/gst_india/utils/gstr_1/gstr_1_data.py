@@ -27,6 +27,8 @@ from india_compliance.gst_india.utils.gstr_1 import (
     SubCategory,
     get_b2c_limit,
 )
+from india_compliance.gst_india.utils.gstr_1.sections import cdnur, exports, nil_rated
+from india_compliance.gst_india.utils.gstr_1.sections._shared import split
 
 CATEGORY_CONDITIONS = {
     Category.ECOM_RCM.value: {
@@ -351,11 +353,11 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
     def set_for_exports(self, invoice):
         if invoice.is_export_with_gst:
             invoice.invoice_sub_category = SubCategory.EXPWP.value
-            invoice.invoice_type = "WPAY"
+            invoice.invoice_type = exports.WITH_TAX
 
         else:
             invoice.invoice_sub_category = SubCategory.EXPWOP.value
-            invoice.invoice_type = "WOPAY"
+            invoice.invoice_type = exports.WITHOUT_TAX
 
     def set_for_b2cs(self, invoice):
         # NO INVOICE VALUE
@@ -366,10 +368,8 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
         is_registered = self.has_gstin_and_is_not_export(invoice)
         is_interstate = self.is_inter_state(invoice)
 
-        gst_registration = "registered" if is_registered else "unregistered"
-        supply_type = "Inter-State" if is_interstate else "Intra-State"
-
-        invoice.invoice_type = f"{supply_type} supplies to {gst_registration} persons"
+        code = nil_rated.supply_code(is_interstate, is_registered)
+        invoice.invoice_type = nil_rated.SUPPLY_TYPES[code]
         invoice.invoice_sub_category = SubCategory.NIL_EXEMPT.value
 
     def set_for_cdnr(self, invoice):
@@ -380,13 +380,13 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
         invoice.invoice_sub_category = SubCategory.CDNUR.value
         if self.is_export(invoice):
             if invoice.is_export_with_gst:
-                invoice.invoice_type = "EXPWP"
+                invoice.invoice_type = cdnur.EXPORT_WITH_TAX
                 return
 
-            invoice.invoice_type = "EXPWOP"
+            invoice.invoice_type = cdnur.EXPORT_WITHOUT_TAX
             return
 
-        invoice.invoice_type = "B2CL"
+        invoice.invoice_type = cdnur.LARGE_UNREGISTERED
         return
 
     def set_for_ecommerce_supply_type(self, invoice):
@@ -465,6 +465,42 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 gst_uom = get_full_gst_uom(uom, settings)
                 identified_uom[uom] = gst_uom
                 invoice["uom"] = gst_uom
+
+        self.rounding_difference = self.settle_amounts(invoices)
+
+    def settle_amounts(self, invoices):
+        """Round the amounts once, here, so every report reads the same figures.
+
+        The total per invoice per tax rate is what has to tie back to the ledger, so it is rounded
+        exactly as before. Each row then takes a share of that total, which is why the rows still
+        add back to it however a report later groups them -- by invoice, or by HSN across invoices.
+
+        Returns what rounding cost, for the summary to report.
+        """
+        rows_by_rate = {}
+        for invoice in invoices:
+            key = (invoice.get("invoice_no"), flt(invoice.get("gst_rate")))
+            rows_by_rate.setdefault(key, []).append(invoice)
+
+        lost = dict.fromkeys(self.AMOUNT_FIELDS, 0.0)
+
+        for rows in rows_by_rate.values():
+            for field in self.AMOUNT_FIELDS:
+                weights = [row.get(field) or 0 for row in rows]
+                raw_total = sum(weights)
+                total = flt(raw_total, 2)
+                lost[field] += raw_total - total
+
+                for row, share in zip(rows, split(total, weights), strict=True):
+                    row[field] = share
+
+        for invoice in invoices:
+            invoice["total_tax"] = flt(
+                sum(invoice.get(field) or 0 for field in self.AMOUNT_FIELDS if field != "taxable_value"), 2
+            )
+            invoice["total_amount"] = flt((invoice.get("taxable_value") or 0) + invoice["total_tax"], 2)
+
+        return lost
 
     def assign_categories(self, invoice):
         if not invoice.invoice_sub_category:
@@ -1022,11 +1058,17 @@ class GSTR11A11BData:
         )
 
     def get_11B_query(self):
+        from india_compliance.gst_india.overrides.payment_entry import (
+            get_payment_exchange_rate,
+        )
+
         return (
             self.get_query("Adjustment")
             .join(self.pe_ref)
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
-            .select(Max(self.pe_ref.allocated_amount).as_("taxable_value"))
+            .select(
+                Max(self.pe_ref.allocated_amount * get_payment_exchange_rate(self.pe)).as_("taxable_value")
+            )
             .groupby(self.gl_entry.voucher_detail_no)
         )
 

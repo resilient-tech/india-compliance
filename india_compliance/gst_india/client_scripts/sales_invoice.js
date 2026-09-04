@@ -24,10 +24,6 @@ frappe.ui.form.on(DOCTYPE, {
         });
     },
 
-    before_submit(frm) {
-        frm.doc._submitted_from_ui = 1;
-    },
-
     refresh(frm) {
         set_e_waybill_status_options(frm);
         gst_invoice_warning(frm);
@@ -86,7 +82,7 @@ function is_gst_invoice(frm) {
         frm.doc.company_gstin != frm.doc.billing_address_gstin &&
         frm.doc.items.some((item) => ["Taxable", "Zero-Rated"].includes(item.gst_treatment));
 
-    if (frm.doc.items[0].gst_treatment === "Zero-Rated")
+    if (frm.doc.items.length > 0 && frm.doc.items[0].gst_treatment === "Zero-Rated")
         return gst_invoice_conditions && frm.doc.is_export_with_gst;
     else return gst_invoice_conditions;
 }

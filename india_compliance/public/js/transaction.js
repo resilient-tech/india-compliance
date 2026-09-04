@@ -40,6 +40,8 @@ for (const doctype of SUBCONTRACTING_DOCTYPES) {
     fetch_gst_details(doctype);
 }
 
+fetch_gst_details("Asset Movement");
+
 for (const doctype of ["Sales Invoice", "Delivery Note"]) {
     ignore_port_code_validation(doctype);
 }
@@ -56,6 +58,8 @@ function fetch_gst_details(doctype) {
         event_fields.push("customer_address", "shipping_address_name", "is_export_with_gst");
     } else if (doctype === "Stock Entry") {
         event_fields.push("bill_from_address", "bill_to_address");
+    } else if (doctype === "Asset Movement") {
+        event_fields.push("bill_from_address", "bill_to_address", "ship_to_address", "purpose");
     } else if (["Subcontracting Order", "Subcontracting Receipt"].includes(doctype)) {
         event_fields.push("supplier_gstin");
     } else {
@@ -73,7 +77,8 @@ async function update_gst_details(frm, event) {
     if (
         frm.updating_party_details ||
         !frm.doc.company ||
-        (["place_of_supply", "bill_to_address"].includes(event) && frm.__updating_gst_details)
+        (["place_of_supply", "bill_from_address", "bill_to_address", "ship_to_address"].includes(event) &&
+            frm.__updating_gst_details)
     )
         return;
 
@@ -86,13 +91,16 @@ async function update_gst_details(frm, event) {
         ["Material Transfer", "Material Issue"].includes(frm.doc.purpose) &&
         !frm.doc.is_return;
 
-    if (!(party || same_gstin_stock_entry)) return;
+    const is_asset_movement = frm.doc.doctype === "Asset Movement";
+
+    if (!(party || same_gstin_stock_entry || is_asset_movement)) return;
 
     if (
         [
             "company_gstin",
             "bill_from_gstin",
             "bill_to_address",
+            "ship_to_address",
             "customer_address",
             "shipping_address_name",
             "supplier_address",
@@ -143,10 +151,24 @@ async function update_gst_details(frm, event) {
             "is_export_with_gst",
         );
     } else if (frm.doc.doctype === "Stock Entry") {
-        fieldnames_to_set.push("bill_from_gstin", "bill_to_gstin", "bill_from_address", "bill_to_address");
-
-        party_details["is_outward_stock_entry"] = same_gstin_stock_entry;
-        party_details["is_inward_stock_entry"] = frm.doc.purpose === "Material Transfer" && frm.doc.is_return;
+        // purpose and is_return let the server derive the direction itself
+        fieldnames_to_set.push(
+            "bill_from_gstin",
+            "bill_to_gstin",
+            "bill_from_address",
+            "bill_to_address",
+            "purpose",
+            "is_return",
+        );
+    } else if (is_asset_movement) {
+        fieldnames_to_set.push(
+            "bill_from_gstin",
+            "bill_to_gstin",
+            "bill_from_address",
+            "bill_to_address",
+            "ship_to_address",
+            "purpose",
+        );
     } else {
         fieldnames_to_set.push("supplier_address", "supplier_gstin");
     }
@@ -375,7 +397,6 @@ function _set_e_commerce_ecommerce_supply_type(frm) {
 
 function fetch_party_details(doctype) {
     let company_gstin_field = "company_gstin";
-    let is_inward_stock_entry = false;
 
     if (doctype === "Stock Entry") {
         company_gstin_field = "bill_from_gstin";
@@ -389,14 +410,14 @@ function fetch_party_details(doctype) {
                 frm.doc.is_return
             ) {
                 company_gstin_field = "bill_to_gstin";
-                is_inward_stock_entry = true;
             }
 
             setTimeout(() => {
                 const party_details = {
                     [company_gstin_field]: frm.doc[company_gstin_field],
                     supplier: frm.doc.supplier,
-                    is_inward_stock_entry,
+                    purpose: frm.doc.purpose,
+                    is_return: frm.doc.is_return,
                 };
                 const args = {
                     party_details: JSON.stringify(party_details),

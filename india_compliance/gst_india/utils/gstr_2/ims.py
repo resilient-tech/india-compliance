@@ -2,11 +2,7 @@ import frappe
 from frappe.utils import flt
 from frappe.utils.data import format_date
 
-from india_compliance.gst_india.constants import (
-    ACTION_MAP,
-    GST_CATEGORY_MAP,
-    STATE_NUMBERS,
-)
+from india_compliance.gst_india.constants import ACTION_MAP, STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     create_inward_supply,
 )
@@ -14,33 +10,39 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
     update_previous_ims_action as _update_previous_ims_action,
 )
 from india_compliance.gst_india.utils import parse_datetime
-from india_compliance.gst_india.utils.gstr_2.gstr import get_mapped_value, get_unique_key
+from india_compliance.gst_india.utils.gstr_2.gstr import (
+    GST_CATEGORY,
+    STATES,
+    get_mapped_value,
+    get_unique_key,
+)
+from india_compliance.gst_returns.fields.ims import CLASSIFICATION_MAP
+from india_compliance.gst_returns.fields.ims import DocField as doc
+from india_compliance.gst_returns.fields.ims import RawField as raw
+from india_compliance.gst_returns.steps import take
 
-CLASSIFICATION_MAP = {
-    "B2B": ["B2B", "Invoice"],
-    "B2BA": ["B2BA", "Invoice"],
-    "B2BCN": ["CDNR", "Credit Note"],
-    "B2BCNA": ["CDNRA", "Credit Note"],
-    "B2BDN": ["CDNR", "Debit Note"],
-    "B2BDNA": ["CDNRA", "Debit Note"],
+# stored value -> gov code, for upload
+REVERSE_ACTION = {value: code for code, value in ACTION_MAP.items()}
+REVERSE_GST_CATEGORY = {value: code for code, value in GST_CATEGORY.items()}
+
+# portal -> GST Inward Supply, plain copies; the coded fields sit in the class
+INVOICE_KEYS = {
+    raw.SUPPLIER_GSTIN: doc.SUPPLIER_GSTIN,
+    raw.SUP_RETURN_PERIOD: doc.SUP_RETURN_PERIOD,
+    raw.SUP_RETURN_FORM: doc.SUPPLIER_RETURN_FORM,
+    raw.DOC_VALUE: doc.DOC_VALUE,
+    raw.TAXABLE_VALUE: doc.TAXABLE_VALUE,
+    raw.IGST: doc.IGST,
+    raw.CGST: doc.CGST,
+    raw.SGST: doc.SGST,
+    raw.CESS: doc.CESS,
+    raw.REMARKS: doc.REMARKS,
 }
 
 
 class IMS:
     # specified records carry the declared ITC block
     EMITS_ITC_REDUCTION = False
-
-    VALUE_MAPS = frappe._dict(
-        {
-            "states": {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()},
-            "reverse_states": STATE_NUMBERS,
-            "action": ACTION_MAP,
-            "reverse_action": {v: k for k, v in ACTION_MAP.items()},
-            "gst_category": GST_CATEGORY_MAP,
-            "reverse_gst_category": {v: k for k, v in GST_CATEGORY_MAP.items()},
-            "classification": CLASSIFICATION_MAP,
-        }
-    )
 
     def __init__(self, company=None, gstin=None, *args):
         self.company_gstin = gstin
@@ -76,15 +78,15 @@ class IMS:
         errors = set()
 
         for supplier in error_invoices:
-            for invoice in supplier.get("inv"):
+            for invoice in supplier.get(raw.INVOICES):
                 # same key across categories
-                errors.add(f"{invoice.get('inum')}_{supplier.get('stin')}")
+                errors.add(f"{invoice.get(raw.DOC_NUMBER)}_{supplier.get(raw.SUPPLIER_GSTIN)}")
 
         for invoice in uploaded_invoices:
             invoice = self.get_transaction(frappe._dict(invoice))
 
             # different keys across categories
-            if f"{invoice.get('bill_no')}_{invoice.get('supplier_gstin')}" in errors:
+            if f"{invoice.get(doc.BILL_NO)}_{invoice.get(doc.SUPPLIER_GSTIN)}" in errors:
                 continue
 
             _update_previous_ims_action(invoice)
@@ -100,54 +102,62 @@ class IMS:
         return transaction
 
     def convert_data_to_internal_format(self, invoice):
-        return {
-            "supplier_gstin": invoice.stin,
-            "sup_return_period": invoice.rtnprd,
-            "supply_type": get_mapped_value(invoice.inv_typ, self.VALUE_MAPS.gst_category),
-            "place_of_supply": get_mapped_value(invoice.pos, self.VALUE_MAPS.states),
-            "document_value": invoice.val,
-            "company": self.company,
-            "company_gstin": self.company_gstin,
-            "is_pending_action_allowed": invoice.ispendactblocked == "N",
-            "previous_ims_action": get_mapped_value(invoice.action, self.VALUE_MAPS.action),
-            "is_downloaded_from_ims": 1,
-            "is_supplier_return_filed": 0 if invoice.srcfilstatus == "Not Filed" else 1,
-            "supplier_return_form": invoice.srcform,
-            "cgst": invoice.camt,
-            "sgst": invoice.samt,
-            "igst": invoice.iamt,
-            "cess": invoice.cess,
-            "taxable_value": invoice.txval,
-            # itcRedReq: Y = reduce ITC, N = nothing claimed, absent = no action yet
-            "itc_reduction_required": 1 if invoice.itcRedReq == "Y" else 0,
-            "is_itc_reduction_blocked": 1 if invoice.isItcRedReqBlocked == "Y" else 0,
-            # declared reversal per head; portal omits values for a full reversal -> supplier
-            "declared_igst": self._declared_reversal(invoice.declIgst, invoice.iamt, invoice.itcRedReq),
-            "declared_cgst": self._declared_reversal(invoice.declCgst, invoice.camt, invoice.itcRedReq),
-            "declared_sgst": self._declared_reversal(invoice.declSgst, invoice.samt, invoice.itcRedReq),
-            "declared_cess": self._declared_reversal(invoice.declCess, invoice.cess, invoice.itcRedReq),
-            "remarks": invoice.remarks,
-            "is_remarks_blocked": 1 if invoice.isRemarksBlocked == "Y" else 0,
-        }
+        classification, doc_type = CLASSIFICATION_MAP[self.ims_category()]
+        itc_reduction = invoice.get(raw.ITC_REDUCTION_REQUIRED)
+
+        details = take(invoice, INVOICE_KEYS)
+        details.update(
+            {
+                doc.CLASSIFICATION: classification,
+                doc.DOC_TYPE: doc_type,
+                doc.COMPANY: self.company,
+                doc.COMPANY_GSTIN: self.company_gstin,
+                doc.FROM_IMS: 1,
+                doc.SUPPLY_TYPE: get_mapped_value(invoice.get(raw.SUPPLY_TYPE), GST_CATEGORY),
+                doc.POS: get_mapped_value(invoice.get(raw.POS), STATES),
+                doc.PREVIOUS_IMS_ACTION: get_mapped_value(invoice.get(raw.ACTION), ACTION_MAP),
+                doc.IS_PENDING_ACTION_ALLOWED: invoice.get(raw.PENDING_ACTION_BLOCKED) == "N",
+                doc.IS_SUPPLIER_RETURN_FILED: 0 if invoice.get(raw.SUP_FILING_STATUS) == "Not Filed" else 1,
+                # itcRedReq: Y = reduce ITC, N = nothing claimed, absent = no action yet
+                doc.ITC_REDUCTION_REQUIRED: 1 if itc_reduction == "Y" else 0,
+                doc.IS_ITC_REDUCTION_BLOCKED: 1 if invoice.get(raw.ITC_REDUCTION_BLOCKED) == "Y" else 0,
+                doc.IS_REMARKS_BLOCKED: 1 if invoice.get(raw.REMARKS_BLOCKED) == "Y" else 0,
+                # declared reversal per head; portal omits values for a full reversal -> supplier
+                doc.DECLARED_IGST: self._declared_reversal(
+                    invoice.get(raw.DECLARED_IGST), invoice.get(raw.IGST), itc_reduction
+                ),
+                doc.DECLARED_CGST: self._declared_reversal(
+                    invoice.get(raw.DECLARED_CGST), invoice.get(raw.CGST), itc_reduction
+                ),
+                doc.DECLARED_SGST: self._declared_reversal(
+                    invoice.get(raw.DECLARED_SGST), invoice.get(raw.SGST), itc_reduction
+                ),
+                doc.DECLARED_CESS: self._declared_reversal(
+                    invoice.get(raw.DECLARED_CESS), invoice.get(raw.CESS), itc_reduction
+                ),
+            }
+        )
+
+        return details
 
     def convert_data_to_gov_format(self, invoice):
         data = {
-            "stin": invoice.supplier_gstin,
-            "inv_typ": get_mapped_value(invoice.supply_type, self.VALUE_MAPS.reverse_gst_category),
-            "srcform": invoice.supplier_return_form,
-            "rtnprd": invoice.sup_return_period,
-            "val": invoice.document_value,
-            "pos": get_mapped_value(invoice.place_of_supply.split("-")[1], self.VALUE_MAPS.reverse_states),
-            "prev_status": get_mapped_value(invoice.previous_ims_action, self.VALUE_MAPS.reverse_action),
-            "iamt": invoice.igst,
-            "camt": invoice.cgst,
-            "samt": invoice.sgst,
-            "cess": invoice.cess,
-            "txval": invoice.taxable_value,
+            raw.SUPPLIER_GSTIN: invoice.get(doc.SUPPLIER_GSTIN),
+            raw.SUPPLY_TYPE: get_mapped_value(invoice.get(doc.SUPPLY_TYPE), REVERSE_GST_CATEGORY),
+            raw.SUP_RETURN_FORM: invoice.get(doc.SUPPLIER_RETURN_FORM),
+            raw.SUP_RETURN_PERIOD: invoice.get(doc.SUP_RETURN_PERIOD),
+            raw.DOC_VALUE: invoice.get(doc.DOC_VALUE),
+            raw.POS: get_mapped_value(invoice.get(doc.POS).split("-")[1], STATE_NUMBERS),
+            raw.PREVIOUS_ACTION: get_mapped_value(invoice.get(doc.PREVIOUS_IMS_ACTION), REVERSE_ACTION),
+            raw.IGST: invoice.get(doc.IGST),
+            raw.CGST: invoice.get(doc.CGST),
+            raw.SGST: invoice.get(doc.SGST),
+            raw.CESS: invoice.get(doc.CESS),
+            raw.TAXABLE_VALUE: invoice.get(doc.TAXABLE_VALUE),
         }
 
-        if invoice.ims_action != "No Action":
-            data["action"] = get_mapped_value(invoice.ims_action, self.VALUE_MAPS.reverse_action)
+        if invoice.get(doc.IMS_ACTION) != "No Action":
+            data[raw.ACTION] = get_mapped_value(invoice.get(doc.IMS_ACTION), REVERSE_ACTION)
 
         self.set_itc_reduction(data, invoice)
 
@@ -156,36 +166,41 @@ class IMS:
     def set_itc_reduction(self, data, invoice):
         # remarks: any action, when not blocked
         if (
-            invoice.ims_action in ("Accepted", "Rejected", "Pending")
-            and invoice.remarks
-            and not invoice.is_remarks_blocked
+            invoice.get(doc.IMS_ACTION) in ("Accepted", "Rejected", "Pending")
+            and invoice.get(doc.REMARKS)
+            and not invoice.get(doc.IS_REMARKS_BLOCKED)
         ):
-            data["remarks"] = invoice.remarks
+            data[raw.REMARKS] = invoice.get(doc.REMARKS)
 
         # declared reversal: specified accepts, if govt allows
         if (
             not self.EMITS_ITC_REDUCTION
-            or invoice.ims_action != "Accepted"
-            or invoice.is_itc_reduction_blocked
+            or invoice.get(doc.IMS_ACTION) != "Accepted"
+            or invoice.get(doc.IS_ITC_REDUCTION_BLOCKED)
         ):
             return
 
         declared = {
-            "declIgst": flt(invoice.declared_igst),
-            "declCgst": flt(invoice.declared_cgst),
-            "declSgst": flt(invoice.declared_sgst),
-            "declCess": flt(invoice.declared_cess),
+            raw.DECLARED_IGST: flt(invoice.get(doc.DECLARED_IGST)),
+            raw.DECLARED_CGST: flt(invoice.get(doc.DECLARED_CGST)),
+            raw.DECLARED_SGST: flt(invoice.get(doc.DECLARED_SGST)),
+            raw.DECLARED_CESS: flt(invoice.get(doc.DECLARED_CESS)),
         }
 
         # nothing claimed -> no reversal
         if not any(declared.values()):
-            data["itcRedReq"] = "N"
+            data[raw.ITC_REDUCTION_REQUIRED] = "N"
             return
 
-        data["itcRedReq"] = "Y"
+        data[raw.ITC_REDUCTION_REQUIRED] = "Y"
 
         # full reversal -> omit values (portal reads absence as full); partial -> send them
-        supplier = (invoice.igst, invoice.cgst, invoice.sgst, invoice.cess)
+        supplier = (
+            invoice.get(doc.IGST),
+            invoice.get(doc.CGST),
+            invoice.get(doc.SGST),
+            invoice.get(doc.CESS),
+        )
         if any(flt(d, 2) != flt(s, 2) for d, s in zip(declared.values(), supplier, strict=True)):
             data.update(declared)
 
@@ -196,7 +211,7 @@ class IMS:
         return declared
 
     def get_existing_transactions(self):
-        category, doc_type = get_mapped_value(self.ims_category(), self.VALUE_MAPS.classification)
+        category, doc_type = CLASSIFICATION_MAP[self.ims_category()]
 
         inward_supply = frappe.qb.DocType("GST Inward Supply")
         existing_transactions = (
@@ -222,7 +237,7 @@ class IMS:
             frappe.delete_doc("GST Inward Supply", inward_supply_name, ignore_permissions=True)
 
     def reset_previous_ims_action(self):
-        category, doc_type = get_mapped_value(self.ims_category(), self.VALUE_MAPS.classification)
+        category, doc_type = CLASSIFICATION_MAP[self.ims_category()]
         inward_supply = frappe.qb.DocType("GST Inward Supply")
 
         # blank baseline; download re-fills action and re-flags declaration if ours differs
@@ -243,16 +258,14 @@ class IMS:
 class IMSB2B(IMS):
     def get_invoice_details(self, invoice):
         return {
-            "bill_no": invoice.inum,
-            "bill_date": parse_datetime(invoice.idt, day_first=True),
-            "classification": "B2B",
-            "doc_type": "Invoice",
+            doc.BILL_NO: invoice.get(raw.DOC_NUMBER),
+            doc.BILL_DATE: parse_datetime(invoice.get(raw.DOC_DATE), day_first=True),
         }
 
     def get_category_details(self, invoice):
         return {
-            "inum": invoice.bill_no,
-            "idt": format_date(invoice.bill_date, "dd-mm-yyyy"),
+            raw.DOC_NUMBER: invoice.get(doc.BILL_NO),
+            raw.DOC_DATE: format_date(invoice.get(doc.BILL_DATE), "dd-mm-yyyy"),
         }
 
 
@@ -263,10 +276,9 @@ class IMSB2BA(IMSB2B):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
             {
-                "original_bill_no": invoice.oinum,
-                "original_bill_date": parse_datetime(invoice.oidt, day_first=True),
-                "is_amended": True,
-                "classification": "B2BA",
+                doc.ORIGINAL_BILL_NO: invoice.get(raw.ORIGINAL_DOC_NUMBER),
+                doc.ORIGINAL_BILL_DATE: parse_datetime(invoice.get(raw.ORIGINAL_DOC_DATE), day_first=True),
+                doc.IS_AMENDED: True,
             }
         )
         return invoice_details
@@ -275,8 +287,8 @@ class IMSB2BA(IMSB2B):
         invoice_details = super().get_category_details(invoice)
         invoice_details.update(
             {
-                "oinum": invoice.original_bill_no,
-                "oidt": format_date(invoice.original_bill_date, "dd-mm-yyyy"),
+                raw.ORIGINAL_DOC_NUMBER: invoice.get(doc.ORIGINAL_BILL_NO),
+                raw.ORIGINAL_DOC_DATE: format_date(invoice.get(doc.ORIGINAL_BILL_DATE), "dd-mm-yyyy"),
             }
         )
         return invoice_details
@@ -285,16 +297,14 @@ class IMSB2BA(IMSB2B):
 class IMSB2BDN(IMSB2B):
     def get_invoice_details(self, invoice):
         return {
-            "bill_no": invoice.nt_num,
-            "bill_date": parse_datetime(invoice.nt_dt, day_first=True),
-            "classification": "CDNR",
-            "doc_type": "Debit Note",
+            doc.BILL_NO: invoice.get(raw.NOTE_NUMBER),
+            doc.BILL_DATE: parse_datetime(invoice.get(raw.NOTE_DATE), day_first=True),
         }
 
     def get_category_details(self, invoice):
         return {
-            "nt_num": invoice.bill_no,
-            "nt_dt": format_date(invoice.bill_date, "dd-mm-yyyy"),
+            raw.NOTE_NUMBER: invoice.get(doc.BILL_NO),
+            raw.NOTE_DATE: format_date(invoice.get(doc.BILL_DATE), "dd-mm-yyyy"),
         }
 
 
@@ -305,11 +315,10 @@ class IMSB2BDNA(IMSB2BDN):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
             {
-                "original_bill_no": invoice.ont_num,
-                "original_bill_date": parse_datetime(invoice.ont_dt, day_first=True),
-                "is_amended": True,
-                "original_doc_type": "Debit Note",
-                "classification": "CDNRA",
+                doc.ORIGINAL_BILL_NO: invoice.get(raw.ORIGINAL_NOTE_NUMBER),
+                doc.ORIGINAL_BILL_DATE: parse_datetime(invoice.get(raw.ORIGINAL_NOTE_DATE), day_first=True),
+                doc.IS_AMENDED: True,
+                doc.ORIGINAL_DOC_TYPE: "Debit Note",
             }
         )
         return invoice_details
@@ -318,8 +327,8 @@ class IMSB2BDNA(IMSB2BDN):
         invoice_details = super().get_category_details(invoice)
         invoice_details.update(
             {
-                "ont_num": invoice.original_bill_no,
-                "ont_dt": format_date(invoice.original_bill_date, "dd-mm-yyyy"),
+                raw.ORIGINAL_NOTE_NUMBER: invoice.get(doc.ORIGINAL_BILL_NO),
+                raw.ORIGINAL_NOTE_DATE: format_date(invoice.get(doc.ORIGINAL_BILL_DATE), "dd-mm-yyyy"),
             }
         )
         return invoice_details
@@ -328,35 +337,17 @@ class IMSB2BDNA(IMSB2BDN):
 class IMSB2BCN(IMSB2BDN):
     EMITS_ITC_REDUCTION = True
 
-    def get_invoice_details(self, invoice):
-        invoice_details = super().get_invoice_details(invoice)
-        invoice_details.update(
-            {
-                "doc_type": "Credit Note",
-            }
-        )
-        return invoice_details
-
 
 class IMSB2BCNA(IMSB2BDNA):
-    EMITS_ITC_REDUCTION = True
-
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
             {
-                "doc_type": "Credit Note",
-                "original_doc_type": "Credit Note",
+                doc.ORIGINAL_DOC_TYPE: "Credit Note",
             }
         )
         return invoice_details
 
-    def get_category_details(self, invoice):
-        invoice_details = super().get_category_details(invoice)
-        invoice_details.update(
-            {
-                "ont_num": invoice.original_bill_no,
-                "ont_dt": format_date(invoice.original_bill_date, "dd-mm-yyyy"),
-            }
-        )
-        return invoice_details
+
+def get_data_handler(category):
+    return globals().get(f"IMS{category}")

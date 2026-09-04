@@ -61,6 +61,11 @@ doctype_js = {
         "gst_india/client_scripts/party.js",
         "gst_india/client_scripts/address.js",
     ],
+    "Asset Movement": [
+        "gst_india/client_scripts/e_waybill_applicability.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
+        "gst_india/client_scripts/asset_movement.js",
+    ],
     "Company": [
         "gst_india/client_scripts/party.js",
         "gst_india/client_scripts/company.js",
@@ -138,6 +143,13 @@ doc_events = {
             "india_compliance.gst_india.overrides.party.set_docs_with_previous_gstin",
         ],
         "on_update": ["india_compliance.gst_india.overrides.address.update_party_gstin_and_gst_category"],
+    },
+    "Asset Movement": {
+        "onload": "india_compliance.gst_india.overrides.asset_movement.onload",
+        "validate": "india_compliance.gst_india.overrides.asset_movement.validate",
+        "before_save": "india_compliance.gst_india.overrides.asset_movement.before_save",
+        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.validate_transporter_fields_after_submit",
+        "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
     },
     "Company": {
         "on_trash": "india_compliance.gst_india.overrides.company.on_trash",
@@ -268,9 +280,9 @@ doc_events = {
         "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
     },
     "Stock Entry": {
-        "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
-        "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
-        "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+        "onload": "india_compliance.gst_india.overrides.stock_entry.onload",
+        "validate": "india_compliance.gst_india.overrides.stock_entry.validate",
+        "before_save": "india_compliance.gst_india.overrides.stock_entry.before_save",
         "before_submit": "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
         "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.validate_transporter_fields_after_submit",
         "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
@@ -367,7 +379,7 @@ regional_overrides = {
         "erpnext.accounts.services.base_gl_composer.update_gl_dict_with_regional_fields": (
             "india_compliance.gst_india.overrides.gl_entry.update_gl_dict_with_regional_fields"
         ),
-        "erpnext.controllers.accounts_controller.get_advance_payment_entries_for_regional": (
+        "erpnext.accounts.services.advances.get_advance_payment_entries_for_regional": (
             "india_compliance.gst_india.overrides.payment_entry.get_advance_payment_entries_for_regional"
         ),
         "erpnext.controllers.buying_controller.update_regional_item_valuation_rate": (
@@ -423,10 +435,11 @@ override_doctype_dashboards = {
     "Delivery Note": ("india_compliance.gst_india.overrides.delivery_note.get_dashboard_data"),
     "Purchase Invoice": ("india_compliance.gst_india.overrides.purchase_invoice.get_dashboard_data"),
     "Purchase Receipt": ("india_compliance.gst_india.overrides.purchase_receipt.get_dashboard_data"),
-    "Stock Entry": ("india_compliance.gst_india.overrides.subcontracting_transaction.get_dashboard_data"),
+    "Stock Entry": ("india_compliance.gst_india.overrides.stock_entry.get_dashboard_data"),
     "Subcontracting Receipt": (
         "india_compliance.gst_india.overrides.subcontracting_transaction.get_dashboard_data"
     ),
+    "Asset Movement": ("india_compliance.gst_india.overrides.asset_movement.get_dashboard_data"),
 }
 
 override_doctype_class = {
@@ -457,6 +470,7 @@ audit_trail_doctypes = [
     "Sales Invoice",
     "Asset",
     "Asset Capitalization",
+    "Asset Movement",
     "Asset Repair",
     "Delivery Note",
     "Landed Cost Voucher",

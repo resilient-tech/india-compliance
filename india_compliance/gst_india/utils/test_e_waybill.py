@@ -2,6 +2,7 @@ import copy
 import datetime
 import random
 import re
+from unittest.mock import patch
 
 import frappe
 import pytz
@@ -21,7 +22,12 @@ from india_compliance.gst_india.constants import (
 )
 from india_compliance.gst_india.constants.e_waybill import SUB_SUPPLY_TYPES
 from india_compliance.gst_india.overrides.sales_invoice import (
+    cancel_e_waybill_e_invoice,
     is_e_waybill_applicable,
+)
+from india_compliance.gst_india.overrides.test_asset_movement import (
+    create_asset_movement,
+    get_test_asset,
 )
 from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
     create_subcontracting_data,
@@ -32,14 +38,17 @@ from india_compliance.gst_india.utils import (
     load_doc,
     mark_server_down,
     parse_datetime,
+    run_or_report_failure,
 )
 from india_compliance.gst_india.utils.e_invoice import (
+    auto_cancel_e_invoice_e_waybill,
     retry_e_invoice_e_waybill_generation,
 )
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
     _generate_e_waybill,
     _get_e_waybill_threshold,
+    auto_cancel_e_waybill_for_doc,
     cancel_e_waybill,
     fetch_e_waybill_data,
     generate_e_waybill,
@@ -437,7 +446,9 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         si.reload()
+        # run the deferred portal cancel here, so its writes are visible below
         si.cancel()
+        auto_cancel_e_invoice_e_waybill(si.name)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -447,6 +458,64 @@ class TestEWaybill(IntegrationTestCase):
         si.reload()
         self.assertEqual(si.ewaybill, "")
         self.assertEqual(si.e_waybill_status, "Cancelled")
+
+    @change_settings(
+        "GST Settings",
+        {
+            "auto_cancel_e_waybill": 1,
+            "reason_for_e_waybill_cancellation": "Data Entry Mistake",
+        },
+    )
+    @responses.activate
+    def test_portal_cancel_is_deferred_to_after_commit(self):
+        """portal cancel waits for the SI cancel to commit, never runs inside before_cancel."""
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        self._generate_e_waybill(si.name)
+        si = load_doc("Sales Invoice", si.name, "cancel")
+
+        e_waybill_cancel_data = self.e_waybill_test_data.get("cancel_e_waybill")
+        self._mock_e_waybill_response(
+            data=e_waybill_cancel_data.get("response_data"),
+            match_list=[matchers.query_string_matcher(e_waybill_cancel_data.get("params"))],
+        )
+
+        api_calls_before = len(responses.calls)
+
+        with patch.object(frappe.local, "is_ajax", True, create=True):  # from the desk
+            cancel_e_waybill_e_invoice(si)
+
+            # nothing cancelled on the portal synchronously
+            self.assertEqual(len(responses.calls), api_calls_before)
+
+            # runs once the cancel commits (commit_after_response is inline in tests)
+            frappe.db.after_commit.run()
+
+        si.reload()
+        self.assertEqual(si.ewaybill, "")
+        self.assertEqual(si.e_waybill_status, "Cancelled")
+        self.assertFalse(frappe.flags.in_after_response)
+
+    @change_settings(
+        "GST Settings",
+        {
+            "auto_cancel_e_waybill": 1,
+            "reason_for_e_waybill_cancellation": "Data Entry Mistake",
+        },
+    )
+    @responses.activate
+    def test_portal_cancel_is_enqueued_outside_the_desk(self):
+        """not an ajax request (REST, worker): the portal cancel goes to the queue, after commit."""
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        self._generate_e_waybill(si.name)
+        si = load_doc("Sales Invoice", si.name, "cancel")
+
+        with patch("frappe.enqueue") as mock_enqueue:
+            cancel_e_waybill_e_invoice(si)
+
+        mock_enqueue.assert_called_once()
+        self.assertEqual(mock_enqueue.call_args.args[0], run_or_report_failure)
+        self.assertEqual(mock_enqueue.call_args.kwargs["action"], auto_cancel_e_invoice_e_waybill)
+        self.assertTrue(mock_enqueue.call_args.kwargs["enqueue_after_commit"])
 
     @change_settings("GST Settings", {"auto_cancel_e_waybill": 0})
     @responses.activate
@@ -466,6 +535,11 @@ class TestEWaybill(IntegrationTestCase):
 
         si.reload()
         self.assertNotEqual(si.ewaybill, "")
+
+    def _cancel_and_run_portal_cancel(self, doc):
+        """portal cancel is deferred: run it inline, so its writes are visible to the assertions"""
+        doc.cancel()
+        auto_cancel_e_waybill_for_doc(doc.doctype, doc.name)
 
     @change_settings(
         "GST Settings",
@@ -508,7 +582,7 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         dn.reload()
-        dn.cancel()
+        self._cancel_and_run_portal_cancel(dn)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -562,7 +636,7 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         pr.reload()
-        pr.cancel()
+        self._cancel_and_run_portal_cancel(pr)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -617,7 +691,7 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         pi.reload()
-        pi.cancel()
+        self._cancel_and_run_portal_cancel(pi)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -668,7 +742,7 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         se.reload()
-        se.cancel()
+        self._cancel_and_run_portal_cancel(se)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -677,6 +751,84 @@ class TestEWaybill(IntegrationTestCase):
 
         se.reload()
         self.assertEqual(se.ewaybill, "")
+
+    @change_settings("GST Settings", {"enable_e_waybill_from_asset_movement": 1})
+    @responses.activate
+    def test_e_waybill_for_asset_movement(self):
+        """Test to generate e-waybill for Asset Movement"""
+        am_data = self.e_waybill_test_data.get("asset_movement")
+
+        asset_movement = self._create_asset_movement("asset_movement")
+
+        self._generate_e_waybill(asset_movement.name, "Asset Movement", am_data)
+
+        self.assertDocumentEqual(
+            {"name": am_data.get("response_data").get("result").get("ewayBillNo")},
+            frappe.get_doc("e-Waybill Log", {"reference_name": asset_movement.name}),
+        )
+
+        asset_movement = load_doc("Asset Movement", asset_movement.name, "submit")
+
+        e_waybill_info = asset_movement.get("__onload").e_waybill_info
+
+        self.assertEqual(
+            e_waybill_info.valid_upto,
+            parse_datetime(
+                am_data.get("response_data").get("result").get("validUpto"),
+                day_first=True,
+            ),
+        )
+
+    @change_settings(
+        "GST Settings",
+        {
+            "auto_cancel_e_waybill": 1,
+            "reason_for_e_waybill_cancellation": "Data Entry Mistake",
+            "enable_e_waybill_from_asset_movement": 1,
+        },
+    )
+    @responses.activate
+    def test_auto_cancel_e_waybill_on_asset_movement_cancel(self):
+        """Test that e-waybill is automatically cancelled when asset movement is cancelled and auto_cancel_e_waybill is enabled"""
+        asset_movement = self._create_asset_movement("asset_movement")
+        am_test_data = self.e_waybill_test_data.get("asset_movement")
+
+        self._generate_e_waybill(asset_movement.name, "Asset Movement", am_test_data)
+
+        ewaybill_log = frappe.get_doc("e-Waybill Log", {"reference_name": asset_movement.name})
+        self.assertFalse(ewaybill_log.is_cancelled)
+
+        e_waybill_cancel_data = self.e_waybill_test_data.get("cancel_e_waybill")
+
+        actual_ewaybill_no = ewaybill_log.name
+
+        cancel_response_data = copy.deepcopy(e_waybill_cancel_data.get("response_data"))
+        cancel_response_data["result"]["ewayBillNo"] = actual_ewaybill_no
+
+        self._mock_e_waybill_response(
+            data=cancel_response_data,
+            match_list=[
+                matchers.query_string_matcher(e_waybill_cancel_data.get("params")),
+                matchers.json_params_matcher(
+                    {
+                        "ewbNo": actual_ewaybill_no,
+                        "cancelRsnCode": "3",  # Data Entry Mistake
+                        "cancelRmrk": "Data Entry Mistake",
+                    }
+                ),
+            ],
+        )
+
+        asset_movement.reload()
+        self._cancel_and_run_portal_cancel(asset_movement)
+
+        ewaybill_log.reload()
+        self.assertTrue(ewaybill_log.is_cancelled)
+        self.assertEqual(ewaybill_log.cancel_reason_code, "3")  # Data Entry Mistake
+        self.assertEqual(ewaybill_log.cancel_remark, "Data Entry Mistake")
+
+        asset_movement.reload()
+        self.assertEqual(asset_movement.ewaybill, "")
 
     def test_get_source_destination_address_for_stock_entry(self):
         """Test get_source_destination_address function with Stock Entry doctype"""
@@ -1842,6 +1994,18 @@ class TestEWaybill(IntegrationTestCase):
 
         doc_args["doctype"] = "Stock Entry"
         return create_transaction(**doc_args)
+
+    def _create_asset_movement(self, test_case):
+        """Generate Asset Movement to test e-Waybill functionalities"""
+        doc_args = self.e_waybill_test_data.get(test_case).get("kwargs")
+
+        # Assets are auto-named, so the fixture can only be resolved at runtime
+        doc = create_asset_movement(asset=get_test_asset(), do_not_save=True, **doc_args)
+        _append_taxes(doc, ["CGST", "SGST"], rate=9)
+        doc.insert()
+        doc.submit()
+
+        return doc
 
     def _create_purchase_receipt(self, test_case):
         """Generate Purchase Receipt to test e-Waybill functionalities"""

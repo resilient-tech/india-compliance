@@ -43,6 +43,13 @@ SUBCATEGORY_OF = {
     "DE": SubCategory.DE.value,
 }
 
+# every subcategory B2B reports under
+SUBCATEGORIES = (
+    SubCategory.B2B_REGULAR.value,
+    SubCategory.B2B_REVERSE_CHARGE.value,
+    *SUBCATEGORY_OF.values(),
+)
+
 ITEM_DEFAULTS = dict.fromkeys(s.ITEM_TOTALS, 0)
 
 MONEY = (raw.DOC_VALUE, raw.DIFF_PERCENTAGE)
@@ -88,6 +95,11 @@ def to_canonical(gov_data):
         output.setdefault(subcategory, {})[row[doc.DOC_NUMBER]] = row
 
     return output
+
+
+def from_books(grouped_rows):
+    """Books rows -> one row per invoice, for the subcategories this category reports."""
+    return s.invoice_rows_from_books(grouped_rows, SUBCATEGORIES)
 
 
 def to_gov(rows, company_gstin=""):

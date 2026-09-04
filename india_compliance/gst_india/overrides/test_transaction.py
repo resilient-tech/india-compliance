@@ -1486,7 +1486,7 @@ class TestTransaction(IntegrationTestCase):
         for item in doc.items:
             item.taxable_value = None
 
-        ItemGSTDetails().update(doc)
+        ItemGSTDetails(doc).update()
 
     def test_none_tax_amount_after_discount_amount(self):
         """
@@ -1505,7 +1505,7 @@ class TestTransaction(IntegrationTestCase):
             tax.tax_amount_after_discount_amount = None
             tax.base_tax_amount_after_discount_amount = None
 
-        ItemGSTDetails().update(doc)
+        ItemGSTDetails(doc).update()
 
 
 def create_refund_transaction():
@@ -2323,3 +2323,23 @@ class TestPlaceOfSupply(IntegrationTestCase):
         # Customer is in Karnataka (29). place_of_supply on the DN must reflect
         # that, not the PR's "24-Gujarat".
         self.assertEqual(dn.place_of_supply, "29-Karnataka")
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_pos_payment_entry_for_overseas_customer(self):
+        # Payment Entry has no shipping address field, so the overseas branch must not
+        # assume one. An advance from an overseas customer is 96-Other Countries.
+        doc = create_transaction(
+            doctype="Payment Entry",
+            payment_type="Receive",
+            mode_of_payment="Cash",
+            company_address="_Test Indian Registered Company-Billing",
+            party_type="Customer",
+            party="_Test Foreign Customer",
+            customer_address="_Test Foreign Customer-Billing",
+            paid_to="Cash - _TIRC",
+            paid_amount=500,
+            received_amount=500,
+            is_out_state=1,
+        )
+
+        self.assertEqual(doc.place_of_supply, "96-Other Countries")
