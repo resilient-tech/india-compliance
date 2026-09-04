@@ -32,10 +32,37 @@ party_fields = [
     },
 ]
 
+
+# MSME
+supplier_msme_fields = [
+    {
+        "fieldname": "msme_registration",
+        "label": "MSME Registration",
+        "fieldtype": "Link",
+        "options": "MSME Registration",
+        "insert_after": "is_reverse_charge_applicable",
+    },
+]
+
+
+purchase_invoice_msme_fields = [
+    {
+        "fieldname": "msme_registration",
+        "label": "MSME Registration",
+        "fieldtype": "Autocomplete",
+        "insert_after": "gst_category",
+        "fetch_from": "",
+        "print_hide": 1,
+        "translatable": 0,
+    },
+]
+
+
 CUSTOM_FIELDS = {
     "Company": party_fields,
     "Customer": party_fields,
-    "Supplier": party_fields,
+    "Supplier": party_fields + supplier_msme_fields,
+    "Purchase Invoice": purchase_invoice_msme_fields,
     "Finance Book": [
         {
             "fieldname": "for_income_tax",

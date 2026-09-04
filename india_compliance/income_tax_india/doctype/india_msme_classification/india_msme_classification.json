@@ -1,0 +1,80 @@
+{
+ "actions": [],
+ "creation": "2026-06-10 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "financial_year",
+  "enterprise_type",
+  "activity",
+  "not_written_agreement",
+  "from_date",
+  "to_date"
+ ],
+ "fields": [
+  {
+   "fieldname": "financial_year",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "Financial Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "enterprise_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Enterprise Type",
+   "options": "Micro\nSmall\nMedium\nNot MSME",
+   "reqd": 1
+  },
+  {
+   "default": "Manufacturing",
+   "description": "Major Activity as per the UDYAM certificate. Traders are excluded from Section 43B(h).",
+   "fieldname": "activity",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Activity",
+   "options": "Manufacturing\nService\nTrading",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "No signed payment terms with this supplier. Payment is then due in 15 days instead of 45.",
+   "fieldname": "not_written_agreement",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "No Written Agreement"
+  },
+  {
+   "description": "Derived from the Financial Year, so a classification can be resolved by date.",
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "From Date",
+   "read_only": 1
+  },
+  {
+   "description": "Derived from the Financial Year, so a classification can be resolved by date.",
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "To Date",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-13 19:21:21.233274",
+ "modified_by": "Administrator",
+ "module": "Income Tax India",
+ "name": "India MSME Classification",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

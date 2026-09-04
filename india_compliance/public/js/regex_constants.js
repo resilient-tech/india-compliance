@@ -18,3 +18,5 @@ export const GSTIN_REGEX = new RegExp([NORMAL, GOVT_DEPTID, NRI_ID, OIDAR, UNBOD
 
 export const GST_INVOICE_NUMBER_FORMAT = new RegExp("^[^\\W_][A-Za-z\\d\\-/]{0,15}$");
 export const PAN_REGEX = new RegExp("^[A-Z]{5}[0-9]{4}[A-Z]{1}$");
+
+export const UDYAM_NUMBER_REGEX = new RegExp("^UDYAM-[A-Z]{2}-\\d{2}-\\d{7}$");

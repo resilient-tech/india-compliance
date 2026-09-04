@@ -7,6 +7,7 @@ import {
     TCS_REGEX,
     GST_INVOICE_NUMBER_FORMAT,
     PAN_REGEX,
+    UDYAM_NUMBER_REGEX,
 } from "./regex_constants";
 
 const INWARD_SECTION_MAPPING = {
@@ -72,6 +73,77 @@ Object.assign(india_compliance, {
 
     is_subcontracting_inward_entry(doc) {
         return this.SUBCONTRACTING_INWARD_PURPOSES.includes(doc.purpose);
+    },
+
+    get_indian_fiscal_year(date = frappe.datetime.now_date(true)) {
+        /**
+         * Indian income-tax financial year (April-March) for a date, e.g. "2024-2025"
+         *
+         * A string must be in system format (YYYY-MM-DD), as doc values are.
+         * A displayed value (DD-MM-YYYY) parses to NaN - convert it with
+         * frappe.datetime.user_to_obj first.
+         *
+         * @param {Date|String} date
+         * @returns {String}
+         */
+        if (typeof date === "string") date = frappe.datetime.str_to_obj(date);
+
+        const start = date.getMonth() + 1 >= 4 ? date.getFullYear() : date.getFullYear() - 1;
+        return `${start}-${start + 1}`;
+    },
+
+    get_indian_fiscal_year_options(years_before = 9, years_after = 0, from_date = undefined) {
+        /**
+         * Indian FY strings.
+         *
+         * `from_date` starts the list at the FY containing it - nothing earlier
+         * can apply - instead of running `years_before` back from today, and
+         * orders oldest first, that year being the one most likely wanted. As a
+         * string it must be in system format, see get_indian_fiscal_year.
+         *
+         * @returns {Array} - e.g. ["2025-2026", "2024-2025", ...]
+         */
+        const current_start = parseInt(this.get_indian_fiscal_year().split("-")[0], 10);
+        const first_start = from_date
+            ? parseInt(this.get_indian_fiscal_year(from_date).split("-")[0], 10)
+            : current_start - years_before;
+
+        const last_start = Math.max(current_start + years_after, first_start);
+
+        const options = [];
+        for (let start = first_start; start <= last_start; start++) {
+            options.push(`${start}-${start + 1}`);
+        }
+
+        return from_date ? options : options.reverse();
+    },
+
+    get_indian_fiscal_year_bounds() {
+        /**
+         * Start and end dates of the current Indian financial year
+         *
+         * @returns {Object} - {from_date: "YYYY-04-01", to_date: "YYYY-03-31"}
+         */
+        const [start_year, end_year] = this.get_indian_fiscal_year().split("-");
+        return { from_date: `${start_year}-04-01`, to_date: `${end_year}-03-31` };
+    },
+
+    setup_indian_fiscal_year_options(frm, table_field, fieldname = "financial_year", from_date = undefined) {
+        /**
+         * Set generated Indian FY options (next + recent years) on an
+         * Autocomplete field in a child grid, so the list never expires
+         */
+        const grid = frm.fields_dict[table_field]?.grid;
+        if (!grid) return;
+
+        const options = this.get_indian_fiscal_year_options(9, 1, from_date);
+        grid.update_docfield_property(fieldname, "options", options);
+
+        // an Autocomplete reads df.options once, when its control is built, so
+        // rows already on screen need the new list pushed into them
+        for (const row of grid.grid_rows || []) {
+            row?.on_grid_fields_dict?.[fieldname]?.set_data(options);
+        }
     },
 
     get_month_year_from_period(period) {
@@ -362,6 +434,18 @@ Object.assign(india_compliance, {
         }
 
         return pan;
+    },
+
+    validate_udyam_number(udyam_number) {
+        if (!udyam_number) return;
+
+        udyam_number = udyam_number.trim().toUpperCase();
+
+        if (!UDYAM_NUMBER_REGEX.test(udyam_number)) {
+            frappe.throw(__("Invalid UDYAM Registration Number. Expected format: UDYAM-XX-00-0000000"));
+        }
+
+        return udyam_number;
     },
 
     validate_gstin(gstin, show_msg = true) {

@@ -266,7 +266,50 @@
             "gst_category": "Unregistered"
         }
     ],
+    "MSME Registration": [
+        {
+            "name": "UDYAM-MH-12-0000002",
+            "udyam_number": "UDYAM-MH-12-0000002",
+            "classifications": [
+                {
+                    "financial_year": "2023-2024",
+                    "enterprise_type": "Micro",
+                    "activity": "Manufacturing"
+                }
+            ],
+            "registration_date": "2020-04-01"
+        },
+        {
+            "name": "UDYAM-MH-12-0000001",
+            "udyam_number": "UDYAM-MH-12-0000001",
+            "registration_date": "2022-04-01",
+            "classifications": [
+                {
+                    "financial_year": "2023-2024",
+                    "enterprise_type": "Micro",
+                    "activity": "Manufacturing",
+                    "not_written_agreement": 1
+                }
+            ]
+        }
+    ],
     "Supplier": [
+        {
+            "name": "_Test MSME Supplier",
+            "supplier_name": "_Test MSME Supplier",
+            "supplier_type": "Company",
+            "gstin": "",
+            "gst_category": "Unregistered",
+            "msme_registration": "UDYAM-MH-12-0000002"
+        },
+        {
+            "name": "_Test MSME Supplier without Agreement",
+            "supplier_name": "_Test MSME Supplier without Agreement",
+            "supplier_type": "Company",
+            "gstin": "",
+            "gst_category": "Unregistered",
+            "msme_registration": "UDYAM-MH-12-0000001"
+        },
         {
             "name": "_Test Registered Supplier",
             "supplier_name": "_Test Registered Supplier",

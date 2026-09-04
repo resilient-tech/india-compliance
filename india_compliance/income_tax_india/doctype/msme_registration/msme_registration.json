@@ -1,0 +1,129 @@
+{
+ "actions": [],
+ "autoname": "field:udyam_number",
+ "creation": "2026-07-13 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "udyam_number",
+  "registration_date",
+  "column_break_cxfg",
+  "is_cancelled",
+  "cancelled_date",
+  "classification_section",
+  "classifications"
+ ],
+ "fields": [
+  {
+   "fieldname": "udyam_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "UDYAM Registration Number",
+   "reqd": 1,
+   "unique": 1,
+   "description": "Format: UDYAM-XX-00-0000000"
+  },
+  {
+   "fieldname": "registration_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Registration Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_cxfg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_cancelled",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "in_standard_filter": 1,
+   "label": "Is Cancelled",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.is_cancelled",
+   "fieldname": "cancelled_date",
+   "fieldtype": "Date",
+   "label": "Cancelled Date",
+   "mandatory_depends_on": "eval:doc.is_cancelled",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "classification_section",
+   "fieldtype": "Section Break",
+   "label": "Classification"
+  },
+  {
+   "description": "Enterprise category and activity, as per the UDYAM certificate, for each Financial Year.",
+   "fieldname": "classifications",
+   "fieldtype": "Table",
+   "label": "MSME Classification",
+   "options": "India MSME Classification"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-14 17:01:50.540964",
+ "modified_by": "Administrator",
+ "module": "Income Tax India",
+ "name": "MSME Registration",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "role": "Auditor"
+  },
+  {
+   "read": 1,
+   "role": "Purchase User"
+  }
+ ],
+ "quick_entry": 1,
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "allow_rename": 1
+}

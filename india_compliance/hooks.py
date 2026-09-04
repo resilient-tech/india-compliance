@@ -91,6 +91,7 @@ doctype_js = {
         "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/purchase_invoice.js",
+        "income_tax_india/client_scripts/purchase_invoice.js",
     ],
     "Purchase Receipt": [
         "gst_india/client_scripts/e_waybill_applicability.js",
@@ -121,6 +122,7 @@ doctype_js = {
     "Supplier": [
         "gst_india/client_scripts/party.js",
         "gst_india/client_scripts/supplier.js",
+        "income_tax_india/client_scripts/supplier.js",
     ],
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
     "Customize Form": "audit_trail/client_scripts/customize_form.js",
@@ -206,7 +208,10 @@ doc_events = {
         "before_validate": [
             "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         ],
-        "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
+        "validate": [
+            "india_compliance.gst_india.overrides.purchase_invoice.validate",
+            "india_compliance.income_tax_india.overrides.purchase_invoice.validate",
+        ],
         "before_save": "india_compliance.gst_india.overrides.transaction.update_valuation_rate",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_valuation_rate",
         "before_update_after_submit": [
@@ -398,7 +403,7 @@ regional_overrides = {
             "india_compliance.gst_india.overrides.payment_entry.update_gl_for_advance_gst_reversal"
         ),
         "erpnext.accounts.party.get_regional_address_details": (
-            "india_compliance.gst_india.overrides.transaction.update_party_details"
+            "india_compliance.utils.party.update_party_details"
         ),
         "erpnext.assets.doctype.asset_depreciation_schedule.depreciation_methods.get_wdv_or_dd_depr_amount": (
             "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.get_wdv_or_dd_depr_amount"
@@ -446,7 +451,7 @@ override_doctype_class = {
     "Customize Form": ("india_compliance.audit_trail.overrides.customize_form.CustomizeForm"),
 }
 
-
+# class extensions for virtual fields
 # DocTypes to be ignored while clearing transactions of a Company
 company_data_to_be_ignored = ["GST Account", "GST Credential"]
 
@@ -504,6 +509,11 @@ scheduler_events = {
             "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_reconcile",
         ],
         "0 1 * * *": ["india_compliance.gst_india.utils.e_waybill.extend_scheduled_e_waybills"],
+        # carry MSME classifications into the new financial year. Idempotent, so
+        # a daily run is self-healing if the 1 April run is missed - without it
+        # every registration is unclassified from 1 April and its invoices
+        # silently drop out of all three MSME reports.
+        "0 3 * * *": ["india_compliance.income_tax_india.utils.msme.update_msme_classification"],
     }
 }
 

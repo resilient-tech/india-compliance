@@ -1,7 +1,7 @@
 {
  "app": "india_compliance",
  "charts": [],
- "content": "[{\"id\":\"5lsCmLRfWb\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Masters</b></span>\",\"col\":12}},{\"id\":\"fina67k1Ip\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tax Withholding Category\",\"col\":5}},{\"id\":\"LaQ64p519z\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tax Withholding Group\",\"col\":4}},{\"id\":\"RqYCD6zDGw\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"C0EMdJBGAa\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tax Withholding Details-India\",\"col\":5}},{\"id\":\"fOEqexSscJ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"TDS Computation Summary-India\",\"col\":5}}]",
+ "content": "[{\"id\":\"5lsCmLRfWb\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Masters</b></span>\",\"col\":12}},{\"id\":\"fina67k1Ip\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tax Withholding Category\",\"col\":5}},{\"id\":\"LaQ64p519z\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tax Withholding Group\",\"col\":4}},{\"id\":\"Kv8ZqTnRb2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"MSME Registration\",\"col\":4}},{\"id\":\"RqYCD6zDGw\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"qQRYrVUAgQ\",\"type\":\"card\",\"data\":{\"card_name\":\"Tax Withholding Reports\",\"col\":4}},{\"id\":\"NQYVwfZj6k\",\"type\":\"card\",\"data\":{\"card_name\":\"MSME Reports\",\"col\":4}}]",
  "creation": "2026-04-24 14:01:49.481971",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,8 +13,80 @@
  "is_hidden": 0,
  "label": "Income Tax India",
  "link_type": "DocType",
- "links": [],
- "modified": "2026-04-24 15:10:44.327696",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Tax Withholding Reports",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Tax Withholding Details-India",
+   "link_count": 0,
+   "link_to": "Tax Withholding Details-India",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "TDS Computation Summary-India",
+   "link_count": 0,
+   "link_to": "TDS Computation Summary-India",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Purchase Invoice",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "MSME Reports",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "MSME Disallowance Report",
+   "link_count": 0,
+   "link_to": "MSME Disallowance Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "MSME Form-1",
+   "link_count": 0,
+   "link_to": "MSME Form-1",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Purchase Invoice",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "MSME Payables Report",
+   "link_count": 0,
+   "link_to": "MSME Payables Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Purchase Invoice",
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-08-25 18:30:00.000000",
  "modified_by": "Administrator",
  "module": "Income Tax India",
  "name": "Income Tax India",
@@ -40,14 +112,6 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Tax Withholding Details-India",
-   "link_to": "Tax Withholding Details-India",
-   "report_ref_doctype": "Purchase Invoice",
-   "type": "Report"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
    "label": "Tax Withholding Group",
    "link_to": "Tax Withholding Group",
    "stats_filter": "[]",
@@ -56,10 +120,10 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "TDS Computation Summary-India",
-   "link_to": "TDS Computation Summary-India",
-   "report_ref_doctype": "Purchase Invoice",
-   "type": "Report"
+   "label": "MSME Registration",
+   "link_to": "MSME Registration",
+   "stats_filter": "[]",
+   "type": "DocType"
   }
  ],
  "title": "Income Tax India",
