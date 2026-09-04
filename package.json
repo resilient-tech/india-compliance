@@ -1,6 +1,17 @@
 {
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:codegen": "playwright test --project=setup && playwright codegen --load-storage=playwright/.auth/admin.json --target=javascript --viewport-size=1400,960 \"${BASE_URL:-http://$SITE:${SITE_PORT:-8000}}/app\""
+  },
   "dependencies": {
     "vue-router": "^4.1.5",
     "vuex": "4.0.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0"
   }
 }

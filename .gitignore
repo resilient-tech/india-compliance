@@ -12,3 +12,10 @@ india_compliance/docs/current
 # JS
 dist/
 node_modules
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.auth/
+/playwright/.cache/
