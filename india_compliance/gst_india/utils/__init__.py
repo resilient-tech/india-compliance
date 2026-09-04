@@ -4,6 +4,7 @@ import functools
 import inspect
 import io
 import tarfile
+from collections.abc import Callable
 
 import frappe
 from dateutil import parser
@@ -12,7 +13,7 @@ from erpnext.accounts.utils import get_fiscal_year
 from erpnext.stock.get_item_details import purchase_doctypes
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
-from frappe.desk.form.load import get_docinfo, run_onload
+from frappe.desk.form.load import run_onload
 from frappe.query_builder.functions import Length
 from frappe.utils import (
     add_months,
@@ -53,6 +54,7 @@ from india_compliance.gst_india.constants import (
     UOM_MAP,
     VALID_HSN_LENGTHS,
 )
+from india_compliance.gst_india.utils.after_response import commit_after_response
 
 
 def get_state(state_number):
@@ -95,18 +97,113 @@ def update_onload(doc, key, value):
         onload[key].update(value)
 
 
-def send_updated_doc(doc, set_docinfo=False):
+def is_response_pending():
+    """can we still reply to the user? no once the response is out."""
+    return bool(frappe.request) and not frappe.flags.in_after_response
+
+
+def run_after_response_or_enqueue(action: Callable, reference_doc, failure_message: str, **kwargs):
+    """Run a portal action once the doc is saved, without making the user wait.
+
+    - from the desk: right after the response (frappe's commit_after_response)
+    - anything else (REST, worker, CLI): the queue
+    - either way only after commit -> a rolled back submit / cancel never reaches the portal
+    - a failure is logged against the doc and reported to the user
+    """
+    is_ui_request = getattr(frappe.local, "is_ajax", False)
+
+    if not is_ui_request:
+        frappe.enqueue(
+            run_or_report_failure,
+            enqueue_after_commit=True,
+            queue="short",
+            action=action,
+            reference_doctype=reference_doc.doctype,
+            reference_name=reference_doc.name,
+            failure_message=failure_message,
+            **kwargs,
+        )
+        return
+
+    def run():
+        frappe.flags.in_after_response = True
+
+        try:
+            run_or_report_failure(
+                action, reference_doc.doctype, reference_doc.name, failure_message, **kwargs
+            )
+        finally:
+            frappe.flags.in_after_response = False
+
+    frappe.db.after_commit.add(lambda: commit_after_response(run))
+
+
+def run_or_report_failure(action: Callable, reference_doctype, reference_name, failure_message, **kwargs):
+    """Run a portal action; a failure is logged against the doc and reported to the user."""
+    try:
+        action(**kwargs)
+
+    except Exception:
+        frappe.log_error(
+            title=failure_message,
+            message=frappe.get_traceback(),
+            reference_doctype=reference_doctype,
+            reference_name=reference_name,
+        )
+        notify_user(
+            failure_message,
+            indicator="red",
+            alert=True,
+            doc=frappe.get_doc(reference_doctype, reference_name),
+        )
+
+    finally:
+        commit()  # realtime updates go out on commit; so do actions queued meanwhile
+
+
+def commit():
+    """the test runner owns the transaction"""
+    if not frappe.flags.in_test:
+        frappe.db.commit()  # nosemgrep
+
+
+def send_updated_doc(doc):
     """Apply fieldlevel perms and send doc if called while handling a request"""
 
-    if not frappe.request:
+    if not is_response_pending() or doc in frappe.response.docs:
         return
 
     doc.apply_fieldlevel_read_permissions()
-
-    if set_docinfo:
-        get_docinfo(doc)
-
     frappe.response.docs.append(doc)
+
+
+def publish_doc_update(doc):
+    """Send the updated doc to the user's open form."""
+    if not frappe.flags.in_bulk_generation:
+        if not doc.get("__onload"):
+            run_onload(doc)  # the form needs onload info too
+
+        doc.apply_fieldlevel_read_permissions()
+        frappe.publish_realtime(
+            "ic_doc_sync",
+            doc.as_dict(),
+            user=frappe.session.user,
+            after_commit=True,
+        )
+
+    doc.notify_update()
+
+
+def notify_user(message, title=None, indicator=None, alert=False, doc=None):
+    pending = is_response_pending()
+
+    if not frappe.flags.in_bulk_generation:  # no alert per doc in bulk
+        frappe.msgprint(message, title=title, indicator=indicator, alert=alert, realtime=not pending)
+
+    if not doc:
+        return
+
+    return send_updated_doc(doc) if pending else publish_doc_update(doc)
 
 
 @frappe.whitelist()
@@ -1074,7 +1171,9 @@ def handle_server_errors(settings, doc, document_type, error):
     if not doc.doctype == "Sales Invoice":
         return
 
-    error_message = "Government services are currently slow/down. We apologize for the inconvenience caused."
+    error_message = _(
+        "Government services are currently slow/down. We apologize for the inconvenience caused."
+    )
 
     error_message_title = {
         GatewayTimeoutError: _("Gateway Timeout Error"),
@@ -1088,17 +1187,15 @@ def handle_server_errors(settings, doc, document_type, error):
     if settings.enable_retry_einv_ewb_generation and (not settings.sandbox_mode or frappe.flags.in_test):
         document_status = "Auto-Retry"
         settings.db_set("is_retry_einv_ewb_generation_pending", 1, update_modified=False)
-        error_message += f" Your {document_type} generation will be automatically retried every 5 minutes."
+        error_message += " " + _("Your {0} generation will be automatically retried every 5 minutes.").format(
+            document_type
+        )
     else:
-        error_message += " Please try again after some time."
+        error_message += " " + _("Please try again after some time.")
 
     doc.db_set({document_status_field: document_status})
 
-    frappe.msgprint(
-        msg=_(error_message),
-        title=error_message_title.get(type(error)),
-        indicator="yellow",
-    )
+    notify_user(error_message, title=error_message_title.get(type(error)), indicator="yellow", doc=doc)
 
 
 def get_month_or_quarter_dict():
@@ -1322,30 +1419,26 @@ def _get_duplicate_gstin_party(gstin, party_type, party=None):
     return list(duplicates_dict.values())
 
 
-def set_einvoice_status(
-    doc,
-    status,
-    *,
-    commit=False,
-    notify=True,
-):
+def rollback_and_set_einvoice_status(doc, status):
+    _rollback_and_set_status(doc, "einvoice_status", status)
+
+
+def rollback_and_set_ewaybill_status(doc, status):
+    _rollback_and_set_status(doc, "e_waybill_status", status)
+
+
+def _rollback_and_set_status(doc, fieldname, status):
+    """drop the failed attempt's writes, persist only the status"""
+    if not frappe.flags.in_test:
+        frappe.db.rollback()
+
     if doc.doctype != "Sales Invoice":
         return
 
-    doc.db_set("einvoice_status", status, commit=commit, notify=notify)
-
-
-def set_ewaybill_status(
-    doc,
-    status,
-    *,
-    commit=False,
-    notify=True,
-):
-    if doc.doctype != "Sales Invoice":
-        return
-
-    doc.db_set("e_waybill_status", status, commit=commit, notify=notify)
+    # if response is pending, other viewers refetch on doc_update;
+    # else the pushed doc (publish_doc_update) notifies them
+    doc.db_set(fieldname, status, notify=is_response_pending())
+    commit()
 
 
 def has_gst_taxes(doc):
