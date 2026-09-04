@@ -43,6 +43,7 @@ from india_compliance.gst_india.constants import (
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
+    ISD_GST_CATEGORY,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
@@ -221,7 +222,7 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
     }
 
     if exclude_isd:
-        filters.update({"gst_category": ["!=", "Input Service Distributor"]})
+        filters.update({"gst_category": ["!=", ISD_GST_CATEGORY]})
 
     gstin_list = frappe.get_all(
         "Address",
@@ -231,8 +232,23 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
     )
 
     default_gstin = frappe.db.get_value(party_type, party, "gstin")
-    if default_gstin and default_gstin not in gstin_list:
-        gstin_list.insert(0, default_gstin)
+    if not default_gstin or default_gstin in gstin_list:
+        return gstin_list
+
+    # the default GSTIN bypasses the filters above, and a company's default can be its own ISD
+    # registration
+    if exclude_isd and frappe.db.exists(
+        "Address",
+        {
+            "link_doctype": party_type,
+            "link_name": party,
+            "gstin": default_gstin,
+            "gst_category": ISD_GST_CATEGORY,
+        },
+    ):
+        return gstin_list
+
+    gstin_list.insert(0, default_gstin)
 
     return gstin_list
 
@@ -276,6 +292,23 @@ def validate_company_access(company, doctype="GST Inward Supply"):
             _("You are not permitted to access data for Company {0}.").format(company),
             frappe.PermissionError,
         )
+
+
+def validate_common_report_filters(filters):
+    """Validate the company and date range a report is scoped by.
+
+    Company is checked here too, not just via `reqd`, which is enforced client-side only.
+    """
+    filters = frappe._dict(filters or {})
+
+    if not filters.company:
+        frappe.throw(_("Company is mandatory"), title=_("Invalid Filter"))
+
+    if not filters.from_date or not filters.to_date:
+        frappe.throw(_("From Date & To Date is mandatory"), title=_("Invalid Filter"))
+
+    if filters.from_date > filters.to_date:
+        frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
 
 
 def validate_company_gstin_access(company_gstin, doctype="GST Inward Supply"):

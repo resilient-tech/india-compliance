@@ -11,7 +11,8 @@
   "igst",
   "cgst",
   "sgst",
-  "cess"
+  "cess",
+  "itcelg"
  ],
  "fields": [
   {
@@ -53,6 +54,12 @@
    "fieldname": "cess",
    "fieldtype": "Float",
    "label": "CESS Amount"
+  },
+  {
+   "fieldname": "itcelg",
+   "fieldtype": "Select",
+   "label": "ITC Eligibility",
+   "options": "\nY\nN"
   }
  ],
  "index_web_pages_for_search": 1,

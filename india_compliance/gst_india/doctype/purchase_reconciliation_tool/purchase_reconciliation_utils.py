@@ -52,6 +52,7 @@ def unlink_documents(data, exclude_from_reconciliation=False):
     inward_supplies = set()
     purchases = set()
     boe = set()
+    isd = set()
 
     for row in data:
         # nothing to unlink where a side is missing
@@ -67,13 +68,17 @@ def unlink_documents(data, exclude_from_reconciliation=False):
         elif purchase_doctype == "Bill of Entry":
             boe.add(row.get("purchase_invoice_name"))
 
+        elif purchase_doctype == "ISD Recipient Invoice":
+            isd.add(row.get("purchase_invoice_name"))
+
     set_reconciliation_status("Purchase Invoice", purchases, "Unreconciled")
     set_reconciliation_status("Bill of Entry", boe, "Unreconciled")
+    set_reconciliation_status("ISD Recipient Invoice", isd, "Unreconciled")
     _unlink_documents(inward_supplies, exclude_from_reconciliation)
 
     # keep itc_claim_period, user can change it
 
-    return purchases.union(boe), inward_supplies
+    return purchases.union(boe).union(isd), inward_supplies
 
 
 def _unlink_documents(inward_supplies, exclude_from_reconciliation=False):

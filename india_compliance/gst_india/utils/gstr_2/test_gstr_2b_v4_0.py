@@ -4,9 +4,14 @@ import frappe
 from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 
-from india_compliance.gst_india.utils import get_data_file_path, merge_dicts
+from india_compliance.gst_india.utils import (
+    get_data_file_path,
+    get_party_for_gstin,
+    merge_dicts,
+)
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
+from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
 
 
@@ -231,7 +236,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         )
 
     def test_gstr2b_isd(self):
-        doc = self.get_doc(GSTRCategory.ISD)
+        doc = self.get_doc(GSTRCategory.ISD, supplier_gstin="16DEFPS8555D1Z7")
         self.assertDocumentEqual(
             {
                 "return_period_2b": "032020",
@@ -255,8 +260,50 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
             doc,
         )
 
+    def test_rejecting_one_isd_document_leaves_the_other(self):
+        """A rejected document is deleted by bill no, date, classification and supplier -- which one
+        ISD numbering series can carry twice, once as an invoice and once as a credit note. Without
+        the document type the wrong one goes."""
+        filters = {"supplier_gstin": "27AABCE2207R1Z5", "bill_no": "S9001"}
+        invoice = self.get_doc(GSTRCategory.ISD, **filters, doc_type="ISD Invoice")
+        credit_note = self.get_doc(GSTRCategory.ISD, **filters, doc_type="ISD Credit Note")
+
+        rejected = frappe._dict(
+            data=frappe._dict(
+                gstin=self.gstin,
+                gendt=self.test_data["data"]["gendt"],
+                docdata={},
+                docRejdata={
+                    "isd": [
+                        {
+                            "ctin": "27AABCE2207R1Z5",
+                            "trdnm": "GSTN Mixed Eligibility",
+                            "supprd": "022020",
+                            "supfildt": "02-03-2020",
+                            "doclist": [
+                                {
+                                    "doctyp": "ISDC",
+                                    "docnum": "S9001",
+                                    "docdt": "03-03-2016",
+                                    "igst": 0,
+                                    "cgst": 50,
+                                    "sgst": 50,
+                                    "cess": 0,
+                                    "itcelg": "Y",
+                                }
+                            ],
+                        }
+                    ]
+                },
+            )
+        )
+        save_gstr_2b(self.gstin, self.return_period, rejected, store_raw=False)
+
+        self.assertFalse(frappe.db.exists(self.doctype, credit_note.name))
+        self.assertTrue(frappe.db.exists(self.doctype, invoice.name))
+
     def test_gstr2b_isda(self):
-        doc = self.get_doc(GSTRCategory.ISDA)
+        doc = self.get_doc(GSTRCategory.ISDA, supplier_gstin="16DEFPS8555D1Z7")
         self.assertDocumentEqual(
             {
                 "return_period_2b": "032020",
@@ -282,6 +329,87 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
             },
             doc,
         )
+
+    def test_gstr2b_isd_groups_by_document_not_by_number(self):
+        """Supplier 27AABCE2207R1Z5 reports three rows, all numbered S9001: an invoice split into
+        its eligible and ineligible halves per Rule 39(1)(b), and a credit note from the same
+        series. The halves belong to one invoice and have to fold together; the credit note is a
+        different document and has to stay apart."""
+        stored = {
+            doc.doc_type: doc
+            for doc in frappe.get_all(
+                self.doctype,
+                filters={
+                    "company_gstin": self.gstin,
+                    "classification": GSTRCategory.ISD.value,
+                    "supplier_gstin": "27AABCE2207R1Z5",
+                },
+                fields=["name", "doc_type", "bill_no", "cgst", "sgst", "itc_availability"],
+            )
+        }
+
+        self.assertEqual(set(stored), {"ISD Invoice", "ISD Credit Note"})
+
+        invoice = frappe.get_doc(self.doctype, stored["ISD Invoice"].name)
+        self.assertEqual(invoice.bill_no, "S9001")
+        # both halves survive as rows, and the totals are their sum
+        self.assertEqual(len(invoice.items), 2)
+        self.assertEqual({item.itcelg for item in invoice.items}, {"Y", "N"})
+        self.assertEqual(invoice.cgst, 300)
+        self.assertEqual(invoice.sgst, 300)
+        self.assertEqual(invoice.document_value, 600)
+        # the rows carry the eligibility; the document keeps what the portal reported for the part
+        # it arrived under
+        self.assertEqual(invoice.itc_availability, "Yes")
+
+        credit_note = stored["ISD Credit Note"]
+        self.assertEqual(credit_note.bill_no, "S9001")
+        self.assertEqual(credit_note.cgst, 50)
+        self.assertEqual(credit_note.sgst, 50)
+
+    def test_gstr2b_isd_keeps_two_distributors_apart(self):
+        """Two ISDs number their documents from their own series, so the same number, type and date
+        can arrive from both in one 2B. Folding the parts of one document together must not fold two
+        suppliers' documents into one, or one distributor is credited with the other's ITC."""
+        credit = {"29AABCE2207R1Z5": 100, "24AABCE2207R1Z5": 250}
+        suppliers = [
+            {
+                "ctin": supplier_gstin,
+                "trdnm": f"Distributor {supplier_gstin}",
+                "supprd": "022020",
+                "supfildt": "02-03-2020",
+                "doclist": [
+                    {
+                        "doctyp": "ISDI",
+                        "docnum": "ISD-77",
+                        "docdt": "03-03-2016",
+                        "igst": 0,
+                        "cgst": cgst,
+                        "sgst": cgst,
+                        "cess": 0,
+                        "itcelg": "Y",
+                    }
+                ],
+            }
+            for supplier_gstin, cgst in credit.items()
+        ]
+
+        gstr = GSTR2b(
+            get_party_for_gstin(self.gstin, "Company"),
+            self.gstin,
+            self.return_period,
+            GSTRCategory.ISD.value,
+        )
+        transactions = {t.supplier_gstin: t for t in gstr.get_all_transactions(suppliers)}
+
+        self.assertEqual(set(transactions), set(credit))
+
+        for supplier_gstin, cgst in credit.items():
+            transaction = transactions[supplier_gstin]
+            self.assertEqual(transaction.bill_no, "ISD-77")
+            self.assertEqual(transaction.cgst, cgst)
+            self.assertEqual(transaction.sgst, cgst)
+            self.assertEqual(transaction.document_value, cgst * 2)
 
     def test_gstr2b_impg(self):
         doc = self.get_doc(GSTRCategory.IMPG)
@@ -346,11 +474,20 @@ class TestGetUniqueKey(IntegrationTestCase):
         existing = frappe._dict(supplier_gstin=None, bill_no="2566282")
         incoming = frappe._dict(bill_no="2566282")
         self.assertEqual(get_unique_key(existing), get_unique_key(incoming))
-        self.assertEqual(get_unique_key(existing), "-2566282")
+        self.assertEqual(get_unique_key(existing), "-2566282-")
 
     def test_normal_gstin(self):
         t = frappe._dict(supplier_gstin="01AABCE2207R1Z5", bill_no="INV-1")
-        self.assertEqual(get_unique_key(t), "01AABCE2207R1Z5-INV-1")
+        self.assertEqual(get_unique_key(t), "01AABCE2207R1Z5-INV-1-")
+
+    def test_doc_type_separates_an_isd_invoice_from_its_credit_note(self):
+        """create_inward_supply keys on doc_type, so the existing-transaction map has to as well:
+        an ISD numbers both from one series, and a collision leaves the stale row behind."""
+        gstin, bill_no = "01AABCE2207R1Z5", "ISD-1"
+        invoice = frappe._dict(supplier_gstin=gstin, bill_no=bill_no, doc_type="ISD Invoice")
+        credit_note = frappe._dict(supplier_gstin=gstin, bill_no=bill_no, doc_type="ISD Credit Note")
+
+        self.assertNotEqual(get_unique_key(invoice), get_unique_key(credit_note))
 
 
 class TestMultiFileRawMerge(IntegrationTestCase):

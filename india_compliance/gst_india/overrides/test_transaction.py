@@ -2088,7 +2088,7 @@ class TestPlaceOfSupply(IntegrationTestCase):
         doc_args = {
             "doctype": "Sales Invoice",
             "customer": "_Test Registered Composition Customer",
-            "shipping_address_name": "_Test Indian Registered Company-Billing",
+            "shipping_address_name": "_Test Same GSTIN Customer-Billing",
         }
 
         settings = ["Accounts Settings", "determine_address_tax_category_from"]

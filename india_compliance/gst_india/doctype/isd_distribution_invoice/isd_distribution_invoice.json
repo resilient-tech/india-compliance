@@ -1,0 +1,510 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "company",
+  "column_break_hvps",
+  "posting_date",
+  "column_break_lrzd",
+  "is_credit_note",
+  "credit_note_against",
+  "amended_from",
+  "section_break_rvis",
+  "is_against_party",
+  "column_break_ejlg",
+  "against_party_section_2",
+  "column_break_euze",
+  "party_type",
+  "column_break_iziu",
+  "party",
+  "accounting_dimensions_section",
+  "cost_center",
+  "dimension_col_break",
+  "project",
+  "source_items_section",
+  "purchase_invoice",
+  "section_break_mmxt",
+  "branch_turnover",
+  "column_break_tjri",
+  "total_turnover",
+  "column_break_mael",
+  "distribution_ratio",
+  "section_break_wtqm",
+  "source_items",
+  "taxes_section",
+  "taxes",
+  "section_break_jryz",
+  "isd_provisional_account",
+  "column_break_ritj",
+  "isd_provisional_amount",
+  "column_break_hiql",
+  "totals_section",
+  "total_eligible",
+  "column_break_5",
+  "total_ineligible",
+  "column_break_mfrl",
+  "total_expense",
+  "section_break_nufp",
+  "grand_total",
+  "column_break_nnkm",
+  "column_break_oegn",
+  "address_tab",
+  "address_section",
+  "column_break_upnr",
+  "company_address",
+  "company_gstin",
+  "company_pos",
+  "company_address_display",
+  "column_break_sram",
+  "party_address",
+  "party_gstin",
+  "party_pos",
+  "party_address_display",
+  "additional_info_section",
+  "remarks",
+  "column_break_tngt",
+  "connections_tab"
+ ],
+ "fields": [
+  {
+   "bold": 1,
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Series",
+   "no_copy": 1,
+   "options": "ISDD-.YYYY.-",
+   "print_hide": 1,
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_credit_note",
+   "fieldtype": "Check",
+   "label": "Is Credit Note"
+  },
+  {
+   "fieldname": "taxes",
+   "fieldtype": "Table",
+   "no_copy": 1,
+   "options": "ISD Tax Item"
+  },
+  {
+   "fieldname": "column_break_5",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_eligible",
+   "fieldtype": "Currency",
+   "label": "Total Eligible",
+   "no_copy": 1,
+   "options": "Company:company:default_currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_ineligible",
+   "fieldtype": "Currency",
+   "label": "Total Ineligible",
+   "no_copy": 1,
+   "options": "Company:company:default_currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "ISD Distribution Invoice",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_sram",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "no_copy": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "fieldname": "column_break_hvps",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_lrzd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_mfrl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.is_credit_note == 1",
+   "fieldname": "credit_note_against",
+   "fieldtype": "Link",
+   "label": "Credit Note Against",
+   "options": "ISD Distribution Invoice"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "accounting_dimensions_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Dimensions"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
+  },
+  {
+   "fieldname": "company_address",
+   "fieldtype": "Link",
+   "label": "Select Company Address (Distributor)",
+   "options": "Address",
+   "reqd": 1
+  },
+  {
+   "fieldname": "party_address",
+   "fieldtype": "Link",
+   "label": "Select Party Address (Recipient)",
+   "options": "Address",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.is_against_party",
+   "fieldname": "party_type",
+   "fieldtype": "Link",
+   "label": "Party Type",
+   "mandatory_depends_on": "eval:doc.is_against_party",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "party_address_display",
+   "fieldtype": "Text Editor",
+   "label": "Party Address",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_euze",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_iziu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_upnr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company_address_display",
+   "fieldtype": "Text Editor",
+   "label": "Company Address",
+   "read_only": 1
+  },
+  {
+   "fieldname": "address_tab",
+   "fieldtype": "Tab Break",
+   "label": "Address"
+  },
+  {
+   "fetch_from": "company_address.gstin",
+   "fieldname": "company_gstin",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Company GSTIN",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company_pos",
+   "fieldtype": "Data",
+   "label": "Company Place of Supply",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "party_address.gstin",
+   "fieldname": "party_gstin",
+   "fieldtype": "Data",
+   "label": "Party GSTIN",
+   "read_only": 1
+  },
+  {
+   "fieldname": "party_pos",
+   "fieldtype": "Data",
+   "label": "Party Place of Supply",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_items_section",
+   "fieldtype": "Section Break",
+   "hide_border": 1,
+   "label": "Source Invoices"
+  },
+  {
+   "fieldname": "dimension_col_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.is_against_party",
+   "fieldname": "party",
+   "fieldtype": "Dynamic Link",
+   "label": "Party",
+   "mandatory_depends_on": "eval:doc.is_against_party",
+   "options": "party_type"
+  },
+  {
+   "fieldname": "source_items",
+   "fieldtype": "Table",
+   "options": "ISD Source Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks",
+   "no_copy": 1,
+   "print_hide": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "additional_info_section",
+   "fieldtype": "Section Break",
+   "label": "Additional Info"
+  },
+  {
+   "fieldname": "address_section",
+   "fieldtype": "Section Break",
+   "label": "Address"
+  },
+  {
+   "fieldname": "against_party_section_2",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "taxes_section",
+   "fieldtype": "Section Break",
+   "hide_border": 1,
+   "label": "Taxes"
+  },
+  {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_tngt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "branch_turnover",
+   "fieldtype": "Currency",
+   "label": "Recipient Branch Turnover",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "total_turnover",
+   "fieldtype": "Currency",
+   "label": "Total Turnover",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "distribution_ratio",
+   "fieldtype": "Float",
+   "label": "Distribution Ratio(%)",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_wtqm",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_mmxt",
+   "fieldtype": "Section Break",
+   "hide_border": 1
+  },
+  {
+   "fieldname": "column_break_tjri",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_mael",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_rvis",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_against_party",
+   "fieldtype": "Check",
+   "label": "Is against Customer/Supplier"
+  },
+  {
+   "fieldname": "column_break_ejlg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "purchase_invoice",
+   "fieldtype": "Link",
+   "label": "Purchase Invoice",
+   "options": "Purchase Invoice"
+  },
+  {
+   "fieldname": "total_expense",
+   "fieldtype": "Currency",
+   "label": "Total Expense",
+   "options": "Company:company:default_currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_nufp",
+   "fieldtype": "Section Break",
+   "hide_border": 1
+  },
+  {
+   "fieldname": "grand_total",
+   "fieldtype": "Currency",
+   "is_virtual": 1,
+   "label": "Grand Total",
+   "options": "Company:company:default_currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_nnkm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_oegn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_jryz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "isd_provisional_account",
+   "fieldtype": "Link",
+   "label": "ISD Provisional Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "isd_provisional_amount",
+   "fieldtype": "Currency",
+   "label": "ISD Provisional Amount",
+   "options": "Company:company:default_currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ritj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_hiql",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "connections_tab",
+   "fieldtype": "Tab Break",
+   "label": "Connections",
+   "show_dashboard": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [
+  {
+   "group": "Reference",
+   "link_doctype": "ISD Recipient Invoice",
+   "link_fieldname": "isd_distribution_invoice_reference"
+  },
+  {
+   "group": "Returns",
+   "link_doctype": "ISD Distribution Invoice",
+   "link_fieldname": "credit_note_against"
+  }
+ ],
+ "modified": "2026-09-01 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "ISD Distribution Invoice",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Purchase User"
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Auditor"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

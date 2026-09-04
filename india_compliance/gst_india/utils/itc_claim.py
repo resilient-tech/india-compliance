@@ -27,7 +27,7 @@ from india_compliance.gst_india.utils import (
     validate_gstin_permission,
 )
 
-SUPPORTED_DOCTYPES = frozenset(("Purchase Invoice", "Bill of Entry"))
+SUPPORTED_DOCTYPES = frozenset(("Purchase Invoice", "Bill of Entry", "ISD Recipient Invoice"))
 SUPPORTED_TABLE_NAMES = frozenset(get_table_name(dt) for dt in SUPPORTED_DOCTYPES)
 ITC_CLAIM_PERIOD_DEFERRED = "Deferred"
 FILING_STATUS = {

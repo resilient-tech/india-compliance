@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import add_months, get_month, getdate
+from frappe.utils import add_months, flt, get_month, getdate
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -18,6 +18,13 @@ from india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report import (
     download_gstr3b_as_excel,
     get_file_name,
     make_json,
+)
+from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
+    create_recipient_invoice,
+    make_ineligible_isd_pi,
+    make_isd_pi,
+    make_source_item,
+    setup_isd_fixtures,
 )
 from india_compliance.gst_india.overrides.test_transaction import create_cess_accounts
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -33,10 +40,13 @@ from india_compliance.gst_india.utils.tests import (
 
 
 class TestGSTR3BReport(IntegrationTestCase):
+    COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
+        setup_isd_fixtures(cls)
 
     def setUp(self):
         frappe.set_user("Administrator")
@@ -50,36 +60,12 @@ class TestGSTR3BReport(IntegrationTestCase):
             "Bill of Entry",
             "GSTR 3B Report",
             "Journal Entry",
+            "ISD Recipient Invoice",
         ):
             frappe.db.delete(doctype, filters=filters)
 
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.rollback()
-
     def get_report_output(self):
-        today = getdate()
-        frappe.db.delete(
-            "GSTR 3B Report",
-            filters={
-                "company": "_Test Indian Registered Company",
-                "company_gstin": "24AAQCA8719H1ZC",
-                "year": today.year,
-                "month_or_quarter": get_month(today),
-            },
-        )
-
-        report = frappe.get_doc(
-            {
-                "doctype": "GSTR 3B Report",
-                "company": "_Test Indian Registered Company",
-                "company_gstin": "24AAQCA8719H1ZC",
-                "year": today.year,
-                "month_or_quarter": get_month(today),
-            }
-        ).insert()
-
-        return json.loads(report.json_output)
+        return generate_gstr_3b_report()
 
     def test_gstr_3b_report(self):
         gst_settings = frappe.get_cached_doc("GST Settings")
@@ -88,7 +74,7 @@ class TestGSTR3BReport(IntegrationTestCase):
 
         create_sales_invoices()
         create_purchase_invoices()
-        create_itc_reclaim_journal_entry(tax_amount=9)
+        create_itc_reclaim_journal_entry(tax_amount=9, company_gstin="24AAQCA8719H1ZC")
 
         today = getdate()
         ret_period = f"{today.month:02}{today.year}"
@@ -405,7 +391,7 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(oth_avl["iamt"], 0.0)
 
     def test_itc_reversal_journal_entry_is_included_in_gstr_3b(self):
-        journal_entry = create_itc_reversal_journal_entry(tax_amount=9)
+        journal_entry = create_itc_reversal_journal_entry(tax_amount=9, company_gstin="24AAQCA8719H1ZC")
 
         self.assertEqual(journal_entry.accounts[1].gst_tax_type, "cgst")
         self.assertEqual(journal_entry.accounts[2].gst_tax_type, "sgst")
@@ -431,7 +417,9 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(output["itc_elg"]["itc_net"]["samt"], -9.0)
 
     def test_itc_reversal_journal_entry_with_others_is_included_in_gstr_3b(self):
-        journal_entry = create_itc_reversal_journal_entry(ineligibility_reason="Others", tax_amount=9)
+        journal_entry = create_itc_reversal_journal_entry(
+            ineligibility_reason="Others", tax_amount=9, company_gstin="24AAQCA8719H1ZC"
+        )
 
         self.assertEqual(journal_entry.accounts[1].gst_tax_type, "cgst")
         self.assertEqual(journal_entry.accounts[2].gst_tax_type, "sgst")
@@ -965,6 +953,78 @@ class TestGSTR3BReport(IntegrationTestCase):
             get_file_name(report),
             f"GSTR-3B-24AAQCA8719H1ZC-Apr-Jun-{getdate().year}",
         )
+
+    # ------------------------------------------------------------------ ISD Recipient Invoice
+    def create_isd_recipient_invoice(self, ineligible=False, ratio=1.0):
+        """An ISD Recipient Invoice booked against an external ISD, on the reporting GSTIN."""
+        pi = (make_ineligible_isd_pi if ineligible else make_isd_pi)(self.isd_address.name)
+
+        return create_recipient_invoice(
+            company_address=self.COMPANY_ADDRESS,
+            party_address=self.isd_address.name,
+            external_isd_invoice_number=frappe.generate_hash(length=8),
+            source_items=make_source_item(pi, ratio=ratio),
+        )
+
+    @staticmethod
+    def itc_row(output, table, ty):
+        return next(row for row in output["itc_elg"][table] if row["ty"] == ty)
+
+    def test_isd_recipient_invoice_in_itc_available(self):
+        """The credit received lands in table 4(A)(4) under ty "ISD", built from the distributed_*
+        heads on the source items (get_base_isd_query), and flows through to net ITC."""
+        doc = self.create_isd_recipient_invoice()
+        source_row = doc.source_items[0]
+
+        # the source Purchase Invoice and the ISD are both in Gujarat, so the credit stays CGST/SGST
+        self.assertTrue(flt(source_row.distributed_cgst))
+        self.assertFalse(flt(source_row.distributed_igst))
+
+        output = generate_gstr_3b_report()
+
+        isd = self.itc_row(output, "itc_avl", "ISD")
+        self.assertEqual(isd["camt"], flt(source_row.distributed_cgst, 2))
+        self.assertEqual(isd["samt"], flt(source_row.distributed_sgst, 2))
+        self.assertEqual(isd["iamt"], 0.0)
+        self.assertEqual(isd["csamt"], 0.0)
+
+        # nothing to reverse for an eligible invoice, so net ITC carries the full amount
+        self.assertEqual(output["itc_elg"]["itc_net"]["camt"], isd["camt"])
+        self.assertEqual(output["itc_elg"]["itc_net"]["samt"], isd["samt"])
+
+    def test_ineligible_isd_recipient_invoice_nets_to_zero(self):
+        """An ineligible source item is reported twice -- once into 4(A)(4) ISD and once into
+        4(B) RUL -- so it cancels out of net ITC. This is the is_itc_reversed_for_isd path."""
+        doc = self.create_isd_recipient_invoice(ineligible=True)
+        source_row = doc.source_items[0]
+        self.assertTrue(source_row.is_ineligible_for_itc)
+
+        output = generate_gstr_3b_report()
+
+        isd = self.itc_row(output, "itc_avl", "ISD")
+        self.assertEqual(isd["camt"], flt(source_row.distributed_cgst, 2))
+        self.assertEqual(isd["samt"], flt(source_row.distributed_sgst, 2))
+
+        rul = self.itc_row(output, "itc_rev", "RUL")
+        self.assertEqual(rul["camt"], isd["camt"])
+        self.assertEqual(rul["samt"], isd["samt"])
+
+        self.assertEqual(output["itc_elg"]["itc_net"]["camt"], 0.0)
+        self.assertEqual(output["itc_elg"]["itc_net"]["samt"], 0.0)
+
+
+def generate_gstr_3b_report():
+    """Generate the current month's GSTR-3B and return its JSON output."""
+    today = getdate()
+    filters = {
+        "company": "_Test Indian Registered Company",
+        "company_gstin": "24AAQCA8719H1ZC",
+        "year": today.year,
+        "month_or_quarter": get_month(today),
+    }
+    frappe.db.delete("GSTR 3B Report", filters=filters)
+
+    return json.loads(frappe.get_doc({"doctype": "GSTR 3B Report", **filters}).insert().json_output)
 
 
 def create_sales_invoices():

@@ -80,7 +80,15 @@ class GSTR2b(GSTR):
                 "supplier_gstin": transaction.supplier_gstin,
             }
 
-            frappe.delete_doc("GST Inward Supply", filters, ignore_permissions=True)
+            # doc classification
+            if transaction.get("doc_type"):
+                filters["doc_type"] = transaction.doc_type
+
+            # delete_doc takes a name, not filters: handed a dict it iterates the keys as names,
+            # finds nothing and drops it on ignore_missing
+            name = frappe.db.get_value("GST Inward Supply", filters)
+            if name:
+                frappe.delete_doc("GST Inward Supply", name, ignore_permissions=True)
 
     def get_download_details(self):
         return {

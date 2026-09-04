@@ -1,0 +1,255 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "creation": "2024-01-01 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_code",
+  "column_break_gcgg",
+  "item_name",
+  "section_break_dncf",
+  "purchase_invoice_item",
+  "gst_hsn_code",
+  "column_break_whwr",
+  "is_ineligible_for_itc",
+  "accounting_dimensions_section",
+  "cost_center",
+  "dimension_col_break",
+  "project",
+  "expense_details_section",
+  "total_expense",
+  "column_break_yxmx",
+  "distributed_expense",
+  "gst_details_section",
+  "column_break_wnmd",
+  "total_igst",
+  "total_cgst",
+  "total_sgst",
+  "total_cess",
+  "total_cess_non_advol",
+  "column_break_xtvz",
+  "distributed_igst",
+  "distributed_sgst",
+  "distributed_cgst",
+  "distributed_cess",
+  "distributed_cess_non_advol",
+  "accounting_section",
+  "expense_head",
+  "column_break_bhxe"
+ ],
+ "fields": [
+  {
+   "fieldname": "column_break_gcgg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_xtvz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fetch_from": "purchase_invoice_item.is_ineligible_for_itc",
+   "fetch_if_empty": 1,
+   "fieldname": "is_ineligible_for_itc",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Ineligible for Input Tax Credit",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "column_break_wnmd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_igst",
+   "fieldtype": "Currency",
+   "label": "Total IGST",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_cgst",
+   "fieldtype": "Currency",
+   "label": "Total CGST",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_sgst",
+   "fieldtype": "Currency",
+   "label": "Total SGST",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_cess",
+   "fieldtype": "Currency",
+   "label": "Total CESS",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_cess_non_advol",
+   "fieldtype": "Currency",
+   "label": "Total CESS Non Advol",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "columns": 2,
+   "default": "0",
+   "fieldname": "distributed_igst",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Distributed IGST",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "columns": 2,
+   "default": "0",
+   "fieldname": "distributed_cgst",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Distributed CGST",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "distributed_sgst",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Distributed SGST",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "default": "0",
+   "fieldname": "distributed_cess",
+   "fieldtype": "Currency",
+   "label": "Distributed CESS",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "default": "0",
+   "fieldname": "distributed_cess_non_advol",
+   "fieldtype": "Currency",
+   "label": "Distributed CESS Non Advol",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "columns": 2,
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item",
+   "options": "Item"
+  },
+  {
+   "fetch_from": "item_code.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "label": "Item Name"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "accounting_dimensions_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Dimensions"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
+  },
+  {
+   "depends_on": "eval: parent.doctype == 'ISD Distribution Invoice'",
+   "fieldname": "purchase_invoice_item",
+   "fieldtype": "Link",
+   "label": "Purchase Invoice Item",
+   "options": "Purchase Invoice Item"
+  },
+  {
+   "fieldname": "accounting_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting"
+  },
+  {
+   "fieldname": "expense_head",
+   "fieldtype": "Link",
+   "label": "Expense Head",
+   "options": "Account"
+  },
+  {
+   "fieldname": "column_break_bhxe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_dncf",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fetch_from": "item_code.gst_hsn_code",
+   "fieldname": "gst_hsn_code",
+   "fieldtype": "Data",
+   "label": "HSN/SAC",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_whwr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "distributed_expense",
+   "fieldtype": "Currency",
+   "label": "Distributed Expense",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "fieldname": "total_expense",
+   "fieldtype": "Currency",
+   "label": "Total Expense",
+   "options": "Company:company:default_currency"
+  },
+  {
+   "fieldname": "column_break_yxmx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "expense_details_section",
+   "fieldtype": "Section Break",
+   "label": "Expense Details"
+  },
+  {
+   "fieldname": "gst_details_section",
+   "fieldtype": "Section Break",
+   "label": "GST Details"
+  },
+  {
+   "fieldname": "dimension_col_break",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-02 14:18:17.012630",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "ISD Source Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

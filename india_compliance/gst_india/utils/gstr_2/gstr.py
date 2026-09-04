@@ -29,11 +29,12 @@ def to_period(value):
 
 
 def get_unique_key(transaction):
-    # supplier_gstin-bill_no key matches existing inward supplies
+    # supplier_gstin-bill_no-doc_type key matches existing inward supplies
     supplier_gstin = transaction.get("supplier_gstin") or ""
     bill_no = transaction.get("bill_no") or ""
+    doc_type = transaction.get("doc_type") or ""
 
-    return f"{supplier_gstin}-{bill_no}"
+    return f"{supplier_gstin}-{bill_no}-{doc_type}"
 
 
 def add_original_details(row, document, keys):
@@ -95,12 +96,14 @@ class GSTR:
         self.handle_missing_transactions()
 
     def get_all_transactions(self, suppliers):
-        get_details, docs_key, has_items = self.SECTIONS[self.category]
+        get_details, docs_key, has_items, *fold = self.SECTIONS[self.category]
 
         if not docs_key:
             return [self.get_transaction(get_details(record, self)) for record in suppliers]
 
-        return list(self.read_suppliers(suppliers, docs_key, get_details, has_items))
+        transactions = list(self.read_suppliers(suppliers, docs_key, get_details, has_items))
+
+        return fold[0](transactions) if fold else transactions
 
     def read_suppliers(self, suppliers, docs_key, get_details, has_items):
         for supplier in suppliers:
@@ -137,7 +140,7 @@ class GSTR:
         gst_is = frappe.qb.DocType("GST Inward Supply")
         transactions = (
             frappe.qb.from_(gst_is)
-            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no)
+            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no, gst_is.doc_type)
             .where(gst_is.classification == self.category)
             .where(self.get_existing_transaction_filter(gst_is))
         ).run(as_dict=True)

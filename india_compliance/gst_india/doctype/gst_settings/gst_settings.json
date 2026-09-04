@@ -17,6 +17,9 @@
   "min_hsn_digits",
   "enable_rcm_for_unregistered_supplier",
   "rcm_threshold",
+  "isd_section_break",
+  "distribute_expense_with_isd_credit",
+  "auto_create_isd_recipient_invoice",
   "api_section",
   "enable_api",
   "enable_retry_einv_ewb_generation",
@@ -368,6 +371,20 @@
    "label": "Invoice Value Threshold for Reverse Charge"
   },
   {
+   "default": "1",
+   "description": "The expense of the ISD applicable Purchase Invoice is distributed to the recipient branch along with the Input Tax Credit",
+   "fieldname": "distribute_expense_with_isd_credit",
+   "fieldtype": "Check",
+   "label": "Distribute Expense with ISD Credit"
+  },
+  {
+   "default": "0",
+   "description": "Applicable when Is against Customer/Supplier is unchecked in the ISD Distribution Invoice",
+   "fieldname": "auto_create_isd_recipient_invoice",
+   "fieldtype": "Check",
+   "label": "Auto Create ISD Recipient Invoice for Intra-Company Distributions"
+  },
+  {
    "default": "0",
    "description": "Reverse Charge will automatically be applied if the Supplier is Unregistered and Reverse Charge value threshold is met",
    "fieldname": "enable_rcm_for_unregistered_supplier",
@@ -656,13 +673,19 @@
    "fieldtype": "Select",
    "label": "Nil / Exempted / Non-GST Items in e-Invoice",
    "options": "Do Not Generate\nGenerate with Other Charges\nGenerate with Taxable Values"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "isd_section_break",
+   "fieldtype": "Section Break",
+   "label": "Input Service Distributor"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-05-15 18:15:50.948178",
+ "modified": "2026-08-03 17:03:14.259119",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

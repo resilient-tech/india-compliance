@@ -32,6 +32,18 @@
             "domain": "Manufacturing",
             "chart_of_accounts": "Standard",
             "enable_perpetual_inventory": 0
+        },
+        {
+            "abbr": "_TISDB",
+            "company_name": "_Test ISD Branch Company",
+            "country": "India",
+            "default_currency": "INR",
+            "doctype": "Company",
+            "domain": "Manufacturing",
+            "chart_of_accounts": "Standard",
+            "enable_perpetual_inventory": 0,
+            "gstin": "29AAQCA8719H2Z1",
+            "gst_category": "Registered Regular"
         }
     ],
     "Account": [
@@ -264,6 +276,20 @@
             "customer_type": "Individual",
             "gstin": "",
             "gst_category": "Unregistered"
+        },
+        {
+            "name": "_Test ISD Branch Customer",
+            "customer_name": "_Test ISD Branch Customer",
+            "customer_type": "Company",
+            "is_internal_customer": 1,
+            "represents_company": "_Test ISD Branch Company",
+            "companies": [
+                {
+                    "company": "_Test Indian Registered Company"
+                }
+            ],
+            "gstin": "29AAQCA8719H2Z1",
+            "gst_category": "Registered Regular"
         }
     ],
     "Supplier": [
@@ -341,6 +367,13 @@
                     "company": "_Test Indian Registered Company"
                 }
             ]
+        },
+        {
+            "name": "_Test ISD Distributor Supplier",
+            "supplier_name": "_Test ISD Distributor Supplier",
+            "supplier_type": "Company",
+            "gstin": "24AAQCA8719H2ZB",
+            "gst_category": "Input Service Distributor"
         }
     ],
     "Address": [
@@ -361,14 +394,6 @@
                 {
                     "link_doctype": "Company",
                     "link_name": "_Test Indian Registered Company"
-                },
-                {
-                    "link_doctype": "Customer",
-                    "link_name": "_Test Registered Customer"
-                },
-                {
-                    "link_doctype": "Customer",
-                    "link_name": "_Test Registered Composition Customer"
                 }
             ]
         },
@@ -744,6 +769,151 @@
                 {
                     "link_doctype": "Company",
                     "link_name": "_Test Indian Registered Company"
+                }
+            ]
+        },
+        {
+            "name": "_Test ISD Distribution-Billing",
+            "address_title": "_Test ISD Distribution",
+            "address_type": "Billing",
+            "address_line1": "Test Address Line 1",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AAQCA8719H2ZB",
+            "gst_category": "Input Service Distributor",
+            "is_primary_address": 0,
+            "is_company_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Company",
+                    "link_name": "_Test Indian Registered Company"
+                }
+            ]
+        },
+        {
+            "name": "_Test ISD Recipient-Billing",
+            "address_title": "_Test ISD Recipient",
+            "address_type": "Billing",
+            "address_line1": "Test Address Line 1",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AAQCA8719H3ZA",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 0,
+            "is_company_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Company",
+                    "link_name": "_Test Indian Registered Company"
+                }
+            ]
+        },
+        {
+            "name": "_Test ISD Recipient KA-Billing",
+            "address_title": "_Test ISD Recipient KA",
+            "address_type": "Billing",
+            "address_line1": "Test Address Line 1",
+            "city": "Test City",
+            "state": "Karnataka",
+            "pincode": "560001",
+            "country": "India",
+            "gstin": "29AAQCA8719H1Z2",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 0,
+            "is_company_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Company",
+                    "link_name": "_Test Indian Registered Company"
+                }
+            ]
+        },
+        {
+            "name": "_Test ISD Branch Customer-Billing",
+            "address_title": "_Test ISD Branch Customer",
+            "address_type": "Billing",
+            "address_line1": "Test Address Line 1",
+            "city": "Test City",
+            "state": "Karnataka",
+            "pincode": "560001",
+            "country": "India",
+            "gstin": "29AAQCA8719H2Z1",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 0,
+            "is_company_address": 0,
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test ISD Branch Customer"
+                }
+            ]
+        },
+        {
+            "name": "_Test Same GSTIN Customer-Billing",
+            "address_title": "_Test Same GSTIN Customer",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 1",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AAQCA8719H1ZC",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 0,
+            "is_company_address": 0,
+            "is_shipping_address": 0,
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Customer"
+                },
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Composition Customer"
+                }
+            ]
+        },
+        {
+            "name": "_Test ISD Distributor Supplier-Billing",
+            "address_title": "_Test ISD Distributor Supplier",
+            "address_type": "Billing",
+            "address_line1": "Test Address Line 1",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AAQCA8719H2ZB",
+            "gst_category": "Input Service Distributor",
+            "is_primary_address": 0,
+            "is_company_address": 0,
+            "links": [
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test ISD Distributor Supplier"
+                }
+            ]
+        },
+        {
+            "name": "_Test ISD Branch Company-Billing",
+            "address_title": "_Test ISD Branch Company",
+            "address_type": "Billing",
+            "address_line1": "Test Address Line 1",
+            "city": "Test City",
+            "state": "Karnataka",
+            "pincode": "560001",
+            "country": "India",
+            "gstin": "29AAQCA8719H2Z1",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 0,
+            "is_company_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Company",
+                    "link_name": "_Test ISD Branch Company"
                 }
             ]
         }
