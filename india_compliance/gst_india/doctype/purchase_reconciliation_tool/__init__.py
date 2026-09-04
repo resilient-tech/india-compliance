@@ -84,6 +84,10 @@ class MatchStatus(Enum):
 # CDNR covers both note types: (inward supply doc_type, purchase is_return)
 CDNR_DOC_TYPES = (("Debit Note", 0), ("Credit Note", 1))
 
+# 2A/2B reports note values as positive. Credit notes reduce ITC, so they are signed
+# negative to match the books, where they are booked as return invoices.
+CREDIT_NOTE_DOC_TYPES = ("Credit Note", "ISD Credit Note")
+
 GSTIN_RULES = (
     {
         "match_status": MatchStatus.EXACT_MATCH,
@@ -359,7 +363,13 @@ class InwardSupply:
 
     def get_tax_fields(self):
         fields = (*GST_TAX_TYPES[:-1], "taxable_value")
-        return [self.GSTR2[field] for field in fields]
+        return [
+            Case()
+            .when(self.GSTR2.doc_type.isin(CREDIT_NOTE_DOC_TYPES), -self.GSTR2[field])
+            .else_(self.GSTR2[field])
+            .as_(field)
+            for field in fields
+        ]
 
 
 class PurchaseInvoice:
@@ -466,7 +476,7 @@ class PurchaseInvoice:
             "place_of_supply",
             "is_reverse_charge",
             "itc_classification",
-            Abs(Sum(self.PI_ITEM.taxable_value)).as_("taxable_value"),
+            Sum(self.PI_ITEM.taxable_value).as_("taxable_value"),
             *tax_fields,
         ]
 
@@ -491,7 +501,7 @@ class PurchaseInvoice:
         return fields
 
     def query_tax_amount(self, field):
-        return Abs(Sum(getattr(self.PI_ITEM, field)))
+        return Sum(getattr(self.PI_ITEM, field))
 
     @staticmethod
     def query_matched_purchase_invoice(from_date=None, to_date=None):
