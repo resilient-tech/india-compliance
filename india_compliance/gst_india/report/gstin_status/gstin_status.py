@@ -6,14 +6,10 @@ from frappe import _
 from frappe.query_builder import Case, Order
 from frappe.query_builder.functions import IfNull, LiteralValue
 
+PARTY_TYPES = ("Customer", "Supplier")
+
 
 def execute(filters: dict | None = None):
-    """Return columns and data for the report.
-
-    This is the main entry point for the report. It accepts the filters as a
-    dictionary and should return columns and data. It is called by the framework
-    every time the report is refreshed or a filter is updated.
-    """
     report = GSTINDetailedReport(filters=filters)
     columns = report.get_columns()
     data = report.get_data()
@@ -24,7 +20,15 @@ def execute(filters: dict | None = None):
 class GSTINDetailedReport:
     def __init__(self, filters: dict | None = None):
         self.filters = frappe._dict(filters or {})
-        self.doctypes = [self.filters.party_type] if self.filters.party_type else ["Customer", "Supplier"]
+        if self.filters.party_type and self.filters.party_type not in PARTY_TYPES:
+            frappe.throw(
+                _("Party Type must be either 'Customer' or 'Supplier'. You provided: {0}").format(
+                    self.filters.party_type
+                )
+            )
+
+        self.doctypes = (self.filters.party_type,) if self.filters.party_type else PARTY_TYPES
+
         self.is_naming_series = "Naming Series" in (
             frappe.db.get_single_value("Buying Settings", "supp_master_name"),
             frappe.db.get_single_value("Selling Settings", "cust_master_name"),

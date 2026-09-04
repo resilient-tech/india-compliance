@@ -47,3 +47,7 @@ class TestGSTINStatus(IntegrationTestCase):
         self.assertTrue(rows)
         self.assertEqual({"Active"}, {row["status"] for row in rows})
         self.assertIn(self.GSTIN, {row["gstin"] for row in rows})
+
+    def test_invalid_party_type_filter(self):
+        with self.assertRaisesRegex(frappe.ValidationError, "Party Type must be either"):
+            self.run_report(party_type="Employee")
