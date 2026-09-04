@@ -5,7 +5,7 @@ import frappe
 from erpnext.accounts.doctype.financial_report_template.financial_report_engine import FinancialReportEngine
 from erpnext.accounts.utils import get_fiscal_year
 from frappe.tests import IntegrationTestCase
-from frappe.utils import today
+from frappe.utils import add_days, today
 
 from india_compliance.tests.erpnext_test_utils import (
     create_account as _create_account,
@@ -14,6 +14,9 @@ from india_compliance.tests.erpnext_test_utils import (
     create_and_submit_transaction_deletion_doc,
     make_journal_entry,
 )
+
+CHANGES_IN_INVENTORIES = "3. Changes in Inventories of Finished Goods, Work-in-Progress and Stock-in-Trade"
+VARIANCE = "VARIANCE (Calculated vs Actual)"
 
 
 class TestScheduleIIITemplates(IntegrationTestCase):
@@ -38,7 +41,7 @@ class TestScheduleIIITemplates(IntegrationTestCase):
     def tearDownClass(cls):
         frappe.db.rollback(save_point="before_test_schedule_iii")
 
-    def execute_report(self, template_name):
+    def execute_report(self, template_name, accumulated_values=0):
         fiscal_year = get_fiscal_year(self.test_date, as_dict=True)
         filters = frappe._dict(
             {
@@ -50,7 +53,7 @@ class TestScheduleIIITemplates(IntegrationTestCase):
                 "from_fiscal_year": fiscal_year.name,
                 "to_fiscal_year": fiscal_year.name,
                 "periodicity": "Yearly",
-                "accumulated_values": 0,
+                "accumulated_values": accumulated_values,
             }
         )
         _, data, _, _ = FinancialReportEngine().execute(filters)
@@ -60,6 +63,14 @@ class TestScheduleIIITemplates(IntegrationTestCase):
         for row in data:
             if row.get("account_name") == account_name:
                 return row.get("total")
+
+        return None
+
+    def get_row_value(self, data, account_name):
+        """Accumulated values are reported per period, leaving the total column unset."""
+        for row in data:
+            if row.get("account_name") == account_name:
+                return row.get(row["_segment_info"]["period_keys"][0])
 
         return None
 
@@ -164,6 +175,51 @@ class TestScheduleIIITemplates(IntegrationTestCase):
         # PROFIT_FOR_PERIOD = TOTAL_REVENUE - TOTAL_EXPENSES - TOTAL_TAX
         # TOTAL_EXPENSES = 3000+500+800+1000 = 5300
         self.assertEqual(self.get_row_total(data, "XV. Profit (Loss) for the Period (XI + XIV)"), -6200)
+
+    def test_profit_and_loss_schedule_iii_ties_back_to_ledger(self):
+        """
+        Under perpetual inventory the ledger COGS already nets the inventory movement, so
+        "1. Cost of Materials Consumed" is back-solved from COGS. Adding it to
+        "3. Changes in Inventories" must return the ledger COGS, leaving no VARIANCE.
+        """
+        # account_type is left unset: Journal Entries cannot post to "Stock" accounts
+        stock_acc = self.create_account("Stock In Hand Test", "Stock Assets", "Asset", "Stock Assets")
+        cogs_acc = self.create_account(
+            "Cost of Goods Sold Test",
+            "Stock Expenses",
+            "Expense",
+            "Cost of Goods Sold",
+            "Cost of Goods Sold",
+        )
+
+        cash = self.cash_account
+        args = {
+            "company": self.company,
+            "cost_center": self.cost_center,
+            "posting_date": self.test_date,
+            "submit": True,
+        }
+
+        # opening stock of 5000, a further 3000 purchased and 2000 sold during the period
+        make_journal_entry(stock_acc, cash, 5000, **{**args, "posting_date": add_days(self.test_date, -1)})
+        make_journal_entry(stock_acc, cash, 3000, **args)
+        make_journal_entry(cogs_acc, stock_acc, 2000, **args)
+
+        data = self.execute_report("Standard Profit and Loss (Schedule III)")
+
+        # stock grew from 5000 to 6000
+        self.assertEqual(self.get_row_value(data, CHANGES_IN_INVENTORIES), -1000)
+
+        # COGS of 2000 less the 1000 retained in stock leaves the 3000 purchased
+        self.assertEqual(self.get_row_value(data, "1. Cost of Materials Consumed"), 3000)
+
+        # the VARIANCE row hides itself only when the report ties back to the ledger
+        self.assertIsNone(self.get_row_value(data, VARIANCE))
+
+        # Accumulated Values is deliberately not asserted: Closing Balance and Period
+        # Movement collapse to the same figure once the engine accumulates, so no one
+        # formula holds in both modes. Both errors cancel in total expenses, which is
+        # why only the line items above catch this.
 
     def test_balance_sheet_schedule_iii(self):
         """
