@@ -24,6 +24,9 @@ def execute(filters: dict | None = None):
 class GSTINDetailedReport:
     def __init__(self, filters: dict | None = None):
         self.filters = frappe._dict(filters or {})
+        if self.filters.party_type and self.filters.party_type not in ("Customer", "Supplier"):
+            frappe.throw(_("Invalid Party Type"))
+
         self.doctypes = [self.filters.party_type] if self.filters.party_type else ["Customer", "Supplier"]
         self.is_naming_series = "Naming Series" in (
             frappe.db.get_single_value("Buying Settings", "supp_master_name"),
