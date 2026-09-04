@@ -119,7 +119,7 @@ def set_itc_claim_period_on_ims_action(
 
 @frappe.whitelist()
 @validate_gstin_permission(doctype="GST Return Log")
-def get_itc_period_options(company_gstin: str | None = None, posting_date: str | None = None) -> list[str]:
+def get_itc_period_options(company_gstin: str | None = None, posting_date: str | None = None) -> list[dict]:
     if not company_gstin or not posting_date:
         return []
 
@@ -133,16 +133,22 @@ def get_itc_period_options(company_gstin: str | None = None, posting_date: str |
     end_date = min(get_last_day(today), deadline_date)
 
     filed = _get_filed_periods(company_gstin)
+    filed_badge = f'<span class="es-badge" data-theme="amber">{_("Filed")}</span>'
 
-    periods = []
+    periods = [{"value": ITC_CLAIM_PERIOD_DEFERRED, "label": ITC_CLAIM_PERIOD_DEFERRED}]
     current = end_date
     while current >= start_date:
         period = format_period(current)
-        if period not in filed:
-            periods.append(period)
+        is_filed = period in filed
+        periods.append(
+            {
+                "value": period,
+                "label": f"{period} {filed_badge}" if is_filed else period,
+                "filed": int(is_filed),
+            }
+        )
         current = add_months(current, -1)
 
-    periods.insert(0, ITC_CLAIM_PERIOD_DEFERRED)
     return periods
 
 
@@ -353,14 +359,10 @@ def _calculate_itc_claim_period(
 def validate_itc_claim_period(doc) -> None:
     validate_mandatory_fields(doc, "itc_claim_period")
     _validate_period_format(doc.itc_claim_period)
-    _validate_itc_claim_period_as_per_filing(doc)
+    _warn_if_gstr3b_filed(doc.company_gstin, doc.itc_claim_period)
 
 
 def validate_itc_claim_period_on_update_after_submit(doc) -> None:
-    validate_mandatory_fields(doc, "itc_claim_period")
-    _validate_period_format(doc.itc_claim_period)
-
-    # On update-after-submit, period checks are needed only if period changed.
     previous = doc.get_doc_before_save()
     if not previous:
         return
@@ -368,27 +370,17 @@ def validate_itc_claim_period_on_update_after_submit(doc) -> None:
     if previous.itc_claim_period == doc.itc_claim_period:
         return
 
-    filed_period = None
-    if _is_gstr3b_filed(doc.company_gstin, previous.itc_claim_period):
-        filed_period = previous.itc_claim_period
-    if _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
-        filed_period = doc.itc_claim_period
+    validate_itc_claim_period(doc)
 
-    if not filed_period:
+
+def _warn_if_gstr3b_filed(company_gstin: str, period: str | None) -> None:
+    if not _is_gstr3b_filed(company_gstin, period):
         return
 
-    frappe.throw(
-        _("Cannot change ITC Claim Period from {0} to {1}. GSTR-3B already filed for {2}.").format(
-            previous.itc_claim_period, doc.itc_claim_period, filed_period
-        )
+    frappe.msgprint(
+        _("GSTR-3B is already filed for ITC Claim Period {0}").format(period),
+        indicator="orange",
     )
-
-
-def _validate_itc_claim_period_as_per_filing(doc) -> None:
-    if _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
-        frappe.throw(
-            _("Cannot set ITC Claim Period to {0}. GSTR-3B is already filed.").format(doc.itc_claim_period)
-        )
 
 
 # =============================================================================
