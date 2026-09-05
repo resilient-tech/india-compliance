@@ -2,12 +2,12 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.report.gstin_status.gstin_status import execute
 
 
-class TestGSTINStatus(IntegrationTestCase):
+class TestGSTINStatus(FrappeTestCase):
     GSTIN = "24AABCR6898M1ZN"
 
     @classmethod
