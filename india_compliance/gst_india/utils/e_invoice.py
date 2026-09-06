@@ -47,6 +47,7 @@ from india_compliance.gst_india.utils import (
     are_goods_supplied,
     clear_server_down,
     commit,
+    enqueue_portal_action,
     handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
@@ -56,8 +57,10 @@ from india_compliance.gst_india.utils import (
     load_doc,
     notify_user,
     parse_datetime,
+    portal_is_busy,
     rollback_and_set_einvoice_status,
     run_or_report_failure,
+    throw_server_down,
     update_onload,
 )
 from india_compliance.gst_india.utils.e_waybill import (
@@ -125,9 +128,6 @@ def generate_e_invoice(docname: str, throw: bool = True):
                 exc=AlreadyGeneratedError,
             )
 
-        if is_server_down("e-Invoice"):
-            raise GSPServerError
-
         if settings.e_invoice_reporting_time_limit_days and getdate() > add_to_date(
             doc.posting_date, days=settings.e_invoice_reporting_time_limit_days
         ):
@@ -135,6 +135,19 @@ def generate_e_invoice(docname: str, throw: bool = True):
                 _(
                     "e-Invoice cannot be generated because the posting date exceeds the reporting time limit of {0} days as specified in GST Settings."
                 ).format(settings.e_invoice_reporting_time_limit_days),
+            )
+
+        # after the real checks, so an outage doesn't mask a genuine error
+        if is_server_down("e-Invoice"):
+            throw_server_down()
+
+        if portal_is_busy():
+            return enqueue_portal_action(
+                generate_e_invoice,
+                doc,
+                _("e-Invoice generation failed"),
+                docname=docname,
+                throw=False,
             )
 
         data = EInvoiceData(doc).get_data()

@@ -1,4 +1,5 @@
 import copy
+import time
 from base64 import b64decode
 from typing import ClassVar
 from urllib.parse import quote, urljoin
@@ -15,10 +16,13 @@ from india_compliance.exceptions import (
     GSPServerError,
 )
 from india_compliance.gst_india.utils import (
-    SERVER_DOWN_MESSAGE,
+    SLOW_RESPONSE_SECONDS,
     is_api_enabled,
     is_server_down,
+    mark_portal_slow,
     mark_server_down,
+    throw_server_down,
+    track_inflight,
 )
 from india_compliance.gst_india.utils.api import enqueue_integration_request
 
@@ -180,12 +184,18 @@ class BaseAPI:
             self.before_request(request_args)
 
             # raise known errors, so auto-retry kicks in
-            try:
-                response = requests.request(method, timeout=self.REQUEST_TIMEOUT, **request_args)
-            except requests.exceptions.Timeout as e:
-                raise GatewayTimeoutError(str(e)) from e
-            except requests.exceptions.ConnectionError as e:
-                raise GSPServerError(str(e)) from e
+            started = time.monotonic()
+            with track_inflight(self.FAIL_FAST_IF_SERVER_DOWN):
+                try:
+                    response = requests.request(method, timeout=self.REQUEST_TIMEOUT, **request_args)
+                except requests.exceptions.Timeout as e:
+                    raise GatewayTimeoutError(str(e)) from e
+                except requests.exceptions.ConnectionError as e:
+                    raise GSPServerError(str(e)) from e
+
+            # slow reply: send the next submits to the queue
+            if self.tracks_portal_health and time.monotonic() - started > SLOW_RESPONSE_SECONDS:
+                mark_portal_slow()
 
             if api_request_id := response.headers.get("x-amzn-RequestId"):
                 self.request_id = api_request_id
@@ -220,8 +230,8 @@ class BaseAPI:
         except Exception as e:
             log.error = str(e)
 
-            # timeout or server down, next requests will fail too
-            if self.FAIL_FAST_IF_SERVER_DOWN and isinstance(e, GSPServerError):
+            # let the next requests fail fast
+            if self.is_outage(e):
                 mark_server_down(self.API_NAME)
 
             raise e
@@ -300,12 +310,19 @@ class BaseAPI:
         if not (self.FAIL_FAST_IF_SERVER_DOWN and is_server_down(self.API_NAME)):
             return
 
-        error_message = f"{SERVER_DOWN_MESSAGE} Please try again after some time."
+        throw_server_down()
 
-        frappe.throw(
-            msg=_(error_message),
-            exc=GSPServerError,
-            title=_("GSP/GST Server Down"),
+    @property
+    def tracks_portal_health(self):
+        # the flags are bench-wide, so keep flaky sandbox out of them
+        return self.FAIL_FAST_IF_SERVER_DOWN and (not self.sandbox_mode or frappe.flags.in_test)
+
+    def is_outage(self, exception):
+        """Server error the next request would hit too. Account limits are not outages."""
+        return (
+            self.tracks_portal_health
+            and isinstance(exception, GSPServerError)
+            and not isinstance(exception, GSPLimitExceededError)
         )
 
     def is_ignored_error(self, response_json):
@@ -336,6 +353,10 @@ class BaseAPI:
                 _("Your India Compliance API key is invalid"),
                 title=_("Invalid API Key"),
             )
+
+        # upstream down, next request would hit it too
+        if status_code in (502, 503):
+            raise GSPServerError(f"HTTP {status_code}")
 
         if status_code == 504:
             raise GatewayTimeoutError

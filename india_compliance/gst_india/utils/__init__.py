@@ -4,9 +4,12 @@ import functools
 import inspect
 import io
 import tarfile
+import time
 from collections.abc import Callable
+from contextlib import contextmanager, suppress
 
 import frappe
+import redis
 from dateutil import parser
 from erpnext.accounts.party import get_default_contact
 from erpnext.accounts.utils import get_fiscal_year
@@ -28,6 +31,7 @@ from frappe.utils import (
     get_system_timezone,
     getdate,
 )
+from frappe.utils.background_jobs import get_queues_timeout
 from frappe.utils.data import get_timespan_date_range as _get_timespan_date_range
 from frappe.utils.file_manager import get_file_path
 from pytz import timezone
@@ -103,27 +107,43 @@ def is_response_pending():
     return bool(frappe.request) and not frappe.flags.in_after_response
 
 
+def portal_is_busy():
+    """Someone is waiting and the portal can't answer fast: better queued than holding a worker.
+
+    False once the response is out or in a worker, so a queued action never queues itself again.
+    """
+    return is_response_pending() and (is_portal_slow() or inflight_in_web() >= max_inflight_in_web())
+
+
+def enqueue_portal_action(action: Callable, reference_doc, failure_message: str, **kwargs):
+    """Hand a portal action to a worker. A failure is logged against the doc and reported."""
+    if getattr(frappe.local, "is_ajax", False):
+        # say so, or the user thinks it failed and hits Generate again
+        frappe.msgprint(
+            _("Government services are busy. This will be completed in the background shortly."),
+            alert=True,
+        )
+
+    frappe.enqueue(
+        run_or_report_failure,
+        enqueue_after_commit=True,
+        queue=gst_queue(),
+        action=action,
+        reference_doctype=reference_doc.doctype,
+        reference_name=reference_doc.name,
+        failure_message=failure_message,
+        **kwargs,
+    )
+
+
 def run_after_response_or_enqueue(action: Callable, reference_doc, failure_message: str, **kwargs):
     """Run a portal action once the doc is saved, without making the user wait.
 
-    - from the desk: right after the response (frappe's commit_after_response)
-    - anything else (REST, worker, CLI): the queue
-    - either way only after commit -> a rolled back submit / cancel never reaches the portal
-    - a failure is logged against the doc and reported to the user
+    Desk and portal healthy: right after the response. Otherwise: the queue.
+    Always after commit, so a rolled back submit never reaches the portal.
     """
-    is_ui_request = getattr(frappe.local, "is_ajax", False)
-
-    if not is_ui_request:
-        frappe.enqueue(
-            run_or_report_failure,
-            enqueue_after_commit=True,
-            queue="short",
-            action=action,
-            reference_doctype=reference_doc.doctype,
-            reference_name=reference_doc.name,
-            failure_message=failure_message,
-            **kwargs,
-        )
+    if not getattr(frappe.local, "is_ajax", False) or portal_is_busy():
+        enqueue_portal_action(action, reference_doc, failure_message, **kwargs)
         return
 
     def run():
@@ -1189,11 +1209,38 @@ def validate_invoice_number(doc, throw=True):
     frappe.msgprint(message, title=title)
 
 
-SERVER_DOWN_MESSAGE = (
-    "Government services are currently slow/down. We apologize for the inconvenience caused."
-)
+# portal health, shared by every worker
+#   down     -> refuse requests, auto-retry picks the doc up
+#   slow     -> desk submits go to the queue
+#   inflight -> web workers in a call now; past the cap, submits go to the queue
+# down is per portal because it refuses work; slow only reroutes, so one flag covers all.
+# down and slow are bench-wide (same portal for every site), inflight is per site.
 SERVER_DOWN_CACHE_KEY = "gst_server_down"
 SERVER_DOWN_CACHE_TIMEOUT = 120
+PORTAL_SLOW_CACHE_KEY = "gst_portal_slow"
+
+# long, because rerouting costs the user nothing but a short wait, and a short
+# window would let a fresh burst through every time it lapsed
+PORTAL_SLOW_CACHE_TIMEOUT = 600
+INFLIGHT_CACHE_KEY = "gst_inflight"
+
+# past this a reply is not instant anyway, so stop paying a web worker for it
+SLOW_RESPONSE_SECONDS = 5
+
+# past this, an entry is a dead worker, not a live call
+INFLIGHT_STALE_SECONDS = 60
+
+
+def server_down_message():
+    return _("Government services are currently slow/down. We apologize for the inconvenience caused.")
+
+
+def throw_server_down():
+    frappe.throw(
+        msg=server_down_message() + " " + _("Please try again after some time."),
+        exc=GSPServerError,
+        title=_("GSP/GST Server Down"),
+    )
 
 
 def get_server_down_key(api_name):
@@ -1202,44 +1249,106 @@ def get_server_down_key(api_name):
 
 
 def is_server_down(api_name):
-    return bool(frappe.cache.get_value(get_server_down_key(api_name)))
+    # expires=True: don't cache in the process, a bulk job must see it change
+    return bool(frappe.cache.get_value(get_server_down_key(api_name), expires=True, shared=True))
 
 
 def mark_server_down(api_name):
-    frappe.cache.set_value(get_server_down_key(api_name), True, expires_in_sec=SERVER_DOWN_CACHE_TIMEOUT)
+    frappe.cache.set_value(
+        get_server_down_key(api_name), True, expires_in_sec=SERVER_DOWN_CACHE_TIMEOUT, shared=True
+    )
 
 
 def clear_server_down(*api_names):
-    frappe.cache.delete_value([get_server_down_key(api_name) for api_name in api_names])
+    frappe.cache.delete_value([get_server_down_key(api_name) for api_name in api_names], shared=True)
+
+
+def is_portal_slow():
+    return bool(frappe.cache.get_value(PORTAL_SLOW_CACHE_KEY, expires=True, shared=True))
+
+
+def mark_portal_slow():
+    frappe.cache.set_value(PORTAL_SLOW_CACHE_KEY, True, expires_in_sec=PORTAL_SLOW_CACHE_TIMEOUT, shared=True)
+
+
+def clear_portal_slow():
+    frappe.cache.delete_value(PORTAL_SLOW_CACHE_KEY, shared=True)
+
+
+def get_inflight_key():
+    # raw redis below, so add the site prefix here
+    return frappe.cache.make_key(INFLIGHT_CACHE_KEY)
+
+
+@contextmanager
+def track_inflight(enabled=True):
+    """Count portal calls holding a web worker, so the next submit can go to the queue instead."""
+    if not (enabled and frappe.request):
+        yield
+        return
+
+    member = frappe.generate_hash(length=10)
+
+    with suppress(redis.exceptions.RedisError):
+        frappe.cache.zadd(get_inflight_key(), {member: time.time()})
+
+    try:
+        yield
+    finally:
+        with suppress(redis.exceptions.RedisError):
+            frappe.cache.zrem(get_inflight_key(), member)
+
+
+def inflight_in_web():
+    """Web workers in a portal call right now. 0 if redis is down, so the fast path survives."""
+    key = get_inflight_key()
+
+    with suppress(redis.exceptions.RedisError):
+        # a killed worker leaves its entry behind
+        frappe.cache.zremrangebyscore(key, 0, time.time() - INFLIGHT_STALE_SECONDS)
+        return frappe.cache.zcard(key)
+
+    return 0
+
+
+def max_inflight_in_web():
+    # ponytail: flat cap; tune with gst_max_inflight_in_web in site config
+    return cint(frappe.conf.get("gst_max_inflight_in_web")) or 3
+
+
+def gst_queue():
+    """Dedicated pool if the bench set one up, so portal work can't starve other queues."""
+    return "gst" if "gst" in get_queues_timeout() else "short"
 
 
 def handle_server_errors(settings, doc, document_type, error):
-    if not doc.doctype == "Sales Invoice":
-        return
+    # only Sales Invoice has the status field the retry job scans
+    is_sales_invoice = doc.doctype == "Sales Invoice"
 
-    error_message = _(
-        "Government services are currently slow/down. We apologize for the inconvenience caused."
+    can_retry = (
+        is_sales_invoice
+        and settings.enable_retry_einv_ewb_generation
+        and (not settings.sandbox_mode or frappe.flags.in_test)
     )
+
+    error_message = server_down_message() + " "
+
+    if can_retry:
+        settings.db_set("is_retry_einv_ewb_generation_pending", 1, update_modified=False)
+        error_message += _("Your {0} generation will be automatically retried every 5 minutes.").format(
+            document_type
+        )
+    else:
+        error_message += _("Please try again after some time.")
+
+    if is_sales_invoice:
+        status_field = "einvoice_status" if document_type == "e-Invoice" else "e_waybill_status"
+        doc.db_set({status_field: "Auto-Retry" if can_retry else "Failed"})
 
     error_message_title = {
         GatewayTimeoutError: _("Gateway Timeout Error"),
         GSPServerError: _("GSP/GST Server Down"),
     }
-
-    document_status_field = "einvoice_status" if document_type == "e-Invoice" else "e_waybill_status"
-
-    document_status = "Failed"
-
-    if settings.enable_retry_einv_ewb_generation and (not settings.sandbox_mode or frappe.flags.in_test):
-        document_status = "Auto-Retry"
-        settings.db_set("is_retry_einv_ewb_generation_pending", 1, update_modified=False)
-        error_message += " " + _("Your {0} generation will be automatically retried every 5 minutes.").format(
-            document_type
-        )
-    else:
-        error_message += " " + _("Please try again after some time.")
-
-    doc.db_set({document_status_field: document_status})
 
     notify_user(error_message, title=error_message_title.get(type(error)), indicator="yellow", doc=doc)
 
