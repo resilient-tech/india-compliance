@@ -85,11 +85,39 @@ class Gstr1Report:
         """
 
     def run(self):
+        self.validate_filters()
         self.get_columns()
         self.gst_accounts = get_gst_accounts_by_type(self.filters.company, "Output")
         self.get_data()
 
         return self.columns, self.data
+
+    def validate_filters(self):
+        if company_address := self.filters.get("company_address"):
+            address = frappe.get_all(
+                "Address",
+                filters={
+                    "name": company_address,
+                    "link_doctype": "Company",
+                    "link_name": self.filters.company,
+                },
+                pluck="gstin",
+            )
+
+            if not address:
+                frappe.throw(
+                    _("Address {0} is not linked to {1}").format(
+                        frappe.bold(company_address), frappe.bold(self.filters.company)
+                    )
+                )
+
+            if not address[0]:
+                frappe.throw(_("Please set GSTIN in Address {0}").format(frappe.bold(company_address)))
+
+            self.filters.company_gstin = address[0]
+
+        if not self.filters.get("company_gstin"):
+            frappe.throw(_("Please select Company GSTIN"), title=_("Missing Filter"))
 
     def get_data(self):
         if self.filters.get("type_of_business") in ("B2C Small", "B2C Large"):
