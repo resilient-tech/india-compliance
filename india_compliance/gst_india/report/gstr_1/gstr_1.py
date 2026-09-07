@@ -94,27 +94,7 @@ class Gstr1Report:
 
     def validate_filters(self):
         if company_address := self.filters.get("company_address"):
-            address = frappe.get_all(
-                "Address",
-                filters={
-                    "name": company_address,
-                    "link_doctype": "Company",
-                    "link_name": self.filters.company,
-                },
-                pluck="gstin",
-            )
-
-            if not address:
-                frappe.throw(
-                    _("Address {0} is not linked to {1}").format(
-                        frappe.bold(company_address), frappe.bold(self.filters.company)
-                    )
-                )
-
-            if not address[0]:
-                frappe.throw(_("Please set GSTIN in Address {0}").format(frappe.bold(company_address)))
-
-            self.filters.company_gstin = address[0]
+            self.filters.company_gstin = get_company_gstin_number(self.filters.company, company_address)
 
         if not self.filters.get("company_gstin"):
             frappe.throw(_("Please select Company GSTIN"), title=_("Missing Filter"))
@@ -1680,9 +1660,13 @@ def set_gst_defaults(filters):
     if isinstance(filters, str):
         filters = json.loads(filters)
 
-    gstin = filters.get("company_gstin") or get_company_gstin_number(
-        filters.get("company"), filters.get("company_address")
-    )
+    if company_address := filters.get("company_address"):
+        gstin = get_company_gstin_number(filters["company"], company_address)
+    else:
+        gstin = filters.get("company_gstin")
+
+    if not gstin:
+        frappe.throw(_("Please select Company GSTIN"), title=_("Missing Filter"))
 
     date = getdate(filters["to_date"])
     fp = f"{date.month:02d}{date.year}"
@@ -2116,7 +2100,21 @@ def get_rate_and_tax_details(row, gstin, num):
 def get_company_gstin_number(company, address=None, all_gstins=False):
     gstin = ""
     if address:
-        gstin = frappe.db.get_value("Address", address, "gstin")
+        linked_address = frappe.get_all(
+            "Address",
+            filters={"name": address, "link_doctype": "Company", "link_name": company},
+            pluck="gstin",
+        )
+
+        if not linked_address:
+            frappe.throw(
+                _("Address {0} is not linked to {1}").format(frappe.bold(address), frappe.bold(company))
+            )
+
+        if not linked_address[0]:
+            frappe.throw(_("Please set GSTIN in Address {0}").format(frappe.bold(address)))
+
+        return linked_address[0]
 
     if not gstin:
         gstin = get_gstin_list(company)

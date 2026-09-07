@@ -169,6 +169,38 @@ class TestGSTR1B2B(FrappeTestCase):
         total_tax_2 = item_det_2.get("iamt", 0) + item_det_2.get("camt", 0) + item_det_2.get("samt", 0)
         self.assertGreater(total_tax_2, 0, "Invoice should have tax amount")
 
+    def test_company_address_without_gstin_throws(self):
+        address = frappe.get_doc(
+            {
+                "doctype": "Address",
+                "address_title": "_Test Unregistered Branch",
+                "address_type": "Billing",
+                "address_line1": "Test Address Line 1",
+                "city": "Ahmedabad",
+                "state": "Gujarat",
+                "pincode": "380001",
+                "country": "India",
+                "links": [{"link_doctype": "Company", "link_name": "_Test Indian Registered Company"}],
+            }
+        ).insert()
+
+        filters = {
+            "company": "_Test Indian Registered Company",
+            "company_address": address.name,
+            "from_date": str(getdate()),
+            "to_date": str(getdate()),
+            "type_of_business": "B2B",
+        }
+
+        self.assertRaisesRegex(frappe.ValidationError, "Please set GSTIN in Address", execute, filters)
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "Please set GSTIN in Address",
+            get_gstr1_json,
+            json.dumps(filters),
+        )
+
 
 class TestGSTR1B2CL(FrappeTestCase):
     def test_b2cl_item_num_resets_per_invoice(self):
