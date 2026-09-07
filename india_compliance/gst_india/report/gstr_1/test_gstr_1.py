@@ -170,19 +170,15 @@ class TestGSTR1B2B(FrappeTestCase):
         self.assertGreater(total_tax_2, 0, "Invoice should have tax amount")
 
     def test_company_address_without_gstin_throws(self):
-        address = frappe.get_doc(
-            {
-                "doctype": "Address",
-                "address_title": "_Test Unregistered Branch",
-                "address_type": "Billing",
-                "address_line1": "Test Address Line 1",
-                "city": "Ahmedabad",
-                "state": "Gujarat",
-                "pincode": "380001",
-                "country": "India",
-                "links": [{"link_doctype": "Company", "link_name": "_Test Indian Registered Company"}],
-            }
-        ).insert()
+        # a GSTIN-less address of a company that has other GSTINs: the report used to fall
+        # back to one of those and silently file the return under it
+        address = frappe.copy_doc(frappe.get_doc("Address", "_Test Indian Registered Company-Billing"))
+        address.address_title = "_Test Company Without GSTIN"
+        address.gstin = None
+        address.insert()
+
+        # leaving it behind makes any later transaction that picks it up fail on mandatory GSTIN
+        self.addCleanup(address.delete)
 
         filters = {
             "company": "_Test Indian Registered Company",
