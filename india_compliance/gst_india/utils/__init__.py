@@ -1298,6 +1298,40 @@ def enable_autocommit(fn):
     return wrapper
 
 
+<<<<<<< HEAD
+=======
+def get_company_gstin_number(company, address=None, gstin=None):
+    """Resolve the GSTIN a report is filed for. Never picks one on the user's behalf."""
+    if address:
+        # an address determines the GSTIN, so resolve it through the company it is linked to
+        linked_address = frappe.get_all(
+            "Address",
+            filters={"name": address, "link_doctype": "Company", "link_name": company},
+            pluck="gstin",
+        )
+
+        if not linked_address:
+            frappe.throw(
+                _("Address {0} is not linked to {1}").format(frappe.bold(address), frappe.bold(company))
+            )
+
+        if not linked_address[0]:
+            frappe.throw(_("Please set GSTIN in Address {0}").format(frappe.bold(address)))
+
+        return linked_address[0]
+
+    if gstin:
+        if gstin not in get_gstin_list(company):
+            frappe.throw(
+                _("GSTIN {0} does not belong to {1}").format(frappe.bold(gstin), frappe.bold(company))
+            )
+
+        return gstin
+
+    frappe.throw(_("Please select Company GSTIN"), title=_("Missing Filter"))
+
+
+>>>>>>> e8a88b7 (refactor: enhance HSN report filters and validation for company GSTIN)
 def has_permission_of_page(page_name, throw=False):
     """
     Check if the user has permission to access the page.
