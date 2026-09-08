@@ -149,6 +149,10 @@ def sync_details(data, fields, tool=None):
         frappe.msgprint(_("No changes to sync"))
         return
 
+    # the company booked on the purchase decides access
+    for doctype, company in {(change.doctype, change.company) for change in changes}:
+        frappe.has_permission(doctype, "write", doc=frappe.new_doc(doctype, company=company), throw=True)
+
     _apply_changes(changes, tool)
 
     return (
@@ -208,6 +212,7 @@ def _get_linked_details(doctype, fieldname_map, inward_supply_names):
             isup.link_doctype.as_("doctype"),
             isup.name,
             isup.link_name,
+            purchase.company,
             # each field as booked, with what 2A/2B reports for it alongside
             *(purchase[booked].as_(booked) for booked in fieldname_map.values()),
             *(isup[field].as_(f"reported_{booked}") for field, booked in fieldname_map.items()),
