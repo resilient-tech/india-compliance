@@ -133,20 +133,15 @@ def get_itc_period_options(company_gstin: str | None = None, posting_date: str |
     end_date = min(get_last_day(today), deadline_date)
 
     filed = _get_filed_periods(company_gstin)
+
     filed_badge = f'<span class="es-badge" data-theme="amber">{_("Filed")}</span>'
 
     periods = [{"value": ITC_CLAIM_PERIOD_DEFERRED, "label": ITC_CLAIM_PERIOD_DEFERRED}]
     current = end_date
     while current >= start_date:
         period = format_period(current)
-        is_filed = period in filed
-        periods.append(
-            {
-                "value": period,
-                "label": f"{period} {filed_badge}" if is_filed else period,
-                "filed": int(is_filed),
-            }
-        )
+        label = f"{period} {filed_badge}" if period in filed else period
+        periods.append({"value": period, "label": label})
         current = add_months(current, -1)
 
     return periods
@@ -359,7 +354,15 @@ def _calculate_itc_claim_period(
 def validate_itc_claim_period(doc) -> None:
     validate_mandatory_fields(doc, "itc_claim_period")
     _validate_period_format(doc.itc_claim_period)
-    _warn_if_gstr3b_filed(doc.company_gstin, doc.itc_claim_period)
+
+    if not _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
+        return
+
+    frappe.msgprint(
+        _("GSTR-3B is already filed for ITC Claim Period {0}").format(doc.itc_claim_period),
+        indicator="orange",
+        alert=True,
+    )
 
 
 def validate_itc_claim_period_on_update_after_submit(doc) -> None:
@@ -371,16 +374,6 @@ def validate_itc_claim_period_on_update_after_submit(doc) -> None:
         return
 
     validate_itc_claim_period(doc)
-
-
-def _warn_if_gstr3b_filed(company_gstin: str, period: str | None) -> None:
-    if not _is_gstr3b_filed(company_gstin, period):
-        return
-
-    frappe.msgprint(
-        _("GSTR-3B is already filed for ITC Claim Period {0}").format(period),
-        indicator="orange",
-    )
 
 
 # =============================================================================

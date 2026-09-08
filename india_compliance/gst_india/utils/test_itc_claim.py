@@ -314,7 +314,7 @@ class TestITCClaim(FrappeTestCase):
 
         current_period = f"{today.month:02}{today.year}"
         values = [period.get("value") for period in periods]
-        filed_periods = [period.get("value") for period in periods if period.get("filed")]
+        filed_periods = [period["value"] for period in periods if period["label"] != period["value"]]
 
         self.assertIn(current_period, values)
         self.assertEqual(filed_periods, [current_period])
