@@ -718,8 +718,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual(result[0].bill_no, "IMS-SYNC-001-A")
 
         # now in agreement: nothing left to sync
-        with self.assertRaises(frappe.exceptions.ValidationError):
-            self.gst_ims.sync_details([row], fields=["bill_no", "bill_date"])
+        self.assertIsNone(self.gst_ims.sync_details([row], fields=["bill_no", "bill_date"]))
 
     def get_periods(self):
         periods = []

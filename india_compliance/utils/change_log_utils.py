@@ -13,9 +13,6 @@ def add_comments_in_bulk(comments, comment_type="Info", user=None, timestamp=Non
             Rows with no content are skipped, so a change log comment that came
             back empty can be passed straight through.
 
-    Returns:
-        int: number of comments inserted
-
     Bypasses all hooks, as bulk_insert does. Use only for informational comments.
     """
     user = user or frappe.session.user
@@ -42,11 +39,9 @@ def add_comments_in_bulk(comments, comment_type="Info", user=None, timestamp=Non
     ]
 
     if not comment_docs:
-        return 0
+        return
 
     bulk_insert("Comment", comment_docs, ignore_duplicates=True)
-
-    return len(comment_docs)
 
 
 def create_change_log_comment(

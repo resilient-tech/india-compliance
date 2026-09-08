@@ -140,12 +140,14 @@ def sync_details(data, fields, tool=None):
     }
 
     if not inward_supply_names:
-        frappe.throw(_("Please select matched rows to sync"))
+        frappe.msgprint(_("Please select matched rows to sync"))
+        return
 
     changes = _get_changes_to_sync(inward_supply_names, fields)
 
     if not changes:
-        frappe.throw(_("No changes to sync"))
+        frappe.msgprint(_("No changes to sync"))
+        return
 
     _apply_changes(changes, tool)
 
@@ -163,7 +165,7 @@ def _validate_sync_fields(fields):
         frappe.throw(_("No fields to sync"))
 
     if invalid := set(fields) - set(SYNCABLE_FIELDS):
-        frappe.throw(_("Unable to sync {0}").format(frappe.bold(", ".join(sorted(invalid)))))
+        frappe.throw(_("Not allowed to the field {0}").format(frappe.bold(", ".join(sorted(invalid)))))
 
     return [field for field in SYNCABLE_FIELDS if field in fields]
 

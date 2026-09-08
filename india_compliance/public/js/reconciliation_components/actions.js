@@ -94,6 +94,8 @@ Object.assign(reconciliation, {
 
         const { message: synced_rows } = await frm._call("sync_details", { data: rows, fields });
 
+        if (!synced_rows) return; // nothing synced, server has said why
+
         // drop the stale copies before pushing the refreshed ones back, else they double up
         const synced_names = new Set(synced_rows.map((row) => row.inward_supply_name));
         const new_data = _class.data.filter((row) => !synced_names.has(row.inward_supply_name));

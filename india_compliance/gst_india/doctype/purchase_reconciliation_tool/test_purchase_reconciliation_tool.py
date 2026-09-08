@@ -807,7 +807,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         ):
             prt.link_documents(purchase.name, inward_supply.name, "Purchase Invoice")
 
-        with self.assertRaises(frappe.exceptions.ValidationError):
+        self.assertIsNone(
             prt.sync_details(
                 [
                     {
@@ -818,8 +818,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                 ],
                 fields=["bill_no", "bill_date"],
             )
+        )
 
-        with self.assertRaises(frappe.exceptions.ValidationError):
+        self.assertIsNone(
             prt.sync_details(
                 [
                     {
@@ -830,6 +831,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                 ],
                 fields=["bill_date"],
             )
+        )
 
         # nothing written, nothing logged on either document
         for purchase_name, bill_no in ((agreed_pinv.name, "SYNC-PI-004"), (pinv.name, "SYNC-PI-005")):

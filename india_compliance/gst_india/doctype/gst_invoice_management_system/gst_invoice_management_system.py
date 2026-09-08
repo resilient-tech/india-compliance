@@ -248,7 +248,10 @@ class GSTInvoiceManagementSystem(Document):
     def sync_details(self, data: str | list, fields: str | list | None = None):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
-        purchases, inward_supplies = _sync_details(data, fields, tool=self.doctype)
+        if not (synced := _sync_details(data, fields, tool=self.doctype)):
+            return
+
+        purchases, inward_supplies = synced
 
         return self.get_invoice_data(inward_supplies, purchases)
 
