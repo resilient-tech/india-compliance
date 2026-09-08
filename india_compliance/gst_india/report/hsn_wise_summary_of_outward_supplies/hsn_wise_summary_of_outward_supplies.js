@@ -2,8 +2,6 @@
 // For license information, please see license.txt
 
 /* eslint-disable */
-{% include "india_compliance/gst_india/report/utils.js" %}
-
 frappe.query_reports["HSN-wise-summary of outward supplies"] = {
     "filters": [
         {
@@ -13,7 +11,9 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
             "options": "Company",
             "reqd": 1,
             "default": frappe.defaults.get_user_default("Company"),
-            "on_change": fetch_gstins
+            "on_change": report => {
+                report.set_filter_value("company_gstin", "");
+            }
         },
         {
             "fieldname":"gst_hsn_code",
@@ -25,10 +25,13 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
         {
             "fieldname":"company_gstin",
             "label": __("Company GSTIN"),
-            "fieldtype": "Select",
-            "placeholder":"Company GSTIN",
-            "options": [""],
-            "width": "80"
+            "fieldtype": "Autocomplete",
+            "reqd": 1,
+            "width": "80",
+            get_query: function () {
+                const company = frappe.query_report.get_filter_value("company");
+                return india_compliance.get_gstin_query(company, "Company", true);
+            }
         },
         {
             "fieldname":"from_date",
@@ -63,8 +66,6 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
 
     ],
     onload: (report) => {
-        fetch_gstins(report);
-
         report.page.add_inner_button(__("Download JSON"), function () {
             var filters = report.get_values();
 
