@@ -1381,25 +1381,35 @@ def enable_autocommit(fn):
     return wrapper
 
 
-def get_company_gstin_number(company, address=None, all_gstins=False):
-    gstin = ""
+def get_company_gstin_number(company, address=None, gstin=None):
+    """Resolve the GSTIN a report is filed for. Never picks one on the user's behalf."""
     if address:
-        gstin = frappe.db.get_value("Address", address, "gstin")
-
-    if not gstin:
-        gstin = get_gstin_list(company)
-        if gstin and not all_gstins:
-            gstin = gstin[0]
-
-    if not gstin:
-        address = frappe.bold(address) if address else ""
-        frappe.throw(
-            _("Please set valid GSTIN No. in Company Address {} for company {}").format(
-                address, frappe.bold(company)
-            )
+        # an address determines the GSTIN, so resolve it through the company it is linked to
+        linked_address = frappe.get_all(
+            "Address",
+            filters={"name": address, "link_doctype": "Company", "link_name": company},
+            pluck="gstin",
         )
 
-    return gstin
+        if not linked_address:
+            frappe.throw(
+                _("Address {0} is not linked to {1}").format(frappe.bold(address), frappe.bold(company))
+            )
+
+        if not linked_address[0]:
+            frappe.throw(_("Please set GSTIN in Address {0}").format(frappe.bold(address)))
+
+        return linked_address[0]
+
+    if gstin:
+        if gstin not in get_gstin_list(company):
+            frappe.throw(
+                _("GSTIN {0} does not belong to {1}").format(frappe.bold(gstin), frappe.bold(company))
+            )
+
+        return gstin
+
+    frappe.throw(_("Please select Company GSTIN"), title=_("Missing Filter"))
 
 
 def has_permission_of_page(page_name, throw=False):
