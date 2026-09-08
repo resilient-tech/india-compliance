@@ -26,7 +26,7 @@ class TestHSNWiseSummaryReport(IntegrationTestCase):
     def test_gstin_not_belonging_to_company_throws(self):
         filters = {
             "company": "_Test Indian Registered Company",
-            "company_gstin": "27AAQCA8719H1Z6",
+            "company_gstin": "29AABCT1332L1ZA",
             "from_date": frappe.utils.getdate(),
             "to_date": frappe.utils.getdate(),
         }
