@@ -197,6 +197,24 @@ class TestGSTR1B2B(FrappeTestCase):
             json.dumps(filters),
         )
 
+    def test_gstin_not_belonging_to_company_throws(self):
+        filters = {
+            "company": "_Test Indian Registered Company",
+            "company_gstin": "27AAQCA8719H1Z6",
+            "from_date": str(getdate()),
+            "to_date": str(getdate()),
+            "type_of_business": "B2B",
+        }
+
+        self.assertRaisesRegex(frappe.ValidationError, "does not belong to", execute, filters)
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "does not belong to",
+            get_gstr1_json,
+            json.dumps(filters),
+        )
+
 
 class TestGSTR1B2CL(FrappeTestCase):
     def test_b2cl_item_num_resets_per_invoice(self):
