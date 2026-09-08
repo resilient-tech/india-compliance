@@ -66,14 +66,6 @@ class TestScheduleIIITemplates(IntegrationTestCase):
 
         return None
 
-    def get_row_value(self, data, account_name):
-        """Accumulated values are reported per period, leaving the total column unset."""
-        for row in data:
-            if row.get("account_name") == account_name:
-                return row.get(row["_segment_info"]["period_keys"][0])
-
-        return None
-
     def get_account(self, account_name):
         return frappe.get_value(
             "Account", {"account_name": account_name, "company": self.company, "is_group": 0}, "name"
@@ -208,18 +200,33 @@ class TestScheduleIIITemplates(IntegrationTestCase):
         data = self.execute_report("Standard Profit and Loss (Schedule III)")
 
         # stock grew from 5000 to 6000
-        self.assertEqual(self.get_row_value(data, CHANGES_IN_INVENTORIES), -1000)
+        self.assertEqual(self.get_row_total(data, CHANGES_IN_INVENTORIES), -1000)
 
         # COGS of 2000 less the 1000 retained in stock leaves the 3000 purchased
-        self.assertEqual(self.get_row_value(data, "1. Cost of Materials Consumed"), 3000)
+        self.assertEqual(self.get_row_total(data, "1. Cost of Materials Consumed"), 3000)
 
         # the VARIANCE row hides itself only when the report ties back to the ledger
-        self.assertIsNone(self.get_row_value(data, VARIANCE))
+        self.assertIsNone(self.get_row_total(data, VARIANCE))
 
-        # Accumulated Values is deliberately not asserted: Closing Balance and Period
-        # Movement collapse to the same figure once the engine accumulates, so no one
-        # formula holds in both modes. Both errors cancel in total expenses, which is
-        # why only the line items above catch this.
+        # consume a further 4000, so stock now falls from the opening 5000 to 2000
+        make_journal_entry(cogs_acc, stock_acc, 4000, **args)
+
+        data = self.execute_report("Standard Profit and Loss (Schedule III)")
+
+        # the line flips sign once inventory is drawn down rather than built up
+        self.assertEqual(self.get_row_total(data, CHANGES_IN_INVENTORIES), 3000)
+
+        # purchases are unchanged, so back-solving must still return the same 3000
+        self.assertEqual(self.get_row_total(data, "1. Cost of Materials Consumed"), 3000)
+
+        self.assertIsNone(self.get_row_total(data, VARIANCE))
+
+        # Accumulated Values is deliberately not asserted. ERPNext's engine folds the
+        # opening balance into the period movement for every account, so a Stock Assets
+        # movement becomes its closing balance and the two line items above come out
+        # wrong. That is an ERPNext bug (it breaks the shipped Horizontal P&L and Cash
+        # Flow templates too) and must not be worked around here: the totals still tie,
+        # and this template will be correct in both modes once the engine is fixed.
 
     def test_balance_sheet_schedule_iii(self):
         """

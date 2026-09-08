@@ -6,18 +6,19 @@ import os
 
 import frappe
 
+from india_compliance.hooks import app_name
+
 
 def execute():
-    """
-    The ERPNext sync only inserts templates that are missing, so a shipped template never
-    picks up later edits. Reloading imports the file when its timestamp is the newer one,
-    so bump that timestamp when editing a template.
-    """
-    path = frappe.get_app_path("india_compliance", "income_tax_india", "financial_report_template")
+    for module in frappe.local.app_modules.get(app_name) or []:
+        path = os.path.join(frappe.get_module_path(module), "financial_report_template")
 
-    for template in os.listdir(path):
-        # every fixture is a folder named after the json it holds
-        if not os.path.exists(os.path.join(path, template, f"{template}.json")):
+        if not os.path.isdir(path):
             continue
 
-        frappe.reload_doc("income_tax_india", "financial_report_template", template)
+        for template in os.listdir(path):
+            # every fixture is a folder named after the json it holds
+            if not os.path.exists(os.path.join(path, template, f"{template}.json")):
+                continue
+
+            frappe.reload_doc(module, "financial_report_template", template)
