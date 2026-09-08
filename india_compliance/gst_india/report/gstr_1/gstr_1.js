@@ -27,7 +27,7 @@ frappe.query_reports["GSTR-1"] = {
             reqd: 1,
             default: frappe.defaults.get_user_default("Company"),
             on_change: (report) => {
-                report.set_filter_value("company_address", "");
+                report.set_filter_value({ company_address: "", company_gstin: "" });
             },
         },
         {

@@ -93,11 +93,7 @@ class Gstr1Report:
         return self.columns, self.data
 
     def validate_filters(self):
-        if company_address := self.filters.get("company_address"):
-            self.filters.company_gstin = get_company_gstin_number(self.filters.company, company_address)
-
-        if not self.filters.get("company_gstin"):
-            frappe.throw(_("Please select Company GSTIN"), title=_("Missing Filter"))
+        self.filters.company_gstin = validate_and_get_company_gstin(self.filters)
 
     def get_data(self):
         if self.filters.get("type_of_business") in ("B2C Small", "B2C Large"):
@@ -1660,13 +1656,7 @@ def set_gst_defaults(filters):
     if isinstance(filters, str):
         filters = json.loads(filters)
 
-    if company_address := filters.get("company_address"):
-        gstin = get_company_gstin_number(filters["company"], company_address)
-    else:
-        gstin = filters.get("company_gstin")
-
-    if not gstin:
-        frappe.throw(_("Please select Company GSTIN"), title=_("Missing Filter"))
+    gstin = validate_and_get_company_gstin(filters)
 
     date = getdate(filters["to_date"])
     fp = f"{date.month:02d}{date.year}"
@@ -2097,8 +2087,17 @@ def get_rate_and_tax_details(row, gstin, num):
     return {"num": int(num), "itm_det": itm_det}
 
 
-def get_company_gstin_number(company, address=None, all_gstins=False):
-    gstin = ""
+def validate_and_get_company_gstin(filters):
+    """Resolve the GSTIN a GSTR-1 report runs for, from its company / address / GSTIN filters."""
+    if not filters.get("company_address") and not filters.get("company_gstin"):
+        frappe.throw(_("Please select Company GSTIN"), title=_("Missing Filter"))
+
+    return get_company_gstin_number(
+        filters["company"], filters.get("company_address"), filters.get("company_gstin")
+    )
+
+
+def get_company_gstin_number(company, address=None, gstin=None, all_gstins=False):
     if address:
         linked_address = frappe.get_all(
             "Address",
@@ -2116,10 +2115,17 @@ def get_company_gstin_number(company, address=None, all_gstins=False):
 
         return linked_address[0]
 
-    if not gstin:
-        gstin = get_gstin_list(company)
-        if gstin and not all_gstins:
-            gstin = gstin[0]
+    if gstin:
+        if gstin not in get_gstin_list(company):
+            frappe.throw(
+                _("GSTIN {0} does not belong to {1}").format(frappe.bold(gstin), frappe.bold(company))
+            )
+
+        return gstin
+
+    gstin = get_gstin_list(company)
+    if gstin and not all_gstins:
+        gstin = gstin[0]
 
     if not gstin:
         address = frappe.bold(address) if address else ""
