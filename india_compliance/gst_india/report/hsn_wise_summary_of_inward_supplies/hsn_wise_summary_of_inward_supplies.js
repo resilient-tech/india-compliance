@@ -35,6 +35,7 @@ frappe.query_reports["HSN-wise-summary of inward supplies"] = {
             fieldname: "company_gstin",
             label: __("Company GSTIN"),
             fieldtype: "Autocomplete",
+            reqd: 1,
             get_query() {
                 const company = frappe.query_report.get_filter_value("company");
                 return india_compliance.get_gstin_query(company);
