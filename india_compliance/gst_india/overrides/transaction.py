@@ -10,6 +10,7 @@ from erpnext.controllers.taxes_and_totals import (
 )
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_default_address
+from frappe.model.meta import get_field_precision
 from frappe.model.utils import get_fetch_values
 from frappe.utils import cint, flt, format_date
 
@@ -1332,7 +1333,12 @@ class ItemGSTDetails:
             tax_differences[tax_type] += flt(tax_row.get(self.tax_amount_field()))
 
         last_item_with_tax = None
+<<<<<<< HEAD
         last_item_defaults = None
+=======
+        running_tax_total = defaultdict(float)
+        allocated_tax_total = defaultdict(float)
+>>>>>>> e435480 (fix: diffuse rounding errors in GST calculations across multiple items)
 
         for item in self.doc.get("items"):
             item_defaults = self.item_defaults.copy()
@@ -1354,8 +1360,16 @@ class ItemGSTDetails:
                     # There can be difference in Item Table and Item Wise Tax Details
                     continue
 
+<<<<<<< HEAD
                 tax_rate = self.get_item_tax_rate(item, tax_row)
                 tax_amount = self.get_item_tax_amount(item, tax_rate, tax)
+=======
+            tax_amount = self.diffuse_rounding_error(
+                tax_amount, tax_type, running_tax_total, allocated_tax_total
+            )
+
+            tax_differences[tax_type] -= tax_amount
+>>>>>>> e435480 (fix: diffuse rounding errors in GST calculations across multiple items)
 
                 # cases when charge type == "Actual"
                 if tax_amount and not tax_rate:
@@ -1374,8 +1388,18 @@ class ItemGSTDetails:
 
         # Handle rounding errors
         if tax_differences and last_item_with_tax:
+<<<<<<< HEAD
             for tax, tax_amount in tax_differences.items():
                 last_item_defaults[f"{tax}_amount"] += flt(tax_amount, 5)
+=======
+            for tax_type, difference in tax_differences.items():
+                tax_amount_field = f"{tax_type}_amount"
+                amount = flt(
+                    last_item_with_tax.get(tax_amount_field) + difference,
+                    self.precision.get(tax_amount_field),
+                )
+                last_item_with_tax.set(tax_amount_field, amount)
+>>>>>>> e435480 (fix: diffuse rounding errors in GST calculations across multiple items)
 
             for fieldname, value in last_item_defaults.items():
                 last_item_with_tax.set(fieldname, value)
@@ -1402,6 +1426,15 @@ class ItemGSTDetails:
         """
 
         tax_details = frappe._dict()
+<<<<<<< HEAD
+=======
+        item_map = frappe._dict()
+        tax_map = frappe._dict()
+        tax_differences = defaultdict(float)
+        last_item_with_tax = None
+        running_tax_total = defaultdict(float)
+        allocated_tax_total = defaultdict(float)
+>>>>>>> e435480 (fix: diffuse rounding errors in GST calculations across multiple items)
 
         for row in self.doc.get("items"):
             key = self.get_item_key(row)
@@ -1421,8 +1454,19 @@ class ItemGSTDetails:
 
             old = json.loads(row.get(self.tax_details_field(), "{}"))
 
+<<<<<<< HEAD
             tax_difference = flt(row.base_tax_amount_after_discount_amount)
             last_item_with_tax = None
+=======
+            item_taxes = tax_details[item.name]
+            tax_rate = row.get("rate")
+            tax_amount = self.diffuse_rounding_error(
+                self.get_item_tax_amount(item, tax_rate, tax_type),
+                tax_type,
+                running_tax_total,
+                allocated_tax_total,
+            )
+>>>>>>> e435480 (fix: diffuse rounding errors in GST calculations across multiple items)
 
             # update item taxes
             for item_name in old:
@@ -1440,6 +1484,7 @@ class ItemGSTDetails:
                 if tax_amount and not tax_rate:
                     continue
 
+<<<<<<< HEAD
                 item_taxes[tax_rate_field] = tax_rate
                 item_taxes[tax_amount_field] += tax_amount
 
@@ -1453,6 +1498,15 @@ class ItemGSTDetails:
             # Handle rounding errors
             if tax_difference and last_item_with_tax:
                 last_item_with_tax[tax_amount_field] += tax_difference
+=======
+        if tax_differences and last_item_with_tax:
+            for tax_type, difference_amount in tax_differences.items():
+                tax_amount_field = f"{tax_type}_amount"
+                last_item_with_tax[tax_amount_field] = flt(
+                    last_item_with_tax[tax_amount_field] + difference_amount,
+                    self.precision.get(tax_amount_field),
+                )
+>>>>>>> e435480 (fix: diffuse rounding errors in GST calculations across multiple items)
 
         self.item_tax_details = tax_details
 
@@ -1546,7 +1600,11 @@ class ItemGSTDetails:
             if not field:
                 continue
 
+<<<<<<< HEAD
             self.precision[fieldname] = field.precision or default_precision
+=======
+            precisions[fieldname] = get_field_precision(field) or default_precision
+>>>>>>> e435480 (fix: diffuse rounding errors in GST calculations across multiple items)
 
     def dont_recompute_tax_is_set(self):
         for row in self.doc.taxes:
@@ -1570,10 +1628,25 @@ class ItemGSTDetails:
         return tax_row.rate
 
     def get_item_tax_amount(self, item, tax_rate, tax):
-        precision = self.precision.get(f"{tax}_amount")
         multiplier = item.qty if tax == "cess_non_advol" else item.taxable_value / 100
 
-        return flt(tax_rate * multiplier, precision)
+        return tax_rate * multiplier
+
+    def diffuse_rounding_error(self, tax_amount, tax_type, running_tax_total, allocated_tax_total):
+        """
+        Round each item's tax amount as a delta of the running cumulative total, so that
+        per item rounding losses cancel out instead of accumulating into the last item.
+
+        Same approach as ERPNext's TaxesAndTotals.set_item_wise_tax.
+        """
+        precision = self.precision.get(f"{tax_type}_amount")
+
+        running_tax_total[tax_type] += tax_amount
+        new_total = flt(running_tax_total[tax_type], precision)
+        tax_amount = flt(new_total - allocated_tax_total[tax_type], precision)
+        allocated_tax_total[tax_type] = new_total
+
+        return tax_amount
 
     def get_tax_details(self, tax_row):
         if not getattr(tax_row, "__tax_details", None):
