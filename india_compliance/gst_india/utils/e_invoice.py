@@ -44,6 +44,7 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
 )
 from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
 from india_compliance.gst_india.utils import (
+    add_version,
     are_goods_supplied,
     commit,
     handle_server_errors,
@@ -339,6 +340,7 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
             "einvoice_status": result.get("einvoice_status") or "Generated",
         }
     )
+    add_version(doc)
 
     invoice_data = None
     if result.SignedInvoice:
@@ -419,6 +421,7 @@ def log_and_process_e_invoice_cancellation(doc, values, result, message):
             "irn": "",
         }
     )
+    add_version(doc)
 
     return notify_user(message, indicator="green", alert=True, doc=doc)
 

@@ -178,6 +178,12 @@ def send_updated_doc(doc):
     frappe.response.docs.append(doc)
 
 
+def add_version(doc):
+    """db_set skips Version, write one so timeline shows who changed what"""
+    doc.save_version()
+    doc._doc_before_save = None
+
+
 def publish_doc_update(doc):
     """Send the updated doc to the user's open form."""
     if not frappe.flags.in_bulk_generation:
@@ -1216,6 +1222,7 @@ def handle_server_errors(settings, doc, document_type, error):
         error_message += " " + _("Please try again after some time.")
 
     doc.db_set({document_status_field: document_status})
+    add_version(doc)
 
     notify_user(error_message, title=error_message_title.get(type(error)), indicator="yellow", doc=doc)
 
@@ -1542,6 +1549,7 @@ def _rollback_and_set_status(doc, fieldname, status):
     # if response is pending, other viewers refetch on doc_update;
     # else the pushed doc (publish_doc_update) notifies them
     doc.db_set(fieldname, status, notify=is_response_pending())
+    add_version(doc)
     commit()
 
 
