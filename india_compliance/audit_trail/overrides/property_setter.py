@@ -5,6 +5,8 @@ from frappe.utils import cint
 from india_compliance.audit_trail.utils import (
     get_audit_trail_doctypes,
     is_audit_trail_enabled,
+    is_audit_trail_enabled_for,
+    throw_cannot_enable_ignore_versioning,
 )
 
 
@@ -12,6 +14,10 @@ def validate(doc, method=None):
     flags = frappe.local.flags
 
     if flags.in_install or flags.in_migrate or not is_audit_trail_enabled():
+        return
+
+    if is_ignore_versioning_property_setter(doc):
+        validate_ignore_versioning(doc)
         return
 
     is_protected = is_protected_property_setter(doc)
@@ -45,8 +51,23 @@ def throw_cannot_change_property_error(doc):
         _(
             "Cannot change the Track Changes property for {0}, since it has been"
             " enabled to maintain Audit Trail"
-        ).format(_(doc.doc_type))
+        ).format(frappe.bold(_(doc.doc_type))),
+        title=_("Audit Trail"),
     )
+
+
+def is_ignore_versioning_property_setter(doc):
+    return doc.doctype_or_field == "DocField" and doc.property == "ignore_versioning"
+
+
+def validate_ignore_versioning(doc):
+    """
+    `Ignore Versioning` cannot be enabled for a standard field.
+    """
+    if not cint(doc.value) or not is_audit_trail_enabled_for(doc.doc_type):
+        return
+
+    throw_cannot_enable_ignore_versioning(doc.doc_type)
 
 
 def is_protected_property_setter(doc):

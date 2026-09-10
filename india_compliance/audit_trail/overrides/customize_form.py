@@ -7,6 +7,7 @@ from frappe.custom.doctype.customize_form.customize_form import (
 from india_compliance.audit_trail.utils import (
     get_audit_trail_doctypes,
     is_audit_trail_enabled,
+    is_audit_trail_enabled_for,
 )
 
 
@@ -15,7 +16,7 @@ class CustomizeForm(_CustomizeForm):
     def fetch_to_customize(self):
         self.set_onload(
             "audit_trail_enabled",
-            self.doc_type and is_audit_trail_enabled() and self.doc_type in get_audit_trail_doctypes(),
+            bool(self.doc_type) and is_audit_trail_enabled_for(self.doc_type),
         )
 
         return super().fetch_to_customize()
@@ -37,5 +38,6 @@ class CustomizeForm(_CustomizeForm):
         frappe.throw(
             _(
                 "Cannot disable Track Changes for {0}, since it has been enabled to maintain Audit Trail"
-            ).format(_(self.doc_type))
+            ).format(frappe.bold(_(self.doc_type))),
+            title=_("Audit Trail"),
         )
