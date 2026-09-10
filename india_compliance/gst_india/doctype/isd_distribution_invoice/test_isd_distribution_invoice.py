@@ -22,7 +22,7 @@ from india_compliance.gst_india.utils.isd import (
     get_source_items_from_purchase_invoice,
     sum_row_tax_by_type,
 )
-from india_compliance.gst_india.utils.tests import create_purchase_invoice
+from india_compliance.gst_india.utils.tests import create_purchase_invoice, create_sales_invoice
 
 # On IntegrationTestCase, the doctype test records and all link-field test record dependencies are
 # recursively loaded. The ISD fixtures below are built at runtime, so keep them out of that list.
@@ -624,6 +624,18 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         doc = make_distribution_invoice(purchase_invoice=self.pi.name, company_gstin=RECIPIENT_GSTIN)
         self.assertRaisesRegex(
             VALIDATION_ERROR, "booked under a different Distribution GSTIN", doc.validate_purchase_invoice
+        )
+
+    def test_isd_gstin_cannot_make_an_outward_supply(self):
+        """An ISD is not a place of business and has no Electronic Credit Ledger, so it cannot be
+        the supplier on an outward transaction."""
+        self.assertRaisesRegex(
+            VALIDATION_ERROR,
+            "cannot make any outward supply",
+            create_sales_invoice,
+            company=self.company,
+            company_address=self.isd_address.name,
+            is_in_state=True,
         )
 
     def test_goods_on_an_isd_purchase_invoice_are_flagged(self):
