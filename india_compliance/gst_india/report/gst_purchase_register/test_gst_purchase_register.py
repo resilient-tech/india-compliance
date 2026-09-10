@@ -283,3 +283,8 @@ class TestGSTPurchaseRegister(IntegrationTestCase):
         self.assertEqual(row["cgst_amount"], source_row.distributed_cgst)
         self.assertEqual(row["sgst_amount"], source_row.distributed_sgst)
         self.assertEqual(row["total_tax"], source_row.distributed_cgst + source_row.distributed_sgst)
+        self.assertEqual(row["taxable_value"], source_row.distributed_expense)
+        self.assertEqual(
+            row["total_amount"],
+            source_row.distributed_expense + source_row.distributed_cgst + source_row.distributed_sgst,
+        )
