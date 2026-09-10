@@ -626,6 +626,34 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             VALIDATION_ERROR, "booked under a different Distribution GSTIN", doc.validate_purchase_invoice
         )
 
+    def test_goods_on_an_isd_purchase_invoice_are_flagged(self):
+        """s.20(1): an ISD distributes credit on input services only. The warning belongs where the
+        credit is booked, so it fires once on the ISD-applicable Purchase Invoice."""
+        goods_item = {
+            "item_code": "_Test Service Item",
+            "qty": 1,
+            "rate": 10000,
+            "gst_hsn_code": "61149090",
+            "cost_center": "Main - _TIRC",
+            "expense_account": PROFIT_AND_LOSS_ACCOUNT,
+        }
+
+        frappe.clear_messages()
+        pi = make_isd_pi(self.isd_address.name, items=[goods_item])
+        self.assertTrue(pi.is_isd_applicable)
+        self.assertIn("Non-Service Items found", str(frappe.message_log))
+
+        # a service invoice on the same ISD stays quiet
+        frappe.clear_messages()
+        make_isd_pi(self.isd_address.name)
+        self.assertNotIn("Non-Service Items found", str(frappe.message_log))
+
+        # the same goods on a non-ISD invoice are none of our business
+        frappe.clear_messages()
+        non_isd = make_isd_pi("_Test Indian Registered Company-Billing", items=[goods_item])
+        self.assertFalse(non_isd.is_isd_applicable)
+        self.assertNotIn("Non-Service Items found", str(frappe.message_log))
+
     # ------------------------------------------------------------------ source items 1:1 mapping
     def test_source_item_validations(self):
         # a row that does not point to an item on the Purchase Invoice
