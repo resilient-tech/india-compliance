@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import Coalesce, Sum
-from frappe.utils import cint, flt, get_link_to_form, getdate
+from frappe.utils import cint, flt, format_date, get_link_to_form, getdate
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, ISD_GST_CATEGORY
 from india_compliance.gst_india.utils import validate_invoice_number
@@ -104,6 +104,16 @@ class ISDDistributionInvoice(ISDController):
                 _("Posting date of Purchase Invoice {0} is after this ISD Distribution Invoice.").format(
                     pi_link
                 )
+            )
+
+        if getdate(pi.posting_date).replace(day=1) != getdate(self.posting_date).replace(day=1):
+            frappe.msgprint(
+                _(
+                    "Purchase Invoice {0} is dated {1}. Under Rule 54(1), credit is normally"
+                    " distributed within the same month in which it became available."
+                ).format(pi_link, format_date(pi.posting_date)),
+                title=_("Distribution Month Differs"),
+                indicator="orange",
             )
 
         if pi.company != self.company:

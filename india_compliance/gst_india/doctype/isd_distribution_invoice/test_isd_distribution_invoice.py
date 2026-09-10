@@ -12,7 +12,9 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.isd_distributio
     _create_isd_recipient_invoice,
     create_credit_note,
 )
-from india_compliance.gst_india.doctype.turnover_record.turnover_record import get_relevant_period
+from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
+    get_relevant_period,
+)
 from india_compliance.gst_india.utils.isd import (
     bulk_create_isd_distribution_invoices,
     get_input_gst_accounts,
@@ -599,6 +601,16 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         self.assertRaisesRegex(
             VALIDATION_ERROR, "is after this ISD Distribution Invoice", doc.validate_purchase_invoice
         )
+
+        # a distribution dated outside the Purchase Invoice's month is warned about, not blocked
+        frappe.clear_messages()
+        doc = make_distribution_invoice(
+            purchase_invoice=self.pi.name,
+            company_address=self.isd_address.name,
+            posting_date=add_months(today(), 1),
+        )
+        doc.validate_purchase_invoice()
+        self.assertIn("Distribution Month Differs", frappe.message_log[-1].get("title", ""))
 
         # must belong to the same company
         doc = make_distribution_invoice(
