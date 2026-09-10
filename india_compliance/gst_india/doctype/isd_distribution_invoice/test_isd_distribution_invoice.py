@@ -14,6 +14,7 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.isd_distributio
 )
 from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
     get_relevant_period,
+    upsert_turnover_record,
 )
 from india_compliance.gst_india.utils.isd import (
     bulk_create_isd_distribution_invoices,
@@ -1041,6 +1042,35 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             self.assertLess(flt(doc.total_eligible) + flt(doc.total_ineligible), 0)
             # the displayed percentage stays a plain proportion
             self.assertGreater(flt(doc.distribution_ratio), 0)
+
+    def test_credit_note_keeps_the_original_proportions_after_turnover_changes(self):
+        """Rule 39(1)(n): a reversal follows the ratio the credit went out on, so a later change to
+        the Turnover Record must not re-apportion it."""
+        distribution = create_distribution_invoice(
+            purchase_invoice=make_isd_pi(self.isd_address.name),
+            company_address=self.isd_address.name,
+            party_address=self.recipient_address.name,
+            branch_turnover=25,
+            total_turnover=100,
+        )
+
+        upsert_turnover_record(
+            company=self.company, gstin=RECIPIENT_GSTIN, gst_state=None, amount=90, posting_date=today()
+        )
+
+        credit_note = create_credit_note(distribution.name)
+        credit_note.insert()
+
+        self.assertEqual(flt(credit_note.branch_turnover), flt(distribution.branch_turnover))
+        self.assertEqual(flt(credit_note.total_turnover), flt(distribution.total_turnover))
+
+        for original, reversal in zip(distribution.source_items, credit_note.source_items, strict=True):
+            for gst_tax_type in GST_TAX_TYPES:
+                self.assertEqual(
+                    flt(reversal.get(f"distributed_{gst_tax_type}")),
+                    -flt(original.get(f"distributed_{gst_tax_type}")),
+                    f"distributed_{gst_tax_type} row {original.idx}",
+                )
 
     def test_only_one_credit_note_per_distribution(self):
         """The reversal limit comes from what the distribution passed on, so a second credit note
