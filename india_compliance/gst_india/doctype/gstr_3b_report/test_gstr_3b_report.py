@@ -1012,6 +1012,30 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(output["itc_elg"]["itc_net"]["camt"], 0.0)
         self.assertEqual(output["itc_elg"]["itc_net"]["samt"], 0.0)
 
+    def test_credit_note_only_period_nets_negative(self):
+        """A period whose only ISD activity is a reversal must report negative ITC in 4(A)(4)
+        rather than clamping to zero."""
+        pi = make_isd_pi(self.isd_address.name)
+        doc = create_recipient_invoice(
+            company_address=self.COMPANY_ADDRESS,
+            party_address=self.isd_address.name,
+            external_isd_invoice_number=frappe.generate_hash(length=8),
+            is_credit_note=1,
+            source_items=make_source_item(pi, is_credit_note=1),
+        )
+        source_row = doc.source_items[0]
+        self.assertLess(flt(source_row.distributed_cgst), 0)
+
+        output = generate_gstr_3b_report()
+
+        isd = self.itc_row(output, "itc_avl", "ISD")
+        self.assertLess(isd["camt"], 0)
+        self.assertEqual(isd["camt"], flt(source_row.distributed_cgst, 2))
+        self.assertEqual(isd["samt"], flt(source_row.distributed_sgst, 2))
+
+        self.assertEqual(output["itc_elg"]["itc_net"]["camt"], isd["camt"])
+        self.assertEqual(output["itc_elg"]["itc_net"]["samt"], isd["samt"])
+
 
 def generate_gstr_3b_report():
     """Generate the current month's GSTR-3B and return its JSON output."""
