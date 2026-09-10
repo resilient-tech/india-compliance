@@ -94,7 +94,9 @@ def upsert_turnover_record(company, gstin, gst_state, amount, posting_date=None)
 
     try:
         if existing:
-            frappe.db.set_value("Turnover Record", existing, "amount", amount)
+            doc = frappe.get_doc("Turnover Record", existing)
+            doc.amount = amount
+            doc.save(ignore_permissions=True)
         else:
             doc = frappe.new_doc("Turnover Record")
             doc.from_date = from_date
