@@ -63,13 +63,13 @@ def delete_ignore_versioning_property_setters():
         "doc_type": ("in", get_audit_trail_doctypes(include_child=True)),
     }
 
-    doctypes = frappe.get_all("Property Setter", filters=filters, pluck="doc_type", distinct=True)
-    if not doctypes:
+    property_setters = frappe.get_all("Property Setter", filters=filters, fields=["name", "doc_type"])
+    if not property_setters:
         return
 
-    frappe.db.delete("Property Setter", filters)
+    frappe.db.delete("Property Setter", {"name": ("in", {ps.name for ps in property_setters})})
 
-    for doctype in doctypes:
+    for doctype in {ps.doc_type for ps in property_setters}:
         frappe.clear_cache(doctype=doctype)
 
 
