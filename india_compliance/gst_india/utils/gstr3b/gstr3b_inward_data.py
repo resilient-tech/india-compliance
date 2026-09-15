@@ -390,7 +390,7 @@ class GSTR3BInwardQuery:
                 self.ISD.posting_date,
                 ConstantColumn("Input Service Distributor").as_("itc_classification"),
                 self.ISD.company_gstin,
-                self.ISD.is_ineligible.as_("is_ineligible_for_itc"),
+                self.ISD.is_ineligible_for_itc,
                 self.ISD_ITEM.item_code,
                 self.ISD_ITEM.gst_hsn_code,
                 self.ISD_ITEM.distributed_expense.as_("taxable_value"),

@@ -472,13 +472,13 @@ def get_purchase_invoice_distribution_summary(purchase_invoice: str):
 
 
 def partition_by_eligibility(pi_items):
-    """(is_ineligible, rows) per document. Used to divide purchase invoice items"""
+    """(is_ineligible_for_itc, rows) per document. Used to divide purchase invoice items"""
     groups = {0: [], 1: []}
     for item in pi_items:
         item = dict(item)
         groups[cint(item.pop("is_ineligible_for_itc", 0))].append(item)
 
-    return [(is_ineligible, rows) for is_ineligible, rows in groups.items() if rows]
+    return [(is_ineligible_for_itc, rows) for is_ineligible_for_itc, rows in groups.items() if rows]
 
 
 @frappe.whitelist()
@@ -514,7 +514,7 @@ def bulk_create_isd_distribution_invoices(
 
         turnover_data.append((pi.company, row.get("gstin"), row.get("gst_state"), turnover, pi.posting_date))
 
-        for is_ineligible, items in partition_by_eligibility(pi.source_items):
+        for is_ineligible_for_itc, items in partition_by_eligibility(pi.source_items):
             doc = frappe.new_doc("ISD Distribution Invoice")
             doc.update(
                 {
@@ -530,7 +530,7 @@ def bulk_create_isd_distribution_invoices(
                     "total_turnover": total_turnover,
                     "distribution_ratio": flt(turnover / total_turnover * 100) if total_turnover else 0,
                     "is_credit_note": cint(pi.is_return),
-                    "is_ineligible": is_ineligible,
+                    "is_ineligible_for_itc": is_ineligible_for_itc,
                 }
             )
             doc.extend("source_items", items)

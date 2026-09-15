@@ -129,7 +129,7 @@ class ISDRecipientInvoice(ISDController):
                 "party_gstin": self.party_gstin,
                 "external_isd_invoice_number": self.external_isd_invoice_number,
                 "is_credit_note": self.is_credit_note,
-                "is_ineligible": cint(self.is_ineligible),
+                "is_ineligible_for_itc": cint(self.is_ineligible_for_itc),
                 "docstatus": ("!=", 2),
                 "name": ("!=", self.name),
             },
@@ -137,7 +137,7 @@ class ISDRecipientInvoice(ISDController):
         if duplicate:
             frappe.throw(
                 _("{0} ISD Invoice Number {1} has already been entered in {2}.").format(
-                    _("Ineligible") if self.is_ineligible else _("Eligible"),
+                    _("Ineligible") if self.is_ineligible_for_itc else _("Eligible"),
                     frappe.bold(self.external_isd_invoice_number),
                     get_link_to_form("ISD Recipient Invoice", duplicate),
                 )

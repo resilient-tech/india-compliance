@@ -607,7 +607,7 @@ class ISDController(Document):
         if self.is_recipient_side_and_unregistered():
             return
 
-        ineligible_rows = list(self.source_items) if self.is_ineligible else []
+        ineligible_rows = list(self.source_items) if self.is_ineligible_for_itc else []
         if not ineligible_rows:
             return
 

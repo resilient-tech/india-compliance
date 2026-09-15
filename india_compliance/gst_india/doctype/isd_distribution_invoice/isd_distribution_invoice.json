@@ -29,7 +29,7 @@
   "source_items_section",
   "purchase_invoice",
   "column_break_gixr",
-  "is_ineligible",
+  "is_ineligible_for_itc",
   "section_break_mmxt",
   "branch_turnover",
   "column_break_tjri",
@@ -102,7 +102,7 @@
   },
   {
    "default": "0",
-   "fieldname": "is_ineligible",
+   "fieldname": "is_ineligible_for_itc",
    "fieldtype": "Check",
    "label": "Is Ineligible for Input Tax Credit"
   },

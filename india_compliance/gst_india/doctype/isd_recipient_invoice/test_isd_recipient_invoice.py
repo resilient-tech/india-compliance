@@ -383,7 +383,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         # ineligible ITC on the recipient side is reversed through the GST Expense account, then
         # transferred to the item's expense head (cost of goods)
         pi = make_ineligible_isd_pi(self.isd_address.name)
-        doc = self._recipient(source_items=make_source_item(pi, ratio=0.25), is_ineligible=1)
+        doc = self._recipient(source_items=make_source_item(pi, ratio=0.25), is_ineligible_for_itc=1)
         doc.insert()
         doc.submit()
 
@@ -434,7 +434,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         # with expense off, the ineligible reversal is transferred to the ISD provisional account
         # instead of the cost-of-goods expense head
         pi = make_ineligible_isd_pi(self.isd_address.name)
-        doc = self._recipient(source_items=make_source_item(pi, ratio=0.25), is_ineligible=1)
+        doc = self._recipient(source_items=make_source_item(pi, ratio=0.25), is_ineligible_for_itc=1)
         doc.insert()
         doc.submit()
 

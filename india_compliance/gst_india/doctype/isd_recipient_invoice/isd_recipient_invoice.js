@@ -60,7 +60,7 @@ frappe.ui.form.on("ISD Recipient Invoice", {
         frm.isd_controller.set_place_of_supply("company_address", "company_pos");
     },
 
-    is_ineligible(frm) {
+    is_ineligible_for_itc(frm) {
         frm.isd_controller.set_total_tax_label();
     },
 

@@ -199,7 +199,7 @@ class ISDDistributionInvoice(ISDController):
             .on(pi_item.item_code == item.name)
             .where(
                 (pi_item.parent == self.purchase_invoice)
-                & (item.is_ineligible_for_itc == cint(self.is_ineligible))
+                & (item.is_ineligible_for_itc == cint(self.is_ineligible_for_itc))
             )
             .select(
                 pi_item.name,
@@ -429,7 +429,7 @@ class ISDDistributionInvoice(ISDController):
             .join(isd_invoice)
             .on(isd_source_item.parent == isd_invoice.name)
             .where(isd_invoice.purchase_invoice == self.purchase_invoice)
-            .where(isd_invoice.is_ineligible == cint(self.is_ineligible))
+            .where(isd_invoice.is_ineligible_for_itc == cint(self.is_ineligible_for_itc))
             .where(isd_invoice.docstatus == 1)
             .where(isd_invoice.name != (self.name or ""))
             .select(

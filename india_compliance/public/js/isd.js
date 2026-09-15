@@ -438,7 +438,7 @@ india_compliance.ISDController = class ISDController {
         this.frm.set_df_property(
             "total_tax",
             "label",
-            this.frm.doc.is_ineligible ? __("Total Ineligible") : __("Total Eligible"),
+            this.frm.doc.is_ineligible_for_itc ? __("Total Ineligible") : __("Total Eligible"),
         );
     }
 

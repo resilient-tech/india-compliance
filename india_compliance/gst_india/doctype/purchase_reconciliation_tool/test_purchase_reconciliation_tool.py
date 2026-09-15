@@ -749,7 +749,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
     POSTING_DATE = "2023-08-11"
 
-    def create_recipient_invoice(self, external_isd_invoice_number, is_credit_note=0, is_ineligible=0):
+    def create_recipient_invoice(
+        self, external_isd_invoice_number, is_credit_note=0, is_ineligible_for_itc=0
+    ):
         pi = make_isd_pi(self.isd_address.name, posting_date=self.POSTING_DATE, set_posting_time=1)
 
         return create_recipient_invoice(
@@ -758,7 +760,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             posting_date=self.POSTING_DATE,
             external_isd_invoice_number=external_isd_invoice_number,
             is_credit_note=is_credit_note,
-            is_ineligible=is_ineligible,
+            is_ineligible_for_itc=is_ineligible_for_itc,
             source_items=make_source_item(pi, is_credit_note=is_credit_note),
         )
 
@@ -915,7 +917,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         """An external ISD distributes the eligible and the ineligible part of one doc, so the
         books carry two ISD Recipient Invoices under one number"""
         eligible = self.create_recipient_invoice("ISD-ELIG-001")
-        ineligible = self.create_recipient_invoice("ISD-ELIG-001", is_ineligible=1)
+        ineligible = self.create_recipient_invoice("ISD-ELIG-001", is_ineligible_for_itc=1)
 
         eligible_row = eligible.source_items[0]
         ineligible_row = ineligible.source_items[0]

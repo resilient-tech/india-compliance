@@ -34,7 +34,7 @@
   "section_break_lorc",
   "column_break_ghfb",
   "column_break_utwj",
-  "is_ineligible",
+  "is_ineligible_for_itc",
   "section_break_mmxt",
   "branch_turnover",
   "column_break_tjri",
@@ -256,7 +256,7 @@
   },
   {
    "default": "0",
-   "fieldname": "is_ineligible",
+   "fieldname": "is_ineligible_for_itc",
    "fieldtype": "Check",
    "in_list_view": 1,
    "label": "Is Ineligible for Input Tax Credit"

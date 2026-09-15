@@ -169,7 +169,7 @@ def make_isd_doc(doctype, source_items=None, **fields):
     fields.setdefault("posting_date", today())
     fields.setdefault("branch_turnover", 25)
     fields.setdefault("total_turnover", 100)
-    fields.setdefault("is_ineligible", 0)
+    fields.setdefault("is_ineligible_for_itc", 0)
 
     # company_gstin / party_gstin are fetch_from fields that are not populated on a bare
     # new_doc, so derive them from the addresses when a caller has not set them explicitly.
@@ -225,7 +225,7 @@ def create_distribution_invoice(**data):
         data.setdefault("source_items", make_source_item(pi))
 
     # Eligibility belongs to the ISD document, not its Purchase Invoice items.
-    data.setdefault("is_ineligible", 0)
+    data.setdefault("is_ineligible_for_itc", 0)
 
     return _create_isd_doc("ISD Distribution Invoice", **data)
 
@@ -242,7 +242,7 @@ def create_recipient_invoice(**data):
         data.setdefault("external_isd_invoice_number", frappe.generate_hash(length=8))
 
     # Default to eligible (0) at document level unless explicitly overridden
-    data.setdefault("is_ineligible", 0)
+    data.setdefault("is_ineligible_for_itc", 0)
 
     return _create_isd_doc("ISD Recipient Invoice", **data)
 
@@ -853,7 +853,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             company_address=self.isd_address.name,
             party_address=self.recipient_address.name,
         )
-        self.assertEqual(doc.is_ineligible, 0)
+        self.assertEqual(doc.is_ineligible_for_itc, 0)
 
         expected = flt(doc.total_tax) + flt(doc.total_expense)
         self.assertTrue(expected)
@@ -1194,7 +1194,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             company_address=self.isd_address.name,
             party_address=self.recipient_address.name,
         )
-        self.assertEqual(doc.is_ineligible, 0)
+        self.assertEqual(doc.is_ineligible_for_itc, 0)
 
         rows = get_gl_rows(doc)
         assert_balanced_gl(self, rows)
@@ -1249,9 +1249,9 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             party_address=self.recipient_address.name,
             branch_turnover=100,
             total_turnover=300,
-            is_ineligible=1,
+            is_ineligible_for_itc=1,
         )
-        self.assertEqual(doc.is_ineligible, 1)
+        self.assertEqual(doc.is_ineligible_for_itc, 1)
 
         rows = get_gl_rows(doc)
         assert_balanced_gl(self, rows)
@@ -1277,7 +1277,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
 
         # mirrored on the recipient: taxes received gross, expense head absorbs the ineligible tax
         recipient = get_auto_recipient_invoice(doc)
-        self.assertEqual(recipient.is_ineligible, 1)
+        self.assertEqual(recipient.is_ineligible_for_itc, 1)
         recipient_rows = get_gl_rows(recipient)
         assert_balanced_gl(self, recipient_rows)
         recipient_row = recipient.source_items[0]
@@ -1294,9 +1294,9 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             party_address=self.recipient_address_ka.name,
             branch_turnover=100,
             total_turnover=300,
-            is_ineligible=1,
+            is_ineligible_for_itc=1,
         )
-        self.assertEqual(inter_state.is_ineligible, 1)
+        self.assertEqual(inter_state.is_ineligible_for_itc, 1)
         inter_state_totals = account_totals(get_gl_rows(inter_state))
         accounts = get_input_gst_accounts(COMPANY)
 
@@ -1483,7 +1483,7 @@ class IntegrationTestISDBulkDistribution(IntegrationTestCase):
             branch_turnover, ratio = expected.pop(doc.party_address)
 
             self.assertEqual(doc.docstatus, 0)
-            self.assertEqual(doc.is_ineligible, 0)
+            self.assertEqual(doc.is_ineligible_for_itc, 0)
             self.assertEqual(doc.purchase_invoice, self.bulk_pi.name)
             self.assertEqual(doc.company_address, self.isd_address.name)
             self.assertEqual(doc.branch_turnover, branch_turnover)
