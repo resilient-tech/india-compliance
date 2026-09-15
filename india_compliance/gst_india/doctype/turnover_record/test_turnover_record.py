@@ -72,6 +72,7 @@ class TestTurnoverRecord(IntegrationTestCase):
 
         # ... while a period that does not overlap is a separate, legitimate record
         record = make_turnover_record("Gujarat", 100000, from_date="2023-04-01", to_date="2024-03-31")
+        self.addCleanup(frappe.delete_doc, "Turnover Record", record.name, force=True)
         self.assertEqual(record.gst_state, "Gujarat")
 
         # turnover is the pool the credit is divided by, so it can never be negative

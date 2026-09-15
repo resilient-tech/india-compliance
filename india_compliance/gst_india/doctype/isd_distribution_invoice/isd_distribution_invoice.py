@@ -192,6 +192,7 @@ class ISDDistributionInvoice(ISDController):
         # validate_purchase_invoice (runs first) guarantees self.purchase_invoice is set
         pi_item = frappe.qb.DocType("Purchase Invoice Item")
         item = frappe.qb.DocType("Item")
+        isd_source_items = [item.item_code for item in self.source_items]
         pi_items = {
             item.name: item
             for item in frappe.qb.from_(pi_item)
@@ -200,6 +201,7 @@ class ISDDistributionInvoice(ISDController):
             .where(
                 (pi_item.parent == self.purchase_invoice)
                 & (item.is_ineligible_for_itc == cint(self.is_ineligible_for_itc))
+                & (pi_item.item_code.isin(isd_source_items))
             )
             .select(
                 pi_item.name,

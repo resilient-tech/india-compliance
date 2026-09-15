@@ -10,8 +10,6 @@ frappe.ui.form.on("ISD Distribution Invoice", {
     },
 
     refresh(frm) {
-        // source_items are populated from the linked purchase invoice, never edited by hand
-        frm.set_df_property("source_items", "read_only", 1);
         frm.isd_controller.set_provisional_labels();
         frm.isd_controller.set_total_tax_label();
         frm.isd_controller.toggle_expense_fields();
@@ -84,20 +82,11 @@ frappe.ui.form.on("ISD Distribution Invoice", {
         await frm.isd_controller.recalculate();
     },
 
-    async purchase_invoice(frm) {
-        const purchase_invoice = frm.doc.purchase_invoice;
+    purchase_invoice: fetch_source_items,
 
-        frm.clear_table("source_items");
-        if (purchase_invoice) {
-            const { message: items } = await frappe.call({
-                method: "india_compliance.gst_india.utils.isd.get_source_items_from_purchase_invoice",
-                args: { purchase_invoice },
-            });
-            if (frm.doc.purchase_invoice !== purchase_invoice) return;
-            for (const item of items || []) frm.add_child("source_items", item);
-        }
-        frm.refresh_field("source_items");
-        await frm.isd_controller.recalculate();
+    is_ineligible_for_itc(frm) {
+        frm.isd_controller.set_total_tax_label();
+        return fetch_source_items(frm);
     },
 
     branch_turnover(frm) {
@@ -115,6 +104,22 @@ frappe.ui.form.on("ISD Distribution Invoice", {
         frm.isd_controller.recalculate();
     },
 });
+
+async function fetch_source_items(frm) {
+    const { purchase_invoice, is_ineligible_for_itc } = frm.doc;
+
+    frm.clear_table("source_items");
+    if (purchase_invoice) {
+        const { message: items } = await frappe.call({
+            method: "india_compliance.gst_india.utils.isd.get_source_items_from_purchase_invoice",
+            args: { purchase_invoice, is_ineligible_for_itc },
+        });
+        if (frm.doc.purchase_invoice !== purchase_invoice) return;
+        for (const item of items || []) frm.add_child("source_items", item);
+    }
+    frm.refresh_field("source_items");
+    await frm.isd_controller.recalculate();
+}
 
 const recalculate = (frm) => {
     if (frm.doctype !== "ISD Distribution Invoice") return;

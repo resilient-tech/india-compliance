@@ -5,6 +5,9 @@ frappe.ui.form.on("Turnover Record", {
     refresh(frm) {
         set_gstin_options(frm);
     },
+    company(frm) {
+        set_gstin_options(frm);
+    },
 });
 
 async function set_gstin_options(frm) {

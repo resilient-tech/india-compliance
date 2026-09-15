@@ -158,22 +158,25 @@ def calculate_distribution(doc):
 
 
 @frappe.whitelist()
-def get_source_items_from_purchase_invoice(purchase_invoice: str):
+def get_source_items_from_purchase_invoice(purchase_invoice: str, is_ineligible_for_itc: int | None = None):
     if not purchase_invoice:
         return []
 
     frappe.has_permission("Purchase Invoice", "read", doc=purchase_invoice, throw=True)
 
+    filters = {"parent": purchase_invoice}
+    if is_ineligible_for_itc is not None:
+        filters["is_ineligible_for_itc"] = cint(is_ineligible_for_itc)
+
     # selected under the ISD Source Item fieldnames, so the rows drop straight into the child table
     source_items = frappe.get_all(
         "Purchase Invoice Item",
-        filters={"parent": purchase_invoice},
+        filters=filters,
         fields=[
             "name as purchase_invoice_item",
             "item_code",
             "item_name",
             "gst_hsn_code",
-            "is_ineligible_for_itc",
             "cost_center",
             "project",
             "expense_account as expense_head",
@@ -216,8 +219,6 @@ def get_purchase_doc(purchase_invoice: str):
 
     if not doc.is_isd_applicable:
         frappe.throw(_("Purchase Invoice {0} is not ISD applicable.").format(pi_link))
-
-    doc.source_items = get_source_items_from_purchase_invoice(purchase_invoice)
 
     return doc
 
@@ -471,16 +472,6 @@ def get_purchase_invoice_distribution_summary(purchase_invoice: str):
     }
 
 
-def partition_by_eligibility(pi_items):
-    """(is_ineligible_for_itc, rows) per document. Used to divide purchase invoice items"""
-    groups = {0: [], 1: []}
-    for item in pi_items:
-        item = dict(item)
-        groups[cint(item.pop("is_ineligible_for_itc", 0))].append(item)
-
-    return [(is_ineligible_for_itc, rows) for is_ineligible_for_itc, rows in groups.items() if rows]
-
-
 @frappe.whitelist()
 def bulk_create_isd_distribution_invoices(
     purchase_invoice: str,
@@ -504,6 +495,11 @@ def bulk_create_isd_distribution_invoices(
         frappe.throw(_("Total Turnover must be greater than zero."))
 
     pi = get_purchase_doc(purchase_invoice)
+    source_items_by_eligibility = {
+        is_ineligible_for_itc: items
+        for is_ineligible_for_itc in (0, 1)
+        if (items := get_source_items_from_purchase_invoice(purchase_invoice, is_ineligible_for_itc))
+    }
 
     invoices, failed = [], []
     turnover_data = []
@@ -514,7 +510,7 @@ def bulk_create_isd_distribution_invoices(
 
         turnover_data.append((pi.company, row.get("gstin"), row.get("gst_state"), turnover, pi.posting_date))
 
-        for is_ineligible_for_itc, items in partition_by_eligibility(pi.source_items):
+        for is_ineligible_for_itc, items in source_items_by_eligibility.items():
             doc = frappe.new_doc("ISD Distribution Invoice")
             doc.update(
                 {

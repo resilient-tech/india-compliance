@@ -84,6 +84,10 @@ class GSTR2b(GSTR):
             if transaction.get("doc_type"):
                 filters["doc_type"] = transaction.doc_type
 
+            # eligible and ineligible parts of one ISD number are separate inward supplies
+            if transaction.classification in ("ISD", "ISDA"):
+                filters["itc_availability"] = transaction.get("itc_availability") or ("is", "not set")
+
             # delete_doc takes a name, not filters: handed a dict it iterates the keys as names,
             # finds nothing and drops it on ignore_missing
             name = frappe.db.get_value("GST Inward Supply", filters)
