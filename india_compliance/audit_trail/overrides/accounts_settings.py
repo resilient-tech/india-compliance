@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 
-from india_compliance.audit_trail.setup import create_property_setters_for_versioning
+from india_compliance.audit_trail.setup import setup_versioning
 
 
 def validate(doc, method=None):
@@ -18,7 +18,7 @@ def validate_change_in_enable_audit_trail(doc):
 
     # Enable audit trail
     doc.delete_linked_ledger_entries = 0
-    frappe.enqueue(create_property_setters_for_versioning, queue="short", at_front=True)
+    frappe.enqueue(setup_versioning, queue="short", at_front=True)
 
 
 def validate_delete_linked_ledger_entries(doc):
