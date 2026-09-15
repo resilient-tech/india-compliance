@@ -15,3 +15,20 @@ tr.not-matched > td {
 td.not-matched {
     color: var(--red-500);
 }
+
+.sync-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+
+    // the sync button is opt-in: hidden until js says this row is worth syncing
+    [data-field] {
+        display: none;
+        max-width: 100%;
+
+        &.sync-detail {
+            display: inline-flex;
+        }
+    }
+}

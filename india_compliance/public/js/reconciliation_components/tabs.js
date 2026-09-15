@@ -542,20 +542,41 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     }
 
     _mark_differences(wrapper) {
+        // one side missing: nothing to compare against, and nothing to copy over
         if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
+
+        const can_sync = frappe.model.can_write(this.row.purchase_doctype);
 
         // template marks the rows worth comparing
         wrapper.find("[data-compare]").each((_index, row) => {
             const field = $(row).data("compare");
-            const purchase = this.data._purchase_invoice[field];
-            const inward_supply = this.data._inward_supply[field];
+            const booked = this.data._purchase_invoice[field];
+            const reported = this.data._inward_supply[field];
 
             const same =
-                typeof purchase === "number" || typeof inward_supply === "number"
-                    ? flt(purchase, 2) === flt(inward_supply, 2)
-                    : purchase == inward_supply;
+                typeof booked === "number" || typeof reported === "number"
+                    ? flt(booked, 2) === flt(reported, 2)
+                    : booked == reported;
 
-            if (!same) $(row).attr("title", __("Books and 2A/2B do not match")).addClass("not-matched");
+            if (same) return;
+
+            $(row).attr("title", __("Books and 2A/2B do not match")).addClass("not-matched");
+
+            // nothing to copy from a blank 2A/2B value, leave the button hidden
+            if (!can_sync || !reported) return;
+
+            $(row)
+                .find("[data-field]")
+                .addClass("sync-detail")
+                .on("click", () => this._sync_field(field));
         });
+    }
+
+    async _sync_field(field) {
+        await reconciliation.sync_details(this.frm, [this.row], [field]);
+
+        await this.get_invoice_details();
+        this.process_data();
+        this.render_html();
     }
 };

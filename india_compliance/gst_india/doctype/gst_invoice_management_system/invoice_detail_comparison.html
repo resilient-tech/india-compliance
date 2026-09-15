@@ -32,7 +32,15 @@
 			<tr data-compare="bill_no">
 				<th>Bill No</th>
 				<td data-label="bill_no">{{ inward_supply.bill_no || '-' }}</td>
-				<td data-label="bill_no">{{ purchase.bill_no || '-' }}</td>
+				<td data-label="bill_no">
+					<div class="sync-cell">
+						<span>{{ purchase.bill_no || '-' }}</span>
+						<button class="es-button" type="button" data-size="xs"
+							data-field="bill_no" title="{{ __('Copy Bill No reported in 2A/2B') }}">
+							<span class="es-button__label">{{ __("Use {0}", [inward_supply.bill_no]) }}</span>
+						</button>
+					</div>
+				</td>
 			</tr>
 			<tr data-compare="bill_date">
 				<th>Bill Date</th>
@@ -40,7 +48,13 @@
 					{{ frappe.format(inward_supply.bill_date, {'fieldtype': 'Date'}) || '-' }}
 				</td>
 				<td data-label="bill_date">
-					{{ frappe.format(purchase.bill_date, {'fieldtype': 'Date'}) || '-' }}
+					<div class="sync-cell">
+						<span>{{ frappe.format(purchase.bill_date, {'fieldtype': 'Date'}) || '-' }}</span>
+						<button class="es-button" type="button" data-size="xs"
+							data-field="bill_date" title="{{ __('Copy Bill Date reported in 2A/2B') }}">
+							<span class="es-button__label">{{ __("Use {0}", [frappe.format(inward_supply.bill_date, {'fieldtype': 'Date'})]) }}</span>
+						</button>
+					</div>
 				</td>
 			</tr>
 			<tr data-compare="place_of_supply">
