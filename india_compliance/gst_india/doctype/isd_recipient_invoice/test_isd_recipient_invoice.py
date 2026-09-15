@@ -280,7 +280,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         # the provisional amount includes the taxes (now an expense) plus the distributed expense
         self.assertAlmostEqual(
             doc.isd_provisional_amount,
-            doc.total_expense + doc.total_eligible + doc.total_ineligible,
+            doc.total_expense + doc.total_tax,
             places=2,
         )
 
@@ -296,7 +296,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         gst_expense_account = frappe.get_cached_value("Company", COMPANY, "default_gst_expense_account")
         self.assertAlmostEqual(
             totals[gst_expense_account]["debit"],
-            doc.total_eligible + doc.total_ineligible,
+            doc.total_tax,
             places=2,
         )
 
@@ -308,7 +308,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         clearing_credit = sum(row.credit for row in rows if row.account == doc.isd_provisional_account)
         self.assertAlmostEqual(
             clearing_credit,
-            doc.total_expense + doc.total_eligible + doc.total_ineligible,
+            doc.total_expense + doc.total_tax,
             places=2,
         )
 
@@ -335,7 +335,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         rows = get_gl_rows(doc)
         assert_balanced_gl(self, rows)
 
-        tax_received = doc.total_eligible + doc.total_ineligible
+        tax_received = doc.total_tax
         self.assertTrue(tax_received)
 
         gst_expense_account = frappe.get_cached_value("Company", COMPANY, "default_gst_expense_account")
@@ -383,7 +383,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
         # ineligible ITC on the recipient side is reversed through the GST Expense account, then
         # transferred to the item's expense head (cost of goods)
         pi = make_ineligible_isd_pi(self.isd_address.name)
-        doc = self._recipient(source_items=make_source_item(pi, ratio=0.25))
+        doc = self._recipient(source_items=make_source_item(pi, ratio=0.25), is_ineligible=1)
         doc.insert()
         doc.submit()
 
@@ -427,16 +427,14 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
 
         self.assertNotIn(source_row.expense_head, totals)
         # the provisional amount is just the taxes (no expense)
-        self.assertAlmostEqual(
-            doc.isd_provisional_amount, doc.total_eligible + doc.total_ineligible, places=2
-        )
+        self.assertAlmostEqual(doc.isd_provisional_amount, doc.total_tax, places=2)
 
     @change_settings("GST Settings", {"distribute_expense_with_isd_credit": 0})
     def test_expense_off_ineligible_routes_to_provisional(self):
         # with expense off, the ineligible reversal is transferred to the ISD provisional account
         # instead of the cost-of-goods expense head
         pi = make_ineligible_isd_pi(self.isd_address.name)
-        doc = self._recipient(source_items=make_source_item(pi, ratio=0.25))
+        doc = self._recipient(source_items=make_source_item(pi, ratio=0.25), is_ineligible=1)
         doc.insert()
         doc.submit()
 
@@ -664,7 +662,7 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
             self.assertGreaterEqual(flt(row.total_expense), 0)
             self.assertLessEqual(flt(row.distributed_expense), 0)
 
-        self.assertLess(flt(doc.total_eligible) + flt(doc.total_ineligible), 0)
+        self.assertLess(flt(doc.total_tax), 0)
 
     def test_credit_note_direction_is_checked_row_by_row(self):
         """ERPNext checks the sign per row (validate_quantity), not on the net: a positive row

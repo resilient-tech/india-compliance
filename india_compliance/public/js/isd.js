@@ -434,6 +434,14 @@ india_compliance.ISDController = class ISDController {
         );
     }
 
+    set_total_tax_label() {
+        this.frm.set_df_property(
+            "total_tax",
+            "label",
+            this.frm.doc.is_ineligible ? __("Total Ineligible") : __("Total Eligible"),
+        );
+    }
+
     // ------------------------------------------------------------------ link field queries
     set_queries() {
         const frm = this.frm;
@@ -654,8 +662,7 @@ india_compliance.ISDController = class ISDController {
         const ratio = this.signed_ratio;
 
         const totals = Object.fromEntries(frappe.boot.gst_tax_types.map((t) => [t, 0]));
-        let total_eligible = 0,
-            total_ineligible = 0,
+        let total_tax = 0,
             total_expense = 0;
 
         for (const r of rows) {
@@ -668,8 +675,7 @@ india_compliance.ISDController = class ISDController {
                     ? flt(Math.abs(flt(r[`total_${t}`])) * ratio, _p)
                     : r[`distributed_${t}`] || 0;
             }
-            if (r.is_ineligible_for_itc) total_ineligible += row_total;
-            else total_eligible += row_total;
+            total_tax += row_total;
             total_expense += r.distributed_expense || 0;
         }
 
@@ -680,29 +686,22 @@ india_compliance.ISDController = class ISDController {
         const isd_provisional_amount =
             (this.frm.doc.taxes || []).reduce((sum, tax) => sum + flt(tax.tax_amount), 0) + total_expense;
 
-        this.frm.doc.total_eligible = flt(total_eligible, precision("total_eligible"));
-        this.frm.doc.total_ineligible = flt(total_ineligible, precision("total_ineligible"));
+        this.frm.doc.total_tax = flt(total_tax, precision("total_tax"));
         this.frm.doc.total_expense = flt(total_expense, precision("total_expense"));
         this.frm.doc.isd_provisional_amount = flt(
             isd_provisional_amount,
             precision("isd_provisional_amount"),
         );
 
-        this.frm.refresh_fields([
-            "taxes",
-            "total_eligible",
-            "total_ineligible",
-            "total_expense",
-            "isd_provisional_amount",
-        ]);
+        this.frm.refresh_fields(["taxes", "total_tax", "total_expense", "isd_provisional_amount"]);
 
         this.set_grand_total();
     }
 
     set_grand_total() {
-        const { total_eligible, total_ineligible, total_expense } = this.frm.doc;
+        const { total_tax, total_expense } = this.frm.doc;
 
-        this.frm.doc.grand_total = flt(total_eligible) + flt(total_ineligible) + flt(total_expense);
+        this.frm.doc.grand_total = flt(total_tax) + flt(total_expense);
         this.frm.refresh_field("grand_total");
     }
 

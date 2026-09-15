@@ -31,6 +31,10 @@
   "cost_center",
   "dimension_col_break",
   "project",
+  "section_break_lorc",
+  "column_break_ghfb",
+  "column_break_utwj",
+  "is_ineligible",
   "section_break_mmxt",
   "branch_turnover",
   "column_break_tjri",
@@ -49,11 +53,10 @@
   "reconciliation_status",
   "itc_claim_period",
   "totals_section",
-  "total_eligible",
+  "total_tax",
   "total_ineligible_column_break",
-  "total_ineligible",
-  "column_break_mfrl",
   "total_expense",
+  "column_break_mfrl",
   "grand_total",
   "address_tab",
   "address_section",
@@ -252,7 +255,14 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "total_eligible",
+   "default": "0",
+   "fieldname": "is_ineligible",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Ineligible for Input Tax Credit"
+  },
+  {
+   "fieldname": "total_tax",
    "fieldtype": "Currency",
    "label": "Total Eligible",
    "no_copy": 1,
@@ -262,14 +272,6 @@
   {
    "fieldname": "total_ineligible_column_break",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "total_ineligible",
-   "fieldtype": "Currency",
-   "label": "Total Ineligible",
-   "no_copy": 1,
-   "options": "Company:company:default_currency",
-   "read_only": 1
   },
   {
    "fieldname": "column_break_mfrl",
@@ -447,6 +449,18 @@
    "options": "\nNot Applicable\nReconciled\nUnreconciled\nIgnored",
    "print_hide": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "section_break_lorc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_ghfb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_utwj",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -463,7 +477,7 @@
    "link_fieldname": "link_name"
   }
  ],
- "modified": "2026-09-01 12:00:01.000000",
+ "modified": "2026-09-10 16:43:09.615881",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Recipient Invoice",

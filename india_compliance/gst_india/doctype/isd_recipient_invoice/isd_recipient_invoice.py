@@ -3,7 +3,7 @@
 
 import frappe
 from frappe import _
-from frappe.utils import flt, get_link_to_form
+from frappe.utils import cint, flt, get_link_to_form
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils.isd import throw_row_table, validate_single_credit_note
@@ -129,13 +129,15 @@ class ISDRecipientInvoice(ISDController):
                 "party_gstin": self.party_gstin,
                 "external_isd_invoice_number": self.external_isd_invoice_number,
                 "is_credit_note": self.is_credit_note,
+                "is_ineligible": cint(self.is_ineligible),
                 "docstatus": ("!=", 2),
                 "name": ("!=", self.name),
             },
         )
         if duplicate:
             frappe.throw(
-                _("ISD Invoice Number {0} has already been entered in {1}.").format(
+                _("{0} ISD Invoice Number {1} has already been entered in {2}.").format(
+                    _("Ineligible") if self.is_ineligible else _("Eligible"),
                     frappe.bold(self.external_isd_invoice_number),
                     get_link_to_form("ISD Recipient Invoice", duplicate),
                 )

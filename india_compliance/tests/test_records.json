@@ -196,6 +196,34 @@
             ]
         },
         {
+            "description": "_Test Ineligible Service Item",
+            "doctype": "Item",
+            "item_code": "_Test Ineligible Service Item",
+            "item_name": "_Test Ineligible Service Item",
+            "valuation_rate": 100,
+            "item_group": "Services",
+            "gst_hsn_code": "999900",
+            "is_ineligible_for_itc": 1,
+            "stock_uom": "Nos",
+            "uoms": [
+                {
+                    "conversion_factor": 1,
+                    "uom": "Nos",
+                    "name": "_Test Ineligible Service Item"
+                }
+            ],
+            "item_defaults": [
+                {
+                    "name": "_Test Ineligible Service Item",
+                    "company": "_Test Indian Registered Company",
+                    "default_warehouse": "Stores - _TIRC",
+                    "buying_cost_center": "Main - _TIRC",
+                    "selling_cost_center": "Main - _TIRC",
+                    "income_account": "Service - _TIRC"
+                }
+            ]
+        },
+        {
             "asset_category": "_Test Asset Movement Category",
             "description": "_Test Asset Movement Fixed Asset",
             "doctype": "Item",

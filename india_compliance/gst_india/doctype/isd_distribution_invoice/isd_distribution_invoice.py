@@ -190,18 +190,24 @@ class ISDDistributionInvoice(ISDController):
     def validate_source_items(self):
         """One to One mapping of purchase invoice items and source items"""
         # validate_purchase_invoice (runs first) guarantees self.purchase_invoice is set
+        pi_item = frappe.qb.DocType("Purchase Invoice Item")
+        item = frappe.qb.DocType("Item")
         pi_items = {
             item.name: item
-            for item in frappe.get_all(
-                "Purchase Invoice Item",
-                filters={"parent": self.purchase_invoice},
-                fields=[
-                    "name",
-                    "idx",
-                    *[f"{gst_tax_type}_amount" for gst_tax_type in GST_TAX_TYPES],
-                    "base_net_amount",
-                ],
+            for item in frappe.qb.from_(pi_item)
+            .join(item)
+            .on(pi_item.item_code == item.name)
+            .where(
+                (pi_item.parent == self.purchase_invoice)
+                & (item.is_ineligible_for_itc == cint(self.is_ineligible))
             )
+            .select(
+                pi_item.name,
+                pi_item.idx,
+                *[getattr(pi_item, f"{gst_tax_type}_amount") for gst_tax_type in GST_TAX_TYPES],
+                pi_item.base_net_amount,
+            )
+            .run(as_dict=True)
         }
 
         precision = self._source_item_precision
@@ -236,15 +242,13 @@ class ISDDistributionInvoice(ISDController):
 
         if invalid_links:
             throw_invalid_rows(
-                _("Following source items do not belong to Purchase Invoice {0}").format(
-                    frappe.bold(self.purchase_invoice)
-                ),
+                _("Following source items do not belong to {0}").format(frappe.bold(self.purchase_invoice)),
                 invalid_links,
             )
 
         if duplicate_rows:
             throw_invalid_rows(
-                _("Following items of Purchase Invoice {0} are added more than once").format(
+                _("Following items of {0} are added more than once").format(
                     frappe.bold(self.purchase_invoice)
                 ),
                 duplicate_rows,
@@ -312,10 +316,10 @@ class ISDDistributionInvoice(ISDController):
             against = frappe.get_value(
                 "ISD Distribution Invoice",
                 self.credit_note_against,
-                ["total_eligible", "total_ineligible", "total_expense"],
+                ["total_tax", "total_expense"],
                 as_dict=True,
             )
-            available_itc = flt(against.total_eligible + against.total_ineligible)
+            available_itc = flt(against.total_tax)
             available_expense = flt(against.total_expense)
             already = frappe._dict(itc=0, expense=0)
         else:
@@ -425,6 +429,7 @@ class ISDDistributionInvoice(ISDController):
             .join(isd_invoice)
             .on(isd_source_item.parent == isd_invoice.name)
             .where(isd_invoice.purchase_invoice == self.purchase_invoice)
+            .where(isd_invoice.is_ineligible == cint(self.is_ineligible))
             .where(isd_invoice.docstatus == 1)
             .where(isd_invoice.name != (self.name or ""))
             .select(

@@ -13,6 +13,7 @@ frappe.ui.form.on("ISD Distribution Invoice", {
         // source_items are populated from the linked purchase invoice, never edited by hand
         frm.set_df_property("source_items", "read_only", 1);
         frm.isd_controller.set_provisional_labels();
+        frm.isd_controller.set_total_tax_label();
         frm.isd_controller.toggle_expense_fields();
         frm.isd_controller.set_common_buttons();
         frm.isd_controller.set_grand_total();
@@ -121,6 +122,5 @@ const recalculate = (frm) => {
 };
 
 frappe.ui.form.on("ISD Source Item", {
-    is_ineligible_for_itc: recalculate,
     source_items_remove: recalculate,
 });

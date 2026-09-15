@@ -471,6 +471,16 @@ def get_purchase_invoice_distribution_summary(purchase_invoice: str):
     }
 
 
+def partition_by_eligibility(pi_items):
+    """(is_ineligible, rows) per document. Used to divide purchase invoice items"""
+    groups = {0: [], 1: []}
+    for item in pi_items:
+        item = dict(item)
+        groups[cint(item.pop("is_ineligible_for_itc", 0))].append(item)
+
+    return [(is_ineligible, rows) for is_ineligible, rows in groups.items() if rows]
+
+
 @frappe.whitelist()
 def bulk_create_isd_distribution_invoices(
     purchase_invoice: str,
@@ -502,40 +512,45 @@ def bulk_create_isd_distribution_invoices(
         is_against_party = 1 if party_type and party_type != "Company" and row.get("party") else 0
         turnover = flt(row["turnover_amount"])
 
-        doc = frappe.new_doc("ISD Distribution Invoice")
-        doc.update(
-            {
-                "company": pi.company,
-                "posting_date": posting_date,
-                "purchase_invoice": pi.name,
-                "company_address": pi.billing_address,
-                "party_address": row.get("address"),
-                "is_against_party": is_against_party,
-                "party_type": party_type if is_against_party else None,
-                "party": row.get("party") if is_against_party else None,
-                "branch_turnover": turnover,
-                "total_turnover": total_turnover,
-                "distribution_ratio": flt(turnover / total_turnover * 100) if total_turnover else 0,
-                "is_credit_note": cint(pi.is_return),
-            }
-        )
-        doc.extend("source_items", [dict(item) for item in pi.source_items])
-
         turnover_data.append((pi.company, row.get("gstin"), row.get("gst_state"), turnover, pi.posting_date))
 
-        frappe.db.savepoint("isd_bulk")
-        try:
-            doc.insert()
-        except Exception:
-            # one unsavable row must not take the invoices already created down with it
-            frappe.db.rollback(save_point="isd_bulk")
-            frappe.log_error(
-                title=_("Bulk ISD Distribution Invoice creation failed for {0}").format(row.get("address"))
+        for is_ineligible, items in partition_by_eligibility(pi.source_items):
+            doc = frappe.new_doc("ISD Distribution Invoice")
+            doc.update(
+                {
+                    "company": pi.company,
+                    "posting_date": posting_date,
+                    "purchase_invoice": pi.name,
+                    "company_address": pi.billing_address,
+                    "party_address": row.get("address"),
+                    "is_against_party": is_against_party,
+                    "party_type": party_type if is_against_party else None,
+                    "party": row.get("party") if is_against_party else None,
+                    "branch_turnover": turnover,
+                    "total_turnover": total_turnover,
+                    "distribution_ratio": flt(turnover / total_turnover * 100) if total_turnover else 0,
+                    "is_credit_note": cint(pi.is_return),
+                    "is_ineligible": is_ineligible,
+                }
             )
-            failed.append(row.get("address"))
-            continue
+            doc.extend("source_items", items)
 
-        invoices.append(doc.name)
+            frappe.db.savepoint("isd_bulk")
+            try:
+                doc.insert()
+            except Exception:
+                # one unsavable row must not take the invoices already created down with it
+                frappe.db.rollback(save_point="isd_bulk")
+                frappe.log_error(
+                    title=_("Bulk ISD Distribution Invoice creation failed for {0}").format(
+                        row.get("address")
+                    )
+                )
+                if row.get("address") not in failed:
+                    failed.append(row.get("address"))
+                continue
+
+            invoices.append(doc.name)
 
     frappe.enqueue(
         "india_compliance.gst_india.utils.isd._upsert_turnover_records",

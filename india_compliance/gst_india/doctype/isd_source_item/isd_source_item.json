@@ -13,7 +13,6 @@
   "purchase_invoice_item",
   "gst_hsn_code",
   "column_break_whwr",
-  "is_ineligible_for_itc",
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
@@ -47,17 +46,6 @@
   {
    "fieldname": "column_break_xtvz",
    "fieldtype": "Column Break"
-  },
-  {
-   "columns": 1,
-   "default": "0",
-   "fetch_from": "purchase_invoice_item.is_ineligible_for_itc",
-   "fetch_if_empty": 1,
-   "fieldname": "is_ineligible_for_itc",
-   "fieldtype": "Check",
-   "in_list_view": 1,
-   "label": "Is Ineligible for Input Tax Credit",
-   "print_hide": 1
   },
   {
    "fieldname": "column_break_wnmd",

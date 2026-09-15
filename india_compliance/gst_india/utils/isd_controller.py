@@ -40,7 +40,7 @@ class ISDController(Document):
     @property
     def grand_total(self):
         """Provider for the grand_total virtual field. Mirrored client-side in set_grand_total."""
-        return flt(self.total_eligible) + flt(self.total_ineligible) + flt(self.total_expense)
+        return flt(self.total_tax) + flt(self.total_expense)
 
     def is_distribution_side(self):
         return self.doctype == "ISD Distribution Invoice"
@@ -382,7 +382,7 @@ class ISDController(Document):
 
     def set_tax_totals(self):
         """Set tax amounts and total eligible/ineligible amounts from source items"""
-        totals = {"eligible": 0, "ineligible": 0}
+        total_tax = 0
 
         # expense is only distributed when enabled;
         distribute_expense = distribute_expense_with_isd_credit()
@@ -391,8 +391,7 @@ class ISDController(Document):
             if not distribute_expense:
                 row.distributed_expense = 0
 
-            key = "ineligible" if row.is_ineligible_for_itc else "eligible"
-            totals[key] += sum_row_tax_by_type(row, "distributed")
+            total_tax += sum_row_tax_by_type(row, "distributed")
 
         for tax in self.taxes:
             calculated_amount = flt(
@@ -409,9 +408,7 @@ class ISDController(Document):
         # remove taxes with zero amount
         self.taxes = [tax for tax in self.taxes if tax.tax_amount]
 
-        total_precision = self.precision("total_eligible")
-        self.total_eligible = flt(totals["eligible"], total_precision)
-        self.total_ineligible = flt(totals["ineligible"], total_precision)
+        self.total_tax = flt(total_tax, self.precision("total_tax"))
         self.total_expense = flt(
             sum(flt(row.distributed_expense) for row in self.source_items),
             self.precision("distributed_expense"),
@@ -448,9 +445,7 @@ class ISDController(Document):
             )
         self._validate_account(self.isd_provisional_account, _("ISD Provisional Account"))
 
-        self.isd_provisional_amount = flt(
-            self.total_eligible + self.total_ineligible + self.total_expense, self._tax_precision
-        )
+        self.isd_provisional_amount = flt(self.total_tax + self.total_expense, self._tax_precision)
 
     # ------------------------------------------------------------------ GL entries
     def on_cancel(self):
@@ -557,7 +552,7 @@ class ISDController(Document):
         """
         if self.is_recipient_side_and_unregistered():
             expense_account = self.get_gst_expense_account()
-            total = flt(self.total_eligible + self.total_ineligible)
+            total = flt(self.total_tax)
             self.add_gl_entry(
                 gl_entries,
                 expense_account,
@@ -612,7 +607,7 @@ class ISDController(Document):
         if self.is_recipient_side_and_unregistered():
             return
 
-        ineligible_rows = [row for row in self.source_items if row.is_ineligible_for_itc]
+        ineligible_rows = list(self.source_items) if self.is_ineligible else []
         if not ineligible_rows:
             return
 

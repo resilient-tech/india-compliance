@@ -28,6 +28,8 @@
   "project",
   "source_items_section",
   "purchase_invoice",
+  "column_break_gixr",
+  "is_ineligible",
   "section_break_mmxt",
   "branch_turnover",
   "column_break_tjri",
@@ -44,13 +46,12 @@
   "isd_provisional_amount",
   "column_break_hiql",
   "totals_section",
-  "total_eligible",
+  "total_tax",
   "column_break_5",
-  "total_ineligible",
-  "column_break_mfrl",
   "total_expense",
-  "section_break_nufp",
+  "column_break_mfrl",
   "grand_total",
+  "section_break_nufp",
   "column_break_nnkm",
   "column_break_oegn",
   "address_tab",
@@ -100,17 +101,15 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "total_eligible",
-   "fieldtype": "Currency",
-   "label": "Total Eligible",
-   "no_copy": 1,
-   "options": "Company:company:default_currency",
-   "read_only": 1
+   "default": "0",
+   "fieldname": "is_ineligible",
+   "fieldtype": "Check",
+   "label": "Is Ineligible for Input Tax Credit"
   },
   {
-   "fieldname": "total_ineligible",
+   "fieldname": "total_tax",
    "fieldtype": "Currency",
-   "label": "Total Ineligible",
+   "label": "Total Eligible",
    "no_copy": 1,
    "options": "Company:company:default_currency",
    "read_only": 1
@@ -434,6 +433,10 @@
    "fieldtype": "Tab Break",
    "label": "Connections",
    "show_dashboard": 1
+  },
+  {
+   "fieldname": "column_break_gixr",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -450,7 +453,7 @@
    "link_fieldname": "credit_note_against"
   }
  ],
- "modified": "2026-09-01 12:00:00.000000",
+ "modified": "2026-09-10 16:42:37.920400",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Distribution Invoice",

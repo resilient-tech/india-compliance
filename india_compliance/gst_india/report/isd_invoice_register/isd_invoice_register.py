@@ -143,8 +143,8 @@ def get_distribution_invoice_data(filters):
             dist.party_gstin,
             dist.party_pos,
             dist.is_credit_note,
-            src.is_ineligible_for_itc,
-            Case().when(src.is_ineligible_for_itc == 0, "Eligible").else_("Ineligible").as_("eligibility"),
+            dist.is_ineligible,
+            Case().when(dist.is_ineligible == 0, "Eligible").else_("Ineligible").as_("eligibility"),
             Sum(src.total_igst).as_("total_igst"),
             Sum(src.total_cgst).as_("total_cgst"),
             Sum(src.total_sgst).as_("total_sgst"),
@@ -158,7 +158,7 @@ def get_distribution_invoice_data(filters):
         )
         .where(dist.docstatus == 1)
         .where(dist.posting_date[filters.from_date : filters.to_date])
-        .groupby(dist.name, src.is_ineligible_for_itc)
+        .groupby(dist.name, dist.is_ineligible)
         .orderby(dist.posting_date, order=Order.desc)
         .orderby(dist.name, order=Order.asc)
     )
@@ -203,8 +203,8 @@ def get_recipient_invoice_data(filters):
             rec.isd_distribution_invoice_reference,
             rec.external_isd_invoice_number,
             rec.is_credit_note,
-            src.is_ineligible_for_itc,
-            Case().when(src.is_ineligible_for_itc == 0, "Eligible").else_("Ineligible").as_("eligibility"),
+            rec.is_ineligible,
+            Case().when(rec.is_ineligible == 0, "Eligible").else_("Ineligible").as_("eligibility"),
             Sum(src.distributed_igst).as_("recipient_igst"),
             Sum(src.distributed_cgst).as_("recipient_cgst"),
             Sum(src.distributed_sgst).as_("recipient_sgst"),
@@ -213,7 +213,7 @@ def get_recipient_invoice_data(filters):
         )
         .where(rec.docstatus == 1)
         .where(rec.posting_date[filters.from_date : filters.to_date])
-        .groupby(rec.name, src.is_ineligible_for_itc)
+        .groupby(rec.name, rec.is_ineligible)
         .orderby(rec.posting_date, order=Order.desc)
         .orderby(rec.name, order=Order.asc)
     )

@@ -24,6 +24,7 @@ frappe.ui.form.on("ISD Recipient Invoice", {
         );
 
         frm.isd_controller.set_provisional_labels();
+        frm.isd_controller.set_total_tax_label();
         frm.isd_controller.toggle_expense_fields();
         frm.isd_controller.set_common_buttons();
     },
@@ -59,6 +60,10 @@ frappe.ui.form.on("ISD Recipient Invoice", {
         frm.isd_controller.set_place_of_supply("company_address", "company_pos");
     },
 
+    is_ineligible(frm) {
+        frm.isd_controller.set_total_tax_label();
+    },
+
     is_credit_note(frm) {
         frm.isd_controller.clear_credit_note_against();
     },
@@ -82,7 +87,6 @@ const recalculate = (frm) => {
 const RECALCULATE_ON = [
     ...(frappe.boot.gst_tax_types || []).map((tax_type) => `distributed_${tax_type}`),
     "distributed_expense",
-    "is_ineligible_for_itc",
 ];
 
 frappe.ui.form.on("ISD Source Item", {

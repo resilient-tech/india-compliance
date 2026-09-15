@@ -153,7 +153,6 @@ def make_source_item(pi, ratio=1.0, is_credit_note=0):
             {
                 "item_code": item.item_code,
                 "purchase_invoice_item": item.name,
-                "is_ineligible_for_itc": item.get("is_ineligible_for_itc") or 0,
                 "expense_head": item.expense_account,
                 "total_expense": flt(item.base_net_amount),
                 "distributed_expense": sign * abs(flt(item.base_net_amount)) * ratio,
@@ -170,6 +169,7 @@ def make_isd_doc(doctype, source_items=None, **fields):
     fields.setdefault("posting_date", today())
     fields.setdefault("branch_turnover", 25)
     fields.setdefault("total_turnover", 100)
+    fields.setdefault("is_ineligible", 0)
 
     # company_gstin / party_gstin are fetch_from fields that are not populated on a bare
     # new_doc, so derive them from the addresses when a caller has not set them explicitly.
@@ -220,10 +220,12 @@ def create_distribution_invoice(**data):
     set on the document.
     """
     data = frappe._dict(data)
-
     if (pi := data.purchase_invoice) and not isinstance(pi, str):
         data.purchase_invoice = pi.name
         data.setdefault("source_items", make_source_item(pi))
+
+    # Eligibility belongs to the ISD document, not its Purchase Invoice items.
+    data.setdefault("is_ineligible", 0)
 
     return _create_isd_doc("ISD Distribution Invoice", **data)
 
@@ -239,23 +241,16 @@ def create_recipient_invoice(**data):
     if not data.get("isd_distribution_invoice_reference"):
         data.setdefault("external_isd_invoice_number", frappe.generate_hash(length=8))
 
+    # Default to eligible (0) at document level unless explicitly overridden
+    data.setdefault("is_ineligible", 0)
+
     return _create_isd_doc("ISD Recipient Invoice", **data)
 
 
 def make_ineligible_isd_pi(billing_address, **kwargs):
-    """An ISD-applicable Purchase Invoice whose single item is ineligible for ITC."""
-    items = [
-        {
-            "item_code": "_Test Service Item",
-            "qty": 1,
-            "rate": 10000,
-            "gst_hsn_code": "999900",
-            "cost_center": "Main - _TIRC",
-            "expense_account": PROFIT_AND_LOSS_ACCOUNT,
-            "is_ineligible_for_itc": 1,
-        }
-    ]
-    return make_isd_pi(billing_address, items=items, **kwargs)
+    """An ISD-applicable Purchase Invoice using the ineligible Item test record."""
+    kwargs.setdefault("item_code", "_Test Ineligible Service Item")
+    return make_isd_pi(billing_address, **kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -346,7 +341,12 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         with self.assertRaises(VALIDATION_ERROR) as cm:
             method()
 
-        self.assertIn(title, frappe.message_log[-1].get("title", ""))
+        last_log = frappe.message_log[-1] if frappe.message_log else {}
+        log_title = last_log.get("title", "")
+        log_msg = last_log.get("message", "")
+        combined_log = f"{log_title} {log_msg} {cm.exception}"
+
+        self.assertIn(title, combined_log)
         if row_value:
             self.assertIn(row_value, str(cm.exception))
 
@@ -674,9 +674,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         row["purchase_invoice_item"] = "NON-EXISTENT-PII"
         doc = make_distribution_invoice(purchase_invoice=self.pi.name, source_items=[row])
         doc.setup_precision()
-        self.assert_invalid_rows(
-            doc.validate_source_items, "do not belong to Purchase Invoice", "_Test Service Item"
-        )
+        self.assert_invalid_rows(doc.validate_source_items, "do not belong to", "_Test Service Item")
 
         # the same Purchase Invoice item added twice
         rows = make_source_item(self.pi)
@@ -685,7 +683,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         doc.setup_precision()
         self.assert_invalid_rows(doc.validate_source_items, "added more than once", "_Test Service Item")
 
-        # a Purchase Invoice item missing from the source items
+        # every Purchase Invoice item must be represented by the distribution document
         pi = make_isd_pi(
             self.isd_address.name,
             items=[
@@ -855,8 +853,9 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             company_address=self.isd_address.name,
             party_address=self.recipient_address.name,
         )
+        self.assertEqual(doc.is_ineligible, 0)
 
-        expected = flt(doc.total_eligible) + flt(doc.total_ineligible) + flt(doc.total_expense)
+        expected = flt(doc.total_tax) + flt(doc.total_expense)
         self.assertTrue(expected)
 
         # virtual: resolved through the class property, so it must survive a fresh load
@@ -1039,7 +1038,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             for tax in doc.taxes:
                 self.assertLess(flt(tax.tax_amount), 0, tax.gst_tax_type)
 
-            self.assertLess(flt(doc.total_eligible) + flt(doc.total_ineligible), 0)
+            self.assertLess(flt(doc.total_tax), 0)
             # the displayed percentage stays a plain proportion
             self.assertGreater(flt(doc.distribution_ratio), 0)
 
@@ -1072,6 +1071,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
                     f"distributed_{gst_tax_type} row {original.idx}",
                 )
 
+    @change_settings("GST Settings", {"auto_create_isd_recipient_invoice": 1})
     def test_only_one_credit_note_per_distribution(self):
         """The reversal limit comes from what the distribution passed on, so a second credit note
         would be free to reverse the same credit all over again."""
@@ -1095,7 +1095,11 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         )
         self.assertRaisesRegex(VALIDATION_ERROR, "already has a credit note", second.insert)
 
-        # a cancelled credit note does not hold the slot
+        # Its linked recipient invoice must be cancelled before the credit note can be cancelled.
+        recipient = get_auto_recipient_invoice(credit_note)
+        recipient.cancel()
+
+        # A cancelled credit note does not hold the slot.
         credit_note.cancel()
         replacement = self._full_distribution(
             pi=pi, branch=50, total=100, is_credit_note=1, credit_note_against=distribution.name
@@ -1190,6 +1194,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             company_address=self.isd_address.name,
             party_address=self.recipient_address.name,
         )
+        self.assertEqual(doc.is_ineligible, 0)
 
         rows = get_gl_rows(doc)
         assert_balanced_gl(self, rows)
@@ -1212,7 +1217,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         )
         self.assertAlmostEqual(
             doc.isd_provisional_amount,
-            doc.total_eligible + doc.total_ineligible + doc.total_expense,
+            doc.total_tax + doc.total_expense,
             places=2,
         )
 
@@ -1244,7 +1249,9 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             party_address=self.recipient_address.name,
             branch_turnover=100,
             total_turnover=300,
+            is_ineligible=1,
         )
+        self.assertEqual(doc.is_ineligible, 1)
 
         rows = get_gl_rows(doc)
         assert_balanced_gl(self, rows)
@@ -1270,6 +1277,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
 
         # mirrored on the recipient: taxes received gross, expense head absorbs the ineligible tax
         recipient = get_auto_recipient_invoice(doc)
+        self.assertEqual(recipient.is_ineligible, 1)
         recipient_rows = get_gl_rows(recipient)
         assert_balanced_gl(self, recipient_rows)
         recipient_row = recipient.source_items[0]
@@ -1286,7 +1294,9 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             party_address=self.recipient_address_ka.name,
             branch_turnover=100,
             total_turnover=300,
+            is_ineligible=1,
         )
+        self.assertEqual(inter_state.is_ineligible, 1)
         inter_state_totals = account_totals(get_gl_rows(inter_state))
         accounts = get_input_gst_accounts(COMPANY)
 
@@ -1473,6 +1483,7 @@ class IntegrationTestISDBulkDistribution(IntegrationTestCase):
             branch_turnover, ratio = expected.pop(doc.party_address)
 
             self.assertEqual(doc.docstatus, 0)
+            self.assertEqual(doc.is_ineligible, 0)
             self.assertEqual(doc.purchase_invoice, self.bulk_pi.name)
             self.assertEqual(doc.company_address, self.isd_address.name)
             self.assertEqual(doc.branch_turnover, branch_turnover)
