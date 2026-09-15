@@ -1,6 +1,4 @@
-"""Credit distributed by an Input Service Distributor. No rate-wise breakup is reported: the eligible
-and the ineligible part of one document arrive as separate rows, and fold into one document with a
-row each."""
+"""Credit distributed by an Input Service Distributor. Amounts sit on the document, no items."""
 
 from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2.gstr import add_original_details, to_period
@@ -14,14 +12,13 @@ from india_compliance.gst_returns.fields.gstr2 import DocField as doc
 from india_compliance.gst_returns.fields.gstr2 import ItemField as item
 from india_compliance.gst_returns.fields.gstr2 import RawField2a as raw2a
 from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
-from india_compliance.gst_returns.steps import decode, flip, set_item_totals, take
+from india_compliance.gst_returns.steps import decode, set_item_totals, take
 
-# the amounts the portal reports against distributed credit; no taxable value, and the item rows
-# carry the same field names as the document
+# no taxable value is reported against distributed credit
 TAX_FIELDS = (doc.IGST, doc.CGST, doc.SGST, doc.CESS)
 
-# the rows keep the eligibility under the portal's own name and code
-ELIGIBILITY_CODE = flip(YES_NO)
+# "Yes" -> "Y": the rows keep the eligibility as the portal codes it
+ITC_ELIGIBILITY_CODE = {value: key for key, value in YES_NO.items()}
 
 
 def get_document_value(details):
@@ -93,51 +90,45 @@ def get_amended_document_details_2b(document, gstr):
 
 
 def as_item(transaction):
-    """One part of a document, as its own row: the amounts it contributes and the eligibility they
-    were distributed under."""
+    """The document's own amounts become its single row, carrying the eligibility that decides how
+    the rows of one document fold together."""
     return {
         **{field: transaction.get(field) for field in TAX_FIELDS},
-        item.ITC_ELIGIBILITY: ELIGIBILITY_CODE.get(transaction.get(doc.ITC_AVAILABILITY)),
+        item.ITC_ELIGIBILITY: ITC_ELIGIBILITY_CODE.get(transaction.get(doc.ITC_AVAILABILITY)),
     }
 
 
-def document_key(transaction):
-    """What makes two rows parts of one document. Matches how an inward supply is keyed, plus the
-    date, so a re-used number in another period stays separate."""
-    return (
-        transaction.get(doc.SUPPLIER_GSTIN),
-        transaction.get(doc.BILL_NO),
-        transaction.get(doc.DOC_TYPE),
-        transaction.get(doc.BILL_DATE),
-    )
-
-
-def set_totals(document):
-    rows = document[doc.ITEMS]
-
-    # an unsplit document re-sums its single row to the value it already had
-    set_item_totals(document, rows, TAX_FIELDS)
-    document[doc.DOC_VALUE] = get_document_value(document)
-
-
-def fold_parts(transactions):
+def group_documents(transactions):
     """Rule 39(1)(b): an ISD passes on the eligible and the ineligible credit of one document
-    separately, and the portal reports each part under the same document number. Left apart they
-    would collide on the inward supply key and the second part would overwrite the first."""
-    documents = {}
+    separately, and the portal reports each part under the same document number. They are one
+    document -- kept apart, the second part overwrites the first, since an inward supply is keyed
+    by supplier, number and document type."""
+    grouped = {}
 
     for transaction in transactions:
-        row = as_item(transaction)
-        key = document_key(transaction)
+        transaction[doc.ITEMS] = [as_item(transaction)]
+        key = (
+            transaction.get(doc.SUPPLIER_GSTIN),
+            transaction.get(doc.BILL_NO),
+            transaction.get(doc.DOC_TYPE),
+            transaction.get(doc.BILL_DATE),
+        )
 
-        if document := documents.get(key):
-            document[doc.ITEMS].append(row)
+        if existing := grouped.get(key):
+            existing[doc.ITEMS].extend(transaction[doc.ITEMS])
             continue
 
-        transaction[doc.ITEMS] = [row]
-        documents[key] = transaction
+        grouped[key] = transaction
 
-    for document in documents.values():
-        set_totals(document)
+    for transaction in grouped.values():
+        set_item_totals(transaction, transaction[doc.ITEMS], TAX_FIELDS)
+        transaction[doc.DOC_VALUE] = get_document_value(transaction)
 
-    return list(documents.values())
+        # any eligible row makes the document's credit available
+        transaction[doc.ITC_AVAILABILITY] = (
+            YES_NO["Y"]
+            if any(row[item.ITC_ELIGIBILITY] == "Y" for row in transaction[doc.ITEMS])
+            else YES_NO["N"]
+        )
+
+    return list(grouped.values())
