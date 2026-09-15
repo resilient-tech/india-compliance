@@ -95,6 +95,13 @@
 				<td data-label="taxable_value">{{ inward_supply.taxable_value ? format_number(inward_supply.taxable_value, null, 2) : '-' }}</td>
 				<td data-label="taxable_value">{{ purchase.taxable_value ? format_number(purchase.taxable_value, null, 2) : '-' }}</td>
 			</tr>
+			{% if inward_supply.return_period_2b || purchase.itc_claim_period %}
+			<tr>
+				<th>ITC Claim Period</th>
+				<td data-label="return_period_2b">{{ inward_supply.return_period_2b || '-' }}</td>
+				<td data-label="itc_claim_period">{{ purchase.itc_claim_period || '-' }}</td>
+			</tr>
+			{% endif %}
 			{% if inward_supply.reason_itc_unavailability %}
 			<tr>
 				<th>Reason for ITC Unavailability</th>
