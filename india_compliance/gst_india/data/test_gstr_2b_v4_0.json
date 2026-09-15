@@ -983,7 +983,7 @@
 						},
 						{
 							"doctyp": "ISDI",
-							"docnum": "S9001",
+							"docnum": "S9002",
 							"docdt": "03-03-2016",
 							"igst": 0,
 							"cgst": 100,
@@ -993,7 +993,7 @@
 						},
 						{
 							"doctyp": "ISDC",
-							"docnum": "S9001",
+							"docnum": "S9003",
 							"docdt": "03-03-2016",
 							"igst": 0,
 							"cgst": 50,

@@ -1,4 +1,6 @@
-"""Credit distributed by an Input Service Distributor. Amounts sit on the document, no items."""
+"""Credit distributed by an Input Service Distributor. Amounts sit on the document, no items:
+the eligible and the ineligible part of a common credit are distributed under their own document
+numbers, so each arrives as its own row and stays its own inward supply."""
 
 from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2.gstr import add_original_details, to_period
@@ -9,16 +11,12 @@ from india_compliance.gst_returns.fields.gstr2 import (
     YES_NO,
 )
 from india_compliance.gst_returns.fields.gstr2 import DocField as doc
-from india_compliance.gst_returns.fields.gstr2 import ItemField as item
 from india_compliance.gst_returns.fields.gstr2 import RawField2a as raw2a
 from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
-from india_compliance.gst_returns.steps import decode, set_item_totals, take
+from india_compliance.gst_returns.steps import decode, take
 
 # no taxable value is reported against distributed credit
 TAX_FIELDS = (doc.IGST, doc.CGST, doc.SGST, doc.CESS)
-
-# "Yes" -> "Y": the rows keep the eligibility as the portal codes it
-ITC_ELIGIBILITY_CODE = {value: key for key, value in YES_NO.items()}
 
 
 def get_document_value(details):
@@ -87,43 +85,3 @@ def get_amended_document_details_2b(document, gstr):
     decode(details, doc.ORIGINAL_DOC_TYPE, ISD_TYPE_2B)
 
     return details
-
-
-def as_item(transaction):
-    """The document's own amounts become its single row, carrying the eligibility that decides how
-    the rows of one document fold together."""
-    return {
-        **{field: transaction.get(field) for field in TAX_FIELDS},
-        item.ITC_ELIGIBILITY: ITC_ELIGIBILITY_CODE.get(transaction.get(doc.ITC_AVAILABILITY)),
-    }
-
-
-def group_documents(transactions):
-    """Rule 39(1)(b): an ISD passes on the eligible and the ineligible credit of one document
-    separately, and the portal reports each part under the same document number. They are one
-    document -- kept apart, the second part overwrites the first, since an inward supply is keyed
-    by supplier, number and document type."""
-    grouped = {}
-
-    for transaction in transactions:
-        transaction[doc.ITEMS] = [as_item(transaction)]
-        key = (transaction.get(doc.BILL_NO), transaction.get(doc.DOC_TYPE), transaction.get(doc.BILL_DATE))
-
-        if existing := grouped.get(key):
-            existing[doc.ITEMS].extend(transaction[doc.ITEMS])
-            continue
-
-        grouped[key] = transaction
-
-    for transaction in grouped.values():
-        set_item_totals(transaction, transaction[doc.ITEMS], TAX_FIELDS)
-        transaction[doc.DOC_VALUE] = get_document_value(transaction)
-
-        # any eligible row makes the document's credit available
-        transaction[doc.ITC_AVAILABILITY] = (
-            YES_NO["Y"]
-            if any(row[item.ITC_ELIGIBILITY] == "Y" for row in transaction[doc.ITEMS])
-            else YES_NO["N"]
-        )
-
-    return list(grouped.values())

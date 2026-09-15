@@ -124,24 +124,6 @@ frappe.query_reports["ISD Invoice Register"] = {
         },
     ],
 
-    async onload(report) {
-        const company = report.get_filter_value("company");
-        if (!company) return;
-
-        const company_gstin = await frappe.db.get_list("Purchase Invoice", {
-            filters: { company: company, is_isd_applicable: 1, docstatus: 1 },
-            fields: ["company_gstin"],
-            pluck: "company_gstin",
-            limit: 1,
-        });
-
-        if (company_gstin) {
-            if (!report.get_filter_value("company_gstin")) {
-                report.set_filter_value("company_gstin", company_gstin[0]);
-            }
-        }
-    },
-
     // Override datatable hook for column total calculation
     get_datatable_options(datatable_options) {
         datatable_options.hooks = {

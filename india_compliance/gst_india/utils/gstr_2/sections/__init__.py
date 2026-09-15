@@ -25,9 +25,6 @@ SECTIONS_2A = {
     "TCS": (tds_tcs.get_tcs_details, None, False),
 }
 
-# an ISD reports the eligible and the ineligible half of one document as separate rows
-GROUPED_SECTIONS = dict.fromkeys(("ISD", "ISDA"), isd.group_documents)
-
 SECTIONS_2B = {
     "B2B": (b2b.get_invoice_details_2b, raw2b.INVOICES, True),
     "B2BA": (b2b.get_amended_invoice_details_2b, raw2b.INVOICES, True),

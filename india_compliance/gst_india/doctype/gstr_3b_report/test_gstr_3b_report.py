@@ -963,6 +963,7 @@ class TestGSTR3BReport(IntegrationTestCase):
             company_address=self.COMPANY_ADDRESS,
             party_address=self.isd_address.name,
             external_isd_invoice_number=frappe.generate_hash(length=8),
+            is_ineligible=1 if ineligible else 0,
             source_items=make_source_item(pi, ratio=ratio),
         )
 
@@ -997,7 +998,7 @@ class TestGSTR3BReport(IntegrationTestCase):
         4(B) RUL -- so it cancels out of net ITC. This is the is_itc_reversed_for_isd path."""
         doc = self.create_isd_recipient_invoice(ineligible=True)
         source_row = doc.source_items[0]
-        self.assertTrue(source_row.is_ineligible_for_itc)
+        self.assertTrue(doc.is_ineligible)
 
         output = generate_gstr_3b_report()
 
