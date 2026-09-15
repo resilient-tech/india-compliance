@@ -14,6 +14,9 @@ _create_custom_fields = get_custom_fields_creator("Audit Trail")
 
 
 def setup_fixtures():
+    """
+    Runs when the app is installed.
+    """
     create_custom_fields()
     create_property_setters_for_versioning()
 
@@ -42,6 +45,34 @@ def create_property_setters_for_versioning():
         property_setter.insert()
 
 
+def setup_versioning():
+    """
+    Runs on migrate and when the Audit Trail gets enabled.
+
+    Custom Fields are skipped, since those are the user's own fields.
+    """
+    create_property_setters_for_versioning()
+    delete_ignore_versioning_property_setters()
+
+
+def delete_ignore_versioning_property_setters():
+    filters = {
+        "doctype_or_field": "DocField",
+        "property": "ignore_versioning",
+        "value": "1",
+        "doc_type": ("in", get_audit_trail_doctypes(include_children=True)),
+    }
+
+    property_setters = frappe.get_all("Property Setter", filters=filters, fields=["name", "doc_type"])
+    if not property_setters:
+        return
+
+    frappe.db.delete("Property Setter", {"name": ("in", {ps.name for ps in property_setters})})
+
+    for doctype in {ps.doc_type for ps in property_setters}:
+        frappe.clear_cache(doctype=doctype)
+
+
 def after_migrate():
     if is_audit_trail_enabled():
-        create_property_setters_for_versioning()
+        setup_versioning()

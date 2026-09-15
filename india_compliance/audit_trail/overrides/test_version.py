@@ -7,6 +7,10 @@ from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 
 class TestVersion(IntegrationTestCase):
+    def setUp(self):
+        # set explicitly, since a previous run can leave this either way
+        frappe.db.set_single_value("Accounts Settings", "enable_audit_trail", 0)
+
     def test_validate_version_where_audit_trail_enabled(self):
         # enable audit trail
         frappe.db.set_single_value("Accounts Settings", "enable_audit_trail", 1)

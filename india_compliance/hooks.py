@@ -347,6 +347,9 @@ doc_events = {
         "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
     },
     "Accounts Settings": {"validate": "india_compliance.audit_trail.overrides.accounts_settings.validate"},
+    "Custom Field": {
+        "validate": "india_compliance.audit_trail.overrides.custom_field.validate",
+    },
     "Property Setter": {
         "validate": "india_compliance.audit_trail.overrides.property_setter.validate",
         "on_trash": "india_compliance.audit_trail.overrides.property_setter.on_trash",
