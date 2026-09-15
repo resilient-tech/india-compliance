@@ -16,6 +16,7 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
     make_source_item,
     setup_isd_fixtures,
 )
+from india_compliance.gst_india.utils.gstr_2 import save_gstr_2b
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     format_period,
@@ -748,7 +749,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
     POSTING_DATE = "2023-08-11"
 
-    def create_recipient_invoice(self, external_isd_invoice_number, is_credit_note=0):
+    def create_recipient_invoice(self, external_isd_invoice_number, is_credit_note=0, is_ineligible=0):
         pi = make_isd_pi(self.isd_address.name, posting_date=self.POSTING_DATE, set_posting_time=1)
 
         return create_recipient_invoice(
@@ -757,6 +758,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             posting_date=self.POSTING_DATE,
             external_isd_invoice_number=external_isd_invoice_number,
             is_credit_note=is_credit_note,
+            is_ineligible=is_ineligible,
             source_items=make_source_item(pi, is_credit_note=is_credit_note),
         )
 
@@ -908,6 +910,71 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
         # the invoice stays unmatched rather than absorbing the credit note
         self.assertEqual(self.isd_row(rows, invoice).match_status, "Only in Books")
+
+    def test_one_2b_isd_row_against_an_eligible_and_an_ineligible_book_invoice(self):
+        """An external ISD distributes the eligible and the ineligible part of one doc, so the
+        books carry two ISD Recipient Invoices under one number"""
+        eligible = self.create_recipient_invoice("ISD-ELIG-001")
+        ineligible = self.create_recipient_invoice("ISD-ELIG-001", is_ineligible=1)
+
+        eligible_row = eligible.source_items[0]
+        ineligible_row = ineligible.source_items[0]
+
+        save_gstr_2b(
+            "24AAQCA8719H1ZC",
+            "082023",
+            frappe._dict(
+                data=frappe._dict(
+                    gstin="24AAQCA8719H1ZC",
+                    rtnprd="082023",
+                    gendt="11-08-2023",
+                    docdata={
+                        "isd": [
+                            {
+                                "ctin": self.isd_address.gstin,
+                                "trdnm": "_Test ISD Distribution Address",
+                                "supprd": "072023",
+                                "supfildt": "11-08-2023",
+                                "doclist": [
+                                    {
+                                        "doctyp": "ISDI",
+                                        "docnum": "ISD-ELIG-001",
+                                        "docdt": "11-08-2023",
+                                        "igst": 0,
+                                        "cgst": eligible_row.distributed_cgst,
+                                        "sgst": eligible_row.distributed_sgst,
+                                        "cess": 0,
+                                        "itcelg": "Y",
+                                    },
+                                    {
+                                        "doctyp": "ISDI",
+                                        "docnum": "ISD-ELIG-001",
+                                        "docdt": "11-08-2023",
+                                        "igst": 0,
+                                        "cgst": ineligible_row.distributed_cgst,
+                                        "sgst": ineligible_row.distributed_sgst,
+                                        "cess": 0,
+                                        "itcelg": "N",
+                                    },
+                                ],
+                            }
+                        ]
+                    },
+                )
+            ),
+            store_raw=False,
+        )
+
+        # the two parts share supplier, number, date and type, so they key onto one inward supply
+        self.assertEqual(
+            frappe.db.count("GST Inward Supply", {"bill_no": "ISD-ELIG-001", "classification": "ISD"}),
+            2,
+        )
+
+        _, rows = self.reconcile()
+
+        self.assertEqual(self.isd_row(rows, eligible).match_status, "Exact Match")
+        self.assertEqual(self.isd_row(rows, ineligible).match_status, "Exact Match")
 
     def test_isd_invoice_manual_link_and_unlink(self):
         """Manually linking an ISD Recipient Invoice writes the status back onto the document, and
