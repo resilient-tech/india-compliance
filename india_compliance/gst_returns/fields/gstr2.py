@@ -85,7 +85,6 @@ class ItemField:
     CGST = "cgst"
     SGST = "sgst"
     CESS = "cess"
-    ITC_ELIGIBILITY = "itcelg"
 
 
 class RawField2a:
