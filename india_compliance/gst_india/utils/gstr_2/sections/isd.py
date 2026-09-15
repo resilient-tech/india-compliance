@@ -1,4 +1,6 @@
-"""Credit distributed by an Input Service Distributor. Amounts sit on the document, no items."""
+"""Credit distributed by an Input Service Distributor. Amounts sit on the document, no items:
+the eligible and the ineligible part of a common credit are distributed under their own document
+numbers, so each arrives as its own row and stays its own inward supply."""
 
 from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2.gstr import add_original_details, to_period
@@ -12,6 +14,14 @@ from india_compliance.gst_returns.fields.gstr2 import DocField as doc
 from india_compliance.gst_returns.fields.gstr2 import RawField2a as raw2a
 from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
 from india_compliance.gst_returns.steps import decode, take
+
+# no taxable value is reported against distributed credit
+TAX_FIELDS = (doc.IGST, doc.CGST, doc.SGST, doc.CESS)
+
+
+def get_document_value(details):
+    return sum(details.get(field) or 0 for field in TAX_FIELDS)
+
 
 KEYS_2A = {
     raw2a.ISD_DOC_TYPE: doc.DOC_TYPE,
@@ -36,12 +46,7 @@ def get_document_details_2a(document, gstr):
     details[doc.OTHER_RETURN_PERIOD] = to_period(details[doc.OTHER_RETURN_PERIOD])
     details[doc.IS_AMENDED] = 1 if document.get(raw2a.AMEND_TYPE) else 0
     decode(details, doc.AMENDMENT_TYPE, AMEND_TYPE)
-    details[doc.DOC_VALUE] = (
-        (details[doc.IGST] or 0)
-        + (details[doc.CGST] or 0)
-        + (details[doc.SGST] or 0)
-        + (details[doc.CESS] or 0)
-    )
+    details[doc.DOC_VALUE] = get_document_value(details)
 
     return details
 
@@ -70,12 +75,7 @@ def get_document_details_2b(document, gstr):
     decode(details, doc.DOC_TYPE, ISD_TYPE_2B)
     details[doc.BILL_DATE] = parse_datetime(details[doc.BILL_DATE], day_first=True)
     decode(details, doc.ITC_AVAILABILITY, YES_NO)
-    details[doc.DOC_VALUE] = (
-        (details[doc.IGST] or 0)
-        + (details[doc.CGST] or 0)
-        + (details[doc.SGST] or 0)
-        + (details[doc.CESS] or 0)
-    )
+    details[doc.DOC_VALUE] = get_document_value(details)
 
     return details
 

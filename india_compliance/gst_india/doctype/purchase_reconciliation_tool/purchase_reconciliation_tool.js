@@ -286,7 +286,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 label: "DocType",
                 fieldname: "purchase_doctype",
                 fieldtype: "Select",
-                options: ["Purchase Invoice", "Bill of Entry"],
+                options: ["Purchase Invoice", "Bill of Entry", "ISD Recipient Invoice"],
             },
         );
 
@@ -801,11 +801,13 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         if (this.row.match_status == "Only in Books") this.missing_doctype = "GST Inward Supply";
         else if (this.row.match_status == "Only in 2A/2B")
             if (["IMPG", "IMPGSEZ"].includes(this.row.classification)) this.missing_doctype = "Bill of Entry";
+            else if (["ISD", "ISDA"].includes(this.row.classification))
+                this.missing_doctype = "ISD Recipient Invoice";
             else this.missing_doctype = "Purchase Invoice";
         else return;
 
         if (this.missing_doctype == "GST Inward Supply") this.doctype_options = ["GST Inward Supply"];
-        else this.doctype_options = ["Purchase Invoice", "Bill of Entry"];
+        else this.doctype_options = ["Purchase Invoice", "Bill of Entry", "ISD Recipient Invoice"];
     }
 }
 

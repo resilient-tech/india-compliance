@@ -1,5 +1,4 @@
 const DOCTYPE = "Purchase Invoice";
-const IMPORT_GST_CATEGORIES = ["Overseas", "SEZ"];
 
 setup_e_waybill_actions(DOCTYPE);
 
@@ -63,6 +62,21 @@ frappe.ui.form.on(DOCTYPE, {
                         method: "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.make_bill_of_entry",
                         frm: frm,
                     });
+                },
+                __("Create"),
+            );
+        }
+
+        if (
+            frm.doc.docstatus === 1 &&
+            frm.doc.is_isd_applicable &&
+            frm.doc.isd_credit_distributed_percent < 100 &&
+            frappe.model.can_create("ISD Distribution Invoice")
+        ) {
+            frm.add_custom_button(
+                __("ISD Distribution Invoices"),
+                () => {
+                    india_compliance.show_isd_invoice_distribution_dialog(frm.doc);
                 },
                 __("Create"),
             );
@@ -137,5 +151,5 @@ function has_goods_items(frm) {
 }
 
 function is_import_gst_category(gst_category) {
-    return IMPORT_GST_CATEGORIES.includes(gst_category);
+    return frappe.boot.import_gst_categories.includes(gst_category);
 }
