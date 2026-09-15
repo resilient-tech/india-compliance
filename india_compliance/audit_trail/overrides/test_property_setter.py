@@ -97,7 +97,7 @@ class TestPropertySetter(IntegrationTestCase):
         self.assertCannotEnableIgnoreVersioning(doc.insert)
 
         # child table changes are recorded in the parent's Version
-        self.assertIn("Sales Invoice Item", get_audit_trail_doctypes(include_child=True))
+        self.assertIn("Sales Invoice Item", get_audit_trail_doctypes(include_children=True))
 
         child_doc = self.get_ignore_versioning_property_setter("Sales Invoice Item", "item_name")
         self.assertCannotEnableIgnoreVersioning(child_doc.insert)

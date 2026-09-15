@@ -60,7 +60,7 @@ def delete_ignore_versioning_property_setters():
         "doctype_or_field": "DocField",
         "property": "ignore_versioning",
         "value": "1",
-        "doc_type": ("in", get_audit_trail_doctypes(include_child=True)),
+        "doc_type": ("in", get_audit_trail_doctypes(include_children=True)),
     }
 
     property_setters = frappe.get_all("Property Setter", filters=filters, fields=["name", "doc_type"])

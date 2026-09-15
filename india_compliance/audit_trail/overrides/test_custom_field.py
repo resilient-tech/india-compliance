@@ -51,7 +51,7 @@ class TestCustomField(IntegrationTestCase):
 
     def test_ignore_versioning_cannot_be_enabled_for_child_table(self):
         # child table changes are recorded in the parent's Version
-        self.assertIn("Sales Invoice Item", get_audit_trail_doctypes(include_child=True))
+        self.assertIn("Sales Invoice Item", get_audit_trail_doctypes(include_children=True))
 
         doc = self.get_ignore_versioning_custom_field("Sales Invoice Item")
 
