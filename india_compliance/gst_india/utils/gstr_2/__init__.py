@@ -347,14 +347,25 @@ def save_gstr(
         rejected_data = {}
 
     company = get_party_for_gstin(gstin, "Company")
+    created = 0
     for category in GSTRCategory:
         gstr = get_data_handler(return_type.value, category.value)
         if not gstr:
             continue
 
-        gstr(company, gstin, return_period, category.value, gen_date_2b).create_transactions(
-            json_data.get(category.value.lower()),
-            rejected_data.get(category.value.lower()),
+        created += (
+            gstr(company, gstin, return_period, category.value, gen_date_2b).create_transactions(
+                json_data.get(category.value.lower()),
+                rejected_data.get(category.value.lower()),
+            )
+            or 0
+        )
+
+    if return_period and not created:
+        frappe.publish_realtime(
+            "update_2a_2b_transactions_progress",
+            {"current_progress": 100, "return_period": return_period},
+            user=frappe.session.user,
         )
 
 

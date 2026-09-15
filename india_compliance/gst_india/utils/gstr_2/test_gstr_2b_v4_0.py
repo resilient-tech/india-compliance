@@ -1,13 +1,15 @@
 from datetime import date
+from unittest.mock import patch
 
 import frappe
 from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.utils import get_data_file_path, merge_dicts
-from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
+from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
+from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
 
 class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
@@ -338,6 +340,18 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         doc.reload()
         self.assertEqual(doc.return_period_2b, self.return_period)
         self.assertEqual(doc.is_downloaded_from_2b, 1)
+
+
+class TestEmptyPeriodProgress(IntegrationTestCase):
+    def test_month_with_nothing_to_save_still_reports_done(self):
+        """No save event means the sync progress never closes on screen."""
+        with patch("frappe.publish_realtime") as publish:
+            save_gstr("01AABCE2207R1Z5", ReturnType.GSTR2B, "032020", {"b2b": []})
+
+        publish.assert_called_once()
+        event, message = publish.call_args.args[:2]
+        self.assertEqual(event, "update_2a_2b_transactions_progress")
+        self.assertEqual(message, {"current_progress": 100, "return_period": "032020"})
 
 
 class TestGetUniqueKey(IntegrationTestCase):
