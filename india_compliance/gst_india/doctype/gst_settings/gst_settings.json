@@ -378,7 +378,7 @@
    "label": "Distribute Expense with ISD Credit"
   },
   {
-   "default": "0",
+   "default": "1",
    "description": "Applicable when Is against Customer/Supplier is unchecked in the ISD Distribution Invoice",
    "fieldname": "auto_create_isd_recipient_invoice",
    "fieldtype": "Check",
