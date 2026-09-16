@@ -420,26 +420,17 @@ india_compliance.ISDController = class ISDController {
         return this.frm.set_value("credit_note_against", null);
     }
 
-    set_provisional_labels() {
-        const against_party = this.frm.doc.is_against_party;
-        this.frm.set_df_property(
-            "isd_provisional_account",
-            "label",
-            against_party ? "Party Account" : "ISD Provisional Account",
-        );
-        this.frm.set_df_property(
-            "isd_provisional_amount",
-            "label",
-            against_party ? "Party Amount" : "ISD Provisional Amount",
-        );
-    }
+    set_labels() {
+        const { is_against_party, is_ineligible_for_itc } = this.frm.doc;
+        const label_map = [
+            ["isd_provisional_account", is_against_party ? "Party Account" : "ISD Provisional Account"],
+            ["isd_provisional_amount", is_against_party ? "Party Amount" : "ISD Provisional Amount"],
+            ["total_tax", is_ineligible_for_itc ? "Total Ineligible" : "Total Eligible"],
+        ];
 
-    set_total_tax_label() {
-        this.frm.set_df_property(
-            "total_tax",
-            "label",
-            this.frm.doc.is_ineligible_for_itc ? __("Total Ineligible") : __("Total Eligible"),
-        );
+        for (const [field, label] of label_map) {
+            this.frm.set_df_property(field, "label", __(label));
+        }
     }
 
     // ------------------------------------------------------------------ link field queries

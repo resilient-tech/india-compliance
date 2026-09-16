@@ -10,8 +10,7 @@ frappe.ui.form.on("ISD Distribution Invoice", {
     },
 
     refresh(frm) {
-        frm.isd_controller.set_provisional_labels();
-        frm.isd_controller.set_total_tax_label();
+        frm.isd_controller.set_labels();
         frm.isd_controller.toggle_expense_fields();
         frm.isd_controller.set_common_buttons();
         frm.isd_controller.set_grand_total();
@@ -51,7 +50,7 @@ frappe.ui.form.on("ISD Distribution Invoice", {
     },
 
     is_against_party(frm) {
-        frm.isd_controller.set_provisional_labels();
+        frm.isd_controller.set_labels();
         if (frm.__updating_isd_autofill) return;
         frm.isd_controller.fetch_autofill("is_against_party");
     },
@@ -74,18 +73,18 @@ frappe.ui.form.on("ISD Distribution Invoice", {
     },
 
     async party_address(frm) {
-        frm.isd_controller.set_address_display("party_address", "party_address_display");
-        await frm.isd_controller.set_place_of_supply("party_address", "party_pos");
         if (!frm.__updating_isd_autofill) {
             await frm.isd_controller.fetch_autofill("party_address");
         }
+        frm.isd_controller.set_address_display("party_address", "party_address_display");
+        await frm.isd_controller.set_place_of_supply("party_address", "party_pos");
         await frm.isd_controller.recalculate();
     },
 
     purchase_invoice: fetch_source_items,
 
     is_ineligible_for_itc(frm) {
-        frm.isd_controller.set_total_tax_label();
+        frm.isd_controller.set_labels();
         return fetch_source_items(frm);
     },
 

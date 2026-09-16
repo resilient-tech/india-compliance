@@ -66,8 +66,7 @@ class ISDRecipientInvoice(ISDController):
         )
 
     def validate_credit_note_direction(self):
-        """Per row, the way ERPNext checks a return (validate_quantity): on the net, a positive row
-        hides behind a larger negative one and claims credit the document is giving back."""
+        """check amounts to be negative for credit notes and positive otherwise"""
         for row in self.source_items:
             for gst_tax_type in (*GST_TAX_TYPES, "expense"):
                 fieldname = f"distributed_{gst_tax_type}"

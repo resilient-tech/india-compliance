@@ -23,8 +23,7 @@ frappe.ui.form.on("ISD Recipient Invoice", {
                 : "external_isd_invoice_number",
         );
 
-        frm.isd_controller.set_provisional_labels();
-        frm.isd_controller.set_total_tax_label();
+        frm.isd_controller.set_labels();
         frm.isd_controller.toggle_expense_fields();
         frm.isd_controller.set_common_buttons();
     },
@@ -35,7 +34,7 @@ frappe.ui.form.on("ISD Recipient Invoice", {
     },
 
     is_against_party(frm) {
-        frm.isd_controller.set_provisional_labels();
+        frm.isd_controller.set_labels();
         if (frm.__updating_isd_autofill) return;
         frm.isd_controller.fetch_autofill("is_against_party");
     },
@@ -61,7 +60,7 @@ frappe.ui.form.on("ISD Recipient Invoice", {
     },
 
     is_ineligible_for_itc(frm) {
-        frm.isd_controller.set_total_tax_label();
+        frm.isd_controller.set_labels();
     },
 
     is_credit_note(frm) {
