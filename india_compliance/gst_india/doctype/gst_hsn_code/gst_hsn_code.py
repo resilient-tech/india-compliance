@@ -81,6 +81,9 @@ def _update_item_modified_timestamp(item_names, timestamp=None):
 
 
 def _add_comment_to_items(item_names, hsn_code, timestamp=None):
+    if not item_names:
+        return
+
     comment_text = f"changed item tax from GST HSN Code {hsn_code}"
 
     add_comments_in_bulk(
