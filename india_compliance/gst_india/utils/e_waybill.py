@@ -53,7 +53,6 @@ from india_compliance.gst_india.overrides.transaction import (
     is_inter_state_supply,
 )
 from india_compliance.gst_india.utils import (
-    add_version,
     commit,
     get_items,
     handle_server_errors,
@@ -162,6 +161,7 @@ def generate_e_waybill(*, doctype: str, docname: str, values: str | dict | None 
     if values:
         update_transaction(doc, frappe.parse_json(values))
         commit()  # save details even if generation fails
+        doc.load_doc_before_save()
 
     _generate_e_waybill(doc, throw=True if values else False, force=force)
 
@@ -310,7 +310,7 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
         data["distance"] = distance
 
     doc.db_set(data)
-    add_version(doc)
+    doc.save_version()
 
     # dates are entered by the user in ISO format for manual generation
     day_first = not with_irn and status != "Manually Generated"
@@ -395,7 +395,7 @@ def log_and_process_e_waybill_cancellation(doc, values, result):
         data["e_waybill_status"] = result.get("e_waybill_status") or "Cancelled"
 
     doc.db_set(data)
-    add_version(doc)
+    doc.save_version()
 
 
 # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
@@ -425,7 +425,7 @@ def update_vehicle_info(*, doctype: str, docname: str, values: str | dict | frap
             "gst_vehicle_type": values.gst_vehicle_type,
         }
     )
-    add_version(doc)
+    doc.save_version()
 
     data = EWaybillData(doc).get_update_vehicle_data(values)
     result = EWaybillAPI.create(doc).update_vehicle_info(data)
@@ -503,7 +503,7 @@ def _bulk_update_transporter_in_docs(doctype, docnames, values):
     for docname in docs_to_update:
         doc = frappe.get_doc(doctype, docname)
         doc.db_set(data)
-        add_version(doc)
+        doc.save_version()
 
     if docs_with_ewaybill := set(docnames).difference(set(docs_to_update)):
         doc_links = [get_link_to_form(doctype, doc) for doc in docs_with_ewaybill]
@@ -546,7 +546,7 @@ def update_transporter(*, doctype: str, docname: str, values: str | dict | frapp
             "gst_transporter_id": values.gst_transporter_id,
         }
     )
-    add_version(doc)
+    doc.save_version()
 
     comment = (
         "Transporter Info has been updated by {user}. Transporter ID changed from"
@@ -598,7 +598,7 @@ def extend_validity(
     result = EWaybillAPI.create(doc).extend_validity(data)
 
     doc.db_set("distance", cint(values.remaining_distance))
-    add_version(doc)
+    doc.save_version()
 
     update_e_waybill_log_for_extention(
         values=values,
@@ -692,7 +692,7 @@ def schedule_ewaybill_for_extension(
             "lr_date": values.lr_date,
         }
     )
-    add_version(doc)
+    doc.save_version()
 
     validate_data_before_schedule(doc, values)
 
@@ -1095,7 +1095,7 @@ def update_transaction(doc, values):
         data["port_address"] = values.port_address
 
     doc.db_set(data)
-    add_version(doc)
+    doc.save_version()
 
     if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt", "Asset Movement"):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]

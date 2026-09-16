@@ -44,7 +44,6 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
 )
 from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
 from india_compliance.gst_india.utils import (
-    add_version,
     are_goods_supplied,
     commit,
     handle_server_errors,
@@ -340,7 +339,7 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
             "einvoice_status": result.get("einvoice_status") or "Generated",
         }
     )
-    add_version(doc)
+    doc.save_version()
 
     invoice_data = None
     if result.SignedInvoice:
@@ -365,6 +364,7 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
     )
 
     if result.EwbNo:
+        doc.load_doc_before_save()
         log_and_process_e_waybill_generation(doc, result, with_irn=True)
 
     return notify_user(
@@ -387,6 +387,7 @@ def _cancel_e_invoice(doc, values):
         _cancel_e_waybill(doc, values)
 
         commit()  # e-Waybill gone from portal for good: a later IRN failure can't undo it
+        doc.load_doc_before_save()
 
     data = {
         "Irn": doc.irn,
@@ -421,7 +422,7 @@ def log_and_process_e_invoice_cancellation(doc, values, result, message):
             "irn": "",
         }
     )
-    add_version(doc)
+    doc.save_version()
 
     return notify_user(message, indicator="green", alert=True, doc=doc)
 
