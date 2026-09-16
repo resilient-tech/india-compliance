@@ -167,14 +167,14 @@ def get_party_for_gstin(gstin: str, party_type: str = "Supplier"):
         return party[0][0]
 
 
-def validate_company_access(company, doctype="GST Inward Supply"):
+def validate_company_access(company, doctype="GST Inward Supply", perm="read"):
     """Throw unless the user may read doctype data for company."""
     if not company:
         return
 
     reference = frappe.new_doc(doctype)
     reference.company = company
-    if not frappe.has_permission(doctype, "read", doc=reference):
+    if not frappe.has_permission(doctype, perm, doc=reference):
         frappe.throw(
             _("You are not permitted to access data for Company {0}.").format(company),
             frappe.PermissionError,

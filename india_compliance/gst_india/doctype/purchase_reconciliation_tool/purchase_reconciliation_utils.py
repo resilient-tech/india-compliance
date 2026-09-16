@@ -7,6 +7,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
     ReconciledData,
 )
+from india_compliance.gst_india.utils import validate_company_access
 from india_compliance.gst_india.utils.itc_claim import set_itc_claim_period_on_match
 from india_compliance.utils.change_log_utils import (
     add_comments_in_bulk,
@@ -149,9 +150,9 @@ def sync_details(data, fields, tool=None):
         frappe.msgprint(_("No changes to sync"))
         return
 
-    # the company booked on the purchase decides access
+    # validate permission before applying changes
     for doctype, company in {(change.doctype, change.company) for change in changes}:
-        frappe.has_permission(doctype, "write", doc=frappe.new_doc(doctype, company=company), throw=True)
+        validate_company_access(company, doctype, perm="write")
 
     _apply_changes(changes, tool)
 
@@ -169,7 +170,7 @@ def _validate_sync_fields(fields):
         frappe.throw(_("No fields to sync"))
 
     if invalid := set(fields) - set(SYNCABLE_FIELDS):
-        frappe.throw(_("Not allowed to the field {0}").format(frappe.bold(", ".join(sorted(invalid)))))
+        frappe.throw(_("Not allowed to sync field {0}").format(frappe.bold(", ".join(sorted(invalid)))))
 
     return [field for field in SYNCABLE_FIELDS if field in fields]
 

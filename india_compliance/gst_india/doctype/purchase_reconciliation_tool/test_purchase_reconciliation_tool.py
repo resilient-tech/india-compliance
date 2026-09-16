@@ -12,6 +12,9 @@ from frappe.utils import getdate
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
 )
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
+    sync_details,
+)
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     format_period,
@@ -1025,6 +1028,49 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.reconcile_and_generate_data()
 
         self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+
+    def test_sync_details_is_scoped_to_the_purchase_company(self):
+        pinv = create_purchase_invoice(bill_no="BOOKED-001", bill_date="2023-12-11")
+        gst_is = create_gst_inward_supply(bill_no="REPORTED-001", bill_date="2023-12-15")
+        gst_is.db_set(
+            {
+                "link_doctype": "Purchase Invoice",
+                "link_name": pinv.name,
+                "match_status": "Manual Match",
+            }
+        )
+
+        data = json.dumps([{"inward_supply_name": gst_is.name, "purchase_invoice_name": pinv.name}])
+        fields = ["bill_no", "bill_date"]
+
+        test_user = frappe.get_doc("User", "test@example.com")
+        test_user.add_roles("Accounts User")
+
+        # restricted to another company, so the purchase is out of reach
+        user_permission = frappe.get_doc(
+            {
+                "doctype": "User Permission",
+                "user": test_user.name,
+                "allow": "Company",
+                "for_value": "_Test Indian Unregistered Company",
+            }
+        ).insert(ignore_permissions=True)
+        self.addCleanup(user_permission.delete, ignore_permissions=True)
+        frappe.clear_cache(user=test_user.name)
+
+        with self.set_user(test_user.name):
+            self.assertRaises(frappe.PermissionError, sync_details, data, fields)
+
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "BOOKED-001")
+
+        # same user, now permitted for the company the purchase is booked in
+        user_permission.db_set("for_value", "_Test Indian Registered Company")
+        frappe.clear_cache(user=test_user.name)
+
+        with self.set_user(test_user.name):
+            sync_details(data, fields)
+
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "REPORTED-001")
 
 
 def create_purchase_invoice(**kwargs):
