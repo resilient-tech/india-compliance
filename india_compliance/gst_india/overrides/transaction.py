@@ -753,10 +753,6 @@ def _is_multicurrency_doc(doc):
     return bool(conversion_rate and conversion_rate != 1)
 
 
-def update_party_details(party_details, doctype, company):
-    party_details.update(get_gst_details(party_details, doctype, company, update_place_of_supply=True))
-
-
 @frappe.whitelist()
 def get_party_details_for_subcontracting(
     party_details: str | dict | frappe._dict, doctype: str, company: str
