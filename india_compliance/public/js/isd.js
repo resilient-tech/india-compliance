@@ -56,6 +56,15 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     calculate_distribution_ratios();
                 },
             },
+            {
+                fieldtype: "Button",
+                fieldname: "recalculate_total_turnover",
+                label: __("Recalculate Total Turnover"),
+                click() {
+                    fill_total_turnover();
+                    calculate_distribution_ratios();
+                },
+            },
 
             { fieldtype: "Section Break" },
             {
@@ -275,14 +284,21 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
     dialog.show();
     render_summary({});
 
-    // frappe does not fire a grid trigger on row removal, but the grid triggers "change" on the
-    // wrapper once it has re-rendered (Grid.remove_rows -> Grid.refresh)
-    distribution_grid.wrapper.on("click", ".grid-remove-rows", () => {
-        distribution_grid.wrapper.one("change", () => {
-            fill_total_turnover();
-            calculate_distribution_ratios();
-        });
-    });
+    // monkey patching to call recalculate on deletion of rows
+    const delete_rows = distribution_grid.delete_rows;
+    distribution_grid.delete_rows = function () {
+        const run_serially = frappe.run_serially;
+        frappe.run_serially = (tasks) => {
+            frappe.run_serially = run_serially;
+            return run_serially([...tasks, fill_total_turnover, calculate_distribution_ratios]);
+        };
+
+        try {
+            return delete_rows.call(this);
+        } finally {
+            frappe.run_serially = run_serially;
+        }
+    };
 
     frappe.call({
         method: "india_compliance.gst_india.utils.isd.get_purchase_invoice_distribution_summary",
