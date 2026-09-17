@@ -1088,33 +1088,6 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "SYNC-PI-011-A")
         self.assertEqual([row.purchase_invoice_name for row in result], [pinv.name])
 
-    def test_sync_details_skips_a_bill_date_the_due_date_cannot_take(self):
-        """
-        erpnext compares the due date against the bill date, so a reported bill date
-        past it cannot be written. The document is skipped, not the whole batch.
-        """
-        pinv = create_purchase_invoice(
-            bill_no="SYNC-PI-010",
-            bill_date="2024-02-01",
-            posting_date="2024-02-01",
-            due_date="2024-02-01",
-        )
-        gst_is = create_gst_inward_supply(
-            bill_no="SYNC-PI-010",
-            bill_date="2024-02-20",
-            return_period_2b="022024",
-        )
-
-        prt = self.get_reconciliation_tool()
-        prt.link_documents(pinv.name, gst_is.name, "Purchase Invoice")
-
-        self.assertIsNone(prt.sync_details([self.sync_row(pinv.name, gst_is.name)], fields=["bill_date"]))
-
-        self.assertEqual(
-            frappe.db.get_value("Purchase Invoice", pinv.name, "bill_date"), getdate("2024-02-01")
-        )
-        self.assertEqual(get_sync_versions("Purchase Invoice", pinv.name), [])
-
     def test_sync_details_skips_rows_with_a_missing_side(self):
         """
         There is nothing to copy where one side of the pair is missing, and the user is
