@@ -236,7 +236,7 @@ def _apply_changes(changes, tool=None):
             doc.update(change.new_values)
 
             _fieldlevel_perm_check(doc, change.new_values)
-            _validate_purchase_invoice(doc)
+            _validate_purchase_invoice(doc, change.new_values)
 
         # validation errors should not stop the sync process
         except (frappe.ValidationError, frappe.PermissionError) as e:
@@ -287,12 +287,13 @@ def _fieldlevel_perm_check(doc, new_values):
     )
 
 
-def _validate_purchase_invoice(doc):
+def _validate_purchase_invoice(doc, new_values):
     if doc.doctype != "Purchase Invoice":
         return
 
-    doc.validate_supplier_invoice()
-    doc.validate_due_date()
+    # only what the sync touches, else a booked inconsistency blocks an unrelated field
+    if "bill_no" in new_values:
+        doc.validate_supplier_invoice()
 
 
 def get_formatted_options(data):
