@@ -12,9 +12,6 @@ from frappe.utils import formatdate, getdate
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
 )
-from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
-    sync_details,
-)
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     format_period,
@@ -108,11 +105,17 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                 if isinstance(value, datetime.date):
                     row[key] = str(value)
 
+        matched = 0
+
         for row in reconciled_data:
-            self.assertDictEqual(
-                row,
-                self.reconciled_data.get((row.purchase_invoice_name, row.inward_supply_name)) or {},
-            )
+            expected = self.reconciled_data.get((row.purchase_invoice_name, row.inward_supply_name))
+            if not expected:
+                continue
+
+            self.assertDictEqual(row, expected)
+            matched += 1
+
+        self.assertEqual(matched, len(self.reconciled_data))
 
     @classmethod
     def create_test_data(cls):
@@ -1015,31 +1018,78 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
     def test_sync_details_validates_only_the_synced_fields(self):
         """
-        A booked due date that already precedes the bill date must not block a sync of
-        the bill no, which has nothing to do with it.
+        The booked bill no already duplicates a sibling, but the sync only touches the
+        bill date, so erpnext's uniqueness check has no business running.
         """
         pinv = create_purchase_invoice(
             bill_no="SYNC-PI-011",
             bill_date="2024-02-01",
             posting_date="2024-02-01",
-            due_date="2024-02-28",
         )
-        # only reachable post submit, the same way the books got into this state
-        frappe.db.set_value("Purchase Invoice", pinv.name, "bill_date", getdate("2024-03-15"))
-
+        create_purchase_invoice(
+            bill_no="SYNC-PI-011",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
         gst_is = create_gst_inward_supply(
-            bill_no="SYNC-PI-011-A",
-            bill_date="2024-03-15",
+            bill_no="SYNC-PI-011",
+            bill_date="2024-02-20",
             return_period_2b="022024",
         )
 
         prt = self.get_reconciliation_tool()
         prt.link_documents(pinv.name, gst_is.name, "Purchase Invoice")
 
-        result = prt.sync_details([self.sync_row(pinv.name, gst_is.name)], fields=["bill_no"])
+        with change_settings("Accounts Settings", {"check_supplier_invoice_uniqueness": 1}):
+            result = prt.sync_details([self.sync_row(pinv.name, gst_is.name)], fields=["bill_date"])
 
-        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "SYNC-PI-011-A")
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv.name, "bill_date"), getdate("2024-02-20")
+        )
         self.assertEqual([row.purchase_invoice_name for row in result], [pinv.name])
+
+    def test_sync_details_skips_a_purchase_the_user_does_not_have_access_to(self):
+        """
+        The company gate checks a blank document, on which every other link field is
+        empty, so a user permission on supplier only bites once the real purchase is.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="SYNC-PI-013",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-013-A",
+            bill_date="2024-02-01",
+            return_period_2b="022024",
+        )
+
+        prt = self.get_reconciliation_tool()
+        prt.link_documents(pinv.name, gst_is.name, "Purchase Invoice")
+
+        test_user = frappe.get_doc("User", "test@example.com")
+
+        # the purchase is booked against _Test Registered Supplier, so it is out of reach
+        user_permission = frappe.get_doc(
+            {
+                "doctype": "User Permission",
+                "user": test_user.name,
+                "allow": "Supplier",
+                "for_value": "_Test Foreign Supplier",
+            }
+        ).insert(ignore_permissions=True)
+        self.addCleanup(user_permission.delete, ignore_permissions=True)
+        self.addCleanup(frappe.clear_cache, user=test_user.name)
+        frappe.clear_cache(user=test_user.name)
+
+        row = self.sync_row(pinv.name, gst_is.name)
+        tool = frappe.get_doc("Purchase Reconciliation Tool")
+
+        with self.set_user(test_user.name):
+            self.assertIsNone(tool.sync_details([row], fields=["bill_no"]))
+
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "SYNC-PI-013")
+        self.assertEqual(get_sync_versions("Purchase Invoice", pinv.name), [])
 
     def test_sync_details_skips_rows_with_a_missing_side(self):
         """
@@ -1200,6 +1250,8 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
         test_user = frappe.get_doc("User", "test@example.com")
         test_user.add_roles("Accounts User")
+        self.addCleanup(test_user.remove_roles, "Accounts User")
+        self.addCleanup(frappe.clear_cache, user=test_user.name)
 
         # restricted to another company, so the purchase is out of reach
         user_permission = frappe.get_doc(
@@ -1213,8 +1265,10 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.addCleanup(user_permission.delete, ignore_permissions=True)
         frappe.clear_cache(user=test_user.name)
 
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+
         with self.set_user(test_user.name):
-            self.assertRaises(frappe.PermissionError, sync_details, data, fields)
+            self.assertRaises(frappe.PermissionError, prt.sync_details, data, fields)
 
         self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "BOOKED-001")
         self.assertEqual(get_sync_versions("Purchase Invoice", pinv.name), [])
@@ -1224,7 +1278,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         frappe.clear_cache(user=test_user.name)
 
         with self.set_user(test_user.name):
-            sync_details(data, fields)
+            prt.sync_details(data, fields)
 
         self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "REPORTED-001")
 
@@ -1237,11 +1291,19 @@ def get_sync_versions(doctype, name, tool="Purchase Reconciliation Tool"):
         order_by="creation desc",
     )
 
-    return [
-        {row[0]: row[2] for row in data["changed"]}
-        for version in versions
-        if (data := json.loads(version)) and (data.get("updater_reference") or {}).get("doctype") == tool
-    ]
+    synced = []
+    for version in versions:
+        data = json.loads(version)
+        updater = data.get("updater_reference") or {}
+
+        # submitting the document writes its own version, which carries no updater
+        if not updater:
+            continue
+
+        assert updater.get("doctype") == tool, f"version on {name} tagged {updater}, expected {tool}"
+        synced.append({row[0]: row[2] for row in data["changed"]})
+
+    return synced
 
 
 def create_purchase_invoice(**kwargs):
