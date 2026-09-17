@@ -7,7 +7,7 @@ import json
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.tests.utils import make_test_objects
-from frappe.utils import getdate
+from frappe.utils import formatdate, getdate
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -613,6 +613,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             bill_no="SYNC-PI-001",
             bill_date="2024-02-01",
             posting_date="2024-02-01",
+            due_date="2024-03-31",
         )
         gst_is = create_gst_inward_supply(
             bill_no="SYNC-PI-001-A",
@@ -659,34 +660,21 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             {"bill_no": "SYNC-PI-001-A", "bill_date": getdate("2024-02-05")},
         )
 
-        # db.set_value writes no version, so the comment is what shows on the timeline
-        comments = frappe.get_all(
-            "Comment",
-            filters={
-                "reference_doctype": "Purchase Invoice",
-                "reference_name": pinv.name,
-                "comment_type": "Info",
-                "content": ("like", "%Purchase Reconciliation Tool%"),
-            },
-            pluck="content",
-        )
-        self.assertEqual(len(comments), 1)
-        self.assertIn("SYNC-PI-001-A", comments[0])
+        # set_value writes no version, so the sync records one itself
+        # this also adds to audit trail report
+        versions = get_sync_versions("Purchase Invoice", pinv.name)
+        self.assertEqual(len(versions), 1)
+        self.assertEqual(versions[0]["bill_no"], "SYNC-PI-001-A")
+
+        # get_diff stores formatted values, and the timeline renders them as stored
+        self.assertEqual(versions[0]["bill_date"], formatdate("2024-02-05"))
 
         # set_value adds modified / modified_by to the dict it is given, those are not changes
-        self.assertNotIn("Last Updated", comments[0])
+        self.assertNotIn("modified", versions[0])
+        self.assertNotIn("modified_by", versions[0])
 
-        # nothing changed on the row already in agreement, so it gets no sync comment
-        self.assertFalse(
-            frappe.db.exists(
-                "Comment",
-                {
-                    "reference_doctype": "Purchase Invoice",
-                    "reference_name": matched_pinv.name,
-                    "content": ("like", "%Purchase Reconciliation Tool%"),
-                },
-            )
-        )
+        # nothing changed on the row already in agreement, so it gets no sync version
+        self.assertEqual(get_sync_versions("Purchase Invoice", matched_pinv.name), [])
 
         # already in agreement: nothing written, nothing returned
         self.assertEqual(frappe.db.get_value("Purchase Invoice", matched_pinv.name, "bill_no"), "SYNC-PI-002")
@@ -700,6 +688,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             bill_no="SYNC-PI-003",
             bill_date="2024-02-01",
             posting_date="2024-02-01",
+            due_date="2024-03-31",
         )
         gst_is = create_gst_inward_supply(
             bill_no="SYNC-PI-003-A",
@@ -797,17 +786,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                 ),
                 {"bill_no": bill_no, "bill_date": getdate("2024-02-01")},
             )
-            self.assertFalse(
-                frappe.db.exists(
-                    "Comment",
-                    {
-                        "reference_doctype": "Purchase Invoice",
-                        "reference_name": purchase_name,
-                        "comment_type": "Info",
-                        "content": ("like", "%Purchase Reconciliation Tool%"),
-                    },
-                )
-            )
+            self.assertEqual(get_sync_versions("Purchase Invoice", purchase_name), [])
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_sync_details_for_bill_of_entry(self):
@@ -864,16 +843,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             {"bill_of_entry_no": "SYNC-BOE-001-A", "bill_of_entry_date": getdate("2023-12-15")},
         )
 
-        self.assertTrue(
-            frappe.db.exists(
-                "Comment",
-                {
-                    "reference_doctype": "Bill of Entry",
-                    "reference_name": boe.name,
-                    "comment_type": "Info",
-                },
-            )
-        )
+        versions = get_sync_versions("Bill of Entry", boe.name)
+        self.assertEqual(len(versions), 1)
+        self.assertEqual(versions[0]["bill_of_entry_no"], "SYNC-BOE-001-A")
 
         # already in agreement: nothing written, nothing returned
         self.assertEqual(
@@ -894,6 +866,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         frappe.db.set_value("GST Inward Supply", gst_is, "bill_date", None)
         self.addCleanup(frappe.db.set_value, "GST Inward Supply", gst_is, "bill_date", "2023-12-11")
 
+        # the class rolls back only at teardown, so a shared fixture must be put back
+        self.addCleanup(frappe.db.set_value, "Purchase Invoice", pinv, "bill_no", "BILL-23-00040")
+
         prt.sync_details([self.sync_row(pinv, gst_is)], fields=["bill_no", "bill_date"])
 
         self.assertEqual(
@@ -912,6 +887,9 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         frappe.db.set_value("GST Inward Supply", gst_is, "bill_no", "BILL-23-00011-A")
         self.addCleanup(frappe.db.set_value, "GST Inward Supply", gst_is, "bill_no", "BILL-23-00011")
 
+        # the class rolls back only at teardown, so a shared fixture must be put back
+        self.addCleanup(frappe.db.set_value, "Bill of Entry", boe, "bill_of_entry_no", "BILL-23-00011")
+
         row = self.sync_row(boe, gst_is)
         row.pop("purchase_doctype")
 
@@ -919,6 +897,210 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
         self.assertEqual(frappe.db.get_value("Bill of Entry", boe, "bill_of_entry_no"), "BILL-23-00011-A")
         self.assertEqual([row.purchase_invoice_name for row in result], [boe])
+
+    def test_sync_details_applies_the_rest_when_one_document_fails(self):
+        """
+        A bulk sync is a queue: a document that cannot be written is logged and skipped,
+        the others still go through.
+        """
+        # collides with the bill no reported for it, so its sync throws
+        blocked_pinv = create_purchase_invoice(
+            bill_no="SYNC-PI-008",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        create_purchase_invoice(
+            bill_no="SYNC-PI-008-A",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        blocked_gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-008-A",
+            bill_date="2024-02-01",
+            return_period_2b="022024",
+        )
+
+        pinv = create_purchase_invoice(
+            bill_no="SYNC-PI-009",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-009-A",
+            bill_date="2024-02-01",
+            return_period_2b="022024",
+        )
+
+        prt = self.get_reconciliation_tool()
+        for purchase, inward_supply in ((blocked_pinv, blocked_gst_is), (pinv, gst_is)):
+            prt.link_documents(purchase.name, inward_supply.name, "Purchase Invoice")
+
+        with change_settings("Accounts Settings", {"check_supplier_invoice_uniqueness": 1}):
+            result = prt.sync_details(
+                [
+                    self.sync_row(blocked_pinv.name, blocked_gst_is.name),
+                    self.sync_row(pinv.name, gst_is.name),
+                ],
+                fields=["bill_no"],
+            )
+
+        # the one that could not be written is untouched, and left an Error Log behind
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", blocked_pinv.name, "bill_no"), "SYNC-PI-008")
+        self.assertEqual(get_sync_versions("Purchase Invoice", blocked_pinv.name), [])
+        self.assertTrue(
+            frappe.db.exists(
+                "Error Log",
+                {"reference_doctype": "Purchase Invoice", "reference_name": blocked_pinv.name},
+            )
+        )
+
+        # the rest of the queue went through
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "SYNC-PI-009-A")
+        self.assertEqual([row.purchase_invoice_name for row in result], [pinv.name])
+
+    def test_sync_details_is_case_sensitive(self):
+        """
+        MariaDB compares case-insensitively, so a difference in case alone is invisible
+        to the query builder. The comparison has to happen in python.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="sync-pi-006",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-006",
+            bill_date="2024-02-01",
+            return_period_2b="022024",
+        )
+
+        prt = self.get_reconciliation_tool()
+        prt.link_documents(pinv.name, gst_is.name, "Purchase Invoice")
+
+        result = prt.sync_details([self.sync_row(pinv.name, gst_is.name)], fields=["bill_no"])
+
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "SYNC-PI-006")
+        self.assertEqual([row.purchase_invoice_name for row in result], [pinv.name])
+
+    @change_settings("Accounts Settings", {"check_supplier_invoice_uniqueness": 1})
+    def test_sync_details_skips_a_duplicate_supplier_invoice_no(self):
+        """
+        The sync writes a submitted document, so erpnext's uniqueness check never runs
+        on its own. Two invoices of one supplier sharing a bill no in a fiscal year is
+        the standard double ITC vector.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="SYNC-PI-007",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        create_purchase_invoice(
+            bill_no="SYNC-PI-007-A",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-007-A",
+            bill_date="2024-02-01",
+            return_period_2b="022024",
+        )
+
+        prt = self.get_reconciliation_tool()
+        prt.link_documents(pinv.name, gst_is.name, "Purchase Invoice")
+
+        self.assertIsNone(prt.sync_details([self.sync_row(pinv.name, gst_is.name)], fields=["bill_no"]))
+
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "SYNC-PI-007")
+        self.assertEqual(get_sync_versions("Purchase Invoice", pinv.name), [])
+
+    def test_sync_details_validates_only_the_synced_fields(self):
+        """
+        A booked due date that already precedes the bill date must not block a sync of
+        the bill no, which has nothing to do with it.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="SYNC-PI-011",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+            due_date="2024-02-28",
+        )
+        # only reachable post submit, the same way the books got into this state
+        frappe.db.set_value("Purchase Invoice", pinv.name, "bill_date", getdate("2024-03-15"))
+
+        gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-011-A",
+            bill_date="2024-03-15",
+            return_period_2b="022024",
+        )
+
+        prt = self.get_reconciliation_tool()
+        prt.link_documents(pinv.name, gst_is.name, "Purchase Invoice")
+
+        result = prt.sync_details([self.sync_row(pinv.name, gst_is.name)], fields=["bill_no"])
+
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "SYNC-PI-011-A")
+        self.assertEqual([row.purchase_invoice_name for row in result], [pinv.name])
+
+    def test_sync_details_skips_a_bill_date_the_due_date_cannot_take(self):
+        """
+        erpnext compares the due date against the bill date, so a reported bill date
+        past it cannot be written. The document is skipped, not the whole batch.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="SYNC-PI-010",
+            bill_date="2024-02-01",
+            posting_date="2024-02-01",
+            due_date="2024-02-01",
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="SYNC-PI-010",
+            bill_date="2024-02-20",
+            return_period_2b="022024",
+        )
+
+        prt = self.get_reconciliation_tool()
+        prt.link_documents(pinv.name, gst_is.name, "Purchase Invoice")
+
+        self.assertIsNone(prt.sync_details([self.sync_row(pinv.name, gst_is.name)], fields=["bill_date"]))
+
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv.name, "bill_date"), getdate("2024-02-01")
+        )
+        self.assertEqual(get_sync_versions("Purchase Invoice", pinv.name), [])
+
+    def test_sync_details_skips_rows_with_a_missing_side(self):
+        """
+        There is nothing to copy where one side of the pair is missing, and the user is
+        told rather than left with a silent no-op.
+        """
+        prt = self.get_reconciliation_tool()
+        pinv, gst_is = self.get_fixture_pair("BILL-23-00040")
+
+        row = self.sync_row(pinv, gst_is)
+        row["purchase_invoice_name"] = None
+
+        frappe.clear_messages()
+        self.assertIsNone(prt.sync_details([row], fields=["bill_no"]))
+
+        self.assertIn(
+            "Please select matched rows to sync",
+            "".join(message.get("message", "") for message in frappe.get_message_log()),
+        )
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv, "bill_no"), "BILL-23-00040")
+
+    def test_sync_details_throws_without_fields(self):
+        """
+        Nothing selected must throw, not fall back to syncing everything.
+        """
+        prt = self.get_reconciliation_tool()
+        pinv, gst_is = self.get_fixture_pair("BILL-23-00040")
+        row = self.sync_row(pinv, gst_is)
+
+        for fields in ([], None, json.dumps([])):
+            with self.assertRaises(frappe.ValidationError):
+                prt.sync_details([row], fields=fields)
+
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv, "bill_no"), "BILL-23-00040")
 
     def get_fixture_pair(self, bill_no):
         """(purchase, inward supply) of a linked pair created from the shared test json"""
@@ -1030,7 +1212,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
 
     def test_sync_details_is_scoped_to_the_purchase_company(self):
-        pinv = create_purchase_invoice(bill_no="BOOKED-001", bill_date="2023-12-11")
+        pinv = create_purchase_invoice(bill_no="BOOKED-001", bill_date="2023-12-11", due_date="2024-01-31")
         gst_is = create_gst_inward_supply(bill_no="REPORTED-001", bill_date="2023-12-15")
         gst_is.db_set(
             {
@@ -1062,6 +1244,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             self.assertRaises(frappe.PermissionError, sync_details, data, fields)
 
         self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "BOOKED-001")
+        self.assertEqual(get_sync_versions("Purchase Invoice", pinv.name), [])
 
         # same user, now permitted for the company the purchase is booked in
         user_permission.db_set("for_value", "_Test Indian Registered Company")
@@ -1071,6 +1254,21 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             sync_details(data, fields)
 
         self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "REPORTED-001")
+
+
+def get_sync_versions(doctype, name, tool="Purchase Reconciliation Tool"):
+    versions = frappe.get_all(
+        "Version",
+        filters={"ref_doctype": doctype, "docname": name},
+        pluck="data",
+        order_by="creation desc",
+    )
+
+    return [
+        {row[0]: row[2] for row in data["changed"]}
+        for version in versions
+        if (data := json.loads(version)) and (data.get("updater_reference") or {}).get("doctype") == tool
+    ]
 
 
 def create_purchase_invoice(**kwargs):
