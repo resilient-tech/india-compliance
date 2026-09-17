@@ -23,6 +23,7 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.test_purchase_reconciliation_tool import (
     create_gst_inward_supply,
+    get_sync_versions,
 )
 from india_compliance.gst_india.utils.api import create_integration_request
 from india_compliance.gst_india.utils.gstr_2.ims import IMSB2B, IMSB2BCN
@@ -696,19 +697,10 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             {"bill_no": "IMS-SYNC-001-A", "bill_date": getdate("2024-12-15")},
         )
 
-        # db.set_value writes no version, so the comment is what shows on the timeline
-        comments = frappe.get_all(
-            "Comment",
-            filters={
-                "reference_doctype": "Purchase Invoice",
-                "reference_name": pinv.name,
-                "comment_type": "Info",
-                "content": ("like", "%GST Invoice Management System%"),
-            },
-            pluck="content",
-        )
-        self.assertEqual(len(comments), 1)
-        self.assertIn("IMS-SYNC-001-A", comments[0])
+        # set_value writes no version, so the sync records one itself
+        versions = get_sync_versions("Purchase Invoice", pinv.name, "GST Invoice Management System")
+        self.assertEqual(len(versions), 1)
+        self.assertEqual(versions[0]["bill_no"], "IMS-SYNC-001-A")
 
         # rows come back IMS shaped, with what a re-sync of the same row needs
         self.assertEqual([synced.inward_supply_name for synced in result], [gst_is.name])

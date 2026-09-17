@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.core.doctype.version.version import get_diff
 
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
@@ -7,10 +8,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
 )
 from india_compliance.gst_india.utils import validate_company_access
 from india_compliance.gst_india.utils.itc_claim import set_itc_claim_period_on_match
-from india_compliance.utils.change_log_utils import (
-    add_comments_in_bulk,
-    create_change_log_comment,
-)
+from india_compliance.utils.change_log_utils import add_versions_in_bulk
 
 SYNCABLE_FIELDS = ("bill_no", "bill_date")
 
@@ -152,7 +150,10 @@ def sync_details(data, fields, tool=None):
     for doctype, company in {(change.doctype, change.company) for change in changes}:
         validate_company_access(company, doctype, perm="write")
 
-    _apply_changes(changes, tool)
+    changes = _apply_changes(changes, tool)
+
+    if not changes:
+        return
 
     return (
         [change.link_name for change in changes],
@@ -224,33 +225,46 @@ def _get_linked_details(doctype, fieldname_map, inward_supply_names):
 
 
 def _apply_changes(changes, tool=None):
-    comments = []
+    applied = []
+    versions = []
+    skipped = []
 
     for change in changes:
-        meta = frappe.get_meta(change.doctype)
-        doc = frappe.get_lazy_doc(change.doctype, change.link_name)
-        doc.update(change.new_values)
+        try:
+            previous = frappe.get_lazy_doc(change.doctype, change.link_name)
+            doc = frappe.get_lazy_doc(change.doctype, change.link_name)
+            doc.update(change.new_values)
 
-        _fieldlevel_perm_check(doc, change.new_values)
-        _validate_purchase_invoice(doc)
+            _fieldlevel_perm_check(doc, change.new_values)
+            _validate_purchase_invoice(doc)
+
+        # validation errors should not stop the sync process
+        except (frappe.ValidationError, frappe.PermissionError) as e:
+            frappe.log_error(
+                title=f"Sync failed for {change.doctype} {change.link_name}",
+                reference_doctype=change.doctype,
+                reference_name=change.link_name,
+            )
+            skipped.append((change, str(e)))
+            continue
+
+        doc.flags.updater_reference = {"doctype": tool, "docname": tool} if tool else None
+        versions.append((change.doctype, change.link_name, get_diff(previous, doc)))
 
         frappe.db.set_value(change.doctype, change.link_name, change.new_values)
+        applied.append(change)
 
-        comments.append(
-            (
-                change.doctype,
-                change.link_name,
-                create_change_log_comment(
-                    change.old_values,
-                    change.new_values,
-                    field_labels={field: meta.get_label(field) for field in change.new_values},
-                    date_fields=(PURCHASE_FIELDNAME_MAP[change.doctype]["bill_date"],),
-                    source=tool,
-                ),
-            )
+    add_versions_in_bulk(versions)
+
+    if skipped:
+        frappe.msgprint(
+            [f"{frappe.bold(change.link_name)}: {message}" for change, message in skipped],
+            title=_("Skipped {0} of {1} documents").format(len(skipped), len(changes)),
+            indicator="orange",
+            as_list=True,
         )
 
-    add_comments_in_bulk(comments)
+    return applied
 
 
 def _fieldlevel_perm_check(doc, new_values):

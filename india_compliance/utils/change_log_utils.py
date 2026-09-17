@@ -44,13 +44,40 @@ def add_comments_in_bulk(comments, comment_type="Info", user=None, timestamp=Non
     bulk_insert("Comment", comment_docs, ignore_duplicates=True)
 
 
+def add_versions_in_bulk(versions, user=None, timestamp=None):
+    user = user or frappe.session.user
+    timestamp = timestamp or frappe.utils.now()
+
+    version_docs = [
+        frappe.new_doc("Version").update(
+            {
+                "name": random_string(10),
+                "ref_doctype": ref_doctype,
+                "docname": docname,
+                # same encoding as Version.set_diff writes
+                "data": frappe.as_json(diff, indent=None, separators=(",", ":")),
+                "creation": timestamp,
+                "modified": timestamp,
+                "modified_by": user,
+                "owner": user,
+            }
+        )
+        for ref_doctype, docname, diff in versions
+        if diff
+    ]
+
+    if not version_docs:
+        return
+
+    bulk_insert("Version", version_docs, ignore_duplicates=True)
+
+
 def create_change_log_comment(
     old_values,
     new_values,
     field_labels=None,
     date_fields=None,
     comment_prefix=None,
-    source=None,
     user=None,
 ):
     """
@@ -62,7 +89,6 @@ def create_change_log_comment(
         field_labels (dict): Optional mapping of field names to display labels
         date_fields (list/tuple): Optional list of fields to format as dates
         comment_prefix (str): Optional comment prefix (default: "Updated by {user}")
-        source (str): Optional tool the change came from, named alongside the user
         user (str): Optional user name (default: current user)
 
     Returns:
@@ -105,10 +131,8 @@ def create_change_log_comment(
 
     # Build comment
     user = user or get_fullname()
-    prefix = comment_prefix or (_("Updated by {user} using {source}") if source else _("Updated by {user}"))
-    comment_header = (prefix + ".<br><br>").format(
-        user=frappe.bold(user), source=frappe.bold(_(source)) if source else ""
-    )
+    prefix = comment_prefix or _("Updated by {user}")
+    comment_header = (prefix + ".<br><br>").format(user=frappe.bold(user))
 
     # Build table
     table_rows = "".join(
