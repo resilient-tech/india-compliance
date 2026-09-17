@@ -567,7 +567,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
 
             $(row)
                 .find("[data-field]")
-                .addClass("sync-detail")
+                .removeClass("d-none")
                 .on("click", () => this._sync_field(field));
         });
     }
