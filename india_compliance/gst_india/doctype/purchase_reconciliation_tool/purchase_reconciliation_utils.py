@@ -228,7 +228,12 @@ def _apply_changes(changes, tool=None):
 
     for change in changes:
         meta = frappe.get_meta(change.doctype)
-        _validate_purchase_invoice(change)
+        doc = frappe.get_lazy_doc(change.doctype, change.link_name)
+        doc.update(change.new_values)
+
+        _fieldlevel_perm_check(doc, change.new_values)
+        _validate_purchase_invoice(doc)
+
         frappe.db.set_value(change.doctype, change.link_name, change.new_values)
 
         comments.append(
@@ -248,12 +253,29 @@ def _apply_changes(changes, tool=None):
     add_comments_in_bulk(comments)
 
 
-def _validate_purchase_invoice(change):
-    if change.doctype != "Purchase Invoice":
+def _fieldlevel_perm_check(doc, new_values):
+    if frappe.session.user == "Administrator":
         return
 
-    doc = frappe.get_doc(change.doctype, change.link_name)
-    doc.update(change.new_values)
+    restricted = [
+        field for field in new_values if not doc.has_permlevel_access_to(field, permission_type="write")
+    ]
+
+    if not restricted:
+        return
+
+    frappe.throw(
+        _("You are not permitted to update {0} in {1}.").format(
+            frappe.bold(", ".join(doc.meta.get_label(field) for field in restricted)),
+            _(doc.doctype),
+        ),
+        frappe.PermissionError,
+    )
+
+
+def _validate_purchase_invoice(doc):
+    if doc.doctype != "Purchase Invoice":
+        return
 
     doc.validate_supplier_invoice()
     doc.validate_due_date()
