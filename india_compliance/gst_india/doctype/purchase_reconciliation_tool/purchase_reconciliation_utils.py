@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 import frappe
 from frappe import _
 
@@ -226,12 +224,12 @@ def _get_linked_details(doctype, fieldname_map, inward_supply_names):
 
 
 def _apply_changes(changes, tool=None):
-    doc_updates_by_doctype = defaultdict(dict)
     comments = []
 
     for change in changes:
         meta = frappe.get_meta(change.doctype)
-        doc_updates_by_doctype[change.doctype][change.link_name] = change.new_values
+        _validate_purchase_invoice(change)
+        frappe.db.set_value(change.doctype, change.link_name, change.new_values)
 
         comments.append(
             (
@@ -247,14 +245,18 @@ def _apply_changes(changes, tool=None):
             )
         )
 
-    for doctype, doc_updates in doc_updates_by_doctype.items():
-        frappe.db.bulk_update(doctype, doc_updates)
-
-        # bulk_update doesn't invalidate the document cache the way set_value does
-        for purchase_name in doc_updates:
-            frappe.clear_document_cache(doctype, purchase_name)
-
     add_comments_in_bulk(comments)
+
+
+def _validate_purchase_invoice(change):
+    if change.doctype != "Purchase Invoice":
+        return
+
+    doc = frappe.get_doc(change.doctype, change.link_name)
+    doc.update(change.new_values)
+
+    doc.validate_supplier_invoice()
+    doc.validate_due_date()
 
 
 def get_formatted_options(data):
