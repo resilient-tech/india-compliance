@@ -232,7 +232,7 @@ def _apply_changes(changes, tool=None):
     for change in changes:
         try:
             previous = frappe.get_lazy_doc(change.doctype, change.link_name)
-            doc = frappe.get_lazy_doc(change.doctype, change.link_name)
+            doc = frappe.get_lazy_doc(change.doctype, change.link_name, check_permission="write")
             doc.update(change.new_values)
 
             _fieldlevel_perm_check(doc, change.new_values)
@@ -240,6 +240,7 @@ def _apply_changes(changes, tool=None):
 
         # validation errors should not stop the sync process
         except (frappe.ValidationError, frappe.PermissionError) as e:
+            frappe.clear_last_message()
             frappe.log_error(
                 title=f"Sync failed for {change.doctype} {change.link_name}",
                 reference_doctype=change.doctype,
