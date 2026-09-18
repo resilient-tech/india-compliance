@@ -10,12 +10,7 @@ frappe.query_reports["HSN-wise-summary of inward supplies"] = {
             options: "Company",
             reqd: 1,
             default: frappe.defaults.get_user_default("Company"),
-            on_change: (report) => {
-                report.set_filter_value({
-                    company_gstin: "",
-                });
-                report.refresh();
-            },
+            on_change: (report) => india_compliance.set_gstin_filter_options(report),
             get_query: function () {
                 return {
                     filters: {
@@ -66,4 +61,7 @@ frappe.query_reports["HSN-wise-summary of inward supplies"] = {
             reqd: 1,
         },
     ],
+    onload(report) {
+        india_compliance.set_gstin_filter_options(report);
+    },
 };
