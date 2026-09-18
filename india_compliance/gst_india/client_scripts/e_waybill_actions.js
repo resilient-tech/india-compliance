@@ -8,6 +8,9 @@ const E_WAYBILL_CLASS = {
     "Asset Movement": AssetMovementEwaybill,
 };
 
+const E_WAYBILL_TRANSPORTER_FIELDS = ["transporter", "gst_transporter_id"];
+const E_WAYBILL_VEHICLE_FIELDS = ["vehicle_no", "mode_of_transport", "gst_vehicle_type", "lr_no", "lr_date"];
+
 function setup_e_waybill_actions(doctype) {
     setup_gst_update_notifications(doctype);
     setup_cancel_confirmation(doctype);
@@ -29,6 +32,8 @@ function setup_e_waybill_actions(doctype) {
             if (!frm.doc.driver) frm.set_value("driver_name", "");
         },
         setup(frm) {
+            intercept_update_for_e_waybill(frm);
+
             if (!india_compliance.is_api_enabled()) return;
 
             frappe.realtime.on("e_waybill_pdf_update", (message) => {
@@ -44,6 +49,8 @@ function setup_e_waybill_actions(doctype) {
             });
         },
         refresh(frm) {
+            toggle_transport_fields(frm);
+
             if (frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode)
                 frm.get_field("ewaybill").set_description("Generated in Sandbox Mode");
 
@@ -147,16 +154,16 @@ function setup_e_waybill_actions(doctype) {
                 return;
             }
 
-            if (frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) && is_e_waybill_valid(frm)) {
+            if (can_update_e_waybill(frm)) {
                 frm.add_custom_button(
                     __("Update Vehicle Info"),
-                    () => show_update_vehicle_info_dialog(frm),
+                    () => show_update_e_waybill_dialog(frm, { vehicle: true }),
                     "e-Waybill",
                 );
 
                 frm.add_custom_button(
                     __("Update Transporter"),
-                    () => show_update_transporter_dialog(frm),
+                    () => show_update_e_waybill_dialog(frm, { transporter: true }),
                     "e-Waybill",
                 );
             }
@@ -834,123 +841,141 @@ function get_cancel_e_waybill_dialog_fields(frm) {
     ];
 }
 
-async function show_update_vehicle_info_dialog(frm) {
-    const source_address = await get_source_destination_address(frm, "source_address");
-    const d = new frappe.ui.Dialog({
-        title: __("Update Vehicle Information"),
-        fields: [
-            {
-                label: "e-Waybill",
-                fieldname: "ewaybill",
-                fieldtype: "Data",
-                read_only: 1,
-                default: frm.doc.ewaybill,
-            },
-            {
-                label: "Place of Change",
-                fieldname: "place_of_change",
-                fieldtype: "Data",
-                reqd: 1,
-                default: source_address.city,
-            },
-            {
-                label: "Vehicle No",
-                fieldname: "vehicle_no",
-                fieldtype: "Data",
-                default: frm.doc.vehicle_no,
-                mandatory_depends_on: "eval: ['Road', 'Ship'].includes(doc.mode_of_transport)",
-            },
-            {
-                label: "Transport Receipt No",
-                fieldname: "lr_no",
-                fieldtype: "Data",
-                default: frm.doc.lr_no,
-                mandatory_depends_on: "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport)",
-            },
-            {
-                fieldtype: "Column Break",
-            },
-            {
-                label: "Mode Of Transport",
-                fieldname: "mode_of_transport",
-                fieldtype: "Select",
-                options: `\nRoad\nAir\nRail\nShip`,
-                default: frm.doc.mode_of_transport,
-                mandatory_depends_on: "eval: doc.lr_no",
-                onchange: () => update_vehicle_type(d),
-            },
-            {
-                label: "State",
-                fieldname: "state",
-                fieldtype: "Autocomplete",
-                options: frappe.boot.india_state_options.join("\n"),
-                reqd: 1,
-                default: source_address.state,
-            },
-            {
-                label: "GST Vehicle Type",
-                fieldname: "gst_vehicle_type",
-                fieldtype: "Select",
-                options: `Regular\nOver Dimensional Cargo (ODC)`,
-                depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
-                read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
-                default: frm.doc.gst_vehicle_type,
-            },
-            {
-                label: "Transport Receipt Date",
-                fieldname: "lr_date",
-                fieldtype: "Date",
-                default: frm.doc.lr_date,
-                mandatory_depends_on: "eval:doc.lr_no",
-            },
-            {
-                fieldtype: "Section Break",
-            },
-            {
-                fieldname: "reason",
-                label: "Reason",
-                fieldtype: "Select",
-                options: ["Due to Break Down", "Due to Trans Shipment", "First Time", "Others"],
-                reqd: 1,
-            },
-            {
-                label: "Update e-Waybill Print/Data",
-                fieldname: "update_e_waybill_data",
-                fieldtype: "Check",
-                default: gst_settings.fetch_e_waybill_data,
-            },
-            {
-                fieldtype: "Column Break",
-            },
-            {
-                fieldname: "remark",
-                label: "Remark",
-                fieldtype: "Data",
-                mandatory_depends_on: 'eval: doc.reason == "Others"',
-            },
-        ],
-        primary_action_label: __("Update"),
-        primary_action(values) {
-            frappe.call({
-                method: "india_compliance.gst_india.utils.e_waybill.update_vehicle_info",
-                args: {
-                    doctype: frm.doctype,
-                    docname: frm.doc.name,
-                    values,
-                },
-                callback: () => frm.refresh(),
-            });
-            d.hide();
+// one dialog for vehicle and/or transporter; both at once become two pages
+async function show_update_e_waybill_dialog(frm, { vehicle = false, transporter = false }) {
+    const both = vehicle && transporter;
+    const page = (name) => (both ? `eval: doc.page == '${name}'` : "");
+    const source_address = vehicle ? await get_source_destination_address(frm, "source_address") : {};
+
+    const vehicle_fields = [
+        {
+            fieldtype: "Section Break",
+            label: __("Vehicle Details"),
+            depends_on: page("vehicle"),
         },
-    });
+        {
+            label: "Place of Change",
+            fieldname: "place_of_change",
+            fieldtype: "Data",
+            reqd: 1,
+            default: source_address.city,
+        },
+        {
+            label: "Vehicle No",
+            fieldname: "vehicle_no",
+            fieldtype: "Data",
+            default: frm.doc.vehicle_no,
+            mandatory_depends_on: "eval: ['Road', 'Ship'].includes(doc.mode_of_transport)",
+        },
+        {
+            label: "Transport Receipt No",
+            fieldname: "lr_no",
+            fieldtype: "Data",
+            default: frm.doc.lr_no,
+            mandatory_depends_on: "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport)",
+        },
+        {
+            fieldtype: "Column Break",
+        },
+        {
+            label: "Mode Of Transport",
+            fieldname: "mode_of_transport",
+            fieldtype: "Select",
+            options: `\nRoad\nAir\nRail\nShip`,
+            default: frm.doc.mode_of_transport,
+            mandatory_depends_on: "eval: doc.lr_no",
+            onchange: () => update_vehicle_type(d),
+        },
+        {
+            label: "State",
+            fieldname: "state",
+            fieldtype: "Autocomplete",
+            options: frappe.boot.india_state_options.join("\n"),
+            reqd: 1,
+            default: source_address.state,
+        },
+        {
+            label: "GST Vehicle Type",
+            fieldname: "gst_vehicle_type",
+            fieldtype: "Select",
+            options: `Regular\nOver Dimensional Cargo (ODC)`,
+            depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
+            read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
+            default: frm.doc.gst_vehicle_type,
+        },
+        {
+            label: "Transport Receipt Date",
+            fieldname: "lr_date",
+            fieldtype: "Date",
+            default: frm.doc.lr_date,
+            mandatory_depends_on: "eval:doc.lr_no",
+        },
+        {
+            fieldtype: "Section Break",
+            depends_on: page("vehicle"),
+        },
+        {
+            fieldname: "reason",
+            label: "Reason",
+            fieldtype: "Select",
+            options: ["Due to Break Down", "Due to Trans Shipment", "First Time", "Others"],
+            reqd: 1,
+        },
+        {
+            fieldtype: "Column Break",
+        },
+        {
+            fieldname: "remark",
+            label: "Remark",
+            fieldtype: "Data",
+            mandatory_depends_on: 'eval: doc.reason == "Others"',
+        },
+    ];
 
-    d.show();
-}
+    const transporter_fields = [
+        {
+            fieldtype: "Section Break",
+            label: __("Transporter Details"),
+            depends_on: page("transporter"),
+        },
+        {
+            label: "Transporter",
+            fieldname: "transporter",
+            fieldtype: "Link",
+            options: "Supplier",
+            default: frm.doc.transporter,
+            get_query: () => {
+                return {
+                    filters: {
+                        is_transporter: 1,
+                    },
+                };
+            },
+            onchange: () => update_gst_tranporter_id(d),
+        },
+        {
+            fieldtype: "Column Break",
+        },
+        {
+            label: "GST Transporter ID",
+            fieldname: "gst_transporter_id",
+            fieldtype: "Data",
+            mandatory_depends_on: "eval: doc.page == 'transporter'",
+            default:
+                frm.doc.gst_transporter_id && frm.doc.gst_transporter_id.length === 15
+                    ? frm.doc.gst_transporter_id
+                    : "",
+            onchange: () => validate_gst_transporter_id(d, frm.doc),
+        },
+    ];
 
-function show_update_transporter_dialog(frm) {
     frappe.ui.form.ControlData.trigger_change_on_input_event = false;
     const d = new frappe.ui.Dialog({
-        title: __("Update Transporter"),
+        title: both
+            ? __("Update e-Waybill")
+            : vehicle
+              ? __("Update Vehicle Information")
+              : __("Update Transporter"),
         fields: [
             {
                 label: "e-Waybill",
@@ -960,30 +985,16 @@ function show_update_transporter_dialog(frm) {
                 default: frm.doc.ewaybill,
             },
             {
-                label: "Transporter",
-                fieldname: "transporter",
-                fieldtype: "Link",
-                options: "Supplier",
-                default: frm.doc.transporter,
-                get_query: () => {
-                    return {
-                        filters: {
-                            is_transporter: 1,
-                        },
-                    };
-                },
-                onchange: () => update_gst_tranporter_id(d),
-            },
-            {
-                label: "GST Transporter ID",
-                fieldname: "gst_transporter_id",
+                fieldname: "page",
                 fieldtype: "Data",
-                reqd: 1,
-                default:
-                    frm.doc.gst_transporter_id && frm.doc.gst_transporter_id.length === 15
-                        ? frm.doc.gst_transporter_id
-                        : "",
-                onchange: () => validate_gst_transporter_id(d, frm.doc),
+                hidden: 1,
+                default: vehicle ? "vehicle" : "transporter",
+            },
+            ...(vehicle ? vehicle_fields : []),
+            ...(transporter ? transporter_fields : []),
+            {
+                fieldtype: "Section Break",
+                depends_on: page(transporter ? "transporter" : "vehicle"),
             },
             {
                 label: "Update e-Waybill Print/Data",
@@ -992,25 +1003,49 @@ function show_update_transporter_dialog(frm) {
                 default: gst_settings.fetch_e_waybill_data,
             },
         ],
-        primary_action_label: __("Update"),
+        primary_action_label: both ? __("Next") : __("Update"),
         primary_action(values) {
-            frappe.call({
-                method: "india_compliance.gst_india.utils.e_waybill.update_transporter",
-                args: {
-                    doctype: frm.doctype,
-                    docname: frm.doc.name,
-                    values,
-                },
-                callback: () => frm.refresh(),
-            });
+            if (both && values.page === "vehicle") return show_page("transporter");
+
             d.hide();
+            update_e_waybill(frm, values, { vehicle, transporter });
         },
     });
     // HACK!
     // To prevent triggering of change event on input twice
     frappe.ui.form.ControlData.trigger_change_on_input_event = true;
     d.show();
-    validate_gst_transporter_id(d, frm.doc);
+    if (transporter) validate_gst_transporter_id(d, frm.doc);
+
+    function show_page(name) {
+        d.set_value("page", name);
+
+        const last = name === "transporter";
+        d.set_primary_action(last ? __("Update") : __("Next"), d.primary_action);
+        if (!last) return d.get_secondary_btn().addClass("hide");
+
+        d.set_secondary_action_label(__("Back"));
+        d.set_secondary_action(() => show_page("vehicle"));
+    }
+}
+
+async function update_e_waybill(frm, values, { vehicle, transporter }) {
+    const call = (method, values) =>
+        frappe.call({
+            method: `india_compliance.gst_india.utils.e_waybill.${method}`,
+            args: { doctype: frm.doctype, docname: frm.doc.name, values },
+            freeze: true,
+        });
+
+    // portal takes Part-B from the generator only while no transporter is assigned, so vehicle goes first
+    if (vehicle)
+        await call("update_vehicle_info", {
+            ...values,
+            update_e_waybill_data: transporter ? 0 : values.update_e_waybill_data,
+        });
+    if (transporter) await call("update_transporter", values);
+
+    frm.refresh();
 }
 
 async function show_extend_validity_dialog(frm) {
@@ -1446,6 +1481,51 @@ async function get_source_destination_address(frm, address_type) {
     });
 
     return address?.message;
+}
+
+function can_update_e_waybill(frm) {
+    return (
+        is_e_waybill_api_enabled(frm) &&
+        is_e_waybill_valid(frm) &&
+        frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
+    );
+}
+
+function toggle_transport_fields(frm) {
+    frm.toggle_enable(
+        [...E_WAYBILL_TRANSPORTER_FIELDS, ...E_WAYBILL_VEHICLE_FIELDS].filter(
+            (f) => f !== "gst_vehicle_type",
+        ),
+        !frm.doc.ewaybill || can_update_e_waybill(frm),
+    );
+}
+
+function intercept_update_for_e_waybill(frm) {
+    if (frm._save_without_e_waybill_check) return;
+
+    frm._save_without_e_waybill_check = frm.save;
+    frm.save = async function (action, ...args) {
+        if (action === "Update" && (await open_e_waybill_update_dialog(frm))) return;
+
+        return frm._save_without_e_waybill_check(action, ...args);
+    };
+}
+
+async function open_e_waybill_update_dialog(frm) {
+    if (frm.doc.docstatus !== 1 || !frm.doc.ewaybill || !can_update_e_waybill(frm)) return false;
+
+    const fields = [...E_WAYBILL_TRANSPORTER_FIELDS, ...E_WAYBILL_VEHICLE_FIELDS].filter(
+        (f) => frm.fields_dict[f],
+    );
+    const { message: saved } = await frappe.db.get_value(frm.doctype, frm.docname, fields);
+    const changed = fields.filter((f) => (saved[f] || "") != (frm.doc[f] || ""));
+
+    const vehicle = changed.some((f) => E_WAYBILL_VEHICLE_FIELDS.includes(f));
+    const transporter = changed.some((f) => E_WAYBILL_TRANSPORTER_FIELDS.includes(f));
+    if (!vehicle && !transporter) return false;
+
+    show_update_e_waybill_dialog(frm, { vehicle, transporter });
+    return true;
 }
 
 // ask before cancelling: from the Cancel button or a workflow action
