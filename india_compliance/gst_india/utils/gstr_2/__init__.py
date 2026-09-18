@@ -395,7 +395,7 @@ def update_import_history(gstin, return_periods):
     if not logs:
         return
 
-    frappe.qb.update(log).set(log.data_not_found, 0).where(log.name.isin(logs)).run()
+    frappe.db.set_value("GSTR Import Log", {"name": ("in", logs)}, "data_not_found", 0)
 
 
 def _download_gstr_2a(gstin, return_period, json_data):
