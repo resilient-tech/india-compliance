@@ -3,7 +3,7 @@ div[data-page-route="GST Return Export"] .section-body {
 }
 
 .gst-return-summary .summary-heading {
-	font-size: 1.2rem;
+	font-size: var(--text-xl);
 	margin-top: var(--margin-md);
 	margin-bottom: var(--margin-md);
 }
@@ -17,7 +17,7 @@ div[data-page-route="GST Return Export"] .section-body {
 }
 
 /* stylelint-disable-next-line selector-class-pattern -- air-datepicker's own class names */
-.datepicker--cell.-current-.-disabled-:not(.-selected-) {
-	color: var(--gray-500);
+.datepicker--cell.-disabled-:not(.-selected-):not(.-in-range-) {
+	color: var(--text-muted);
 	font-weight: normal;
 }

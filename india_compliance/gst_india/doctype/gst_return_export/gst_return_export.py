@@ -4,14 +4,22 @@
 """Endpoints and delivery: queue, build, save, download, sweep."""
 
 from io import BytesIO
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import add_days, add_to_date, get_datetime, get_first_day, getdate, now_datetime
-from frappe.utils.background_jobs import is_job_enqueued
+from frappe.utils import (
+    add_days,
+    add_to_date,
+    get_datetime,
+    get_first_day,
+    getdate,
+    now,
+    now_datetime,
+    time_diff_in_seconds,
+)
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -34,6 +42,7 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import BaseUtil
 from india_compliance.gst_india.utils import (
+    create_notification,
     get_periods_between_dates,
     validate_gstin_permission,
 )
@@ -42,6 +51,7 @@ from india_compliance.gst_india.utils.gstr_utils import ReturnType
 EXPORT_READY_EVENT = "gst_return_export_ready"
 DOCTYPE = "GST Return Export"
 EXPORT_MARKER = "gst_return_export"
+BELL_AFTER = 60
 
 
 class GSTReturnExport(Document):
@@ -56,25 +66,16 @@ class GSTReturnExport(Document):
         from_date: str,
         to_date: str,
     ):
-        """Fetch picked months from the portal, one job at a time."""
+        """Fetch picked months from the portal."""
         # validate
         frappe.has_permission(DOCTYPE, "export", throw=True)
 
         return_type = normalize_return_type(return_type)
-        get_exporter(return_type)
         periods = frappe.parse_json(periods) if isinstance(periods, str) else periods
 
         # only months the portal can serve
         allowed = set(_periods(return_type, from_date, to_date))
         periods = [period for period in periods if period in allowed]
-
-        job_id = f"gst_return_sync:{company_gstin}:{return_type}"
-        if is_job_enqueued(job_id):
-            return {
-                "message": _("A sync is already in progress for GSTIN {0} and {1}.").format(
-                    company_gstin, return_type
-                ),
-            }
 
         from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
             get_periods_to_download,
@@ -97,10 +98,8 @@ class GSTReturnExport(Document):
             return_type=return_type,
             periods=periods,
             queue="long",
-            job_id=job_id,
             now=frappe.flags.in_test,
             timeout=1800,
-            deduplicate=True,
             enqueue_after_commit=True,
         )
 
@@ -144,6 +143,10 @@ def _periods(return_type, from_date, to_date):
     return get_periods_between_dates(start, end)
 
 
+def _log_names(return_type, gstin, periods):
+    return [f"{return_type}-{period}-{gstin}" for period in periods]
+
+
 def get_exporter(return_type):
     """Exporter for a return type."""
     if exporter := EXPORTERS.get(normalize_return_type(return_type)):
@@ -157,9 +160,13 @@ def get_adapter(return_type, gstin):
 
 
 def _sync_return_data(company_gstin, return_type, periods):
-    """Job: download, toast on failure. Summary builds on first read."""
+    """Job: download, drop exports built on the old data, cache summaries. Toast on failure."""
+    adapter = get_adapter(return_type, company_gstin)
     try:
-        get_adapter(return_type, company_gstin).download(periods)
+        adapter.download(periods)
+        delete_export_files(_log_names(return_type, company_gstin, periods))
+        for period in periods:
+            adapter.build_and_store_summary(period)
     except Exception as e:
         frappe.publish_realtime(
             "gstr_2a_2b_download_message",
@@ -171,7 +178,7 @@ def _sync_return_data(company_gstin, return_type, periods):
 
 @frappe.whitelist()
 @validate_gstin_permission(doctype=DOCTYPE)
-def export_return_as_excel(
+def export_file(
     company_gstin: str,
     return_type: str,
     from_date: str,
@@ -182,10 +189,9 @@ def export_return_as_excel(
     # validate
     frappe.has_permission(DOCTYPE, "export", throw=True)
     return_type = normalize_return_type(return_type)
-    get_exporter(return_type)
-    group_by = validated_group_by(group_by)
-
     periods = _periods(return_type, from_date, to_date)
+    group_by = effective_group_by(periods, group_by)
+
     request = {
         "company_gstin": company_gstin,
         "return_type": return_type,
@@ -195,29 +201,34 @@ def export_return_as_excel(
     }
 
     # a fresh file already built
-    file_name = export_file_name(company_gstin, return_type, periods, group_by)
-    if get_reusable_export(company_gstin, return_type, periods, group_by):
-        return {"file_name": file_name, "request": request}
+    if file := get_reusable_export(company_gstin, return_type, periods, group_by):
+        return {"file_name": file.file_name, "created": file.creation, "request": request}
 
-    # queue
-    user = frappe.session.user
-    frappe.enqueue(
-        generate_export_file,
+    queued = frappe.enqueue(
+        generate_file,
         queue="long",
         timeout=1500,
-        job_id=f"gst_return_export:{user}:{company_gstin}:{return_type}:{export_key(periods, group_by)}",
+        job_id=export_file_name(company_gstin, return_type, periods, group_by),
         deduplicate=True,
         company_gstin=company_gstin,
         return_type=return_type,
         from_date=from_date,
         to_date=to_date,
         group_by=group_by,
-        user=user,
+        user=frappe.session.user,
+        requested_at=now(),
     )
+    if not queued:
+        return {
+            "message": _("This export is already being generated. Try again in some time."),
+            "indicator": "orange",
+        }
     return {"message": _("Generating your export — the download will start when it's ready.")}
 
 
-def generate_export_file(company_gstin, return_type, from_date, to_date, user, group_by=DEFAULT_GROUP_BY):
+def generate_file(
+    company_gstin, return_type, from_date, to_date, user, group_by=DEFAULT_GROUP_BY, requested_at=None
+):
     """Job: build, save as private File, tell the user."""
     request = {
         "company_gstin": company_gstin,
@@ -228,45 +239,58 @@ def generate_export_file(company_gstin, return_type, from_date, to_date, user, g
     }
     try:
         periods = _periods(return_type, from_date, to_date)
-        file_name = export_file_name(company_gstin, return_type, periods, group_by)
 
         # another job may have built it while this one queued
-        if not get_reusable_export(company_gstin, return_type, periods, group_by):
-            file_name, content = build_export(company_gstin, return_type, periods, group_by)
-
-            # save, attached to a synced log of the range: its company is what gates the file
-            names = [f"{return_type}-{period}-{company_gstin}" for period in periods]
-            log = frappe.get_all(
-                RETURN_LOG,
-                filters={"name": ("in", names), "raw_gov_data": ("is", "set")},
-                pluck="name",
-                limit=1,
-            )[0]
-            file = frappe.get_doc(
-                {
-                    "doctype": "File",
-                    "file_name": file_name,
-                    "attached_to_doctype": RETURN_LOG,
-                    "attached_to_name": log,
-                    "attached_to_field": export_key(periods, group_by),
-                    "is_private": 1,
-                    "content": content,
-                }
-            )
-            file.flags.skip_file_size_check = True  # a year of 2B beats the 25 MB upload cap
-            file.insert(ignore_permissions=True)
-
+        file = get_reusable_export(company_gstin, return_type, periods, group_by)
+        file_name = file.file_name if file else save_file(company_gstin, return_type, periods, group_by)
     except Exception as e:
         frappe.publish_realtime(EXPORT_READY_EVENT, {"error": str(e)}, user=user)
         raise e
 
-    # tell the browser
+    # tell the browser; a slow build also rings the bell, its click downloads the file
     frappe.publish_realtime(
-        EXPORT_READY_EVENT,
-        {"file_name": file_name, "request": request},
-        user=user,
-        after_commit=True,
+        EXPORT_READY_EVENT, {"file_name": file_name, "request": request}, user=user, after_commit=True
     )
+    if time_diff_in_seconds(now(), requested_at or now()) > BELL_AFTER:
+        create_notification(
+            {"subject": _("{0} is ready to download").format(file_name)},
+            DOCTYPE,
+            link=f"/api/method/{__name__}.download_export_file?{urlencode(request)}",
+        )
+
+
+def save_file(company_gstin, return_type, periods, group_by):
+    """Build, store as private File on a synced log; its stored name."""
+    file_name, content = build_export(company_gstin, return_type, periods, group_by)
+    stem, ext = file_name.rsplit(".", 1)
+    file_name = (
+        f"{stem}-{now_datetime():%Y%m%d-%H%M}-{frappe.generate_hash(length=6)}.{ext}"  # moment + unguessable
+    )
+
+    # the log's company is what gates the file
+    log = frappe.get_all(
+        RETURN_LOG,
+        filters={
+            "name": ("in", _log_names(return_type, company_gstin, periods)),
+            "raw_gov_data": ("is", "set"),
+        },
+        pluck="name",
+        limit=1,
+    )[0]
+    file = frappe.get_doc(
+        {
+            "doctype": "File",
+            "file_name": file_name,
+            "attached_to_doctype": RETURN_LOG,
+            "attached_to_name": log,
+            "attached_to_field": export_key(periods, group_by),
+            "is_private": 1,
+            "content": content,
+        }
+    )
+    file.flags.skip_file_size_check = True  # a year of 2B beats the 25 MB upload cap
+    file.insert(ignore_permissions=True)
+    return file_name
 
 
 def build_export(gstin, return_type, periods, group_by=DEFAULT_GROUP_BY):
@@ -300,13 +324,14 @@ def _throw_no_data():
     frappe.throw(_("No data to export for the selected period(s). Sync first, then export."))
 
 
-def validated_group_by(group_by):
-    """Known grouping, else the default."""
-    return group_by if group_by in {*GROUP_BY_MONTHS, GROUP_BY_ALL} else DEFAULT_GROUP_BY
+def effective_group_by(periods, group_by):
+    """Known grouping, else the default; a single workbook is "all" however it was asked for."""
+    group_by = group_by if group_by in {*GROUP_BY_MONTHS, GROUP_BY_ALL} else DEFAULT_GROUP_BY
+    return group_by if len(group_periods(periods, group_by)) > 1 else GROUP_BY_ALL
 
 
 def export_file_name(gstin, return_type, periods, group_by):
-    """Name the browser sees. Stored copy may get a suffix, never look up by it."""
+    """Base name for the request. Stored copy adds the build moment, never look up by it."""
     return_type = normalize_return_type(return_type)
     groups = group_periods(periods, group_by)
     if len(groups) == 1:
@@ -322,10 +347,10 @@ def export_key(periods, group_by):
 
 
 def get_reusable_export(company_gstin, return_type, periods, group_by):
-    """Url of a fresh file for this exact request, else None. Shared by all allowed the GSTIN."""
+    """Fresh File row for this exact request, else None. Shared by all allowed the GSTIN."""
     # last sync
     return_type = normalize_return_type(return_type)
-    names = [f"{return_type}-{period}-{company_gstin}" for period in periods]
+    names = _log_names(return_type, company_gstin, periods)
     synced_on = frappe.get_all(
         RETURN_LOG,
         filters={"name": ("in", names), "raw_gov_data": ("is", "set")},
@@ -335,9 +360,9 @@ def get_reusable_export(company_gstin, return_type, periods, group_by):
     if not synced_on:
         return None
 
-    # newer than the last sync, and young enough to outlive the daily sweep
-    cutoff = max(get_datetime(max(synced_on)), add_to_date(now_datetime(), hours=-20))
-    file_url = frappe.db.get_value(
+    # newer than the last sync, at most a day old
+    cutoff = max(get_datetime(max(synced_on)), add_to_date(now_datetime(), hours=-24))
+    file = frappe.db.get_value(
         "File",
         {
             "attached_to_doctype": RETURN_LOG,
@@ -346,13 +371,14 @@ def get_reusable_export(company_gstin, return_type, periods, group_by):
             "is_private": 1,
             "creation": (">", cutoff),
         },
-        "file_url",
+        ["file_name", "file_url", "creation"],
         order_by="creation desc",
+        as_dict=True,
     )
 
     # named for this request
     stem = export_file_name(company_gstin, return_type, periods, group_by).rsplit(".", 1)[0]
-    return file_url if (file_url or "").startswith(f"/private/files/{stem}") else None
+    return file if file and (file.file_url or "").startswith(f"/private/files/{stem}") else None
 
 
 @frappe.whitelist()
@@ -368,12 +394,10 @@ def download_export_file(
     # validate
     frappe.has_permission(DOCTYPE, "export", throw=True)
     return_type = normalize_return_type(return_type)
-    group_by = validated_group_by(group_by)
-
     periods = _periods(return_type, from_date, to_date)
-    file_name = export_file_name(company_gstin, return_type, periods, group_by)
-    file_url = get_reusable_export(company_gstin, return_type, periods, group_by)
-    if not file_url:
+    group_by = effective_group_by(periods, group_by)
+    file = get_reusable_export(company_gstin, return_type, periods, group_by)
+    if not file:
         frappe.throw(
             _("This export is no longer available. Please export again."),
             frappe.DoesNotExistError,
@@ -383,21 +407,26 @@ def download_export_file(
     from frappe.core.doctype.access_log.access_log import make_access_log
     from frappe.utils.response import send_private_file
 
-    make_access_log(doctype=RETURN_LOG, document=file_name, file_type=file_name.rsplit(".", 1)[-1])
-    response = send_private_file(file_url.split("/private", 1)[1], filename=file_name)
-    response.headers["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(file_name)}"
+    make_access_log(doctype=RETURN_LOG, document=file.file_name, file_type=file.file_name.rsplit(".", 1)[-1])
+    response = send_private_file(file.file_url.split("/private", 1)[1], filename=file.file_name)
+    response.headers["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(file.file_name)}"
     return response
 
 
-def delete_stale_export_files():
-    """Daily: drop day-old exports."""
-    stale = frappe.get_all(
+def delete_export_files(log_names=None):
+    """Drop the exports built on these logs; with none named (the daily job), the day-old ones."""
+    scope = (
+        {"attached_to_name": ("in", log_names)}
+        if log_names
+        else {"creation": ("<", add_days(now_datetime(), -1))}
+    )
+    files = frappe.get_all(
         "File",
         filters={
             "attached_to_doctype": RETURN_LOG,
             "attached_to_field": ("like", f"{EXPORT_MARKER}%"),
-            "creation": ("<", add_days(now_datetime(), -1)),
+            **scope,
         },
         pluck="name",
     )
-    frappe.delete_doc("File", stale, ignore_permissions=True, delete_permanently=True)
+    frappe.delete_doc("File", files, ignore_permissions=True, delete_permanently=True)

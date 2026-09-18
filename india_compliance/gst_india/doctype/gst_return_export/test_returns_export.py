@@ -82,7 +82,7 @@ class TestSummaryHelpers(IntegrationTestCase):
                     "sgst": 0.0,
                     "cess": 0.0,
                 },
-                "itc": {"available": 18.0, "not_available": 0.0, "reversal": 0.0},
+                "itc_summary": {"available": 18.0, "not_available": 0.0, "reversal": 0.0},
             },
             {
                 "totals": {
@@ -93,14 +93,14 @@ class TestSummaryHelpers(IntegrationTestCase):
                     "sgst": 0.0,
                     "cess": 0.0,
                 },
-                "itc": {"available": 0.0, "not_available": 9.0, "reversal": 0.0},
+                "itc_summary": {"available": 0.0, "not_available": 9.0, "reversal": 0.0},
             },
         ]
         result = sum_summaries(summaries)
         self.assertEqual(result["totals"]["documents"], 3)
         self.assertEqual(result["totals"]["taxable_value"], 150.0)
         self.assertEqual(result["totals"]["igst"], 27.0)
-        self.assertEqual(result["itc"], {"available": 18.0, "not_available": 9.0, "reversal": 0.0})
+        self.assertEqual(result["itc_summary"], {"available": 18.0, "not_available": 9.0, "reversal": 0.0})
 
     def test_sum_summaries_itc_none_when_absent(self):
         summaries = [
@@ -113,10 +113,10 @@ class TestSummaryHelpers(IntegrationTestCase):
                     "sgst": 0.0,
                     "cess": 0.0,
                 },
-                "itc": None,
+                "itc_summary": None,
             }
         ]
-        self.assertIsNone(sum_summaries(summaries)["itc"])
+        self.assertIsNone(sum_summaries(summaries)["itc_summary"])
 
 
 class TestRangeSummary(IntegrationTestCase):
@@ -144,7 +144,7 @@ class TestRangeSummary(IntegrationTestCase):
                 "sgst": 0.0,
                 "cess": 0.0,
             },
-            "itc": {"available": 18.0, "not_available": 0.0, "reversal": 0.0},
+            "itc_summary": {"available": 18.0, "not_available": 0.0, "reversal": 0.0},
         },
         {
             "period": "052024",
@@ -176,7 +176,7 @@ class TestRangeSummary(IntegrationTestCase):
                 "sgst": 0.0,
                 "cess": 0.0,
             },
-            "itc": {"available": 12.6, "not_available": 0.0, "reversal": 0.0},
+            "itc_summary": {"available": 12.6, "not_available": 0.0, "reversal": 0.0},
         },
     ]
 
@@ -198,7 +198,7 @@ class TestRangeSummary(IntegrationTestCase):
         self.assertEqual(result["totals"]["documents"], 4)
         self.assertEqual(result["totals"]["taxable_value"], 170.0)
         self.assertAlmostEqual(result["totals"]["igst"], 30.6)
-        self.assertAlmostEqual(result["itc"]["available"], 30.6)
+        self.assertAlmostEqual(result["itc_summary"]["available"], 30.6)
 
 
 class TestComputeSummary2B(IntegrationTestCase):
@@ -221,7 +221,7 @@ class TestComputeSummary2B(IntegrationTestCase):
 
     def test_itc_buckets_partition_total_tax(self):
         summary = self.adapter.compute_summary(PERIOD_2B)
-        itc = summary["itc"]
+        itc = summary["itc_summary"]
         self.assertIsNotNone(itc)
         total_tax = sum(summary["totals"][t] for t in TAX_FIELDS)
         self.assertAlmostEqual(itc["available"] + itc["not_available"] + itc["reversal"], total_tax)
@@ -258,7 +258,7 @@ class TestComputeSummary2A(IntegrationTestCase):
     def test_summary_has_no_itc_and_is_consistent(self):
         summary = self.adapter.compute_summary("032020")
         self.assertTrue(summary["sections"])
-        self.assertIsNone(summary["itc"])
+        self.assertIsNone(summary["itc_summary"])
         self.assertEqual(summary["totals"]["documents"], sum(s["documents"] for s in summary["sections"]))
 
     def test_summary_reads_gov_keyed_notes(self):
@@ -327,7 +327,7 @@ class TestGSTReturnExportController(IntegrationTestCase):
 
     def test_get_summary_maps_return_type_and_delegates(self):
         """The UI label must reach the adapter as the enum value the logs are named with."""
-        fake = {"sections": [], "totals": {}, "itc": None}
+        fake = {"sections": [], "totals": {}, "itc_summary": None}
         with patch.object(ReturnAdapter, "get_range_summary", return_value=fake) as summary:
             result = self.doc.get_summary(GSTIN, "GSTR-2B", "2020-08-01", "2020-08-31")
 
@@ -337,20 +337,12 @@ class TestGSTReturnExportController(IntegrationTestCase):
     def test_sync_only_accepts_months_the_portal_can_serve(self):
         """Client months land in log names; junk and months past the cut-off are dropped."""
         today = "india_compliance.gst_india.doctype.purchase_reconciliation_tool.getdate"
-        with (
-            patch.object(controller, "is_job_enqueued", return_value=False),
-            patch(today, return_value=getdate("2021-05-20")),
-        ):
+        with patch(today, return_value=getdate("2021-05-20")):
             result = self.doc.sync_return_data(
                 GSTIN, "GSTR-2B", ["../etc", "132021", "", "072021"], "2021-03-01", "2021-08-01"
             )
 
         self.assertEqual(result["indicator"], "orange")
-
-    def test_sync_skips_when_job_already_enqueued(self):
-        with patch.object(controller, "is_job_enqueued", return_value=True):
-            result = self.doc.sync_return_data(GSTIN, "GSTR-2B", ["082020"], "2020-08-01", "2020-08-31")
-        self.assertIn("already in progress", result["message"])
 
     def test_sync_status_stops_at_the_portal_cut_off(self):
         """2B for a month exists from the 14th of the next; on 20 May, April is the newest."""
@@ -374,11 +366,11 @@ class TestGSTReturnExportController(IntegrationTestCase):
 
     def test_export_before_the_return_existed_is_refused(self):
         with self.assertRaises(frappe.ValidationError):
-            controller.export_return_as_excel(GSTIN, "GSTR-2B", "2019-01-01", "2019-12-31")
+            controller.export_file(GSTIN, "GSTR-2B", "2019-01-01", "2019-12-31")
 
-    def _export_job_id(self, return_type, from_date, to_date):
+    def _export_job_id(self, return_type, from_date, to_date, group_by="all"):
         with patch.object(controller.frappe, "enqueue") as enqueue:
-            controller.export_return_as_excel(GSTIN, return_type, from_date, to_date, "all")
+            controller.export_file(GSTIN, return_type, from_date, to_date, group_by)
         return enqueue.call_args.kwargs["job_id"]
 
     def test_export_jobs_are_keyed_on_the_months_and_the_return(self):
@@ -389,14 +381,21 @@ class TestGSTReturnExportController(IntegrationTestCase):
         self.assertNotEqual(self._export_job_id("GSTR-2A", "2020-08-01", "2020-08-31"), august_2b)
         self.assertNotEqual(self._export_job_id("GSTR-2B", "2020-09-01", "2020-09-30"), august_2b)
 
+        # one workbook is one workbook, however the grouping was asked for
+        quarter = self._export_job_id("GSTR-2B", "2020-07-01", "2020-09-30", "quarterly")
+        self.assertEqual(quarter, self._export_job_id("GSTR-2B", "2020-07-01", "2020-09-30", "all"))
+        self.assertNotEqual(quarter, self._export_job_id("GSTR-2B", "2020-07-01", "2020-09-30", "monthly"))
+
+    def test_second_requester_is_told_a_build_is_running(self):
+        with patch.object(controller.frappe, "enqueue", return_value=None):
+            result = controller.export_file(GSTIN, "GSTR-2B", "2020-08-01", "2020-08-31")
+        self.assertEqual(result["indicator"], "orange")
+
     def test_sync_reports_nothing_to_sync(self):
-        with (
-            patch.object(controller, "is_job_enqueued", return_value=False),
-            patch(
-                "india_compliance.gst_india.doctype.purchase_reconciliation_tool"
-                ".purchase_reconciliation_tool.get_periods_to_download",
-                return_value=[],
-            ),
+        with patch(
+            "india_compliance.gst_india.doctype.purchase_reconciliation_tool"
+            ".purchase_reconciliation_tool.get_periods_to_download",
+            return_value=[],
         ):
             result = self.doc.sync_return_data(GSTIN, "GSTR-2B", ["082020"], "2020-08-01", "2020-08-31")
         self.assertEqual(result["indicator"], "orange")

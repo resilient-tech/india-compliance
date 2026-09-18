@@ -59,11 +59,11 @@ def sum_summaries(summaries):
         for key in totals:
             totals[key] += flt(summary["totals"][key])
 
-    itc_parts = [s["itc"] for s in summaries if s.get("itc")]
+    itc_parts = [s["itc_summary"] for s in summaries if s.get("itc_summary")]
     itc = None
     if itc_parts:
         itc = {bucket: sum(flt(part[bucket]) for part in itc_parts) for bucket in ITC_BUCKETS}
-    return {"totals": totals, "itc": itc}
+    return {"totals": totals, "itc_summary": itc}
 
 
 class ReturnAdapter:
@@ -102,11 +102,11 @@ class ReturnAdapter:
         return {
             "sections": sorted(sections.values(), key=lambda s: section_rank(s["section"])),
             "totals": cumulative["totals"],
-            "itc": cumulative["itc"],
+            "itc_summary": cumulative["itc_summary"],
         }
 
     def get_summaries(self, periods):
-        """Cached month summaries, built on first read. No raw, no summary."""
+        """Cached month summaries; built here when the sync predates the cache. No raw, no summary."""
         names = {self._log_name(period): period for period in periods}
         logs = frappe.get_all(
             RETURN_LOG,
@@ -177,7 +177,7 @@ class ReturnAdapter:
             else flt(sum(s[field] for s in sections))
             for field in SECTION_FIELDS
         }
-        return {"sections": sections, "totals": totals, "itc": self._itc(itc_rows)}
+        return {"sections": sections, "totals": totals, "itc_summary": self._itc_summary(itc_rows)}
 
     @staticmethod
     def raw_sections(raw):
@@ -188,7 +188,7 @@ class ReturnAdapter:
         """The sync's reader for one category."""
         return self.handler_class(None, self.gstin, period, category)
 
-    def _itc(self, rows):
+    def _itc_summary(self, rows):
         return None
 
     # ---- sync state
@@ -252,7 +252,7 @@ class GSTR2BAdapter(ReturnAdapter):
     def raw_sections(raw):
         return (raw or {}).get(raw2b.DOC_DATA) or {}
 
-    def _itc(self, rows):
+    def _itc_summary(self, rows):
         """Total tax split by ITC availability."""
         itc = dict.fromkeys(ITC_BUCKETS, 0)
         buckets = {"Yes": "available", "Temporary": "reversal"}

@@ -14,17 +14,18 @@ import openpyxl
 from frappe import parse_json, read_file
 from frappe.core.doctype.file.utils import delete_file
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, now_datetime
+from frappe.utils import add_days, add_to_date, now_datetime
 
 from india_compliance.gst_india.doctype.gst_return_export.gst_return_export import (
     DOCTYPE,
     RETURN_LOG,
+    _sync_return_data,
     build_export,
-    delete_stale_export_files,
+    delete_export_files,
     download_export_file,
     export_file_name,
     export_key,
-    generate_export_file,
+    generate_file,
     get_reusable_export,
 )
 from india_compliance.gst_india.doctype.gst_return_export.gstr_2_export import (
@@ -42,6 +43,7 @@ from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
 ENGINE_MODULE = "india_compliance.gst_india.doctype.gst_return_export.template_exporter"
+ADAPTERS_MODULE = "india_compliance.gst_india.doctype.gst_return_export.return_adapters"
 
 GSTIN_2B = "01AABCE2207R1Z5"
 PERIOD_2B = "032020"
@@ -839,7 +841,6 @@ class TestExportFileLifecycle(IntegrationTestCase):
 
         self.assertTrue(send.called, "file was never handed to the browser")
         self.assertTrue(send.call_args.args[0].startswith("/files/"), send.call_args)
-        # name comes from the request, not the File row
         file_name = f"GSTR-2B-{GSTIN_2B}-{self.PERIOD}.xlsx"
         self.assertEqual(send.call_args.kwargs["filename"], file_name)
         send.return_value.headers.__setitem__.assert_called_once_with(
@@ -888,7 +889,7 @@ class TestExportFileLifecycle(IntegrationTestCase):
         stale = self._make_export_file(creation=add_days(now_datetime(), -3))
         fresh = self._make_export_file()
 
-        delete_stale_export_files()
+        delete_export_files()
 
         self.assertFalse(frappe.db.exists("File", stale))
         self.assertTrue(frappe.db.exists("File", fresh), "swept a file the user may still download")
@@ -905,15 +906,15 @@ class TestExportFileLifecycle(IntegrationTestCase):
         )
         frappe.db.set_value("File", raw_file, "creation", add_days(now_datetime(), -3), update_modified=False)
 
-        delete_stale_export_files()
+        delete_export_files()
 
         self.assertTrue(frappe.db.exists("File", raw_file), "swept the synced data itself")
 
-    def _generate(self, period=PERIOD, invoices=("R1",)):
+    def _generate(self, period=PERIOD, invoices=("R1",), requested_at=None):
         raw = {"docdata": {"b2b": [{"ctin": GSTIN_2B, "inv": [{"inum": inum} for inum in invoices]}]}}
         month = f"{period[2:]}-{period[:2]}-01"
         with _mock_names(raw), patch("frappe.publish_realtime"):
-            generate_export_file(GSTIN_2B, "GSTR2b", month, month, "Administrator", "all")
+            generate_file(GSTIN_2B, "GSTR2b", month, month, "Administrator", "all", requested_at=requested_at)
 
         file = frappe.get_last_doc(
             "File",
@@ -931,18 +932,40 @@ class TestExportFileLifecycle(IntegrationTestCase):
         self.assertEqual((file.attached_to_doctype, file.attached_to_name), (RETURN_LOG, self.LOG))
 
     def test_rebuild_after_resync_is_downloadable(self):
-        """Old file keeps the clean name, frappe suffixes the new one; download must not care."""
+        """Names carry the build moment (frappe suffixes a same-minute clash); download serves the newest."""
         period, raw = "092020", {"docdata": {"b2b": [{"ctin": GSTIN_2B}]}}
         store_raw_return_data(GSTIN_2B, ReturnType.GSTR2B.value, period, raw)
         self._generate(period)
         store_raw_return_data(GSTIN_2B, ReturnType.GSTR2B.value, period, raw)  # resync
 
         file = self._generate(period, invoices=("R1", "R2"))  # new data, new bytes
-        self.assertNotEqual(file.file_name, f"GSTR-2B-{GSTIN_2B}-{period}.xlsx", "old file gone?")
+        self.assertRegex(file.file_name, rf"^GSTR-2B-{GSTIN_2B}-{period}-\d{{8}}-\d{{4}}")
         with patch("frappe.utils.response.send_private_file") as send:
             self._download("2020-09-01", "2020-09-30")
         self.assertEqual(send.call_args.args[0], file.file_url.split("/private", 1)[1])
-        self.assertEqual(send.call_args.kwargs["filename"], f"GSTR-2B-{GSTIN_2B}-{period}.xlsx")
+        self.assertEqual(send.call_args.kwargs["filename"], file.file_name)
+
+    def test_slow_build_also_rings_the_bell(self):
+        """Over a minute in: the user has likely left, so a bell whose click downloads the file."""
+        file = self._generate(requested_at=add_to_date(now_datetime(), minutes=-2))
+        link = frappe.db.get_value(
+            "Notification Log",
+            {"for_user": "Administrator", "subject": ("like", f"{file.file_name}%")},
+            "link",
+        )
+        self.assertIn(f"download_export_file?company_gstin={GSTIN_2B}", link)
+
+    def test_quick_build_relies_on_realtime(self):
+        file = self._generate()
+        self.assertFalse(frappe.db.exists("Notification Log", {"subject": ("like", f"{file.file_name}%")}))
+
+    def test_sync_drops_the_months_exports(self):
+        """A resync must rebuild, not reuse."""
+        name = self._make_export_file()
+        with patch(f"{ADAPTERS_MODULE}.GSTR2BAdapter.download"):
+            _sync_return_data(GSTIN_2B, ReturnType.GSTR2B.value, [self.PERIOD])
+
+        self.assertFalse(frappe.db.exists("File", name))
 
 
 class TestExportReuse(IntegrationTestCase):
@@ -977,7 +1000,7 @@ class TestExportReuse(IntegrationTestCase):
             }
         ).insert(ignore_permissions=True)
         _remove_file_later(self, file)
-        self.assertEqual(get_reusable_export(*args), file.file_url)
+        self.assertEqual(get_reusable_export(*args).file_url, file.file_url)
 
         # resync bumps the log; the built file is now older than the data
         store_raw_return_data(GSTIN_2B, ReturnType.GSTR2B.value, self.PERIODS[0], self.raw)
@@ -1024,12 +1047,12 @@ class TestExportPermissions(IntegrationTestCase):
 
     def test_export_endpoint_requires_permission(self):
         from india_compliance.gst_india.doctype.gst_return_export.gst_return_export import (
-            export_return_as_excel,
+            export_file,
         )
 
         frappe.set_user(self.USER)
         with self.assertRaises(frappe.PermissionError):
-            export_return_as_excel(GSTIN_2B, "GSTR-2B", "2020-03-01", "2020-03-31")
+            export_file(GSTIN_2B, "GSTR-2B", "2020-03-01", "2020-03-31")
 
     def test_download_requires_permission(self):
         frappe.set_user(self.USER)

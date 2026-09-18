@@ -16,7 +16,6 @@ const GROUP_BY_LABELS = {
     all: "All",
 };
 const GROUP_BY_ALL = "all";
-const MONTH_FORMAT = "MM-YYYY";
 
 // ---- form handlers: each hands off to the current return type's view
 
@@ -32,7 +31,6 @@ frappe.ui.form.on("GST Return Export", {
     refresh(frm) {
         frm.disable_save();
         frm.page.clear_indicator();
-        apply_month_pickers(frm);
 
         const view = get_view(frm);
         view.setup_actions();
@@ -73,52 +71,21 @@ function on_period_change(frm) {
     const bounds = frm._bounds;
     if (bounds) {
         const { first, latest } = bounds;
-        const from_date = clamp(frm.doc.from_date || fiscal_year_start(latest), first, latest);
+        const default_from = india_compliance.fiscal_year_start(latest);
+        const from_date = clamp(frm.doc.from_date || default_from, first, latest);
         if (from_date !== frm.doc.from_date) return frm.set_value("from_date", from_date);
 
         const to_date = clamp(frm.doc.to_date || latest, first, latest);
         if (to_date !== frm.doc.to_date) return frm.set_value("to_date", to_date);
     }
 
-    apply_month_pickers(frm);
+    india_compliance.setup_month_range_fields(frm, "from_date", "to_date", frm._bounds);
     get_view(frm).refresh_view();
-}
-
-function apply_month_pickers(frm) {
-    const to_obj = (value) => (value ? frappe.datetime.str_to_obj(value) : false);
-    const first = to_obj(frm._bounds?.first);
-    const latest = to_obj(frm._bounds?.latest || frappe.datetime.get_today());
-    const { from_date, to_date } = frm.fields_dict;
-
-    for (const field of [from_date, to_date]) {
-        Object.assign(field, { parse: parse_month, format_for_input: format_month });
-    }
-
-    from_date.datepicker?.update({ minDate: first, maxDate: to_obj(frm.doc.to_date) || latest });
-    to_date.datepicker?.update({ minDate: to_obj(frm.doc.from_date) || first, maxDate: latest });
 }
 
 // dates are "YYYY-MM-DD", so plain string order is date order
 function clamp(value, low, high) {
     return value < low ? low : value > high ? high : value;
-}
-
-function fiscal_year_start(date) {
-    const month = moment(date);
-    return month_start([month.month() >= 3 ? month.year() : month.year() - 1, 3, 1]);
-}
-
-function month_start(date) {
-    return moment(date).startOf("month").format("YYYY-MM-DD");
-}
-
-function parse_month(value) {
-    const date = moment(value, [MONTH_FORMAT, "YYYY-MM-DD"], true);
-    return date.isValid() ? month_start(date) : "";
-}
-
-function format_month(value) {
-    return value ? moment(value).format(MONTH_FORMAT) : "";
 }
 
 function format_period(period) {
@@ -147,13 +114,16 @@ function set_realtime_listeners(frm) {
     frappe.realtime.on(EXPORT_READY, on_export_ready);
 }
 
-function on_export_ready({ file_name, request, error }) {
+function on_export_ready({ file_name, request, created, error }) {
     if (error) {
         frappe.show_alert({ message: __("Export failed: {0}", [error]), indicator: "red" });
         return;
     }
 
-    frappe.show_alert({ message: __("Export ready: {0}", [file_name]), indicator: "green" });
+    const message = created
+        ? __("Downloading export built {0}: {1}", [frappe.datetime.prettyDate(created), file_name])
+        : __("Export ready: {0}", [file_name]);
+    frappe.show_alert({ message, indicator: "green" });
 
     open_url_post(`/api/method/${EXPORT_MODULE}.download_export_file`, request);
 }
@@ -282,12 +252,12 @@ class ReturnExportView {
         if (!group_by) return;
 
         const { message } = await frappe.call({
-            method: `${EXPORT_MODULE}.export_return_as_excel`,
+            method: `${EXPORT_MODULE}.export_file`,
             args: { ...filters, group_by },
         });
         if (message?.request) return on_export_ready(message); // already built, download now
         if (message?.message) {
-            frappe.show_alert({ message: message.message, indicator: "blue" });
+            frappe.show_alert({ message: message.message, indicator: message.indicator || "blue" });
         }
     }
 
@@ -523,11 +493,11 @@ class GSTR2View extends ReturnExportView {
 
 class GSTR2BView extends GSTR2View {
     itc_summary_html(data) {
-        return data?.itc ? `<div class="itc-summary"></div>` : "";
+        return data?.itc_summary ? `<div class="itc-summary"></div>` : "";
     }
 
     render_itc_summary($wrapper, data) {
-        if (data?.itc) this.render_itc_cards($wrapper.find(".itc-summary"), data.itc);
+        if (data?.itc_summary) this.render_itc_cards($wrapper.find(".itc-summary"), data.itc_summary);
     }
 
     render_itc_cards($wrapper, itc) {
