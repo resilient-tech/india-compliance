@@ -2,6 +2,7 @@ import copy
 import datetime
 import random
 import re
+from unittest.mock import patch
 
 import frappe
 import pytz
@@ -20,19 +21,22 @@ from india_compliance.gst_india.constants import (
     SHIP_TO_GSTIN_APPLICABLE_DATE,
 )
 from india_compliance.gst_india.overrides.sales_invoice import (
+    cancel_e_waybill_e_invoice,
     is_e_waybill_applicable,
 )
 from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
     create_subcontracting_data,
 )
-from india_compliance.gst_india.utils import load_doc, parse_datetime
+from india_compliance.gst_india.utils import load_doc, parse_datetime, run_or_report_failure
 from india_compliance.gst_india.utils.e_invoice import (
+    auto_cancel_e_invoice_e_waybill,
     retry_e_invoice_e_waybill_generation,
 )
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
     _generate_e_waybill,
     _get_e_waybill_threshold,
+    auto_cancel_e_waybill_for_doc,
     cancel_e_waybill,
     fetch_e_waybill_data,
     generate_e_waybill,
@@ -424,7 +428,9 @@ class TestEWaybill(FrappeTestCase):
         )
 
         si.reload()
+        # run the deferred portal cancel here, so its writes are visible below
         si.cancel()
+        auto_cancel_e_invoice_e_waybill(si.name)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -434,6 +440,64 @@ class TestEWaybill(FrappeTestCase):
         si.reload()
         self.assertEqual(si.ewaybill, "")
         self.assertEqual(si.e_waybill_status, "Cancelled")
+
+    @change_settings(
+        "GST Settings",
+        {
+            "auto_cancel_e_waybill": 1,
+            "reason_for_e_waybill_cancellation": "Data Entry Mistake",
+        },
+    )
+    @responses.activate
+    def test_portal_cancel_is_deferred_to_after_commit(self):
+        """portal cancel waits for the SI cancel to commit, never runs inside before_cancel."""
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        self._generate_e_waybill(si.name)
+        si = load_doc("Sales Invoice", si.name, "cancel")
+
+        e_waybill_cancel_data = self.e_waybill_test_data.get("cancel_e_waybill")
+        self._mock_e_waybill_response(
+            data=e_waybill_cancel_data.get("response_data"),
+            match_list=[matchers.query_string_matcher(e_waybill_cancel_data.get("params"))],
+        )
+
+        api_calls_before = len(responses.calls)
+
+        with patch.object(frappe.local, "is_ajax", True, create=True):  # from the desk
+            cancel_e_waybill_e_invoice(si)
+
+            # nothing cancelled on the portal synchronously
+            self.assertEqual(len(responses.calls), api_calls_before)
+
+            # runs once the cancel commits (commit_after_response is inline in tests)
+            frappe.db.after_commit.run()
+
+        si.reload()
+        self.assertEqual(si.ewaybill, "")
+        self.assertEqual(si.e_waybill_status, "Cancelled")
+        self.assertFalse(frappe.flags.in_after_response)
+
+    @change_settings(
+        "GST Settings",
+        {
+            "auto_cancel_e_waybill": 1,
+            "reason_for_e_waybill_cancellation": "Data Entry Mistake",
+        },
+    )
+    @responses.activate
+    def test_portal_cancel_is_enqueued_outside_the_desk(self):
+        """not an ajax request (REST, worker): the portal cancel goes to the queue, after commit."""
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        self._generate_e_waybill(si.name)
+        si = load_doc("Sales Invoice", si.name, "cancel")
+
+        with patch("frappe.enqueue") as mock_enqueue:
+            cancel_e_waybill_e_invoice(si)
+
+        mock_enqueue.assert_called_once()
+        self.assertEqual(mock_enqueue.call_args.args[0], run_or_report_failure)
+        self.assertEqual(mock_enqueue.call_args.kwargs["action"], auto_cancel_e_invoice_e_waybill)
+        self.assertTrue(mock_enqueue.call_args.kwargs["enqueue_after_commit"])
 
     @change_settings("GST Settings", {"auto_cancel_e_waybill": 0})
     @responses.activate
@@ -453,6 +517,11 @@ class TestEWaybill(FrappeTestCase):
 
         si.reload()
         self.assertNotEqual(si.ewaybill, "")
+
+    def _cancel_and_run_portal_cancel(self, doc):
+        """portal cancel is deferred: run it inline, so its writes are visible to the assertions"""
+        doc.cancel()
+        auto_cancel_e_waybill_for_doc(doc.doctype, doc.name)
 
     @change_settings(
         "GST Settings",
@@ -495,7 +564,7 @@ class TestEWaybill(FrappeTestCase):
         )
 
         dn.reload()
-        dn.cancel()
+        self._cancel_and_run_portal_cancel(dn)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -549,7 +618,7 @@ class TestEWaybill(FrappeTestCase):
         )
 
         pr.reload()
-        pr.cancel()
+        self._cancel_and_run_portal_cancel(pr)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -604,7 +673,7 @@ class TestEWaybill(FrappeTestCase):
         )
 
         pi.reload()
-        pi.cancel()
+        self._cancel_and_run_portal_cancel(pi)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
@@ -655,7 +724,7 @@ class TestEWaybill(FrappeTestCase):
         )
 
         se.reload()
-        se.cancel()
+        self._cancel_and_run_portal_cancel(se)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)
