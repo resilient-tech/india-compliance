@@ -6,6 +6,7 @@ import frappe
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_default_address
+from frappe.model.meta import get_field_precision
 from frappe.model.utils import get_fetch_values
 from frappe.utils import cint, flt, format_date
 
@@ -1194,6 +1195,8 @@ class ItemGSTDetails:
             tax_differences[tax_type] += flt(tax_row.get(self.tax_amount_field()))
 
         last_item_with_tax = None
+        running_tax_total = defaultdict(float)
+        allocated_tax_total = defaultdict(float)
 
         for row in self.doc.get("_item_wise_tax_details") or []:
             item = row.get("item")
@@ -1213,6 +1216,10 @@ class ItemGSTDetails:
             if tax_amount and not tax_rate:
                 continue
 
+            tax_amount = self.diffuse_rounding_error(
+                tax_amount, tax_type, running_tax_total, allocated_tax_total
+            )
+
             tax_differences[tax_type] -= tax_amount
 
             amount = flt(item.get(tax_amount_field)) + tax_amount
@@ -1230,8 +1237,12 @@ class ItemGSTDetails:
         # Handle rounding errors
         if tax_differences and last_item_with_tax:
             for tax_type, difference in tax_differences.items():
-                amount = flt(last_item_with_tax.get(f"{tax_type}_amount") + difference, 5)
-                last_item_with_tax.set(f"{tax_type}_amount", amount)
+                tax_amount_field = f"{tax_type}_amount"
+                amount = flt(
+                    last_item_with_tax.get(tax_amount_field) + difference,
+                    self.precision.get(tax_amount_field),
+                )
+                last_item_with_tax.set(tax_amount_field, amount)
 
     def set_item_defaults(self):
         item_defaults = self.get_item_defaults()
@@ -1264,6 +1275,8 @@ class ItemGSTDetails:
         tax_map = frappe._dict()
         tax_differences = defaultdict(float)
         last_item_with_tax = None
+        running_tax_total = defaultdict(float)
+        allocated_tax_total = defaultdict(float)
 
         for row in self.doc.get("taxes"):
             if not self.is_gst_tax_row(row):
@@ -1296,7 +1309,12 @@ class ItemGSTDetails:
 
             item_taxes = tax_details[item.name]
             tax_rate = row.get("rate")
-            tax_amount = self.get_item_tax_amount(item, tax_rate, tax_type)
+            tax_amount = self.diffuse_rounding_error(
+                self.get_item_tax_amount(item, tax_rate, tax_type),
+                tax_type,
+                running_tax_total,
+                allocated_tax_total,
+            )
 
             tax_differences[tax_type] -= tax_amount
 
@@ -1313,7 +1331,11 @@ class ItemGSTDetails:
 
         if tax_differences and last_item_with_tax:
             for tax_type, difference_amount in tax_differences.items():
-                last_item_with_tax[f"{tax_type}_amount"] += flt(difference_amount, 5)
+                tax_amount_field = f"{tax_type}_amount"
+                last_item_with_tax[tax_amount_field] = flt(
+                    last_item_with_tax[tax_amount_field] + difference_amount,
+                    self.precision.get(tax_amount_field),
+                )
 
         self.item_tax_details = tax_details
 
@@ -1373,7 +1395,7 @@ class ItemGSTDetails:
             if not field:
                 continue
 
-            precisions[fieldname] = field.precision or default_precision
+            precisions[fieldname] = get_field_precision(field) or default_precision
 
         return precisions
 
@@ -1392,10 +1414,25 @@ class ItemGSTDetails:
         return tax_row.rate
 
     def get_item_tax_amount(self, item, tax_rate, tax):
-        precision = self.precision.get(f"{tax}_amount")
         multiplier = item.qty if tax == "cess_non_advol" else item.taxable_value / 100
 
-        return flt(tax_rate * multiplier, precision)
+        return tax_rate * multiplier
+
+    def diffuse_rounding_error(self, tax_amount, tax_type, running_tax_total, allocated_tax_total):
+        """
+        Round each item's tax amount as a delta of the running cumulative total, so that
+        per item rounding losses cancel out instead of accumulating into the last item.
+
+        Same approach as ERPNext's TaxesAndTotals.set_item_wise_tax.
+        """
+        precision = self.precision.get(f"{tax_type}_amount")
+
+        running_tax_total[tax_type] += tax_amount
+        new_total = flt(running_tax_total[tax_type], precision)
+        tax_amount = flt(new_total - allocated_tax_total[tax_type], precision)
+        allocated_tax_total[tax_type] = new_total
+
+        return tax_amount
 
     def get_tax_details(self, tax_row):
         if not getattr(tax_row, "__tax_details", None):
