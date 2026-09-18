@@ -343,9 +343,6 @@ class ISDDistributionInvoice(ISDController):
         return itc_surplus, expense_surplus
 
     def get_surplus_by_tax_type(self, surplus):
-        """Cess is levied separately from GST, so it gives up its own proportion of the surplus
-        instead of leaving the GST heads to absorb it. What is left is keyed as "gst" because the
-        rows and the taxes table can hold it under different heads; each side places it itself."""
         precision = self._source_item_precision
         total = abs(sum(sum_row_tax_by_type(row, "distributed") for row in self.source_items))
         if not total:
@@ -366,9 +363,6 @@ class ISDDistributionInvoice(ISDController):
         return surplus_by_tax_type
 
     def clamp_itc_surplus(self, surplus_by_tax_type):
-        # the rows hold the heads the credit converts to while the taxes table holds the source
-        # heads, so an intra-state purchase distributed inter-state is IGST on one side and
-        # CGST + SGST on the other: each side places the GST surplus under its own heads
         row_types = ("igst",) if is_inter_state_distribution(self) else ("cgst", "sgst")
         tax_types = ("cgst", "sgst") if flt(self._tax_amounts_by_head.get("cgst")) else ("igst",)
         tax_precision = self._tax_precision
