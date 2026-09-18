@@ -75,7 +75,13 @@ def download_queued_request():
         return toggle_scheduled_jobs(stopped=True)
 
     for doc in queued_requests:
-        frappe.enqueue(_download_queued_request, queue="long", doc=doc)
+        frappe.enqueue(
+            _download_queued_request,
+            queue="long",
+            doc=doc,
+            job_id=f"download_queued_request:{doc.name}",
+            deduplicate=True,
+        )
 
 
 def _download_queued_request(doc):
