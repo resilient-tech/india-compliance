@@ -123,13 +123,32 @@ Object.assign(india_compliance, {
         };
     },
 
-    async get_gstin_options(party, party_type = "Company") {
-        const { query, params } = india_compliance.get_gstin_query(party, party_type);
+    async get_gstin_options(party, party_type = "Company", exclude_isd = false) {
+        const { query, params } = india_compliance.get_gstin_query(party, party_type, exclude_isd);
         const { message } = await frappe.call({
             method: query,
             args: params,
         });
-        return message;
+        return message || [];
+    },
+
+    async set_gstin_filter_options(report, exclude_isd = false) {
+        const company = report.get_filter_value("company");
+        const gstin_field = report.get_filter("company_gstin");
+        const options = company
+            ? await india_compliance.get_gstin_options(company, "Company", exclude_isd)
+            : [];
+
+        gstin_field.set_data(options);
+
+        if (options.includes(gstin_field.get_value())) return;
+
+        if (options.length !== 1) {
+            gstin_field.set_value("");
+            return;
+        }
+
+        gstin_field.set_value(options[0]);
     },
 
     async get_account_options(company) {

@@ -16,9 +16,7 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
             "options": "Company",
             "reqd": 1,
             "default": frappe.defaults.get_user_default("Company"),
-            "on_change": report => {
-                report.set_filter_value("company_gstin", "");
-            }
+            "on_change": report => india_compliance.set_gstin_filter_options(report, true)
         },
         {
             "fieldname":"gst_hsn_code",
@@ -71,6 +69,8 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
 
     ],
     onload: (report) => {
+        india_compliance.set_gstin_filter_options(report, true);
+
         report.page.add_inner_button(__("Download JSON"), function () {
             var filters = report.get_values();
 
