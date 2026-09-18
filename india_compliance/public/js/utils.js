@@ -162,6 +162,8 @@ Object.assign(india_compliance, {
             ? await india_compliance.get_gstin_options(company, "Company", exclude_isd)
             : [];
 
+        if (report.get_filter_value("company") !== company) return;
+
         gstin_field.set_data(options);
 
         if (options.includes(gstin_field.get_value())) return;
