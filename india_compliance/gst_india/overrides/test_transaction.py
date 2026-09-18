@@ -1052,7 +1052,7 @@ class TestTransaction(FrappeTestCase):
 
         doc.save().reload()
 
-        precision = ItemGSTDetails.get_tax_amount_precisions(self.doctype).get("cgst_amount")
+        precision = doc.items[0].precision("cgst_amount")
         allowed_difference = 10**-precision
 
         for tax_row in doc.taxes:
