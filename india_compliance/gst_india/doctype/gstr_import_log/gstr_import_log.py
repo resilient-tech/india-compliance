@@ -20,31 +20,6 @@ def create_import_log(
     request_id=None,
     retry_after_mins=None,
 ):
-    frappe.enqueue(
-        _create_import_log,
-        queue="short",
-        now=frappe.flags.in_test,
-        gstin=gstin,
-        return_type=return_type,
-        return_period=return_period,
-        classification=classification,
-        data_not_found=data_not_found,
-        dont_redownload=dont_redownload,
-        request_id=request_id,
-        retry_after_mins=retry_after_mins,
-    )
-
-
-def _create_import_log(
-    gstin,
-    return_type,
-    return_period,
-    classification=None,
-    data_not_found=False,
-    dont_redownload=False,
-    request_id=None,
-    retry_after_mins=None,
-):
     doctype = "GSTR Import Log"
     fields = {
         "gstin": gstin,
