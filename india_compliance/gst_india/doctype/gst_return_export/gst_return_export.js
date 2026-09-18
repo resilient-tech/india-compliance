@@ -160,21 +160,22 @@ class ReturnExportView {
     }
 
     async refresh_view() {
-        if (!this.get_filters()) {
+        const render = (this.frm._render_seq = (this.frm._render_seq || 0) + 1);
+        const filters = this.get_filters();
+        if (!filters) {
             this.sync_status = null;
             this.remove_missing_sync_alert();
             return this.render_placeholder();
         }
 
-        // a later change may answer first; only the newest draws
-        const render = (this.frm._render_seq = (this.frm._render_seq || 0) + 1);
-        const [, { message: summary }] = await Promise.all([
-            this.fetch_sync_status(),
-            this.frm.call("get_summary", this.get_filters()),
+        const [{ message: sync_status }, { message: summary }] = await Promise.all([
+            this.frm.call("get_sync_status", filters),
+            this.frm.call("get_summary", filters),
         ]);
+        await this.frm._assets;
         if (render !== this.frm._render_seq) return;
 
-        await this.frm._assets;
+        this.sync_status = sync_status;
         this.render_missing_sync_alert();
         this.render_summary(summary);
     }
