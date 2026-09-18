@@ -56,12 +56,8 @@ def toggle_scheduled_jobs(stopped):
     )
 
     if scheduled_job:
-<<<<<<< HEAD
         frappe.db.set_value("Scheduled Job Type", scheduled_job, "stopped", stopped)
-=======
-        frappe.db.set_value("Scheduled Job Type", scheduled_job, "stopped", cint(stopped))
 
 
 def on_doctype_update():
     frappe.db.add_index("GSTR Import Log", ["gstin", "return_type", "return_period"])
->>>>>>> 986ad2f (perf: add composite index to GSTR Import Log)
