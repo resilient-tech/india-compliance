@@ -414,6 +414,7 @@ def download_gstr(
             return download_gstr_2b(company_gstin, periods)
 
     except Exception as e:
+        frappe.log_error(title="2A/2B Download Failed")
         frappe.publish_realtime(
             "gstr_2a_2b_download_message",
             {
