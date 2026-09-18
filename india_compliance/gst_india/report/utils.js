@@ -1,4 +1,4 @@
-function fetch_gstins(report) {
+function fetch_gstins(report, exclude_isd = false) {
     const company = report.get_filter_value("company");
     const gstin_field = report.get_filter("company_gstin");
 
@@ -13,6 +13,7 @@ function fetch_gstins(report) {
         async: false,
         args: {
             party: company,
+            exclude_isd,
         },
         callback(r) {
             r.message.unshift("");
