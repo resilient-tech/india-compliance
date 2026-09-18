@@ -1347,7 +1347,8 @@ def get_sync_versions(doctype, name, tool="Purchase Reconciliation Tool"):
         if not updater:
             continue
 
-        assert updater.get("doctype") == tool, f"version on {name} tagged {updater}, expected {tool}"
+        if updater.get("doctype") != tool:
+            raise AssertionError(f"version on {name} tagged {updater}, expected {tool}")
         synced.append({row[0]: row[2] for row in data["changed"]})
 
     return synced
