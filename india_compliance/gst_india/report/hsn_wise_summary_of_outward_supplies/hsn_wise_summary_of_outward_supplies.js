@@ -1,12 +1,6 @@
 // Copyright (c) 2016, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 /* eslint-disable */
-<<<<<<< HEAD
-
-{% include "india_compliance/gst_india/report/utils.js" %}
-
-=======
->>>>>>> e8a88b7 (refactor: enhance HSN report filters and validation for company GSTIN)
 frappe.query_reports["HSN-wise-summary of outward supplies"] = {
     "filters": [
         {

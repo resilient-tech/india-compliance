@@ -171,11 +171,7 @@ def process_hsn_data(invoices):
 
 @frappe.whitelist()
 def get_json(filters: str, report_name: str, data: str):
-<<<<<<< HEAD
-    from india_compliance.gst_india.report.gstr_1.gstr_1 import get_company_gstin_number
-=======
     frappe.has_permission("Sales Invoice", throw=True)
->>>>>>> e8a88b7 (refactor: enhance HSN report filters and validation for company GSTIN)
 
     filters = json.loads(filters)
     report_data = json.loads(data)
