@@ -26,6 +26,17 @@ frappe.query_reports["GSTR-1"] = {
             options: "Company",
             reqd: 1,
             default: frappe.defaults.get_user_default("Company"),
+            on_change: (report) => {
+                report.set_filter_value("company_address", "");
+                india_compliance.set_gstin_filter_options(report);
+            },
+            get_query: function () {
+                return {
+                    filters: {
+                        country: "India",
+                    },
+                };
+            },
         },
         {
             fieldname: "company_address",
@@ -34,18 +45,18 @@ frappe.query_reports["GSTR-1"] = {
             options: "Address",
             get_query: function () {
                 const company = frappe.query_report.get_filter_value("company");
-                if (company) {
-                    return {
-                        query: "frappe.contacts.doctype.address.address.address_query",
-                        filters: { link_doctype: "Company", link_name: company },
-                    };
-                }
+                return {
+                    query: "frappe.contacts.doctype.address.address.address_query",
+                    filters: { link_doctype: "Company", link_name: company },
+                };
             },
+            on_change: set_gstin_from_address,
         },
         {
             fieldname: "company_gstin",
             label: __("Company GSTIN"),
             fieldtype: "Autocomplete",
+            reqd: 1,
             get_query: function () {
                 const company = frappe.query_report.get_filter_value("company");
                 return india_compliance.get_gstin_query(company);
@@ -104,8 +115,33 @@ frappe.query_reports["GSTR-1"] = {
     onload(report) {
         create_download_buttons(report);
         show_gstr_1_beta_alert(report);
+        set_gstin_from_address(report, false);
     },
 };
+
+async function set_gstin_from_address(report, refresh = true) {
+    const company_address = report.get_filter_value("company_address");
+    const gstin_field = report.get_filter("company_gstin");
+
+    // GSTIN is determined by the address, wherever one is selected
+    gstin_field.df.read_only = company_address ? 1 : 0;
+    gstin_field.refresh();
+
+    // without an address the company's own GSTINs apply
+    if (!company_address) return india_compliance.set_gstin_filter_options(report, false, refresh);
+
+    const { message } = await frappe.db.get_value("Address", company_address, "gstin");
+
+    if (!message?.gstin) {
+        frappe.show_alert({
+            message: __("No GSTIN set in address {0}", [company_address.bold()]),
+            indicator: "orange",
+        });
+        return;
+    }
+
+    report.set_filter_value("company_gstin", message.gstin);
+}
 
 function create_download_buttons(report) {
     report.page.add_inner_button(
