@@ -20,11 +20,6 @@ class TestHSNWiseSummaryReport(IntegrationTestCase):
     def tearDownClass(cls):
         frappe.db.rollback()
 
-<<<<<<< HEAD
-=======
-    def setUp(self):
-        frappe.db.delete("Sales Invoice", filters={"company": "_Test Indian Registered Company"})
-
     def test_gstin_not_belonging_to_company_throws(self):
         filters = {
             "company": "_Test Indian Registered Company",
@@ -35,9 +30,6 @@ class TestHSNWiseSummaryReport(IntegrationTestCase):
 
         self.assertRaisesRegex(frappe.ValidationError, "does not belong to", run_report, filters)
 
-<<<<<<< HEAD
->>>>>>> e8a88b7 (refactor: enhance HSN report filters and validation for company GSTIN)
-=======
     def test_report_without_company_gstin_throws(self):
         filters = {
             "company": "_Test Indian Registered Company",
@@ -47,7 +39,6 @@ class TestHSNWiseSummaryReport(IntegrationTestCase):
 
         self.assertRaisesRegex(frappe.ValidationError, "Please select Company GSTIN", run_report, filters)
 
->>>>>>> 2494189 (test: add validation for missing Company GSTIN in HSN report)
     def test_hsn_summary_for_invoice_with_duplicate_items(self):
         si_one = create_sales_invoice(do_not_save=1, is_in_state=True, gst_hsn_code="61149090")
         append_item(si_one, frappe._dict(gst_hsn_code="61149090", uom="Box"))
