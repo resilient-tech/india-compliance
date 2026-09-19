@@ -45,12 +45,10 @@ frappe.query_reports["GSTR-1"] = {
             options: "Address",
             get_query: function () {
                 const company = frappe.query_report.get_filter_value("company");
-                if (company) {
-                    return {
-                        query: "frappe.contacts.doctype.address.address.address_query",
-                        filters: { link_doctype: "Company", link_name: company },
-                    };
-                }
+                return {
+                    query: "frappe.contacts.doctype.address.address.address_query",
+                    filters: { link_doctype: "Company", link_name: company },
+                };
             },
             on_change: set_gstin_from_address,
         },
