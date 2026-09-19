@@ -167,7 +167,10 @@ Object.assign(india_compliance, {
         const gstin_field = report.get_filter("company_gstin");
         gstin_field.set_data(options);
 
-        const gstin = options.length === 1 ? options[0] : "";
+        // keep a selection that is still valid, eg. restored from the url on reload
+        let gstin = gstin_field.get_value();
+        if (!options.includes(gstin)) gstin = options.length === 1 ? options[0] : "";
+
         if (gstin !== gstin_field.get_value()) {
             // frappe refreshes the report on its own when a filter is set
             report.set_filter_value("company_gstin", gstin);
