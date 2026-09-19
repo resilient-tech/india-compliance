@@ -413,13 +413,14 @@ Object.assign(india_compliance, {
         // Deferred is a deliberate user choice; only a period follows the posting date
         if (frm.doc.itc_claim_period === "Deferred") return;
 
-        const period = moment(frm.doc.posting_date).format("MMYYYY");
+        const posting_month = moment(frm.doc.posting_date);
+        const period = posting_month.format("MMYYYY");
         if (period === frm.doc.itc_claim_period) return;
 
         frm.set_value("itc_claim_period", period);
         frappe.show_alert(
             {
-                message: __("ITC Claim Period updated to {0}.", [period]),
+                message: __("ITC Claim Period updated to {0}.", [posting_month.format("MMM YYYY")]),
                 indicator: "blue",
             },
             7,
