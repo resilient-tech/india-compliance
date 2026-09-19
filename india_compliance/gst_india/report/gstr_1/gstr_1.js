@@ -115,11 +115,11 @@ frappe.query_reports["GSTR-1"] = {
     onload(report) {
         create_download_buttons(report);
         show_gstr_1_beta_alert(report);
-        set_gstin_from_address(report);
+        set_gstin_from_address(report, false);
     },
 };
 
-async function set_gstin_from_address(report) {
+async function set_gstin_from_address(report, refresh = true) {
     const company_address = report.get_filter_value("company_address");
     const gstin_field = report.get_filter("company_gstin");
 
@@ -128,7 +128,7 @@ async function set_gstin_from_address(report) {
     gstin_field.refresh();
 
     // without an address the company's own GSTINs apply
-    if (!company_address) return india_compliance.set_gstin_filter_options(report);
+    if (!company_address) return india_compliance.set_gstin_filter_options(report, false, refresh);
 
     const { message } = await frappe.db.get_value("Address", company_address, "gstin");
 
