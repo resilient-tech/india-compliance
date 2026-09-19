@@ -31,12 +31,8 @@ frappe.ui.form.on(DOCTYPE, {
         toggle_reverse_charge(frm);
     },
 
-    async posting_date(frm) {
-        await india_compliance.update_itc_claim_period(frm);
-    },
-
-    async company_gstin(frm) {
-        await india_compliance.update_itc_claim_period(frm);
+    posting_date(frm) {
+        india_compliance.update_itc_claim_period(frm);
     },
 
     async after_save(frm) {
