@@ -219,9 +219,9 @@ class TestPurchaseInvoice(FrappeTestCase):
 
         pinv.save()
 
-        self.assertEqual(
-            frappe.parse_json(frappe.message_log[-1]).get("message"),
+        self.assertIn(
             "Transaction Name must be 16 characters or fewer to meet GST requirements",
+            [frappe.parse_json(message).get("message") for message in frappe.message_log],
         )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
@@ -391,5 +391,15 @@ class TestPurchaseInvoice(FrappeTestCase):
             messages = frappe.as_json(frappe.message_log)
             self.assertIn(f"GSTR-3B is filed for {formatdate(posting_date, 'MMM YYYY')}", messages)
             self.assertIn("india_compliance.scroll_to_field", messages)
+
+            # a period set automatically on first save warns the same way
+            frappe.local.message_log = []
+            auto_pinv = create_purchase_invoice(do_not_submit=True)
+
+            self.assertEqual(auto_pinv.itc_claim_period, posting_period)
+            self.assertIn(
+                f"GSTR-3B is filed for {formatdate(posting_date, 'MMM YYYY')}",
+                frappe.as_json(frappe.message_log),
+            )
 
         self.assertEqual(pinv.docstatus, 1)

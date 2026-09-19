@@ -420,7 +420,7 @@ Object.assign(india_compliance, {
         frm.set_value("itc_claim_period", period);
         frappe.show_alert(
             {
-                message: __("ITC Claim Period updated to {0}.", [posting_month.format("MMM YYYY")]),
+                message: __("ITC Claim Period set to {0}.", [posting_month.format("MMM YYYY")]),
                 indicator: "blue",
             },
             7,

@@ -38,12 +38,12 @@ FILING_STATUS = {
 
 
 def set_or_validate_itc_claim_period(doc) -> None:
-    """Set ITC claim period if empty, otherwise validate it."""
+    """Set ITC claim period if empty, then validate it."""
 
     if not doc.get("itc_claim_period"):
         doc.itc_claim_period = _calculate_itc_claim_period(doc)
-    else:
-        validate_itc_claim_period(doc)
+
+    validate_itc_claim_period(doc)
 
 
 def set_itc_claim_period_on_match(
