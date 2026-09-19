@@ -2,14 +2,9 @@ import re
 from contextlib import contextmanager
 
 import frappe
-<<<<<<< HEAD
 from erpnext.accounts.doctype.account.test_account import create_account
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import add_months, getdate
-=======
-from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_months, formatdate, getdate
->>>>>>> 75037b3 (refactor: update GSTR-3B filed messages to use formatted date and improve user action)
 
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
