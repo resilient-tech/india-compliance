@@ -367,7 +367,7 @@ def validate_itc_claim_period(doc) -> None:
         primary_action={
             "label": _("Go to {0}").format(_(doc.meta.get_label("itc_claim_period"))),
             "client_action": "india_compliance.scroll_to_field",
-            "args": {"fieldname": "itc_claim_period"},
+            "args": {"doctype": doc.doctype, "fieldname": "itc_claim_period"},
         },
     )
 
