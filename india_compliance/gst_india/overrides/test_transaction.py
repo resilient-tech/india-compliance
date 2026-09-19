@@ -1212,6 +1212,32 @@ class TestTransaction(FrappeTestCase):
         self.assertEqual(doc.gst_category, "Overseas")
         self.assertEqual(doc.place_of_supply, "24-Gujarat")
 
+    def test_other_countries_place_of_supply_requires_overseas(self):
+        if not self.is_sales_doctype:
+            return
+
+        for customer, customer_address in (
+            ("_Test Unregistered Customer", None),
+            ("_Test Registered Customer", "_Test Registered Customer-Billing"),
+        ):
+            doc = create_transaction(
+                **{
+                    **self.transaction_details,
+                    "customer": customer,
+                    "party_name": customer,
+                },
+                customer_address=customer_address,
+                place_of_supply="96-Other Countries",
+                is_out_state=True,
+                do_not_save=True,
+            )
+
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"^(Place of Supply .*96-Other Countries.* is only allowed for GST Category .*)$"),
+                doc.save,
+            )
+
     def test_purchase_with_different_place_of_supply(self):
         if self.is_sales_doctype:
             return

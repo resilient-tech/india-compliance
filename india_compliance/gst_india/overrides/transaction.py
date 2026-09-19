@@ -621,6 +621,23 @@ def validate_place_of_supply(doc):
 
     if (
         doc.doctype in SALES_DOCTYPES
+        and doc.place_of_supply == "96-Other Countries"
+        and doc.gst_category != "Overseas"
+    ):
+        frappe.throw(
+            _(
+                "Place of Supply {0} is only allowed for GST Category {1}. Select a {2} outside India,"
+                " or choose a Place of Supply within India."
+            ).format(
+                bold("96-Other Countries"),
+                bold(_("Overseas")),
+                bold(_(doc.meta.get_label(_get_address_fields(doc.doctype).party_address_field))),
+            ),
+            title=_("Invalid Place of Supply"),
+        )
+
+    if (
+        doc.doctype in SALES_DOCTYPES
         and doc.gst_category == "Overseas"
         and doc.place_of_supply != "96-Other Countries"
         and (
