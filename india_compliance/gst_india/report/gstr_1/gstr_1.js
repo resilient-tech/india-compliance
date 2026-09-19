@@ -27,7 +27,8 @@ frappe.query_reports["GSTR-1"] = {
             reqd: 1,
             default: frappe.defaults.get_user_default("Company"),
             on_change: (report) => {
-                report.set_filter_value({ company_address: "", company_gstin: "" });
+                report.set_filter_value("company_address", "");
+                india_compliance.set_gstin_filter_options(report);
             },
         },
         {
@@ -121,7 +122,8 @@ async function set_gstin_from_address(report) {
     gstin_field.df.read_only = company_address ? 1 : 0;
     gstin_field.refresh();
 
-    if (!company_address) return;
+    // without an address the company's own GSTINs apply
+    if (!company_address) return india_compliance.set_gstin_filter_options(report);
 
     const { message } = await frappe.db.get_value("Address", company_address, "gstin");
 

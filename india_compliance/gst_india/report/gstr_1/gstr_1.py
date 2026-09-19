@@ -18,9 +18,9 @@ from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_
     get_hsn_wise_json_data,
 )
 from india_compliance.gst_india.utils import (
+    get_company_gstin_number,
     get_escaped_name,
     get_gst_accounts_by_type,
-    get_gstin_list,
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
@@ -2095,47 +2095,6 @@ def validate_and_get_company_gstin(filters):
     return get_company_gstin_number(
         filters["company"], filters.get("company_address"), filters.get("company_gstin")
     )
-
-
-def get_company_gstin_number(company, address=None, gstin=None, all_gstins=False):
-    if address:
-        linked_address = frappe.get_all(
-            "Address",
-            filters={"name": address, "link_doctype": "Company", "link_name": company},
-            pluck="gstin",
-        )
-
-        if not linked_address:
-            frappe.throw(
-                _("Address {0} is not linked to {1}").format(frappe.bold(address), frappe.bold(company))
-            )
-
-        if not linked_address[0]:
-            frappe.throw(_("Please set GSTIN in Address {0}").format(frappe.bold(address)))
-
-        return linked_address[0]
-
-    if gstin:
-        if gstin not in get_gstin_list(company):
-            frappe.throw(
-                _("GSTIN {0} does not belong to {1}").format(frappe.bold(gstin), frappe.bold(company))
-            )
-
-        return gstin
-
-    gstin = get_gstin_list(company)
-    if gstin and not all_gstins:
-        gstin = gstin[0]
-
-    if not gstin:
-        address = frappe.bold(address) if address else ""
-        frappe.throw(
-            _("Please set valid GSTIN No. in Company Address {} for company {}").format(
-                address, frappe.bold(company)
-            )
-        )
-
-    return gstin
 
 
 @frappe.whitelist()
