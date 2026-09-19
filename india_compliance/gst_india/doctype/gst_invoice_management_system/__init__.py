@@ -59,6 +59,7 @@ class InwardSupply:
                 "declared_sgst",
                 "declared_cess",
                 "remarks",
+                "return_period_2b",
             ],
         )
 
@@ -182,7 +183,7 @@ class PurchaseInvoice:
 
     def get_all(self, names=None, filters=None):
         dimension_fields = [*get_accounting_dimensions(), "cost_center", "project"]
-        additional_fields = [*dimension_fields, "posting_date"]
+        additional_fields = [*dimension_fields, "posting_date", "itc_claim_period"]
 
         query = self.get_query(filters=filters, additional_fields=additional_fields)
 
