@@ -143,14 +143,11 @@ Object.assign(india_compliance, {
 
         gstin_field.set_data(options);
 
-        if (options.includes(gstin_field.get_value())) return;
-
-        if (options.length !== 1) {
-            gstin_field.set_value("");
-            return;
+        if (!options.includes(gstin_field.get_value())) {
+            gstin_field.set_input(options.length === 1 ? options[0] : "");
         }
 
-        gstin_field.set_value(options[0]);
+        report.refresh();
     },
 
     async get_account_options(company) {
