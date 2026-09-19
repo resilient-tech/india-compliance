@@ -30,6 +30,13 @@ frappe.query_reports["GSTR-1"] = {
                 report.set_filter_value("company_address", "");
                 india_compliance.set_gstin_filter_options(report);
             },
+            get_query: function () {
+                return {
+                    filters: {
+                        country: "India",
+                    },
+                };
+            },
         },
         {
             fieldname: "company_address",
