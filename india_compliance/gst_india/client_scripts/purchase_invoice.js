@@ -51,7 +51,6 @@ frappe.ui.form.on(DOCTYPE, {
 
     refresh(frm) {
         india_compliance.set_reconciliation_status(frm, "bill_no");
-        india_compliance.set_itc_claim_period_status(frm);
         if (gst_settings.enable_e_waybill && gst_settings.enable_e_waybill_from_pi)
             show_sandbox_mode_indicator();
 
