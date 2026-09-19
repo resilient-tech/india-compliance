@@ -92,7 +92,7 @@ frappe.query_reports["GSTR-3B Details"] = {
     ],
 
     onload(report) {
-        india_compliance.set_gstin_filter_options(report);
+        india_compliance.set_gstin_filter_options(report, false, false);
     },
 
     // Override datatable hook for column total calculation
