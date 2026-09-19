@@ -626,9 +626,12 @@ def validate_place_of_supply(doc):
     ):
         frappe.throw(
             _(
-                "Place of Supply <strong>96-Other Countries</strong> is only allowed for GST Category"
-                " <strong>Overseas</strong>. Select an address outside India for the customer, or"
-                " choose a Place of Supply within India."
+                "Place of Supply {0} is only allowed for GST Category {1}. Select a {2} outside India,"
+                " or choose a Place of Supply within India."
+            ).format(
+                bold("96-Other Countries"),
+                bold(_("Overseas")),
+                bold(_(doc.meta.get_label(_get_address_fields(doc.doctype).party_address_field))),
             ),
             title=_("Invalid Place of Supply"),
         )
