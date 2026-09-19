@@ -462,6 +462,12 @@ Object.assign(india_compliance, {
         frm.get_field("itc_claim_period").format_for_input = (value) => value;
     },
 
+    // client_action target for msgprint primary actions, args: { fieldname }
+    scroll_to_field({ fieldname }) {
+        frappe.hide_msgprint(true);
+        cur_frm?.scroll_to_field(fieldname);
+    },
+
     set_reconciliation_status(frm, field) {
         if (!frm.doc.docstatus === 1 || !frm.doc.reconciliation_status) return;
 

@@ -13,6 +13,7 @@ from frappe.model.document import bulk_insert
 from frappe.query_builder.functions import IfNull
 from frappe.utils import (
     add_months,
+    formatdate,
     get_first_day,
     get_last_day,
     get_table_name,
@@ -358,10 +359,16 @@ def validate_itc_claim_period(doc) -> None:
     if not _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
         return
 
+    period_label = formatdate(period_to_date(doc.itc_claim_period), "MMM YYYY")
     frappe.msgprint(
-        _("GSTR-3B is already filed for ITC Claim Period {0}").format(doc.itc_claim_period),
+        _("GSTR-3B is filed for {0}.").format(period_label),
+        title=_("GSTR-3B Filed"),
         indicator="orange",
-        alert=True,
+        primary_action={
+            "label": _("Go to {0}").format(_(doc.meta.get_label("itc_claim_period"))),
+            "client_action": "india_compliance.scroll_to_field",
+            "args": {"fieldname": "itc_claim_period"},
+        },
     )
 
 
