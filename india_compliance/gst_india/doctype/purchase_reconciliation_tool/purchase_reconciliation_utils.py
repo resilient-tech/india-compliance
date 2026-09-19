@@ -1,10 +1,21 @@
 import frappe
+from frappe import _
+from frappe.core.doctype.version.version import get_diff
 
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
     ReconciledData,
 )
+from india_compliance.gst_india.utils import validate_company_access
 from india_compliance.gst_india.utils.itc_claim import set_itc_claim_period_on_match
+from india_compliance.utils.change_log_utils import add_versions_in_bulk
+
+SYNCABLE_FIELDS = ("bill_no", "bill_date")
+
+PURCHASE_FIELDNAME_MAP = {
+    "Purchase Invoice": {"bill_no": "bill_no", "bill_date": "bill_date"},
+    "Bill of Entry": {"bill_no": "bill_of_entry_no", "bill_date": "bill_of_entry_date"},
+}
 
 
 def link_documents(purchase_invoice_name, inward_supply_name, link_doctype):
@@ -110,6 +121,180 @@ def _unlink_documents(inward_supplies, exclude_from_reconciliation=False):
         .where(GSTR2.ims_action == "Accepted")
         .run()
     )
+
+
+def sync_details(data, fields, tool=None):
+    """
+    Copy bill no / date reported in 2A/2B onto the linked purchase document.
+    """
+    fields = _validate_sync_fields(fields)
+
+    inward_supply_names = {
+        row["inward_supply_name"]
+        for row in frappe.parse_json(data)
+        # nothing to sync where a side is missing
+        if row.get("inward_supply_name") and row.get("purchase_invoice_name")
+    }
+
+    if not inward_supply_names:
+        frappe.msgprint(_("Please select matched rows to sync"))
+        return
+
+    changes = _get_changes_to_sync(inward_supply_names, fields)
+
+    if not changes:
+        frappe.msgprint(_("No changes to sync"))
+        return
+
+    # validate permission before applying changes
+    for doctype, company in {(change.doctype, change.company) for change in changes}:
+        validate_company_access(company, doctype, perm="write")
+
+    changes = _apply_changes(changes, tool)
+
+    if not changes:
+        return
+
+    return (
+        [change.link_name for change in changes],
+        [change.name for change in changes],
+    )
+
+
+def _validate_sync_fields(fields):
+    if isinstance(fields, str):
+        fields = frappe.parse_json(fields)
+
+    if not fields:
+        frappe.throw(_("No fields to sync"))
+
+    if invalid := set(fields) - set(SYNCABLE_FIELDS):
+        frappe.throw(_("Not allowed to sync field {0}").format(frappe.bold(", ".join(sorted(invalid)))))
+
+    return [field for field in SYNCABLE_FIELDS if field in fields]
+
+
+def _get_changes_to_sync(inward_supply_names, fields):
+    """
+    return:[doctype, name (inward supply), link_name (purchase), {field_name: old_value...}, {field_name: new_value...}]
+    """
+    changes = []
+
+    for doctype, purchase_fieldnames in PURCHASE_FIELDNAME_MAP.items():
+        fieldname_map = {field: purchase_fieldnames[field] for field in fields}
+
+        for row in _get_linked_details(doctype, fieldname_map, inward_supply_names):
+            new_values = {
+                field_name: reported
+                for field_name in fieldname_map.values()
+                if (reported := row[f"reported_{field_name}"]) and row[field_name] != reported
+            }
+
+            if not new_values:
+                continue
+
+            row.new_values = new_values
+            row.old_values = {field_name: row[field_name] for field_name in new_values}
+            changes.append(row)
+
+    return changes
+
+
+def _get_linked_details(doctype, fieldname_map, inward_supply_names):
+    isup = frappe.qb.DocType("GST Inward Supply")
+    purchase = frappe.qb.DocType(doctype)
+
+    return (
+        frappe.qb.from_(isup)
+        .join(purchase)  # linked purchases only
+        .on(purchase.name == isup.link_name)
+        .select(
+            isup.link_doctype.as_("doctype"),
+            isup.name,
+            isup.link_name,
+            purchase.company,
+            # each field as booked, with what 2A/2B reports for it alongside
+            *(purchase[booked].as_(booked) for booked in fieldname_map.values()),
+            *(isup[field].as_(f"reported_{booked}") for field, booked in fieldname_map.items()),
+        )
+        # the stored link decides where the values are booked, not the client
+        .where(isup.link_doctype == doctype)
+        .where(isup.name.isin(inward_supply_names))
+        .run(as_dict=True)
+    )
+
+
+def _apply_changes(changes, tool=None):
+    applied = []
+    versions = []
+    skipped = []
+
+    for change in changes:
+        try:
+            previous = frappe.get_lazy_doc(change.doctype, change.link_name)
+            doc = frappe.get_lazy_doc(change.doctype, change.link_name, check_permission="write")
+            doc.update(change.new_values)
+
+            _fieldlevel_perm_check(doc, change.new_values)
+            _validate_purchase_invoice(doc, change.new_values)
+
+        # validation errors should not stop the sync process
+        except (frappe.ValidationError, frappe.PermissionError) as e:
+            frappe.clear_last_message()
+            frappe.log_error(
+                title=f"Sync failed for {change.doctype} {change.link_name}",
+                reference_doctype=change.doctype,
+                reference_name=change.link_name,
+            )
+            skipped.append((change, str(e)))
+            continue
+
+        doc.flags.updater_reference = {"doctype": tool, "docname": tool} if tool else None
+        versions.append((change.doctype, change.link_name, get_diff(previous, doc)))
+
+        frappe.db.set_value(change.doctype, change.link_name, change.new_values)
+        applied.append(change)
+
+    add_versions_in_bulk(versions)
+
+    if skipped:
+        frappe.msgprint(
+            [f"{frappe.bold(change.link_name)}: {message}" for change, message in skipped],
+            title=_("Skipped {0} of {1} documents").format(len(skipped), len(changes)),
+            indicator="orange",
+            as_list=True,
+        )
+
+    return applied
+
+
+def _fieldlevel_perm_check(doc, new_values):
+    if frappe.session.user == "Administrator":
+        return
+
+    restricted = [
+        field for field in new_values if not doc.has_permlevel_access_to(field, permission_type="write")
+    ]
+
+    if not restricted:
+        return
+
+    frappe.throw(
+        _("You are not permitted to update {0} in {1}.").format(
+            frappe.bold(", ".join(doc.meta.get_label(field) for field in restricted)),
+            _(doc.doctype),
+        ),
+        frappe.PermissionError,
+    )
+
+
+def _validate_purchase_invoice(doc, new_values):
+    if doc.doctype != "Purchase Invoice":
+        return
+
+    # only what the sync touches, else a booked inconsistency blocks an unrelated field
+    if "bill_no" in new_values:
+        doc.validate_supplier_invoice()
 
 
 def get_formatted_options(data):

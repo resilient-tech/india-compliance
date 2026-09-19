@@ -33,6 +33,7 @@ class Fields(Enum):
     SUPPLIER_GSTIN = "supplier_gstin"
     COMPANY_GSTIN = "company_gstin"
     BILL_NO = "bill_no"
+    BILL_DATE = "bill_date"
     PLACE_OF_SUPPLY = "place_of_supply"
     REVERSE_CHARGE = "is_reverse_charge"
     TAXABLE_VALUE = "taxable_value"
