@@ -69,19 +69,19 @@ frappe.ui.form.on("Bill of Entry", {
 
     async company(frm) {
         if (!frm.doc.company) {
-            await frm.set_value("company_gstin", "");
+            frm.set_value("company_gstin", "");
             return;
         }
 
         const options = await india_compliance.set_gstin_options(frm, false, true);
-        await frm.set_value("company_gstin", options[0]);
+        frm.set_value("company_gstin", options[0]);
 
         const { message } = await frappe.db.get_value("Company", frm.doc.company, [
             "default_customs_payable_account as customs_payable_account",
             "default_customs_expense_account as customs_expense_account",
         ]);
 
-        await frm.set_value(message);
+        frm.set_value(message);
     },
 
     get_items_from_purchase_invoice(frm) {
