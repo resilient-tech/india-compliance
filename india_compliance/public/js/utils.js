@@ -155,25 +155,28 @@ Object.assign(india_compliance, {
         return message || [];
     },
 
-    async set_gstin_filter_options(report, exclude_isd = false) {
+    async set_gstin_filter_options(report, exclude_isd = false, refresh = true) {
         const company = report.get_filter_value("company");
-        const gstin_field = report.get_filter("company_gstin");
         const options = company
             ? await india_compliance.get_gstin_options(company, "Company", exclude_isd)
             : [];
 
+        // company changed again while loading
         if (report.get_filter_value("company") !== company) return;
 
+        const gstin_field = report.get_filter("company_gstin");
         gstin_field.set_data(options);
 
-        if (options.includes(gstin_field.get_value())) return;
+        // keep a selection that is still valid, eg. restored from the url on reload
+        let gstin = gstin_field.get_value();
+        if (!options.includes(gstin)) gstin = options.length === 1 ? options[0] : "";
 
-        if (options.length !== 1) {
-            gstin_field.set_value("");
-            return;
+        if (gstin !== gstin_field.get_value()) {
+            // frappe refreshes the report on its own when a filter is set
+            report.set_filter_value("company_gstin", gstin);
+        } else if (refresh) {
+            report.refresh();
         }
-
-        gstin_field.set_value(options[0]);
     },
 
     async get_account_options(company) {

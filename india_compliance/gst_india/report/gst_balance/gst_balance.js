@@ -78,7 +78,7 @@ frappe.query_reports["GST Balance"] = {
 
     onload(report) {
         toggle_filters(report);
-        india_compliance.set_gstin_filter_options(report);
+        india_compliance.set_gstin_filter_options(report, false, false);
         add_custom_button_to_update_gstin(report);
     },
 };
