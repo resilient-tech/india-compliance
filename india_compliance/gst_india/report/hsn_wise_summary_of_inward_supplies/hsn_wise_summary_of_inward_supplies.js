@@ -62,6 +62,6 @@ frappe.query_reports["HSN-wise-summary of inward supplies"] = {
         },
     ],
     onload(report) {
-        india_compliance.set_gstin_filter_options(report);
+        india_compliance.set_gstin_filter_options(report, false, false);
     },
 };
