@@ -407,6 +407,26 @@ Object.assign(india_compliance, {
         frm.get_field("itc_claim_period").format_for_input = (value) => value;
     },
 
+    update_itc_claim_period(frm) {
+        if (frm.doc.docstatus !== 0 || !frm.doc.posting_date) return;
+
+        // Deferred is a deliberate user choice; only a period follows the posting date
+        if (frm.doc.itc_claim_period === "Deferred") return;
+
+        const posting_month = moment(frm.doc.posting_date);
+        const period = posting_month.format("MMYYYY");
+        if (period === frm.doc.itc_claim_period) return;
+
+        frm.set_value("itc_claim_period", period);
+        frappe.show_alert(
+            {
+                message: __("ITC Claim Period set to {0}.", [posting_month.format("MMM YYYY")]),
+                indicator: "blue",
+            },
+            7,
+        );
+    },
+
     // client_action target for msgprint primary actions, args: { doctype, fieldname }
     scroll_to_field({ doctype, fieldname }) {
         frappe.hide_msgprint(true);
