@@ -407,10 +407,10 @@ Object.assign(india_compliance, {
         frm.get_field("itc_claim_period").format_for_input = (value) => value;
     },
 
-    // client_action target for msgprint primary actions, args: { fieldname }
-    scroll_to_field({ fieldname }) {
+    // client_action target for msgprint primary actions, args: { doctype, fieldname }
+    scroll_to_field({ doctype, fieldname }) {
         frappe.hide_msgprint(true);
-        cur_frm?.scroll_to_field(fieldname);
+        frappe.views.formview[doctype]?.frm.scroll_to_field(fieldname);
     },
 
     set_reconciliation_status(frm, field) {
