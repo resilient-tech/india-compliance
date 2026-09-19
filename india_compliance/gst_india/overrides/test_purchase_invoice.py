@@ -2,9 +2,14 @@ import re
 from contextlib import contextmanager
 
 import frappe
+<<<<<<< HEAD
 from erpnext.accounts.doctype.account.test_account import create_account
 from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_months, getdate
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+from frappe.utils import add_months, formatdate, getdate
+>>>>>>> 75037b3 (refactor: update GSTR-3B filed messages to use formatted date and improve user action)
 
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
@@ -355,7 +360,7 @@ class TestPurchaseInvoice(FrappeTestCase):
             pinv.save()
 
             self.assertIn(
-                f"GSTR-3B is already filed for ITC Claim Period {next_period}",
+                f"GSTR-3B is filed for {formatdate(next_date, 'MMM YYYY')}",
                 frappe.as_json(frappe.message_log),
             )
 
@@ -374,7 +379,7 @@ class TestPurchaseInvoice(FrappeTestCase):
             frappe.local.message_log = []
             pinv.save()
 
-            self.assertNotIn("GSTR-3B is already filed", frappe.as_json(frappe.message_log))
+            self.assertNotIn("GSTR-3B is filed for", frappe.as_json(frappe.message_log))
 
     def test_submit_warns_if_draft_period_gets_filed_before_submit(self):
         """Submitting a draft must warn, not fail, if its claim period gets filed meanwhile."""
@@ -388,9 +393,8 @@ class TestPurchaseInvoice(FrappeTestCase):
             frappe.local.message_log = []
             pinv.submit()
 
-            self.assertIn(
-                f"GSTR-3B is already filed for ITC Claim Period {posting_period}",
-                frappe.as_json(frappe.message_log),
-            )
+            messages = frappe.as_json(frappe.message_log)
+            self.assertIn(f"GSTR-3B is filed for {formatdate(posting_date, 'MMM YYYY')}", messages)
+            self.assertIn("india_compliance.scroll_to_field", messages)
 
         self.assertEqual(pinv.docstatus, 1)
