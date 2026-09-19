@@ -1234,7 +1234,7 @@ class TestTransaction(FrappeTestCase):
 
             self.assertRaisesRegex(
                 frappe.exceptions.ValidationError,
-                re.compile(r"^(Place of Supply .*96-Other Countries.* only valid when GST Category is .*)$"),
+                re.compile(r"^(Place of Supply .*96-Other Countries.* is only allowed for GST Category .*)$"),
                 doc.save,
             )
 
