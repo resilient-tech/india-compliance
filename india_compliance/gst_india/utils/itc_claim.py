@@ -38,12 +38,12 @@ FILING_STATUS = {
 
 
 def set_or_validate_itc_claim_period(doc) -> None:
-    """Set ITC claim period if empty, otherwise validate it."""
+    """Set ITC claim period if empty, then validate it."""
 
     if not doc.get("itc_claim_period"):
         doc.itc_claim_period = _calculate_itc_claim_period(doc)
-    else:
-        validate_itc_claim_period(doc)
+
+    validate_itc_claim_period(doc)
 
 
 def set_itc_claim_period_on_match(
@@ -237,10 +237,6 @@ def compare_periods(p1: str, p2: str) -> int:
     return (key1 > key2) - (key1 < key2)
 
 
-def _next_period(period: str) -> str:
-    return format_period(add_months(period_to_date(period), 1))
-
-
 def _max_period(p1: str, p2: str) -> str:
     return max(p1, p2, key=period_sort_key)
 
@@ -296,23 +292,6 @@ def _get_filed_periods(gstin: str) -> set[str]:
     )
 
 
-def _get_next_unfiled_period(
-    gstin: str,
-    start_period: str,
-    posting_date: str | datetime.date | datetime.datetime,
-    filed: set[str] | None = None,
-) -> str | None:
-    deadline = _get_section_16_4_deadline(posting_date)
-    is_filed = (lambda p: p in filed) if filed else (lambda p: _is_gstr3b_filed(gstin, p))
-
-    current = start_period
-    while compare_periods(current, deadline) <= 0:
-        if not is_filed(current):
-            return current
-        current = _next_period(current)
-    return None
-
-
 # =============================================================================
 # ITC Calculation
 # =============================================================================
@@ -349,7 +328,7 @@ def _calculate_itc_claim_period(
     if inward_supply and inward_supply.get("return_period_2b"):
         default_period = _max_period(posting_period, inward_supply.return_period_2b)
 
-    return _get_next_unfiled_period(doc.company_gstin, default_period, doc.posting_date, filed)
+    return default_period
 
 
 def validate_itc_claim_period(doc) -> None:

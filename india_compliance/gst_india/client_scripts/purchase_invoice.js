@@ -31,6 +31,10 @@ frappe.ui.form.on(DOCTYPE, {
         toggle_reverse_charge(frm);
     },
 
+    posting_date(frm) {
+        india_compliance.update_itc_claim_period(frm);
+    },
+
     async after_save(frm) {
         if (
             frm.doc.supplier_address ||
