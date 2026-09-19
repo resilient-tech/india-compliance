@@ -7,6 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "gstin",
+  "legal_name",
+  "trade_name",
   "registration_date",
   "status",
   "transporter_id_status",
@@ -26,6 +28,18 @@
    "label": "GSTIN",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "legal_name",
+   "fieldtype": "Data",
+   "label": "Legal Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "trade_name",
+   "fieldtype": "Data",
+   "label": "Trade Name",
+   "read_only": 1
   },
   {
    "fieldname": "status",

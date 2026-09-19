@@ -718,6 +718,29 @@ Object.assign(india_compliance, {
     get_inward_subcategory_options(sub_section) {
         return Object.values(INWARD_SECTION_MAPPING[sub_section] || {}).flat();
     },
+
+    fiscal_year_start(date) {
+        const month = moment(date);
+        return moment([month.month() >= 3 ? month.year() : month.year() - 1, 3, 1]).format("YYYY-MM-DD");
+    },
+
+    setup_month_range_fields(frm, from_name, to_name, bounds = {}) {
+        const { first, latest = frappe.datetime.get_today() } = bounds;
+        const to_obj = (value) => (value ? frappe.datetime.str_to_obj(value) : false);
+        const from_ctrl = frm.fields_dict[from_name];
+        const to_ctrl = frm.fields_dict[to_name];
+
+        for (const field of [from_ctrl, to_ctrl]) {
+            field.parse = (text) => {
+                const date = moment(text, ["MM-YYYY", "YYYY-MM-DD"], true);
+                return date.isValid() ? date.startOf("month").format("YYYY-MM-DD") : "";
+            };
+            field.format_for_input = (value) => (value ? moment(value).format("MM-YYYY") : "");
+        }
+
+        from_ctrl.datepicker?.update({ minDate: to_obj(first), maxDate: to_obj(frm.doc[to_name] || latest) });
+        to_ctrl.datepicker?.update({ minDate: to_obj(frm.doc[from_name] || first), maxDate: to_obj(latest) });
+    },
 });
 
 function get_doc_details(doc) {

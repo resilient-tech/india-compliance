@@ -38,7 +38,7 @@ class GSTR2b(GSTR):
         return details
 
     def get_items(self, document):
-        return [take(line, ITEM_KEYS) for line in document.get(raw2b.ITEMS, [])]
+        return [take(line, ITEM_KEYS) for line in document.get(raw2b.ITEMS) or []]
 
     def get_transaction(self, details, items=None):
         return super().get_transaction(details, [] if items is None else items)
