@@ -529,6 +529,11 @@ class TestTransaction(IntegrationTestCase):
             doc.save,
         )
 
+        doc.reload()
+        doc.driver_name = "Test Driver"
+        doc.save()
+        self.assertEqual(frappe.db.get_value(doc.doctype, doc.name, "driver_name"), "Test Driver")
+
         mark_e_waybill_as_cancelled(
             doc.doctype,
             doc.name,

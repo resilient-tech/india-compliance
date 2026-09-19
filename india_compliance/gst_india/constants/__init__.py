@@ -54,6 +54,8 @@ TRANSPORTER_FIELDS = (
     "gst_vehicle_type",
 )
 
+LOCAL_ONLY_TRANSPORTER_FIELDS = ("transporter_name", "driver", "driver_name")
+
 
 # Map for e-Invoice Supply Type
 GST_CATEGORIES = {
