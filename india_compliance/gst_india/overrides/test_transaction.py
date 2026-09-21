@@ -960,6 +960,24 @@ class TestTransaction(FrappeTestCase):
         self.assertEqual(doc.supplier_gstin, "9917SGP29001OST")
         self.assertTrue(doc.taxes)
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_sales_to_oidar_is_blocked(self):
+        """An OIDAR registration is outward-supply only, so it cannot be a customer GSTIN"""
+        if not self.is_sales_doctype:
+            return
+
+        details = self.transaction_details.copy()
+        details["customer"] = "_Test OIDAR Customer"
+        if self.doctype == "Quotation":
+            details["party_name"] = "_Test OIDAR Customer"
+
+        doc = create_transaction(**details, item_code="_Test Service Item", do_not_save=True)
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Non-Resident Online Services Provider.*)$"),
+            doc.insert,
+        )
 
 >>>>>>> 581e9e2 (test: add OIDAR supplier and transaction tests, including GSTIN validation and ITC classification)
     def test_invalid_charge_type_as_actual(self):
