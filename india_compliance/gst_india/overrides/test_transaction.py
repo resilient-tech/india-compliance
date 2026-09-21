@@ -50,6 +50,7 @@ from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
     create_purchase_invoice,
+    create_sales_invoice,
     create_transaction,
 )
 
@@ -993,6 +994,32 @@ class TestTransaction(IntegrationTestCase):
             frappe.exceptions.ValidationError,
             re.compile(r"^(.*Non-Resident Online Services Provider.*)$"),
             doc.insert,
+        )
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_sales_to_oidar_is_blocked_after_submit(self):
+        """The address is editable after submit, so the OIDAR guard must run there too.
+
+        Swapping to an OIDAR billing address on a submitted document would otherwise put
+        a 99...OST GSTIN into GSTR-1 B2B as `ctin`.
+        """
+        if self.doctype != "Sales Invoice":
+            return
+
+        doc = create_sales_invoice(
+            customer="_Test Registered Customer",
+            shipping_address_name="_Test Registered Customer-Billing",
+            item_code="_Test Service Item",
+            is_in_state=True,
+        )
+        self.assertEqual(doc.docstatus, 1)
+
+        doc.customer_address = "_Test OIDAR Customer-Billing"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Non-Resident Online Services Provider.*)$"),
+            doc.save,
         )
 
     def test_invalid_charge_type_as_actual(self):
