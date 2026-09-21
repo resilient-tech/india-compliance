@@ -1,6 +1,9 @@
 frappe.provide("reconciliation");
 
 Object.assign(reconciliation, {
+    // fields that can be synced from 2a/2b to invoice
+    SYNCABLE_FIELDS: ["bill_no", "bill_date"],
+
     // checked rows of the open tab, as invoices. a summary row stands for many
     get_affected_rows(frm) {
         const _class = frm.reconciliation_tabs;
@@ -62,8 +65,6 @@ Object.assign(reconciliation, {
         _class.refresh(new_data);
         reconciliation.after_successful_action(tab);
     },
-
-    SYNCABLE_FIELDS: ["bill_no", "bill_date"],
 
     async sync_details(frm, selected_rows, fields) {
         const _class = frm.reconciliation_tabs;
@@ -259,7 +260,7 @@ Object.assign(reconciliation, {
     after_successful_action(tab, message) {
         if (tab) tab.datatable.clear_checked_items();
         frappe.show_alert({
-            message: message || "Action applied successfully",
+            message: message || __("Action applied successfully"),
             indicator: "green",
         });
     },

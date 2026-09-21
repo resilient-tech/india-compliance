@@ -1,10 +1,17 @@
+from collections.abc import Iterable
+
 import frappe
 from frappe import _
 from frappe.model.document import bulk_insert
 from frappe.utils import escape_html, get_date_str, get_fullname, random_string
 
 
-def add_comments_in_bulk(comments, comment_type="Info", user=None, timestamp=None):
+def add_comments_in_bulk(
+    comments: Iterable[tuple[str, str, str | None]],
+    comment_type: str = "Info",
+    user: str | None = None,
+    timestamp: str | None = None,
+) -> None:
     """
     Insert timeline comments for many documents at once.
 
@@ -15,6 +22,10 @@ def add_comments_in_bulk(comments, comment_type="Info", user=None, timestamp=Non
 
     Bypasses all hooks, as bulk_insert does. Use only for informational comments.
     """
+
+    if not comments:
+        return
+
     user = user or frappe.session.user
     timestamp = timestamp or frappe.utils.now()
 
@@ -30,11 +41,11 @@ def add_comments_in_bulk(comments, comment_type="Info", user=None, timestamp=Non
                 "modified_by": user,
                 "owner": user,
                 "reference_doctype": doctype,
-                "reference_name": name,
+                "reference_name": docname,
                 "content": content,
             }
         )
-        for doctype, name, content in comments
+        for doctype, docname, content in comments
         if content
     ]
 
@@ -44,7 +55,16 @@ def add_comments_in_bulk(comments, comment_type="Info", user=None, timestamp=Non
     bulk_insert("Comment", comment_docs, ignore_duplicates=True)
 
 
-def add_versions_in_bulk(versions, user=None, timestamp=None):
+def add_versions_in_bulk(
+    versions: Iterable[tuple[str, str, dict | None]],
+    user: str | None = None,
+    timestamp: str | None = None,
+) -> None:
+    """create version docs in bulk"""
+
+    if not versions:
+        return
+
     user = user or frappe.session.user
     timestamp = timestamp or frappe.utils.now()
 

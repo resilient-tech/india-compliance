@@ -10,6 +10,7 @@ from india_compliance.gst_india.utils import validate_company_access
 from india_compliance.gst_india.utils.itc_claim import set_itc_claim_period_on_match
 from india_compliance.utils.change_log_utils import add_versions_in_bulk
 
+# same as client side public/js/reconciliation_components/actions.js
 SYNCABLE_FIELDS = ("bill_no", "bill_date")
 
 PURCHASE_FIELDNAME_MAP = {
@@ -127,7 +128,12 @@ def sync_details(data, fields, tool=None):
     """
     Copy bill no / date reported in 2A/2B onto the linked purchase document.
     """
+    if isinstance(fields, str):
+        fields = frappe.parse_json(fields)
     fields = _validate_sync_fields(fields)
+
+    if not (fields or data):
+        return
 
     inward_supply_names = {
         row["inward_supply_name"]
@@ -151,6 +157,7 @@ def sync_details(data, fields, tool=None):
         validate_company_access(company, doctype, perm="write")
 
     changes = _apply_changes(changes, tool)
+    # some changes can get skipped
 
     if not changes:
         return
@@ -162,8 +169,8 @@ def sync_details(data, fields, tool=None):
 
 
 def _validate_sync_fields(fields):
-    if isinstance(fields, str):
-        fields = frappe.parse_json(fields)
+    if not isinstance(fields, list):
+        frappe.throw(_("Fields to sync must be a list"))
 
     if not fields:
         frappe.throw(_("No fields to sync"))

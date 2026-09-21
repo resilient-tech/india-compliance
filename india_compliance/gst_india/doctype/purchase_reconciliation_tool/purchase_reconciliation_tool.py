@@ -288,7 +288,9 @@ class PurchaseReconciliationTool(Document):
     def sync_details(self, data: str | list, fields: str | list | None = None):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        if not (synced := _sync_details(data, fields, tool=self.doctype)):
+        synced = _sync_details(data, fields, tool=self.doctype)
+
+        if not synced:
             return
 
         purchases, inward_supplies = synced
