@@ -26,6 +26,13 @@ on:
         version-16,
       ]
 
+    paths-ignore:
+      - "**.css"
+      - "**.js"
+      - "**.md"
+      - "**.html"
+      - "**.csv"
+
   workflow_dispatch:
     inputs:
       frappe_remote:
