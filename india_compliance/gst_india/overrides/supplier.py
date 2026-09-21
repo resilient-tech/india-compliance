@@ -3,7 +3,7 @@ from frappe import _, bold
 from frappe.utils import cint
 
 from india_compliance.gst_india.constants import REGISTERED
-from india_compliance.gst_india.utils import validate_gstin
+from india_compliance.gst_india.utils import get_pan_from_gstin, validate_gstin
 
 
 def validate(doc, method=None):
@@ -32,8 +32,8 @@ def validate_gst_transporter_id(doc):
             )
             return
 
-        pan_from_transporter_id = doc.gst_transporter_id[2:12]
-        pan_from_gstin = doc.gstin[2:12]
+        pan_from_transporter_id = get_pan_from_gstin(doc.gst_transporter_id)
+        pan_from_gstin = get_pan_from_gstin(doc.gstin)
 
         if pan_from_transporter_id != pan_from_gstin:
             frappe.throw(
