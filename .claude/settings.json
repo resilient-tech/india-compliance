@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git --no-pager diff:*)",
+      "Bash(git --no-pager log:*)",
+      "Bash(git --no-pager show:*)",
+      "Bash(git branch --show-current)",
+      "Bash(git branch --list)",
+      "Bash(git switch -c:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git worktree list)",
+      "Bash(bench --site * list-apps)",
+      "Bash(bench build --app india_compliance:*)"
+    ],
+    "ask": [
+      "Bash(git commit)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(git push:*)",
+      "Bash(gh pr)",
+      "Bash(gh pr:*)"
+    ]
+  }
+}
