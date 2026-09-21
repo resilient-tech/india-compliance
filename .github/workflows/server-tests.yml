@@ -80,14 +80,15 @@ jobs:
       - uses: dorny/paths-filter@v4
         id: filter
         with:
+          predicate-quantifier: every
           filters: |
             backend:
               - '**'
-              - '!**.css'
-              - '!**.js'
-              - '!**.md'
-              - '!**.html'
-              - '!**.csv'
+              - '!**/*.css'
+              - '!**/*.js'
+              - '!**/*.md'
+              - '!**/*.html'
+              - '!**/*.csv'
 
   tests:
     runs-on: ubuntu-latest
