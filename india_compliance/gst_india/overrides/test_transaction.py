@@ -908,6 +908,7 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
+<<<<<<< HEAD
     def test_non_gst_transaction_with_gst_accounts(self):
         doc = create_transaction(
             **self.transaction_details,
@@ -924,6 +925,40 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
+=======
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_purchase_from_oidar_supplier(self):
+        """An OIDAR supplier holds a GSTIN, but tax is payable under Reverse Charge"""
+        if self.is_sales_doctype:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            supplier="_Test OIDAR Supplier",
+            item_code="_Test Service Item",
+            is_out_state=True,
+            do_not_save=True,
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Non-Resident Online Services Provider.*)$"),
+            doc.insert,
+        )
+
+        # the same purchase is valid under Reverse Charge
+        doc = create_transaction(
+            **self.transaction_details,
+            supplier="_Test OIDAR Supplier",
+            item_code="_Test Service Item",
+            is_out_state_rcm=True,
+            is_reverse_charge=1,
+        )
+
+        self.assertEqual(doc.gst_category, "Overseas")
+        self.assertEqual(doc.supplier_gstin, "9917SGP29001OST")
+
+>>>>>>> 581e9e2 (test: add OIDAR supplier and transaction tests, including GSTIN validation and ITC classification)
     def test_invalid_charge_type_as_actual(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
         _append_taxes(doc, ["CGST", "SGST"], charge_type="Actual", tax_amount=9)
