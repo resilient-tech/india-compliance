@@ -11,3 +11,4 @@ under `.claude/skills/` and a row in the table below.
 ## Skills
 
 - Adding or changing behaviour, form layout, or tests → `ic-feature-creation`
+- Writing or changing any code, comment, or name → `ic-house-style`
