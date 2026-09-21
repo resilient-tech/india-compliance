@@ -2,7 +2,6 @@
 name: ic-feature-creation
 description: House rules for building a feature in the india_compliance app — server code shape, Desk form layout, and how tests are written. Use whenever the task adds or changes behaviour in this app — a new doctype or custom field, an override on an ERPNext doctype, a client script, a GST return section or payload mapping, an e-waybill/e-invoice change, or the tests for any of those. Reach for it before writing the first line, since the layout order, `@property` vs helper, patches.txt bump and whole-workflow test shape are all decided up front and expensive to retrofit.
 ---
-
 # Building a feature in india_compliance
 
 The app extends ERPNext, never forks it. Every rule below is checkable — the
@@ -19,11 +18,8 @@ for where something is hooked up.
   `gst_india/utils/gstr_2/sections/isd.py` — `KEYS_2A` dict, then `take`.
 - **Never a raw string key.** Field names and code lists come from the constant
   classes in `gst_returns/fields/` and `gst_india/constants/`.
-- `gst_returns/` stays frappe-free. `gst_returns/test_frappe_free.py` fails the
-  build otherwise.
-- **Extend, don't fork.** Change ERPNext or Frappe behaviour with a
-  `doc_events` / `override_*` entry in `hooks.py` pointing at
-  `gst_india/overrides/`. Never edit another app.
+- **Extend, don't fork.** Change ERPNext or Frappe behaviour with a `doc_events` / `override_*` entry in `hooks.py` pointing at
+- `gst_india/overrides/`. Never edit another app.
 - **Derived value → `@property`** on the controller, not a loose helper. Many
   derived fields on one class → phantom fields instead of many properties
   (`EWaybillData`, `GSTTransactionData`).
@@ -34,6 +30,7 @@ for where something is hooked up.
   check.
 - **Custom field or property setter → bump the numbered patch** in
   `patches.txt`, or existing sites never receive it.
+- Reuse Exsisting Utilities instead of creating your own whenever possible.
 
 ## UI
 
@@ -41,11 +38,8 @@ for where something is hooked up.
   taxes. The taxes table cannot sit above the items table.
 - **Workflow unknown → ask before laying out the form.** Don't guess the order
   the user works in.
-- **Match the sibling doctype.** Asset Movement looks and behaves like Stock
-  Entry — copy its sections, actions and wording rather than inventing a second
-  style.
 - Client scripts: one file per doctype in `gst_india/client_scripts/`,
-  `const DOCTYPE = "..."` at the top, thin handlers, logic in functions below.
+- `const DOCTYPE = "..."` at the top, thin handlers, logic in functions below.
 - **`doctype_js` list order is load order.** A script calling
   `setup_e_waybill_actions` must be listed after the one that defines it, or
   the form dies with a `ReferenceError` and registers no handlers.
