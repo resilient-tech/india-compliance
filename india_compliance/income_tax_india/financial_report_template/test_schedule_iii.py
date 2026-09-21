@@ -12,6 +12,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 >>>>>>> d9b1ada (fix: show correct COGS  in p&l report)
 
+from india_compliance.gst_india.utils.tests import create_purchase_invoice, create_sales_invoice
 from india_compliance.tests.erpnext_test_utils import (
     create_account as _create_account,
 )
@@ -173,56 +174,54 @@ class TestScheduleIIITemplates(FrappeTestCase):
         # TOTAL_EXPENSES = 3000+500+800+1000 = 5300
         self.assertEqual(self.get_row_total(data, "XV. Profit (Loss) for the Period (XI + XIV)"), -6200)
 
-    def test_profit_and_loss_schedule_iii_ties_back_to_ledger(self):
+    def test_profit_and_loss_schedule_iii_stock_lines(self):
         """
-        Under perpetual inventory the ledger COGS already nets the inventory movement, so
-        "1. Cost of Materials Consumed" is back-solved from COGS. Adding it to
-        "3. Changes in Inventories" must return the ledger COGS, leaving no VARIANCE.
+        Tests the stock lines of P&L (Schedule III) under perpetual inventory.
+
+        ERPNext cannot split raw material from stock-in-trade in the GL: consumption moves
+        value stock-to-stock and every warehouse account is just "Stock Assets". So:
+
+        - Cost of Materials Consumed carries no value
+        - Changes in Inventories is the period's stock movement, sign reversed
+        - Purchases of Stock-in-Trade is back-solved as COGS - Changes in Inventories
+        - the two together equal COGS as booked, so the statement ties to the GL
+
+        Expenses are debits, so they come out positive (the report is run with accumulated
+        values off, the P&L report's default).
         """
-        # account_type is left unset: Journal Entries cannot post to "Stock" accounts
-        stock_acc = self.create_account("Stock In Hand Test", "Stock Assets", "Asset", "Stock Assets")
-        cogs_acc = self.create_account(
-            "Cost of Goods Sold Test",
-            "Stock Expenses",
-            "Expense",
-            "Cost of Goods Sold",
-            "Cost of Goods Sold",
+        # opening stock: 10 x 100 received before the report period
+        create_purchase_invoice(
+            update_stock=1, set_posting_time=1, posting_date=add_days(self.test_date, -1), qty=10, rate=100
         )
-
-        cash = self.cash_account
-        args = {
-            "company": self.company,
-            "cost_center": self.cost_center,
-            "posting_date": self.test_date,
-            "submit": True,
-        }
-
-        # opening stock of 5000, a further 3000 purchased and 2000 sold during the period
-        make_journal_entry(stock_acc, cash, 5000, **{**args, "posting_date": add_days(self.test_date, -1)})
-        make_journal_entry(stock_acc, cash, 3000, **args)
-        make_journal_entry(cogs_acc, stock_acc, 2000, **args)
+        # purchases in the period: 5 x 100
+        create_purchase_invoice(update_stock=1, qty=5, rate=100)
+        # sale in the period: 8 units at valuation 100 -> COGS 800, closing stock 700
+        create_sales_invoice(update_stock=1, qty=8, rate=150)
 
         data = self.execute_report("Standard Profit and Loss (Schedule III)")
 
-        # stock grew from 5000 to 6000
-        self.assertEqual(self.get_row_total(data, CHANGES_IN_INVENTORIES), -1000)
+        # raw material cannot be valued separately from stock-in-trade, so the line stays empty
+        self.assertEqual(self.get_row_total(data, "1. Cost of Materials Consumed"), 0)
 
-        # COGS of 2000 less the 1000 retained in stock leaves the 3000 purchased
-        self.assertEqual(self.get_row_total(data, "1. Cost of Materials Consumed"), 3000)
+        # stock was drawn down from 1000 to 700, and a drawdown is an expense
+        self.assertEqual(self.get_row_total(data, CHANGES_IN_INVENTORIES), 300)
+
+        # COGS of 800 less the 300 drawn out of stock leaves the 500 purchased
+        self.assertEqual(self.get_row_total(data, "2. Purchases of Stock in Trade"), 500)
 
         # the VARIANCE row hides itself only when the report ties back to the ledger
         self.assertIsNone(self.get_row_total(data, VARIANCE))
 
-        # consume a further 4000, so stock now falls from the opening 5000 to 2000
-        make_journal_entry(cogs_acc, stock_acc, 4000, **args)
+        # buy a further 10 x 100, so stock closes at 1700, above the opening 1000
+        create_purchase_invoice(update_stock=1, qty=10, rate=100)
 
         data = self.execute_report("Standard Profit and Loss (Schedule III)")
 
-        # the line flips sign once inventory is drawn down rather than built up
-        self.assertEqual(self.get_row_total(data, CHANGES_IN_INVENTORIES), 3000)
+        # the line flips sign once inventory is built up rather than drawn down
+        self.assertEqual(self.get_row_total(data, CHANGES_IN_INVENTORIES), -700)
 
-        # purchases are unchanged, so back-solving must still return the same 3000
-        self.assertEqual(self.get_row_total(data, "1. Cost of Materials Consumed"), 3000)
+        # back-solving still returns every rupee purchased during the period
+        self.assertEqual(self.get_row_total(data, "2. Purchases of Stock in Trade"), 1500)
 
         self.assertIsNone(self.get_row_total(data, VARIANCE))
 
