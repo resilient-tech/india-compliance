@@ -117,7 +117,7 @@ def upsert_turnover_record(company, gstin, gst_state, amount, posting_date=None)
 
 
 def get_turnover_from_sales_invoices(gstin, from_date, to_date, company=None):
-    """Used by distribution dialog when no Turnover Records exists"""
+    """used by patch create_turnover_records_for_isd_recipients"""
 
     if not gstin:
         return 0

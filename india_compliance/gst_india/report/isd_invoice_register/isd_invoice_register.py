@@ -9,11 +9,24 @@ from frappe.query_builder.functions import Substring, Sum
 from pypika.terms import Case
 
 from india_compliance.gst_india.constants import IMPORT_GST_CATEGORIES, STATE_NUMBERS
-from india_compliance.gst_india.utils import validate_common_report_filters
 
 DISTRIBUTION_DOCTYPE = "ISD Distribution Invoice"
 RECIPIENT_DOCTYPE = "ISD Recipient Invoice"
 SOURCE_ITEM_DOCTYPE = "ISD Source Item"
+
+
+def validate_common_report_filters(filters):
+    """Validate filters of this report"""
+    filters = frappe._dict(filters or {})
+
+    if not filters.company:
+        frappe.throw(_("Company is mandatory"), title=_("Invalid Filter"))
+
+    if not filters.from_date or not filters.to_date:
+        frappe.throw(_("From Date & To Date is mandatory"), title=_("Invalid Filter"))
+
+    if filters.from_date > filters.to_date:
+        frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
 
 
 def get_pos_for_state(state):
