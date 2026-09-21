@@ -32,6 +32,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     fetch_and_prefill_grid();
                 },
             },
+            { fieldtype: "Column Break" },
             {
                 fieldtype: "Check",
                 fieldname: "is_against_party",
@@ -44,28 +45,6 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     distribution_grid.reset_grid();
                 },
             },
-            { fieldtype: "Column Break" },
-            {
-                fieldtype: "Currency",
-                fieldname: "total_turnover",
-                label: __("Total Turnover"),
-                default: 0,
-                reqd: 1,
-                options: "Company:company:default_currency",
-                change() {
-                    calculate_distribution_ratios();
-                },
-            },
-            {
-                fieldtype: "Button",
-                fieldname: "recalculate_total_turnover",
-                label: __("Recalculate Total Turnover"),
-                click() {
-                    fill_total_turnover();
-                    calculate_distribution_ratios();
-                },
-            },
-
             { fieldtype: "Section Break" },
             {
                 label: __("Distribution Table"),
@@ -182,6 +161,29 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                         columns: 1,
                     },
                 ],
+            },
+            { fieldtype: "Section Break" },
+            { fieldtype: "Column Break" },
+            { fieldtype: "Column Break" },
+            {
+                fieldtype: "Currency",
+                fieldname: "total_turnover",
+                label: __("Total Turnover"),
+                default: 0,
+                reqd: 1,
+                options: "Company:company:default_currency",
+                change() {
+                    calculate_distribution_ratios();
+                },
+            },
+            {
+                fieldtype: "Button",
+                fieldname: "recalculate_total_turnover",
+                label: __("Recalculate Total Turnover"),
+                click() {
+                    fill_total_turnover();
+                    calculate_distribution_ratios();
+                },
             },
         ],
         primary_action_label: __("Create ISD Distribution Invoices"),
