@@ -145,7 +145,7 @@ class IMS:
         return details
 
     def convert_data_to_gov_format(self, invoice):
-        # Credit notes read negative portal values are positive
+        # portal expects positive values
         for field in (*GST_TAX_TYPES[:-1], "taxable_value"):
             invoice[field] = abs(flt(invoice[field]))
 
