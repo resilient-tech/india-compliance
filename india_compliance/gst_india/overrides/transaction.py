@@ -2052,6 +2052,9 @@ def sync_address_dependent_fields_after_submit(doc, method=None):
     validate_place_of_supply(doc)
     validate_overseas_gst_category(doc)
 
+    if is_sales_transaction:
+        validate_sales_to_oidar(doc)
+
     if gstin:
         validate_gstin_status(gstin, doc)
 
