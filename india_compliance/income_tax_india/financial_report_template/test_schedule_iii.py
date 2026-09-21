@@ -47,7 +47,7 @@ class TestScheduleIIITemplates(FrappeTestCase):
     def tearDownClass(cls):
         frappe.db.rollback(save_point="before_test_schedule_iii")
 
-    def execute_report(self, template_name, accumulated_values=0):
+    def execute_report(self, template_name):
         fiscal_year = get_fiscal_year(self.test_date, as_dict=True)
         filters = frappe._dict(
             {
@@ -59,7 +59,7 @@ class TestScheduleIIITemplates(FrappeTestCase):
                 "from_fiscal_year": fiscal_year.name,
                 "to_fiscal_year": fiscal_year.name,
                 "periodicity": "Yearly",
-                "accumulated_values": accumulated_values,
+                "accumulated_values": 0,
             }
         )
         _, data, _, _ = FinancialReportEngine().execute(filters)
