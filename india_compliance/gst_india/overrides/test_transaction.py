@@ -928,35 +928,38 @@ class TestTransaction(FrappeTestCase):
 =======
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_purchase_from_oidar_supplier(self):
-        """An OIDAR supplier holds a GSTIN, but tax is payable under Reverse Charge"""
+        """Reverse Charge on an OIDAR purchase is the user's choice, so both are allowed.
+
+        Forward charge is lawful for online money gaming under IGST s.14A, and the GSTIN
+        alone cannot distinguish that from an OIDAR service, so the app must not force it.
+        """
         if self.is_sales_doctype:
             return
 
-        doc = create_transaction(
-            **self.transaction_details,
-            supplier="_Test OIDAR Supplier",
-            item_code="_Test Service Item",
-            is_out_state=True,
-            do_not_save=True,
-        )
+        def _oidar_purchase(**kwargs):
+            details = self.transaction_details.copy()
+            if self.doctype == "Purchase Invoice":
+                details["bill_no"] = frappe.generate_hash(length=5)
 
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(.*Non-Resident Online Services Provider.*)$"),
-            doc.insert,
-        )
+            return create_transaction(
+                **details,
+                supplier="_Test OIDAR Supplier",
+                item_code="_Test Service Item",
+                **kwargs,
+            )
 
-        # the same purchase is valid under Reverse Charge
-        doc = create_transaction(
-            **self.transaction_details,
-            supplier="_Test OIDAR Supplier",
-            item_code="_Test Service Item",
-            is_out_state_rcm=True,
-            is_reverse_charge=1,
-        )
-
+        # forward charge is permitted, and keeps the tax rows it was given
+        doc = _oidar_purchase(is_out_state=True)
         self.assertEqual(doc.gst_category, "Overseas")
         self.assertEqual(doc.supplier_gstin, "9917SGP29001OST")
+        self.assertTrue(doc.taxes)
+
+        # so is reverse charge
+        doc = _oidar_purchase(is_out_state_rcm=True, is_reverse_charge=1)
+        self.assertEqual(doc.gst_category, "Overseas")
+        self.assertEqual(doc.supplier_gstin, "9917SGP29001OST")
+        self.assertTrue(doc.taxes)
+
 
 >>>>>>> 581e9e2 (test: add OIDAR supplier and transaction tests, including GSTIN validation and ITC classification)
     def test_invalid_charge_type_as_actual(self):
