@@ -4,7 +4,11 @@ from frappe.utils.data import format_date
 
 from india_compliance.gst_india.constants import (
     ACTION_MAP,
+<<<<<<< HEAD
     GST_CATEGORY_MAP,
+=======
+    GST_TAX_TYPES,
+>>>>>>> 8da812a (fix: handle credit notes as negative values in IMS)
     STATE_NUMBERS,
 )
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
@@ -131,6 +135,10 @@ class IMS:
         }
 
     def convert_data_to_gov_format(self, invoice):
+        # Credit notes read negative portal values are positive
+        for field in (*GST_TAX_TYPES[:-1], "taxable_value"):
+            invoice[field] = abs(flt(invoice[field]))
+
         data = {
             "stin": invoice.supplier_gstin,
             "inv_typ": get_mapped_value(invoice.supply_type, self.VALUE_MAPS.reverse_gst_category),
