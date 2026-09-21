@@ -43,6 +43,11 @@ from india_compliance.gst_india.utils import (
     has_changed,
     has_gst_taxes,
     is_import_transaction,
+<<<<<<< HEAD
+=======
+    is_inward_transaction,
+    is_oidar_gstin,
+>>>>>>> 996bd22 (fix: add OIDAR GSTIN validation and update related logic in transaction handling)
     is_overseas_doc,
     join_list_with_custom_separators,
     validate_gst_category,
@@ -423,12 +428,25 @@ class GSTAccounts:
                 ).format(self.first_gst_idx)
             )
 
-        if not self.doc.is_reverse_charge and not self.doc.supplier_gstin:
-            self._throw(
-                _("Cannot charge GST in Row #{0} since purchase is from a Supplier without GSTIN").format(
-                    self.first_gst_idx
+        if not self.doc.is_reverse_charge:
+            if not self.doc.supplier_gstin:
+                self._throw(
+                    _("Cannot charge GST in Row #{0} since purchase is from a Supplier without GSTIN").format(
+                        self.first_gst_idx
+                    )
                 )
-            )
+
+            # An OIDAR supplier is a non-resident registered under the Simplified Registration
+            # Scheme. Tax on such supplies to a registered recipient is payable by the recipient
+            # under Reverse Charge, so Input GST cannot be charged by the supplier.
+            if is_oidar_gstin(self.doc.supplier_gstin):
+                self._throw(
+                    _(
+                        "Cannot charge GST in Row #{0} since the Supplier is registered as a"
+                        " Non-Resident Online Services Provider. Tax on such supplies is payable"
+                        " under Reverse Charge. Please enable Reverse Charge for this transaction."
+                    ).format(self.first_gst_idx)
+                )
 
     def validate_for_invalid_account_type(self):
         """
@@ -1006,7 +1024,13 @@ def get_gst_details(
             not is_sales_transaction
             and (
                 party_details.get(gst_category_field) == "Registered Composition"
-                or (not party_details.is_reverse_charge and not party_details.get(party_gstin_field))
+                or (
+                    not party_details.is_reverse_charge
+                    and (
+                        not party_details.get(party_gstin_field)
+                        or is_oidar_gstin(party_details.get(party_gstin_field))
+                    )
+                )
             )
         )
     ):
