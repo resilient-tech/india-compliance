@@ -758,7 +758,7 @@ def validate_sales_to_oidar(doc):
         _("Cannot create {0} against Non-Resident Online Services Provider (OIDAR) GSTIN {1}").format(
             doc.doctype, frappe.bold(gstin)
         ),
-        title=_("Invalid Billing Address GSTIN"),
+        title=_("Invalid Customer GSTIN"),
     )
 
 
@@ -1770,13 +1770,15 @@ def validate_transaction(doc, method=None):
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
         validate_sales_reverse_charge(doc)
-        validate_sales_to_oidar(doc)
         gstin = doc.billing_address_gstin
     elif doc.doctype == "Payment Entry":
         is_sales_transaction = True
         gstin = doc.billing_address_gstin
     else:
         gstin = doc.supplier_gstin
+
+    if is_sales_transaction:
+        validate_sales_to_oidar(doc)
 
     validate_gstin_status(gstin, doc)
     validate_gst_transporter_id(doc)
