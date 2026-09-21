@@ -3,6 +3,7 @@ import datetime
 import functools
 import inspect
 import io
+import re
 import tarfile
 from collections.abc import Callable
 
@@ -43,6 +44,7 @@ from india_compliance.gst_india.constants import (
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
+    OIDAR,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
@@ -418,6 +420,15 @@ def validate_gst_category(gst_category, gstin):
 
 def is_valid_pan(pan):
     return PAN_NUMBER.match(pan)
+
+
+def is_oidar_gstin(gstin):
+    """
+    OIDAR (Non-Resident Online Services Provider and/or Non-Resident Online Money Gaming
+    Supplier) is registered under the Simplified Registration Scheme, available only to
+    suppliers located outside India.
+    """
+    return bool(re.match(OIDAR, gstin))
 
 
 def get_pan_from_gstin(gstin):
