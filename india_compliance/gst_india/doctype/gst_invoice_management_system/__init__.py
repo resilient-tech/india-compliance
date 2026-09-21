@@ -4,11 +4,12 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 )
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Abs, IfNull, Sum
+from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import flt
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
+    CREDIT_NOTE_DOC_TYPES,
     GSTIN_RULES,
     PAN_RULES,
     BaseUtil,
@@ -172,7 +173,13 @@ class InwardSupply:
 
     def get_tax_fields(self):
         fields = (*GST_TAX_TYPES[:-1], "taxable_value")
-        return [self.IMS[field] for field in fields]
+        return [
+            Case()
+            .when(self.IMS.doc_type.isin(CREDIT_NOTE_DOC_TYPES), -self.IMS[field])
+            .else_(self.IMS[field])
+            .as_(field)
+            for field in fields
+        ]
 
 
 class PurchaseInvoice:
@@ -224,7 +231,7 @@ class PurchaseInvoice:
             .left_join(self.PI_ITEM)
             .on(self.PI_ITEM.parent == self.PI.name)
             .select(
-                Abs(Sum(self.PI_ITEM.taxable_value)).as_("taxable_value"),
+                Sum(self.PI_ITEM.taxable_value).as_("taxable_value"),
                 *fields,
                 ConstantColumn("Purchase Invoice").as_("doctype"),
             )
@@ -291,7 +298,7 @@ class PurchaseInvoice:
         return [self.query_tax_amount(f"{tax_type}_amount").as_(tax_type) for tax_type in GST_TAX_TYPES]
 
     def query_tax_amount(self, field):
-        return Abs(Sum(getattr(self.PI_ITEM, field)))
+        return Sum(getattr(self.PI_ITEM, field))
 
 
 # declared ITC reduction on specified records
