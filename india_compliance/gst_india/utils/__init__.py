@@ -420,6 +420,14 @@ def is_valid_pan(pan):
     return PAN_NUMBER.match(pan)
 
 
+def get_pan_from_gstin(gstin):
+    """
+    Characters 3-12 of a GSTIN are a PAN only for some formats. Overseas (eg OIDAR
+    9917SGP29001OST), UIN Holders and Tax Deductor yield a non-PAN string.
+    """
+    return pan if is_valid_pan(pan := gstin[2:12]) else ""
+
+
 def validate_pincode(address):
     """
     Validate Pincode with following checks:
