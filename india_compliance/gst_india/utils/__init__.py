@@ -192,9 +192,10 @@ def publish_doc_update(doc):
             run_onload(doc)  # the form needs onload info too
 
         doc.apply_fieldlevel_read_permissions()
+        get_docinfo(doc)
         frappe.publish_realtime(
             "ic_doc_sync",
-            doc.as_dict(),
+            {"docs": doc.as_dict(), "docinfo": frappe.response["docinfo"]},
             user=frappe.session.user,
             after_commit=True,
         )
