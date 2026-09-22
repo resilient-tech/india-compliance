@@ -453,9 +453,13 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         actions.forEach((action) => {
             this.dialog.add_custom_action(
                 action,
-                () => {
-                    this._apply_custom_action(action);
-                    this.dialog.hide();
+                async () => {
+                    await this._apply_custom_action(action);
+                    if (action != "Sync") return this.dialog.hide();
+
+                    await this.get_invoice_details();
+                    this.process_data();
+                    this.render_html();
                 },
                 `mr-2 ${this._get_button_css(action)}`,
             );
@@ -463,6 +467,11 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
 
         this.dialog.$wrapper.find(".btn.btn-secondary.not-grey").removeClass("btn-secondary");
         this.dialog.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
+
+        // add tooltip
+        const $sync_btn = this.dialog.$wrapper.find(".modal-footer .sync-btn");
+        if ($sync_btn.length)
+            frappe.ui.tooltip($sync_btn, { text: __("Copy the values reported in 2A/2B to your books") });
     }
 
     _get_custom_actions() {
@@ -545,8 +554,6 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         // one side missing: nothing to compare against, and nothing to copy over
         if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
 
-        const can_sync = frappe.model.can_write(this.row.purchase_doctype);
-
         // template marks the rows worth comparing
         wrapper.find("[data-compare]").each((_index, row) => {
             const field = $(row).data("compare");
@@ -562,21 +569,30 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
 
             $(row).attr("title", __("Books and 2A/2B do not match")).addClass("not-matched");
 
-            // nothing to copy from a blank 2A/2B value, leave the button hidden
-            if (!can_sync || !reported) return;
-
-            $(row)
-                .find("[data-field]")
-                .removeClass("d-none")
-                .on("click", () => this._sync_field(field));
+            // nothing to copy from a blank 2A/2B value
+            if (reported) $(row).addClass("can-sync");
         });
+
+        wrapper.find("[data-sync-field]").on("change", (e) => {
+            const $values = $(e.target).closest("tr").find("td:last-child span");
+            $values.first().toggleClass("strike text-muted", e.target.checked);
+            $values.last().toggleClass("d-none", !e.target.checked);
+        });
+
+        wrapper
+            .find("[data-sync-all]")
+            .on("change", (e) =>
+                wrapper
+                    .find("tr.can-sync [data-sync-field]")
+                    .prop("checked", e.target.checked)
+                    .trigger("change"),
+            );
     }
 
-    async _sync_field(field) {
-        await reconciliation.sync_details(this.frm, [this.row], [field]);
-
-        await this.get_invoice_details();
-        this.process_data();
-        this.render_html();
+    get sync_fields() {
+        return this.dialog.$wrapper
+            .find("[data-sync-field]:checked")
+            .map((_index, el) => el.dataset.syncField)
+            .get();
     }
 };
