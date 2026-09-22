@@ -455,7 +455,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                 action,
                 async () => {
                     await this._apply_custom_action(action);
-                    if (action != "Sync") return this.dialog.hide();
+                    if (action != "Copy") return this.dialog.hide();
 
                     await this.get_invoice_details();
                     this.process_data();

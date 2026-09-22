@@ -642,7 +642,7 @@ class IMSAction {
                 __("Actions"),
             );
             this.frm.add_custom_button(
-                __("Sync Data"),
+                __("Copy Data"),
                 () => reconciliation.sync_details(this.frm),
                 __("Actions"),
             );
@@ -852,7 +852,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         if (this.row.match_status == "Only in 2A/2B") actions.push("Create", "Link");
         else {
             actions.push("Unlink");
-            actions.push("Sync");
+            actions.push("Copy");
         }
 
         return actions;
@@ -876,7 +876,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
                 this.frm.doc.company_gstin,
                 DOCTYPE,
             );
-        } else if (action == "Sync") {
+        } else if (action == "Copy") {
             return reconciliation.sync_details(this.frm, [this.row], this.sync_fields);
         } else {
             apply_action(this.frm, ACTION_MAP[action], [this.row.inward_supply_name]);
@@ -890,7 +890,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         if (action == "Pending") return "btn-warning not-grey";
         if (action == "Create") return "btn-primary not-grey";
         if (action == "Link") return "btn-primary not-grey link-document-btn disabled";
-        if (action == "Sync") return "btn-warning not-grey sync-btn";
+        if (action == "Copy") return "btn-warning not-grey sync-btn";
     }
 
     _set_missing_doctype() {

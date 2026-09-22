@@ -703,7 +703,7 @@ class PurchaseReconciliationToolAction {
             action_group,
         );
         this.frm.add_custom_button(
-            __("Sync Data"),
+            __("Copy Data"),
             () => reconciliation.sync_details(this.frm),
             action_group,
         );
@@ -766,7 +766,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         else if (this.row.match_status == "Only in 2A/2B")
             if (this.missing_doctype == "Purchase Invoice") return ["Create", "Link", "Pending", "Ignore"];
             else return ["Link", "Pending", "Ignore"];
-        else return ["Unlink", "Accept", "Pending", "Sync"];
+        else return ["Unlink", "Accept", "Pending", "Copy"];
     }
 
     _apply_custom_action(action) {
@@ -787,7 +787,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
                 this.frm.doc.company_gstin,
                 DOCTYPE,
             );
-        } else if (action == "Sync") {
+        } else if (action == "Copy") {
             return reconciliation.sync_details(this.frm, [this.row], this.sync_fields);
         } else {
             apply_action(this.frm, action, [this.row]);
@@ -801,7 +801,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         if (action == "Create") return "btn-primary not-grey";
         if (action == "Link") return "btn-primary not-grey link-document-btn disabled";
         if (action == "Accept") return "btn-primary not-grey";
-        if (action == "Sync") return "btn-warning not-grey sync-btn";
+        if (action == "Copy") return "btn-warning not-grey sync-btn";
     }
 
     _set_missing_doctype() {

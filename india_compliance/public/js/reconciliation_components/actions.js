@@ -75,14 +75,14 @@ Object.assign(reconciliation, {
 
         if (!rows.length)
             return frappe.show_alert({
-                message: __("Please select matched rows to sync"),
+                message: __("Please select matched rows to copy"),
                 indicator: "red",
             });
 
         // labels come off the reported side, since those are the values being copied
         await frappe.model.with_doctype("GST Inward Supply");
 
-        if (!fields) {
+        if (!fields?.length) {
             fields = await reconciliation.prompt_sync_fields();
             if (fields === null) return; // cancelled
 
@@ -106,8 +106,10 @@ Object.assign(reconciliation, {
 
         reconciliation.after_successful_action(
             tab,
-            __("{0} synced successfully", [
+            __("{0} copied to {1} of {2} documents", [
                 fields.map((field) => __(frappe.meta.get_label("GST Inward Supply", field))).join(", "),
+                synced_rows.length,
+                rows.length,
             ]),
         );
     },
