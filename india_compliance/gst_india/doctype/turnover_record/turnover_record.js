@@ -6,8 +6,11 @@ frappe.ui.form.on("Turnover Record", {
         if (!frm.is_new()) return;
 
         const [, from_date, to_date] = erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true) || [];
-        frm.set_value("from_date", from_date);
-        frm.set_value("to_date", to_date);
+        frm.set_value({
+            company: frappe.defaults.get_user_default("Company"),
+            from_date: from_date,
+            to_date: to_date,
+        });
     },
     refresh(frm) {
         set_gstin_options(frm);

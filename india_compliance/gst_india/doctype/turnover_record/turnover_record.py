@@ -6,7 +6,6 @@ from erpnext.accounts.utils import get_fiscal_year
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.meta import get_field_precision
-from frappe.model.naming import make_autoname
 from frappe.query_builder.functions import Sum
 from frappe.utils import add_years, flt, getdate, nowdate
 
@@ -15,14 +14,15 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Query
 
 
 class TurnoverRecord(Document):
-    def autoname(self):
-        fy_prefix = f"{str(self.from_date)[2:4]}-{str(self.to_date)[2:4]}"
-        self.name = make_autoname(f"{fy_prefix} {self.gst_state}.##")
-
     def validate(self):
         validate_gstin(self.gstin)
         self.validate_and_set_gst_state()
         self.validate_duplicate_record()
+        self.set_period_state()
+
+    def set_period_state(self):
+        fy_prefix = f"{str(self.from_date)[2:4]}-{str(self.to_date)[2:4]}"
+        self.period_state = f"{fy_prefix} {self.gst_state}"
 
     def validate_and_set_gst_state(self):
         if not self.gstin:
