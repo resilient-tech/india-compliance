@@ -4,9 +4,10 @@ import frappe
 from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 
-from india_compliance.gst_india.utils import get_data_file_path, merge_dicts
+from india_compliance.gst_india.utils import get_data_file_path, get_party_for_gstin, merge_dicts
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
+from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
 
 
@@ -16,6 +17,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         super().setUpClass()
 
         cls.gstin = "01AABCE2207R1Z5"
+        cls.company = get_party_for_gstin(cls.gstin, "Company")
         cls.return_period = "032020"
         cls.doctype = "GST Inward Supply"
         cls.log_doctype = "GSTR Import Log"
@@ -295,6 +297,30 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
 
         self.assertFalse(frappe.db.exists(self.doctype, credit_note.name))
         self.assertTrue(frappe.db.exists(self.doctype, invoice.name))
+
+    def test_isd_credit_note_sharing_the_invoice_number_is_its_own_row(self):
+        supplier = self.test_data["data"]["docdata"]["isd"][2]
+        self.assertEqual(supplier["ctin"], "29AABCE2207R1Z5")
+        supplier_isd = {**supplier, "doclist": [supplier["doclist"][0]]}  # doctyp ISDI, cgst 300
+        supplier_isd_credit_note = {**supplier, "doclist": [supplier["doclist"][1]]}  # doctype ISDC, cgst 30
+        period = "042020"
+
+        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
+            [supplier_isd], None
+        )
+        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
+            [supplier_isd_credit_note], None
+        )
+
+        invoice = self.get_doc(
+            GSTRCategory.ISD, supplier_gstin="29AABCE2207R1Z5", bill_no="S9010", doc_type="ISD Invoice"
+        )
+        credit_note = self.get_doc(
+            GSTRCategory.ISD, supplier_gstin="29AABCE2207R1Z5", bill_no="S9010", doc_type="ISD Credit Note"
+        )
+        self.assertNotEqual(invoice.name, credit_note.name)
+        self.assertEqual(credit_note.return_period_2b, period)
+        self.assertEqual(invoice.return_period_2b, "")
 
     def test_gstr2b_isda(self):
         doc = self.get_doc(GSTRCategory.ISDA, supplier_gstin="16DEFPS8555D1Z7")

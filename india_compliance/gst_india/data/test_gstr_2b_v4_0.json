@@ -1002,6 +1002,34 @@
 							"itcelg": "Y"
 						}
 					]
+				},
+				{
+					"ctin": "29AABCE2207R1Z5",
+					"trdnm": "GSTN Same Series",
+					"supprd": "022020",
+					"supfildt": "02-03-2020",
+					"doclist": [
+						{
+							"doctyp": "ISDI",
+							"docnum": "S9010",
+							"docdt": "03-03-2016",
+							"igst": 0,
+							"cgst": 300,
+							"sgst": 300,
+							"cess": 0,
+							"itcelg": "Y"
+						},
+						{
+							"doctyp": "ISDC",
+							"docnum": "S9010",
+							"docdt": "04-03-2016",
+							"igst": 0,
+							"cgst": 30,
+							"sgst": 30,
+							"cess": 0,
+							"itcelg": "Y"
+						}
+					]
 				}
 			],
 			"isda": [
