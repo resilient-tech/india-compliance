@@ -28,6 +28,10 @@ from india_compliance.gst_india.utils.isd_controller import ISDController
 class ISDDistributionInvoice(ISDController):
     _DOCTYPE_NAME = "ISD Distribution Invoice"
 
+    @property
+    def party_address_copy(self):
+        return self.party_address
+
     def validate(self):
         self.setup_precision()
         self.setup_party_fields()

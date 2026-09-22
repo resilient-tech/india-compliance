@@ -55,6 +55,9 @@ frappe.ui.form.on("ISD Recipient Invoice", {
     },
 
     company_address(frm) {
+        frm.doc.company_address_copy = frm.doc.company_address;
+        frm.refresh_field("company_address_copy");
+
         frm.isd_controller.set_address_display("company_address", "company_address_display");
         frm.isd_controller.set_place_of_supply("company_address", "company_pos");
     },

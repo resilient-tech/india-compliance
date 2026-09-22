@@ -18,6 +18,7 @@
   "party_section",
   "is_against_party",
   "column_break_ejlg",
+  "company_address",
   "conditional_party_fields_section",
   "column_break_euze",
   "party_type",
@@ -66,7 +67,7 @@
   "party_pos",
   "party_address_display",
   "column_break_sram",
-  "company_address",
+  "company_address_copy",
   "company_gstin",
   "company_pos",
   "company_address_display",
@@ -461,6 +462,13 @@
   {
    "fieldname": "column_break_utwj",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company_address_copy",
+   "fieldtype": "Data",
+   "is_virtual": 1,
+   "label": "Company Address (Recipient)",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
@@ -477,7 +485,7 @@
    "link_fieldname": "link_name"
   }
  ],
- "modified": "2026-09-10 16:43:09.615881",
+ "modified": "2026-09-22 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Recipient Invoice",

@@ -18,6 +18,10 @@ from india_compliance.gst_india.utils.itc_claim import (
 class ISDRecipientInvoice(ISDController):
     """Branch / credit-recipient side of an ISD distribution."""
 
+    @property
+    def company_address_copy(self):
+        return self.company_address
+
     def onload(self):
         if self.docstatus != 1:
             return

@@ -73,6 +73,9 @@ frappe.ui.form.on("ISD Distribution Invoice", {
     },
 
     async party_address(frm) {
+        frm.doc.party_address_copy = frm.doc.party_address;
+        frm.refresh_field("party_address_copy");
+
         if (!frm.__updating_isd_autofill) {
             await frm.isd_controller.fetch_autofill("party_address");
         }
