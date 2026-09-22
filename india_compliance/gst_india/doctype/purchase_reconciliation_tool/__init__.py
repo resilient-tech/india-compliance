@@ -1027,9 +1027,7 @@ class Reconciler(BaseReconciliation):
         """
 
         if rule == Rule.EXACT_MATCH:
-            # 2A/2B leaves a field unset where the book query selects NULL or an empty string
-            # (ISDInvoice selects NULL for the place of supply, which 2A/2B does not report),
-            # so treat every absent spelling as blank
+            # normalize None == ""
             return (purchase.get(field) or "") == (inward_supply.get(field) or "")
         elif rule == Rule.FUZZY_MATCH:
             return self.fuzzy_match(purchase, inward_supply)

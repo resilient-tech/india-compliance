@@ -37,9 +37,6 @@ frappe.query_reports["ISD Invoice Register"] = {
             options: "Purchase Invoice\nISD Distribution Invoice\nISD Recipient Invoice",
             default: "Purchase Invoice",
             reqd: 1,
-            on_change: function () {
-                frappe.query_report.refresh();
-            },
         },
         {
             fieldname: "company",
@@ -54,6 +51,7 @@ frappe.query_reports["ISD Invoice Register"] = {
                     party_gstin: "",
                     purchase_invoice: "",
                 });
+                frappe.query_report.refresh();
             },
             get_query: function () {
                 return { filters: { country: "India" } };
