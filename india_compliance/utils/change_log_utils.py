@@ -6,53 +6,6 @@ from frappe.model.document import bulk_insert
 from frappe.utils import cast, escape_html, get_date_str, get_fullname, random_string
 
 
-def add_comments_in_bulk(
-    comments: Iterable[tuple[str, str, str | None]],
-    *,
-    comment_type: str = "Info",
-    user: str | None = None,
-    timestamp: str | None = None,
-) -> None:
-    """
-    Insert timeline comments for many documents at once.
-
-    Args:
-        comments: iterable of (reference_doctype, reference_name, content).
-            Rows with no content are skipped, so a change log comment that came
-            back empty can be passed straight through.
-
-    Bypasses all hooks, as bulk_insert does. Use only for informational comments.
-    """
-
-    user = user or frappe.session.user
-    timestamp = timestamp or frappe.utils.now()
-
-    comment_docs = [
-        frappe.new_doc("Comment").update(
-            {
-                "name": random_string(10),
-                "comment_type": comment_type,
-                "comment_email": user,
-                "comment_by": user,
-                "creation": timestamp,
-                "modified": timestamp,
-                "modified_by": user,
-                "owner": user,
-                "reference_doctype": doctype,
-                "reference_name": docname,
-                "content": content,
-            }
-        )
-        for doctype, docname, content in comments
-        if content
-    ]
-
-    if not comment_docs:
-        return
-
-    bulk_insert("Comment", comment_docs, ignore_duplicates=True)
-
-
 def add_versions_in_bulk(
     versions: Iterable[tuple[str, str, dict, dict]],
     *,
