@@ -87,9 +87,7 @@ class GSTR2b(GSTR):
             if transaction.classification in ("ISD", "ISDA"):
                 filters["itc_availability"] = transaction.get("itc_availability") or ("is", "not set")
 
-            name = frappe.db.get_value("GST Inward Supply", filters)
-            if name:
-                frappe.delete_doc("GST Inward Supply", name, ignore_permissions=True)
+            frappe.delete_doc("GST Inward Supply", filters, ignore_permissions=True)
 
     def get_download_details(self):
         return {
