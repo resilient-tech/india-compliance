@@ -554,6 +554,8 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         // one side missing: nothing to compare against, and nothing to copy over
         if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
 
+        const has_sync_action = this.dialog.$wrapper.find(".modal-footer .sync-btn").length;
+
         // template marks the rows worth comparing
         wrapper.find("[data-compare]").each((_index, row) => {
             const field = $(row).data("compare");
@@ -570,7 +572,8 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
             $(row).attr("title", __("Books and 2A/2B do not match")).addClass("not-matched");
 
             // nothing to copy from a blank 2A/2B value
-            if (reported && $(row).has("[data-sync-field]").length) $(row).addClass("can-sync");
+            if (has_sync_action && reported && $(row).has("[data-sync-field]").length)
+                $(row).addClass("can-sync");
         });
 
         wrapper.find("thead tr").toggleClass("can-sync", !!wrapper.find("tbody tr.can-sync").length);
