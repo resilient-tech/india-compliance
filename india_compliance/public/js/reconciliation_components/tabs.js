@@ -570,13 +570,15 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
             $(row).attr("title", __("Books and 2A/2B do not match")).addClass("not-matched");
 
             // nothing to copy from a blank 2A/2B value
-            if (reported) $(row).addClass("can-sync");
+            if (reported && $(row).has("[data-sync-field]").length) $(row).addClass("can-sync");
         });
 
+        wrapper.find("thead tr").toggleClass("can-sync", !!wrapper.find("tbody tr.can-sync").length);
+
         wrapper.find("[data-sync-field]").on("change", (e) => {
-            const $values = $(e.target).closest("tr").find("td:last-child span");
-            $values.first().toggleClass("strike text-muted", e.target.checked);
-            $values.last().toggleClass("d-none", !e.target.checked);
+            const $cell = $(e.target).closest("tr").find("td:last-child");
+            $cell.find("span:first-child").toggleClass("strike text-muted", e.target.checked);
+            $cell.find("span:last-child").toggleClass("d-none", !e.target.checked);
         });
 
         wrapper

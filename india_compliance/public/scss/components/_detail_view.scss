@@ -22,8 +22,7 @@ td.not-matched {
     color: var(--red-500);
 }
 
-.table:not(:has(tr.can-sync)) [data-sync-all],
-tr:not(.can-sync) [data-sync-field],
+tr:not(.can-sync) input[type="checkbox"],
 .modal-dialog:not(:has([data-sync-field]:checked)) .sync-btn {
     display: none;
 }
