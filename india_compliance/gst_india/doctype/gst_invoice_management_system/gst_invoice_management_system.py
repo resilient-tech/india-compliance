@@ -637,6 +637,10 @@ class BuildExcelIMS(BuildExcel):
                 },
             },
             {
+                "label": "ITC Claim Period",
+                "fieldname": "itc_claim_period",
+            },
+            {
                 "label": "Classification",
                 "fieldname": "classification",
                 "header_format": {"width": 11},
