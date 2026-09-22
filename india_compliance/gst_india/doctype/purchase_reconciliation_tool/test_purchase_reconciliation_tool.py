@@ -950,8 +950,8 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
     def test_sync_details_applies_the_rest_when_one_document_fails(self):
         """
-        A bulk sync is a queue: a document that cannot be written is logged and skipped,
-        the others still go through.
+        A bulk sync is a queue: a document that cannot be written is reported and
+        skipped, the others still go through.
         """
         # collides with the bill no reported for it, so its sync throws
         blocked_pinv = create_purchase_invoice(
@@ -994,15 +994,13 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                 fields=["bill_no"],
             )
 
-        # the one that could not be written is untouched, and left an Error Log behind
+        # the one that could not be written is untouched, and the user is told why
         self.assertEqual(frappe.db.get_value("Purchase Invoice", blocked_pinv.name, "bill_no"), "SYNC-PI-008")
         self.assertEqual(get_sync_versions("Purchase Invoice", blocked_pinv.name), [])
-        self.assertTrue(
-            frappe.db.exists(
-                "Error Log",
-                {"reference_doctype": "Purchase Invoice", "reference_name": blocked_pinv.name},
-            )
-        )
+
+        messages = frappe.as_json(frappe.get_message_log())
+        self.assertIn(blocked_pinv.name, messages)
+        self.assertIn("Supplier Invoice No exists in Purchase Invoice", messages)
 
         # the rest of the queue went through
         self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "SYNC-PI-009-A")
@@ -1095,48 +1093,56 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         )
         self.assertEqual([row.purchase_invoice_name for row in result], [pinv.name])
 
-    def test_sync_details_skips_a_purchase_the_user_does_not_have_access_to(self):
+    def test_sync_details_is_blocked_before_any_document_is_written(self):
         """
-        The company gate checks a blank document, on which every other link field is
-        empty, so a user permission on supplier only bites once the real purchase is.
+        A field out of reach on one doctype stops the whole sync, so a batch is never
+        half applied by the time the gate is reached.
         """
-        pinv = create_purchase_invoice(
-            bill_no="SYNC-PI-013",
-            bill_date="2024-02-01",
-            posting_date="2024-02-01",
-        )
-        gst_is = create_gst_inward_supply(
-            bill_no="SYNC-PI-013-A",
-            bill_date="2024-02-01",
-            return_period_2b="022024",
-        )
+        self.get_reconciliation_tool()
+        boe, boe_gst_is = self.get_fixture_pair("BILL-23-00011")  # a Bill of Entry pair
+        pinv, pinv_gst_is = self.get_fixture_pair("BILL-23-00040")  # reported bill no BILL-23-00045
 
-        prt = self.get_reconciliation_tool()
-        prt.link_documents(pinv.name, gst_is.name, "Purchase Invoice")
+        frappe.db.set_value("GST Inward Supply", boe_gst_is, "bill_no", "BILL-23-00011-A")
+        self.addCleanup(frappe.db.set_value, "GST Inward Supply", boe_gst_is, "bill_no", "BILL-23-00011")
+
+        # the class rolls back only at teardown, so a shared fixture must be put back
+        self.addCleanup(frappe.db.set_value, "Bill of Entry", boe, "bill_of_entry_no", "BILL-23-00011")
+        self.addCleanup(frappe.db.set_value, "Purchase Invoice", pinv, "bill_no", "BILL-23-00040")
+
+        # the bill of entry field stays writable, only the purchase invoice one is behind it
+        frappe.make_property_setter(
+            {
+                "doctype": "Purchase Invoice",
+                "fieldname": "bill_no",
+                "property": "permlevel",
+                "value": 1,
+                "property_type": "Int",
+            },
+            validate_fields_for_doctype=False,
+        )
+        # the class rolls back only at teardown, so the row must go before the next test
+        self.addCleanup(frappe.clear_cache, doctype="Purchase Invoice")
+        self.addCleanup(frappe.db.delete, "Property Setter", {"doc_type": "Purchase Invoice"})
+        frappe.clear_cache(doctype="Purchase Invoice")
 
         test_user = frappe.get_doc("User", "test@example.com")
-
-        # the purchase is booked against _Test Registered Supplier, so it is out of reach
-        user_permission = frappe.get_doc(
-            {
-                "doctype": "User Permission",
-                "user": test_user.name,
-                "allow": "Supplier",
-                "for_value": "_Test Foreign Supplier",
-            }
-        ).insert(ignore_permissions=True)
-        self.addCleanup(user_permission.delete, ignore_permissions=True)
+        test_user.add_roles("Accounts User")
+        test_user.remove_roles("Accounts Manager")
+        self.addCleanup(test_user.add_roles, "Accounts Manager")
+        self.addCleanup(test_user.remove_roles, "Accounts User")
         self.addCleanup(frappe.clear_cache, user=test_user.name)
         frappe.clear_cache(user=test_user.name)
 
-        row = self.sync_row(pinv.name, gst_is.name)
+        rows = [self.sync_row(boe, boe_gst_is), self.sync_row(pinv, pinv_gst_is)]
         tool = frappe.get_doc("Purchase Reconciliation Tool")
 
         with self.set_user(test_user.name):
-            self.assertIsNone(tool.sync_details([row], fields=["bill_no"]))
+            self.assertRaises(frappe.PermissionError, tool.sync_details, rows, ["bill_no"])
 
-        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv.name, "bill_no"), "SYNC-PI-013")
-        self.assertEqual(get_sync_versions("Purchase Invoice", pinv.name), [])
+        # the doctype the user could write was not written either
+        self.assertEqual(frappe.db.get_value("Bill of Entry", boe, "bill_of_entry_no"), "BILL-23-00011")
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv, "bill_no"), "BILL-23-00040")
+        self.assertEqual(get_sync_versions("Bill of Entry", boe), [])
 
     def test_sync_details_skips_rows_with_a_missing_side(self):
         """

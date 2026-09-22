@@ -3,7 +3,7 @@ from collections.abc import Iterable
 import frappe
 from frappe import _
 from frappe.model.document import bulk_insert
-from frappe.utils import escape_html, get_date_str, get_fullname, random_string
+from frappe.utils import cast, escape_html, get_date_str, get_fullname, random_string
 
 
 def add_comments_in_bulk(
@@ -55,41 +55,141 @@ def add_comments_in_bulk(
     bulk_insert("Comment", comment_docs, ignore_duplicates=True)
 
 
-def add_versions_in_bulk(
-    versions: Iterable[tuple[str, str, dict | None]],
-    user: str | None = None,
-    timestamp: str | None = None,
-) -> None:
-    """create version docs in bulk"""
+def validate_bulk_update_access(doctype: str, fieldnames: Iterable[str]) -> None:
+    """Throw unless the user may write these fields of doctype, checked on the
+    doctype and not on any one document."""
 
-    if not versions:
+    frappe.has_permission(doctype, "write", throw=True)
+
+    if frappe.session.user == "Administrator":
         return
 
-    user = user or frappe.session.user
-    timestamp = timestamp or frappe.utils.now()
+    meta = frappe.get_meta(doctype)
+    restricted = set(fieldnames) - set(meta.get_permitted_fieldnames(permission_type="write"))
 
-    version_docs = [
-        frappe.new_doc("Version").update(
+    if not restricted:
+        return
+
+    frappe.throw(
+        _("No permission to update {0} in {1}").format(
+            frappe.bold(", ".join(meta.get_label(fieldname) for fieldname in sorted(restricted))),
+            _(doctype),
+        ),
+        frappe.PermissionError,
+    )
+
+
+def bulk_update(
+    doctype: str,
+    docs: dict[str, dict],
+    *,
+    ignore_version: bool = False,
+    updater_reference: dict | None = None,
+    check_permission: bool = True,
+) -> list[str]:
+    """
+    Update fields on many documents at once, and record each change on the timeline.
+
+    Args:
+        docs: {docname: {fieldname: new_value}}, as frappe.db.bulk_update takes it.
+        ignore_version: skip the timeline, as doc.save(ignore_version=True) does.
+            A doctype that does not track changes is skipped either way.
+        updater_reference: {"doctype", "docname"} of the tool making the change.
+
+    Returns the names written, skipping documents already holding the value.
+
+    The timeline entry is Version.set_diff's own, built from documents assembled in
+    memory, so it carries whatever a save would have recorded.
+
+    Runs no hooks and no validations, as frappe.db.bulk_update does: the caller
+    validates, and checks any permission beyond validate_bulk_update_access.
+    """
+
+    if not docs:
+        return []
+
+    meta = frappe.get_meta(doctype)
+
+    # the guard save_version applies before writing a Version
+    if not meta.track_changes:
+        ignore_version = True
+
+    fieldnames = set()
+    for new_values in docs.values():
+        fieldnames.update(new_values)
+
+    # standard columns are not doctype fields either, so this covers them too
+    if invalid := sorted(fieldname for fieldname in fieldnames if not meta.get_field(fieldname)):
+        frappe.throw(_("{0} is not a valid field of {1}").format(frappe.bold(", ".join(invalid)), _(doctype)))
+
+    if check_permission:
+        validate_bulk_update_access(doctype, fieldnames)
+
+    db_rows = frappe.get_all(doctype, filters={"name": ("in", list(docs))}, fields=["name", *fieldnames])
+    db_values = {row.name: row for row in db_rows}
+
+    user = frappe.session.user
+    timestamp = frappe.utils.now()
+
+    changed_docs = {}
+    versions = []
+
+    for docname, new_values in docs.items():
+        db_row = db_values.get(docname)
+        if db_row is None:
+            continue
+
+        changed = {}
+
+        for fieldname, new_value in new_values.items():
+            df = meta.get_field(fieldname)
+
+            if cast(df.fieldtype, db_row.get(fieldname)) == cast(df.fieldtype, new_value):
+                continue
+
+            changed[fieldname] = new_value
+
+        if not changed:
+            continue
+
+        changed_docs[docname] = changed
+
+        if ignore_version:
+            continue
+
+        # frappe writes the timeline entry, from documents it never reads from the db
+        booked = frappe.get_doc({"doctype": doctype, **db_row})
+        updated = frappe.get_doc({"doctype": doctype, **db_row, **changed})
+        updated.flags.updater_reference = updater_reference
+
+        version = frappe.new_doc("Version")
+        if not version.set_diff(booked, updated):
+            continue
+
+        version.update(
             {
                 "name": random_string(10),
-                "ref_doctype": ref_doctype,
-                "docname": docname,
-                # same encoding as Version.set_diff writes
-                "data": frappe.as_json(diff, indent=None, separators=(",", ":")),
                 "creation": timestamp,
                 "modified": timestamp,
                 "modified_by": user,
                 "owner": user,
             }
         )
-        for ref_doctype, docname, diff in versions
-        if diff
-    ]
+        versions.append(version)
 
-    if not version_docs:
-        return
+    if not changed_docs:
+        return []
 
-    bulk_insert("Version", version_docs, ignore_duplicates=True)
+    frappe.db.bulk_update(doctype, changed_docs, modified=timestamp, modified_by=user)
+
+    # bulk_update leaves the document cache behind, unlike db.set_value
+    for docname in changed_docs:
+        frappe.clear_document_cache(doctype, docname)
+
+    if versions:
+        bulk_insert("Version", versions, ignore_duplicates=True)
+
+    return list(changed_docs)
 
 
 def create_change_log_comment(

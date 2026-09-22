@@ -1,6 +1,5 @@
 import frappe
 from frappe import _
-from frappe.core.doctype.version.version import get_diff
 
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
@@ -8,7 +7,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
 )
 from india_compliance.gst_india.utils import validate_company_access
 from india_compliance.gst_india.utils.itc_claim import set_itc_claim_period_on_match
-from india_compliance.utils.change_log_utils import add_versions_in_bulk
+from india_compliance.utils.change_log_utils import bulk_update, validate_bulk_update_access
 
 # same as client side public/js/reconciliation_components/actions.js
 SYNCABLE_FIELDS = ("bill_no", "bill_date")
@@ -127,17 +126,19 @@ def _unlink_documents(inward_supplies, exclude_from_reconciliation=False):
 def sync_details(data, fields, tool=None):
     """
     Copy bill no / date reported in 2A/2B onto the linked purchase document.
+
+    Gated on write access to the tool (by the caller), to the purchase doctype for
+    the company it is booked in, and to the fields being written.
     """
     if isinstance(fields, str):
         fields = frappe.parse_json(fields)
-    fields = _validate_sync_fields(fields)
 
-    if not (fields or data):
-        return
+    fields = _validate_sync_fields(fields)
+    data = frappe.parse_json(data) or []
 
     inward_supply_names = {
         row["inward_supply_name"]
-        for row in frappe.parse_json(data)
+        for row in data
         # nothing to sync where a side is missing
         if row.get("inward_supply_name") and row.get("purchase_invoice_name")
     }
@@ -152,9 +153,13 @@ def sync_details(data, fields, tool=None):
         frappe.msgprint(_("No changes to sync"))
         return
 
-    # validate permission before applying changes
+    # the earliest access can be checked, and nothing is read or written before it
     for doctype, company in {(change.doctype, change.company) for change in changes}:
+        purchase_fieldnames = PURCHASE_FIELDNAME_MAP[doctype]
+        fieldnames = [purchase_fieldnames[field] for field in fields]
+
         validate_company_access(company, doctype, perm="write")
+        validate_bulk_update_access(doctype, fieldnames)
 
     changes = _apply_changes(changes, tool)
     # some changes can get skipped
@@ -183,7 +188,8 @@ def _validate_sync_fields(fields):
 
 def _get_changes_to_sync(inward_supply_names, fields):
     """
-    return:[doctype, name (inward supply), link_name (purchase), {field_name: old_value...}, {field_name: new_value...}]
+    return: linked pairs where a requested field differs, as rows of doctype, name
+    (inward supply), link_name (purchase), company and new_values
     """
     changes = []
 
@@ -191,17 +197,21 @@ def _get_changes_to_sync(inward_supply_names, fields):
         fieldname_map = {field: purchase_fieldnames[field] for field in fields}
 
         for row in _get_linked_details(doctype, fieldname_map, inward_supply_names):
-            new_values = {
-                field_name: reported
-                for field_name in fieldname_map.values()
-                if (reported := row[f"reported_{field_name}"]) and row[field_name] != reported
-            }
+            new_values = {}
+
+            for field_name in fieldname_map.values():
+                reported = row[f"reported_{field_name}"]
+
+                # a blank in 2A/2B is not a correction
+                if not reported or row[field_name] == reported:
+                    continue
+
+                new_values[field_name] = reported
 
             if not new_values:
                 continue
 
             row.new_values = new_values
-            row.old_values = {field_name: row[field_name] for field_name in new_values}
             changes.append(row)
 
     return changes
@@ -232,37 +242,27 @@ def _get_linked_details(doctype, fieldname_map, inward_supply_names):
 
 
 def _apply_changes(changes, tool=None):
+    updates = {}
     applied = []
-    versions = []
     skipped = []
 
     for change in changes:
         try:
-            previous = frappe.get_lazy_doc(change.doctype, change.link_name)
-            doc = frappe.get_lazy_doc(change.doctype, change.link_name, check_permission="write")
-            doc.update(change.new_values)
-
-            _fieldlevel_perm_check(doc, change.new_values)
-            _validate_purchase_invoice(doc, change.new_values)
-
-        # validation errors should not stop the sync process
-        except (frappe.ValidationError, frappe.PermissionError) as e:
+            _validate_purchase_invoice(change)
+        except frappe.ValidationError as e:
             frappe.clear_last_message()
-            frappe.log_error(
-                title=f"Sync failed for {change.doctype} {change.link_name}",
-                reference_doctype=change.doctype,
-                reference_name=change.link_name,
-            )
             skipped.append((change, str(e)))
             continue
 
-        doc.flags.updater_reference = {"doctype": tool, "docname": tool} if tool else None
-        versions.append((change.doctype, change.link_name, get_diff(previous, doc)))
-
-        frappe.db.set_value(change.doctype, change.link_name, change.new_values)
+        updates.setdefault(change.doctype, {})[change.link_name] = change.new_values
         applied.append(change)
 
-    add_versions_in_bulk(versions)
+    for doctype, docs in updates.items():
+        bulk_update(
+            doctype,
+            docs,
+            updater_reference={"doctype": tool, "docname": tool} if tool else None,
+        )
 
     if skipped:
         frappe.msgprint(
@@ -275,33 +275,18 @@ def _apply_changes(changes, tool=None):
     return applied
 
 
-def _fieldlevel_perm_check(doc, new_values):
-    if frappe.session.user == "Administrator":
+def _validate_purchase_invoice(change):
+    """erpnext validations the sync must not bypass, for the fields it writes"""
+    if change.doctype != "Purchase Invoice" or "bill_no" not in change.new_values:
         return
 
-    restricted = [
-        field for field in new_values if not doc.has_permlevel_access_to(field, permission_type="write")
-    ]
-
-    if not restricted:
+    # what validate_supplier_invoice checks for itself, read once instead of per document
+    if not frappe.db.get_single_value("Accounts Settings", "check_supplier_invoice_uniqueness"):
         return
 
-    frappe.throw(
-        _("You are not permitted to update {0} in {1}.").format(
-            frappe.bold(", ".join(doc.meta.get_label(field) for field in restricted)),
-            _(doc.doctype),
-        ),
-        frappe.PermissionError,
-    )
-
-
-def _validate_purchase_invoice(doc, new_values):
-    if doc.doctype != "Purchase Invoice":
-        return
-
-    # only what the sync touches, else a booked inconsistency blocks an unrelated field
-    if "bill_no" in new_values:
-        doc.validate_supplier_invoice()
+    doc = frappe.get_lazy_doc("Purchase Invoice", change.link_name)
+    doc.update(change.new_values)
+    doc.validate_supplier_invoice()
 
 
 def get_formatted_options(data):
