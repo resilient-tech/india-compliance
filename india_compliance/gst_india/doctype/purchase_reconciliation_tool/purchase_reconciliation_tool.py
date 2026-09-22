@@ -788,8 +788,8 @@ class BuildExcel:
         """Returns merged_headers for the excel file"""
         return frappe._dict(
             {
-                "2A / 2B": ["inward_supply_bill_no", "inward_supply_return_period_2b"],
-                "Purchase Data": ["bill_no", "itc_claim_period"],
+                "2A / 2B": ["inward_supply_bill_no", "inward_supply_cess"],
+                "Purchase Data": ["bill_no", "cess"],
             }
         )
 
@@ -1132,18 +1132,6 @@ class BuildExcel:
                     "width": 12,
                 },
             },
-            {
-                "label": "ITC Claim Period",
-                "fieldname": "itc_claim_period",
-                "data_format": {
-                    "horizontal": "center",
-                    "bg_color": self.COLOR_PALLATE.light_green,
-                },
-                "header_format": {
-                    "bg_color": self.COLOR_PALLATE.green,
-                    "width": 15,
-                },
-            },
         ]
 
         self.inward_supply_columns = [
@@ -1282,18 +1270,6 @@ class BuildExcel:
                     "width": 12,
                 },
             },
-            {
-                "label": "2B Return Period",
-                "fieldname": "inward_supply_return_period_2b",
-                "data_format": {
-                    "horizontal": "center",
-                    "bg_color": self.COLOR_PALLATE.light_blue,
-                },
-                "header_format": {
-                    "bg_color": self.COLOR_PALLATE.sky_blue,
-                    "width": 15,
-                },
-            },
         ]
 
         inv_columns = [
@@ -1380,6 +1356,18 @@ class BuildExcel:
                     "bg_color": self.COLOR_PALLATE.dark_pink,
                     "width": 25,
                 },
+            },
+            {
+                "label": "GSTR-2B Period",
+                "fieldname": "return_period_2b",
+                "data_format": {"horizontal": "center"},
+                "header_format": {"width": 15},
+            },
+            {
+                "label": "ITC Claim Period (Books)",
+                "fieldname": "itc_claim_period",
+                "data_format": {"horizontal": "center"},
+                "header_format": {"width": 15},
             },
             {
                 "label": "ITC Availability",
