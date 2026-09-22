@@ -7,7 +7,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
 )
 from india_compliance.gst_india.utils import validate_company_access
 from india_compliance.gst_india.utils.itc_claim import set_itc_claim_period_on_match
-from india_compliance.utils.change_log_utils import bulk_update, validate_bulk_update_access
+from india_compliance.utils.change_log_utils import update_docs, validate_update_access
 
 # same as client side public/js/reconciliation_components/actions.js
 SYNCABLE_FIELDS = ("bill_no", "bill_date")
@@ -159,7 +159,7 @@ def sync_details(data, fields, tool=None):
         fieldnames = [purchase_fieldnames[field] for field in fields]
 
         validate_company_access(company, doctype, perm="write")
-        validate_bulk_update_access(doctype, fieldnames)
+        validate_update_access(doctype, fieldnames)
 
     changes = _apply_changes(changes, tool)
     # some changes can get skipped
@@ -258,7 +258,7 @@ def _apply_changes(changes, tool=None):
         applied.append(change)
 
     for doctype, docs in updates.items():
-        bulk_update(
+        update_docs(
             doctype,
             docs,
             updater_reference={"doctype": tool, "docname": tool} if tool else None,

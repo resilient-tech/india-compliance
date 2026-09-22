@@ -5,10 +5,10 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import formatdate, getdate
 
-from india_compliance.utils.change_log_utils import bulk_update
+from india_compliance.utils.change_log_utils import add_versions_in_bulk, update_docs
 
 
-class TestBulkUpdate(IntegrationTestCase):
+class TestUpdateDocs(IntegrationTestCase):
     def setUp(self):
         self.todos = [
             frappe.get_doc(
@@ -23,7 +23,7 @@ class TestBulkUpdate(IntegrationTestCase):
         ]
 
     def test_updates_documents_and_records_a_version_each(self):
-        names = bulk_update(
+        names = update_docs(
             "ToDo",
             {todo.name: {"priority": "High", "date": "2024-02-05"} for todo in self.todos},
             updater_reference={"doctype": "ToDo", "docname": self.todos[0].name},
@@ -55,7 +55,7 @@ class TestBulkUpdate(IntegrationTestCase):
     def test_writes_nothing_where_the_value_already_matches(self):
         todo, unchanged = self.todos[0], self.todos[1]
 
-        names = bulk_update(
+        names = update_docs(
             "ToDo",
             {todo.name: {"priority": "High"}, unchanged.name: {"priority": unchanged.priority}},
         )
@@ -64,13 +64,13 @@ class TestBulkUpdate(IntegrationTestCase):
         self.assertIsNone(self.get_version(unchanged.name))
 
         # a date reported as a string is the same date as the one stored
-        self.assertEqual(bulk_update("ToDo", {todo.name: {"priority": "High"}}), [])
+        self.assertEqual(update_docs("ToDo", {todo.name: {"priority": "High"}}), [])
 
     def test_writes_no_version_when_it_is_ignored(self):
         todo = self.todos[0]
 
         self.assertEqual(
-            bulk_update("ToDo", {todo.name: {"priority": "High"}}, ignore_version=True), [todo.name]
+            update_docs("ToDo", {todo.name: {"priority": "High"}}, ignore_version=True), [todo.name]
         )
 
         self.assertEqual(frappe.db.get_value("ToDo", todo.name, "priority"), "High")
@@ -95,17 +95,36 @@ class TestBulkUpdate(IntegrationTestCase):
         self.addCleanup(frappe.db.delete, "Property Setter", {"doc_type": "ToDo"})
         frappe.clear_cache(doctype="ToDo")
 
-        self.assertEqual(bulk_update("ToDo", {todo.name: {"priority": "High"}}), [todo.name])
+        self.assertEqual(update_docs("ToDo", {todo.name: {"priority": "High"}}), [todo.name])
 
         self.assertEqual(frappe.db.get_value("ToDo", todo.name, "priority"), "High")
         self.assertIsNone(self.get_version(todo.name))
+
+    def test_records_a_version_for_a_write_made_elsewhere(self):
+        """
+        A caller that wrote with db.set_value records the change itself, since that
+        write leaves no timeline entry behind.
+        """
+        todo = self.todos[0]
+        old_values = {"priority": todo.priority}
+        new_values = {"priority": "High"}
+
+        frappe.db.set_value("ToDo", todo.name, new_values)
+        add_versions_in_bulk(
+            [("ToDo", todo.name, old_values, new_values)],
+            updater_reference={"doctype": "ToDo", "docname": todo.name},
+        )
+
+        data = self.get_version(todo.name)
+        self.assertEqual(data["changed"], [["priority", "Low", "High"]])
+        self.assertEqual(data["updater_reference"]["docname"], todo.name)
 
     def test_is_blocked_for_a_field_that_is_not_the_callers_to_set(self):
         todo = self.todos[0]
 
         for new_values in ({"docstatus": 1}, {"owner": "test@example.com"}, {"not_a_field": "x"}):
             with self.assertRaises(frappe.ValidationError):
-                bulk_update("ToDo", {todo.name: new_values})
+                update_docs("ToDo", {todo.name: new_values})
 
         self.assertEqual(
             frappe.db.get_value("ToDo", todo.name, ["docstatus", "owner"], as_dict=True),
@@ -138,7 +157,7 @@ class TestBulkUpdate(IntegrationTestCase):
         with self.set_user(test_user.name):
             self.assertRaises(
                 frappe.PermissionError,
-                bulk_update,
+                update_docs,
                 "ToDo",
                 {todo.name: {"priority": "High"}},
             )
