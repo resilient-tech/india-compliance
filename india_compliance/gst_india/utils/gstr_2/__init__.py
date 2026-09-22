@@ -324,7 +324,7 @@ def save_gstr_2b(gstin, return_period, json_data, *, store_raw=True):
         json_data.get("docRejdata"),
         json_data.get("gendt"),
     )
-    update_import_history(return_period)
+    update_import_history(gstin, return_period)
 
 
 def save_ims_invoices(gstin, return_period, json_data):
@@ -364,13 +364,13 @@ def get_data_handler(return_type, category):
     return GSTR_MODULES[return_type].get_data_handler(category)
 
 
-def update_import_history(return_periods):
+def update_import_history(gstin, return_periods):
     """Updates 2A data availability from 2B Import"""
 
     if not (
         inward_supplies := frappe.get_all(
             "GST Inward Supply",
-            filters={"return_period_2b": ("in", return_periods)},
+            filters={"company_gstin": gstin, "return_period_2b": ("in", return_periods)},
             fields=("sup_return_period as return_period", "classification"),
             distinct=True,
         )
@@ -378,9 +378,11 @@ def update_import_history(return_periods):
         return
 
     log = frappe.qb.DocType("GSTR Import Log")
-    (
-        frappe.qb.update(log)
-        .set(log.data_not_found, 0)
+    logs = (
+        frappe.qb.from_(log)
+        .select(log.name)
+        .where(log.gstin == gstin)
+        .where(log.return_type == ReturnType.GSTR2A.value)
         .where(log.data_not_found == 1)
         .where(
             Criterion.any(
@@ -388,8 +390,13 @@ def update_import_history(return_periods):
                 for doc in inward_supplies
             )
         )
-        .run()
+        .run(pluck=True)
     )
+
+    if not logs:
+        return
+
+    frappe.db.set_value("GSTR Import Log", {"name": ("in", logs)}, "data_not_found", 0)
 
 
 def _download_gstr_2a(gstin, return_period, json_data):

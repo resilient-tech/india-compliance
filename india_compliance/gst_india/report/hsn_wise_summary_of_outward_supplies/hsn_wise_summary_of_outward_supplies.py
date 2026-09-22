@@ -9,6 +9,7 @@ from frappe import _
 from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
+from india_compliance.gst_india.utils import get_company_gstin_number
 from india_compliance.gst_india.utils.gstr_1 import (
     SubCategory,
     truncate_hsn_description,
@@ -33,6 +34,10 @@ def validate_filters(filters):
 
     if from_date and to_date and getdate(to_date) < getdate(from_date):
         frappe.throw(_("To Date cannot be less than From Date"))
+
+    filters["company_gstin"] = get_company_gstin_number(
+        filters["company"], gstin=filters.get("company_gstin")
+    )
 
 
 def get_columns(filters):
@@ -166,13 +171,11 @@ def process_hsn_data(invoices):
 
 @frappe.whitelist()
 def get_json(filters: str, report_name: str, data: str):
-    from india_compliance.gst_india.utils import (
-        get_company_gstin_number,
-    )
+    frappe.has_permission("Sales Invoice", throw=True)
 
     filters = json.loads(filters)
     report_data = json.loads(data)
-    gstin = filters.get("company_gstin") or get_company_gstin_number(filters["company"])
+    gstin = get_company_gstin_number(filters["company"], gstin=filters.get("company_gstin"))
 
     if not filters.get("from_date") or not filters.get("to_date"):
         frappe.throw(_("Please enter From Date and To Date to generate JSON"))

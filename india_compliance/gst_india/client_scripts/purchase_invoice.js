@@ -30,6 +30,10 @@ frappe.ui.form.on(DOCTYPE, {
         toggle_reverse_charge(frm);
     },
 
+    posting_date(frm) {
+        india_compliance.update_itc_claim_period(frm);
+    },
+
     async after_save(frm) {
         if (
             frm.doc.supplier_address ||
@@ -50,7 +54,6 @@ frappe.ui.form.on(DOCTYPE, {
 
     refresh(frm) {
         india_compliance.set_reconciliation_status(frm, "bill_no");
-        india_compliance.set_itc_claim_period_status(frm);
         if (gst_settings.enable_e_waybill && gst_settings.enable_e_waybill_from_pi)
             show_sandbox_mode_indicator();
 

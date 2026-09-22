@@ -1100,6 +1100,71 @@ class TestTransaction(IntegrationTestCase):
 
         self.assertDocumentEqual({"taxable_value": 62.51, "cgst_amount": 5.63}, doc.items[0])
 
+    def test_rounding_gst_details_across_many_items(self):
+        """
+        Rounding loss of each item must be diffused across items. It used to accumulate
+        into the last item, which then failed validation once it crossed
+        ALLOWED_TAX_DIFFERENCE.
+        """
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
+            return
+
+        doc = create_transaction(**self.transaction_details, rate=12.345, is_in_state=True, do_not_save=True)
+        for _ in range(249):
+            append_item(doc, frappe._dict(rate=12.345))
+
+        doc.save().reload()
+
+        precision = ItemGSTDetails.get_tax_amount_precisions(self.doctype).get("cgst_amount")
+        allowed_difference = 10**-precision
+
+        for tax_row in doc.taxes:
+            tax_type = tax_row.gst_tax_type
+            item_wise_amount = 0
+
+            for item in doc.items:
+                tax_amount = item.get(f"{tax_type}_amount")
+                item_wise_amount += tax_amount
+
+                # no item is off by more than a single unit of precision
+                expected_amount = item.get(f"{tax_type}_rate") * item.taxable_value / 100
+                self.assertLessEqual(flt(abs(tax_amount - expected_amount), precision), allowed_difference)
+
+            # item wise amounts still add up to the tax row
+            self.assertEqual(
+                flt(item_wise_amount, precision),
+                flt(tax_row.base_tax_amount_after_discount_amount, precision),
+            )
+
+    @change_settings("GST Settings", {"round_off_gst_values": 1})
+    def test_item_gst_details_tie_to_rounded_tax_row(self):
+        """
+        With round_off_gst_values the tax row is rounded to whole rupees, so it no longer
+        matches rate x taxable value. Item wise amounts must still add up to it.
+        """
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
+            return
+
+        doc = create_transaction(**self.transaction_details, rate=12.345, is_in_state=True, do_not_save=True)
+        for _ in range(249):
+            append_item(doc, frappe._dict(rate=12.345))
+
+        doc.save().reload()
+
+        for tax_row in doc.taxes:
+            if not tax_row.gst_tax_type:
+                continue
+
+            # rounding must actually be in effect, else this proves nothing
+            tax_amount = tax_row.base_tax_amount_after_discount_amount
+            self.assertEqual(tax_amount, flt(tax_amount, 0))
+
+            item_wise_amount = sum(item.get(f"{tax_row.gst_tax_type}_amount") for item in doc.items)
+            self.assertEqual(
+                flt(item_wise_amount, 2),
+                flt(tax_row.base_tax_amount_after_discount_amount, 2),
+            )
+
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_import_service_purchase_transaction_are_taxable(self):
         if self.is_sales_doctype:
@@ -1209,6 +1274,32 @@ class TestTransaction(IntegrationTestCase):
         # Place of Supply as Gujarat for Shipping Address in Gujarat
         self.assertEqual(doc.gst_category, "Overseas")
         self.assertEqual(doc.place_of_supply, "24-Gujarat")
+
+    def test_other_countries_place_of_supply_requires_overseas(self):
+        if not self.is_sales_doctype:
+            return
+
+        for customer, customer_address in (
+            ("_Test Unregistered Customer", None),
+            ("_Test Registered Customer", "_Test Registered Customer-Billing"),
+        ):
+            doc = create_transaction(
+                **{
+                    **self.transaction_details,
+                    "customer": customer,
+                    "party_name": customer,
+                },
+                customer_address=customer_address,
+                place_of_supply="96-Other Countries",
+                is_out_state=True,
+                do_not_save=True,
+            )
+
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"^(Place of Supply .*96-Other Countries.* is only allowed for GST Category .*)$"),
+                doc.save,
+            )
 
     def test_purchase_with_different_place_of_supply(self):
         if self.is_sales_doctype:

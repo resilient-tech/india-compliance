@@ -1,5 +1,6 @@
 import json
 import re
+from unittest.mock import patch
 
 import frappe
 import responses
@@ -11,6 +12,7 @@ from frappe.utils.data import format_date
 from responses import matchers
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.constants import SHIP_TO_GSTIN_APPLICABLE_DATE
 from india_compliance.gst_india.overrides.test_transaction import (
     create_refund_transaction,
@@ -910,6 +912,45 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         self.assertDocumentEqual({"ewaybill": ""}, cancelled_doc)
 
     @responses.activate
+    def test_irn_cancel_failure_after_e_waybill_cancel_is_retryable(self):
+        """The e-Waybill is cancelled on the portal first and that is saved for good: if the IRN
+        cancel is then rejected, local state matches the portal (e-Waybill gone, IRN active) and the
+        IRN cancel can be retried on its own."""
+        test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
+        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000, is_in_state=True)
+        test_data.get("response_data").get("result").update({"AckDt": str(now_datetime())})
+        self._mock_e_invoice_response(data=test_data)
+        generate_e_invoice(si.name)
+
+        values = frappe._dict({"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"})
+        doc = load_doc("Sales Invoice", si.name, "cancel")
+
+        cancel_e_waybill = self.e_invoice_test_data.get("cancel_e_waybill")
+        cancel_e_waybill.get("response_data").get("result").update({"ewayBillNo": doc.ewaybill})
+        self._mock_e_invoice_response(data=cancel_e_waybill, api="ei/api/ewayapi")
+
+        # the portal rejects the IRN cancellation
+        with patch.object(
+            EInvoiceAPI, "cancel_irn", side_effect=frappe.ValidationError("IRN cancel rejected")
+        ):
+            self.assertRaises(frappe.ValidationError, cancel_e_invoice, doc.name, values=values)
+
+        doc.reload()
+        self.assertEqual(doc.ewaybill, "")  # gone on the portal, gone here
+        self.assertEqual(doc.e_waybill_status, "Cancelled")
+        self.assertTrue(frappe.db.get_value("e-Waybill Log", {"reference_name": doc.name}, "is_cancelled"))
+        self.assertTrue(doc.irn)  # still active, still cancellable
+
+        # retry: only the IRN is left to cancel
+        cancel_irn = self.e_invoice_test_data.get("cancel_e_invoice")
+        cancel_irn.get("response_data").get("result").update({"Irn": doc.irn})
+        self._mock_e_invoice_response(data=cancel_irn, api="ei/api/invoice/cancel")
+        cancel_e_invoice(doc.name, values=values)
+
+        doc.reload()
+        self.assertDocumentEqual({"einvoice_status": "Cancelled", "irn": ""}, doc)
+
+    @responses.activate
     def test_auto_cancel_e_invoice(self):
         """Test for auto cancel e-Invoice on cancellation of Sales Invoice"""
         frappe.db.set_single_value("GST Settings", "auto_cancel_e_invoice", 1)
@@ -1429,8 +1470,15 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
             api="ei/api/invoice/cancel",
         )
 
+        # cancel the invoice first, then the portal: the IRN stays cancellable for 24h
+        doc.cancel()
+
         cancel_e_invoice(doc.name, values=values)
-        return frappe.get_doc("Sales Invoice", doc.name)
+
+        cancelled = frappe.get_doc("Sales Invoice", doc.name)
+        self.assertEqual(cancelled.docstatus, 2)
+
+        return cancelled
 
 
 def update_dates_for_test_data(test_data):
