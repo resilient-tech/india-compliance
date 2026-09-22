@@ -1384,14 +1384,11 @@ function are_transport_details_available(doc) {
 }
 
 function update_vehicle_type(dialog, frm) {
-    const values = dialog.get_values(true);
-
-    const saved_type = values.mode_of_transport == "Road" && frm.doc.gst_vehicle_type;
-    dialog.set_value("gst_vehicle_type", saved_type || get_vehicle_type(values));
+    dialog.set_value("gst_vehicle_type", get_vehicle_type(dialog.get_values(true), frm.doc.gst_vehicle_type));
 }
 
-function get_vehicle_type(doc) {
-    if (doc.mode_of_transport == "Road") return "Regular";
+function get_vehicle_type(doc, saved_type) {
+    if (doc.mode_of_transport == "Road") return saved_type || "Regular";
     if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
     return "";
 }
