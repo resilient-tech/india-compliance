@@ -3,7 +3,7 @@
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import add_to_date, getdate
+from frappe.utils import add_to_date, formatdate, getdate
 
 from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     InwardSupply,
@@ -23,7 +23,7 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.test_purchase_reconciliation_tool import (
     create_gst_inward_supply,
-    get_copy_versions,
+    get_copy_version,
 )
 from india_compliance.gst_india.utils.api import create_integration_request
 from india_compliance.gst_india.utils.gstr_2.ims import IMSB2B, IMSB2BCN
@@ -698,9 +698,10 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         )
 
         # set_value writes no version, so the sync records one itself
-        versions = get_copy_versions("Purchase Invoice", pinv.name, "GST Invoice Management System")
-        self.assertEqual(len(versions), 1)
-        self.assertEqual(versions[0]["bill_no"], "IMS-SYNC-001-A")
+        self.assertEqual(
+            get_copy_version("Purchase Invoice", pinv.name, "GST Invoice Management System"),
+            {"bill_no": "IMS-SYNC-001-A", "bill_date": formatdate("2024-12-15")},
+        )
 
         # rows come back IMS shaped, with what a re-sync of the same row needs
         self.assertEqual([synced.inward_supply_name for synced in result], [gst_is.name])
