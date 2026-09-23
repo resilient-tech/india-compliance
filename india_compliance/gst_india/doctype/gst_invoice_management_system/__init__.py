@@ -184,10 +184,7 @@ class PurchaseInvoice:
         dimension_fields = [*get_accounting_dimensions(), "cost_center", "project"]
         additional_fields = [*dimension_fields, "posting_date"]
 
-        query = self.get_query(filters=filters, additional_fields=additional_fields)
-
-        if names:
-            query = query.where(self.PI.name.isin(names))
+        query = self.get_query(filters=filters, additional_fields=additional_fields, names=names)
 
         purchases = query.run(as_dict=True)
 
@@ -216,7 +213,7 @@ class PurchaseInvoice:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_query(self, filters=None, additional_fields=None, is_return=False):
+    def get_query(self, filters=None, additional_fields=None, is_return=False, names=None):
         fields = self.get_fields(additional_fields, is_return)
 
         query = (
@@ -237,16 +234,23 @@ class PurchaseInvoice:
         )
 
         if filters:
-            query = self.apply_filters(query, filters)
+            query = self.apply_filters(query, filters, names)
 
         return query
 
-    def apply_filters(self, query, filters):
+    def apply_filters(self, query, filters, names=None):
         if filters.get("company"):
             query = query.where(self.PI.company == filters.company)
 
+        gstin_condition = None
         if filters.get("company_gstin"):
-            query = query.where(self.PI.company_gstin == filters.company_gstin)
+            gstin_condition = self.PI.company_gstin == filters.company_gstin
+
+        if names:
+            gstin_condition = gstin_condition | self.PI.name.isin(names)
+
+        if gstin_condition:
+            query = query.where(gstin_condition)
 
         return query
 
