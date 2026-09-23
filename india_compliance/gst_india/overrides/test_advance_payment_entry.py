@@ -493,7 +493,6 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_receipt_from_oidar_party_without_gst_is_allowed(self):
-        """A Payment Entry reaches GST validation only when it carries tax rows"""
         payment_doc = self._create_payment_entry(
             party="_Test OIDAR Customer",
             customer_address="_Test OIDAR Customer-Billing",
@@ -506,10 +505,6 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_advance_from_oidar_party_with_gst_is_blocked(self):
-        """An OIDAR party is never the recipient of a supply, so GST on such an advance
-        would leave a liability in GSTR-1 table 11A with no invoice to adjust it against
-        in 11B, the invoice itself being blocked.
-        """
         payment_doc = self._create_payment_entry(
             party="_Test OIDAR Customer",
             customer_address="_Test OIDAR Customer-Billing",

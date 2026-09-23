@@ -947,11 +947,6 @@ class TestTransaction(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_purchase_from_oidar_supplier(self):
-        """Reverse Charge on an OIDAR purchase is the user's choice, so both are allowed.
-
-        Forward charge is lawful for online money gaming under IGST s.14A, and the GSTIN
-        alone cannot distinguish that from an OIDAR service, so the app must not force it.
-        """
         if self.is_sales_doctype:
             return
 
@@ -981,7 +976,6 @@ class TestTransaction(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_sales_to_oidar_is_blocked(self):
-        """An OIDAR registration is outward-supply only, so it cannot be a customer GSTIN"""
         if not self.is_sales_doctype:
             return
 
@@ -1000,11 +994,6 @@ class TestTransaction(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_sales_to_oidar_is_blocked_after_submit(self):
-        """The address is editable after submit, so the OIDAR guard must run there too.
-
-        Swapping to an OIDAR billing address on a submitted document would otherwise put
-        a 99...OST GSTIN into GSTR-1 B2B as `ctin`.
-        """
         if self.doctype != "Sales Invoice":
             return
 
