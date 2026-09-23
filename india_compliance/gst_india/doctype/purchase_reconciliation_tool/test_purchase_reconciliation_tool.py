@@ -723,6 +723,48 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
         self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
 
+    def test_linked_purchase_invoice_on_another_company_gstin_is_shown(self):
+        pinv = create_purchase_invoice(
+            bill_no="GSTIN-DIFF-001",
+            bill_date="2024-02-14",
+            posting_date="2024-02-14",
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="GSTIN-DIFF-001",
+            bill_date="2024-02-14",
+            return_period_2b="022024",
+        )
+
+        frappe.db.set_value("Purchase Invoice", pinv.name, "company_gstin", "27AAQCA8719H1Z6")
+        frappe.db.set_value(
+            "GST Inward Supply",
+            gst_is.name,
+            {
+                "match_status": "Mismatch",
+                "link_doctype": "Purchase Invoice",
+                "link_name": pinv.name,
+            },
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2024-02-01",
+                "to_date": "2024-02-29",
+                "gst_return": "GSTR 2B",
+            }
+        )
+
+        rows = prt.reconcile_and_generate_data()
+        row = next(row for row in rows if row.inward_supply_name == gst_is.name)
+
+        self.assertEqual(row.purchase_invoice_name, pinv.name)
+        self.assertIn(row.match_status, ("Mismatch", "Suggested Match"))
+        self.assertEqual(row.differences, "COMPANY_GSTIN")
+
 
 def create_purchase_invoice(**kwargs):
     args = PURCHASE_INVOICE_DEFAULT_ARGS.copy()
