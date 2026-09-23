@@ -31,7 +31,6 @@ class TestUtils(FrappeTestCase):
         party.insert()
 
     def test_validate_oidar_party(self):
-        """An OIDAR GSTIN is a non-resident registration: Overseas, and it carries no PAN"""
         party = frappe.new_doc(
             "Supplier",
             supplier_name="Google Asia Pacific Pte Ltd",
@@ -44,7 +43,6 @@ class TestUtils(FrappeTestCase):
         self.assertEqual(party.pan, "")
 
     def test_oidar_gstin_on_address_does_not_set_pan(self):
-        """Address hook backfills an Unregistered party, and must not store a non-PAN string"""
         party = frappe.new_doc(
             "Supplier",
             supplier_name="_Test OIDAR Backfill Supplier",
