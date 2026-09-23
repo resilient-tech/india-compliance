@@ -468,7 +468,6 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         this.dialog.$wrapper.find(".btn.btn-secondary.not-grey").removeClass("btn-secondary");
         this.dialog.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
 
-        // add tooltip
         const $sync_btn = this.dialog.$wrapper.find(".modal-footer .sync-btn");
         if ($sync_btn.length)
             frappe.ui.tooltip($sync_btn, { text: __("Copy the values reported in 2A/2B to your books") });

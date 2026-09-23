@@ -1,7 +1,6 @@
 frappe.provide("reconciliation");
 
 Object.assign(reconciliation, {
-    // fields that can be synced from 2a/2b to invoice
     COPYABLE_FIELDS: ["bill_no", "bill_date"],
 
     // checked rows of the open tab, as invoices. a summary row stands for many

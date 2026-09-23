@@ -139,7 +139,6 @@ def copy_details(data, fields, tool=None):
     inward_supply_names = {
         row["inward_supply_name"]
         for row in data
-        # nothing to sync where a side is missing
         if row.get("inward_supply_name") and row.get("purchase_invoice_name")
     }
 
@@ -162,7 +161,6 @@ def copy_details(data, fields, tool=None):
         validate_update_access(doctype, fieldnames)
 
     changes = _apply_changes(changes, tool)
-    # some changes can get skipped
 
     if not changes:
         return
@@ -230,7 +228,6 @@ def _get_linked_details(doctype, fieldname_map, inward_supply_names):
             isup.name,
             isup.link_name,
             purchase.company,
-            # each field as booked, with what 2A/2B reports for it alongside
             *(purchase[booked].as_(booked) for booked in fieldname_map.values()),
             *(isup[field].as_(f"reported_{booked}") for field, booked in fieldname_map.items()),
         )
