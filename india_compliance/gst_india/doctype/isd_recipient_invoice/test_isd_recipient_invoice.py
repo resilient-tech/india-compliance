@@ -5,7 +5,7 @@ import re
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import add_months, flt, getdate
+from frappe.utils import add_months, flt, formatdate, getdate
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
@@ -499,49 +499,22 @@ class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
 
         self.assertEqual(doc.itc_claim_period, next_period)
 
-    def test_itc_claim_period_update_restriction_when_filed(self):
-        """Once GSTR-3B is filed for the claimed period, the period cannot be moved away from it."""
-        doc = self.create_receipent_doc()
-        current_period = doc.itc_claim_period
-
-        with _gstr3b_filed(doc.company_gstin, doc.posting_date):
-            # move to another period -> blocked
-            doc.itc_claim_period = format_period(add_months(doc.posting_date, 1))
-            self.assertRaisesRegex(
-                VALIDATION_ERROR,
-                re.compile(r"Cannot change ITC Claim Period from .* to .*\. GSTR-3B already filed for .*\."),
-                doc.save,
-            )
-
-            # move to Deferred -> also blocked
-            doc.reload()
-            doc.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
-            self.assertRaisesRegex(
-                VALIDATION_ERROR,
-                re.compile(r"Cannot change ITC Claim Period from .* to .*\. GSTR-3B already filed for .*\."),
-                doc.save,
-            )
-
-        # period is unfiled again -> the same change is allowed
-        doc.reload()
-        self.assertEqual(doc.itc_claim_period, current_period)
-        doc.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
-        doc.save()
-
-        self.assertEqual(doc.itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
-
-    def test_itc_claim_period_change_to_filed_period_blocked(self):
-        """Cannot move the claim period INTO a period whose GSTR-3B is already filed."""
+    def test_itc_claim_period_change_to_filed_period_warns(self):
+        """Moving the claim period INTO a period whose GSTR-3B is filed warns but is allowed."""
         doc = self.create_receipent_doc()
         next_date = getdate(add_months(doc.posting_date, 1))
 
         with _gstr3b_filed(doc.company_gstin, next_date):
             doc.itc_claim_period = format_period(next_date)
-            self.assertRaisesRegex(
-                VALIDATION_ERROR,
-                re.compile(r"GSTR-3B already filed"),
-                doc.save,
+            frappe.local.message_log = []
+            doc.save()
+
+            self.assertIn(
+                f"GSTR-3B is filed for {formatdate(next_date, 'MMM YYYY')}",
+                frappe.as_json(frappe.message_log),
             )
+
+        self.assertEqual(doc.itc_claim_period, format_period(next_date))
 
     def test_recipient_cancel_reverses_gl_entries(self):
         doc = self._recipient(source_items=make_source_item(self.pi, ratio=0.25))
