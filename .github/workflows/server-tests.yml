@@ -30,6 +30,8 @@ on:
       - "**.css"
       - "**.js"
       - "**.md"
+      - "**.svg"
+      - "**.png"
       - "india_compliance/public/**/*.html"
       - "**.csv"
 
@@ -87,6 +89,8 @@ jobs:
               - '!**/*.css'
               - '!**/*.js'
               - '!**/*.md'
+              - '!**/*.svg'
+              - '!**/*.png'
               - '!india_compliance/public/**/*.html'
               - '!**/*.csv'
 
