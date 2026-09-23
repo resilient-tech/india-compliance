@@ -872,9 +872,12 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
 
         self.assertEqual(item["AssAmt"], 100)
         self.assertEqual(item["OthChrg"], 0)
+        self.assertEqual(item["TotItemVal"], 118)  # AssAmt + tax, not folded with the cost
         self.assertEqual(val["AssVal"], 100)  # margin only, NOT 100 + 182
         self.assertEqual(val["OthChrg"], 182)
         self.assertEqual(val["TotInvVal"], 300)
+        total_item_val = sum(i["TotItemVal"] for i in request_data["ItemList"])
+        self.assertEqual(total_item_val + val["OthChrg"], val["TotInvVal"])
 
     @responses.activate
     def test_credit_note_e_invoice_with_goods_item(self):

@@ -1779,9 +1779,10 @@ class TestSpecificTransactions(IntegrationTestCase):
         {"allow_multi_currency_invoices_against_single_party_account": 1},
     )
     def test_multicurrency_taxable_value_on_mrp(self):
-        """Tobacco RSP ("On MRP") on a USD export invoice. The reported taxable value is the
-        net sale value (company currency), while IGST is computed on the RSP-deemed base —
-        decoupled, and validated against the deemed base (else update_gst_details throws)."""
+        """Tobacco RSP ("On MRP") on a USD export invoice. RSP is entered in company currency
+        (INR, by Legal Metrology). The reported taxable value is the net sale value (company
+        currency), while IGST is computed on the RSP-deemed base — decoupled, and validated
+        against the deemed base (else update_gst_details throws)."""
         _create_currency_exchange("USD", "INR", 80)
 
         doc = create_transaction(
@@ -1823,7 +1824,7 @@ class TestSpecificTransactions(IntegrationTestCase):
     def test_get_item_tax_amount_preserves_zero_deemed_base(self):
         # RSP not entered -> deemed base is an explicit 0; tax must be 0, not fall back
         # to the reported (net) taxable_value.
-        calc = ItemGSTDetails()
+        calc = ItemGSTDetails(frappe._dict())
         calc.precision = frappe._dict(igst_amount=2)
 
         zero_deemed = frappe._dict(_deemed_taxable_value=0, taxable_value=10000, qty=1)
