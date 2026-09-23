@@ -1,9 +1,10 @@
 from collections.abc import Iterable
+from uuid import uuid7
 
 import frappe
 from frappe import _
 from frappe.model.document import bulk_insert
-from frappe.utils import cast, escape_html, get_date_str, get_fullname, random_string
+from frappe.utils import cast, escape_html, get_date_str, get_fullname
 
 
 def add_versions_in_bulk(
@@ -46,7 +47,7 @@ def add_versions_in_bulk(
 
         version.update(
             {
-                "name": random_string(10),
+                "name": str(uuid7()),
                 "creation": timestamp,
                 "modified": timestamp,
                 "modified_by": user,
