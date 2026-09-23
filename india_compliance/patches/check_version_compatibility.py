@@ -14,8 +14,8 @@ VERSIONS_TO_COMPARE = [
         "current_version": version.parse(frappe.__version__),
         "required_versions": {
             "version-14": "14.57.0",
-            # Frappe #42371 (reliable after_response callbacks)
-            "version-15": "15.120.0",
+            # Frappe #43160 (fetch_from on Autocomplete fields)
+            "version-15": "15.121.1",
             "version-16": "16.33.0",
         },
     },
