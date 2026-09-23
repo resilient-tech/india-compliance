@@ -34,6 +34,7 @@ GST_CATEGORIES = {
     "SEZ Developer": "SEZ",
     "United Nation Body": "UIN Holders",
     "Consulate or Embassy of Foreign Country": "UIN Holders",
+    "Non-Resident Online Services Provider and/or Non-Resident Online Money Gaming Supplier": "Overseas",
     "URP": "Unregistered",
 }
 
