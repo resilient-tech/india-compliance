@@ -128,13 +128,6 @@ Object.assign(reconciliation, {
         if (row.match_status != "Only in 2A/2B") return;
         const doc = row._inward_supply;
 
-        const { message: supplier } = await frappe.call({
-            method: "india_compliance.gst_india.utils.get_party_for_gstin",
-            args: {
-                gstin: row.supplier_gstin,
-            },
-        });
-
         let company_address;
         await frappe.model.get_value(
             "Address",
@@ -165,7 +158,7 @@ Object.assign(reconciliation, {
 
             _set_value({
                 ...values,
-                supplier: supplier,
+                supplier: row.supplier,
                 shipping_address: company_address,
                 billing_address: company_address,
             });

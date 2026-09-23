@@ -47,7 +47,7 @@ class TestForbiddenPredicate(unittest.TestCase):
             "erpnext",
             "india_compliance",
             "india_compliance.gst_india.utils.exporter",
-            "india_compliance.gst_returns.helpers",
+            "india_compliance.gst_returns.fields.gstr1",
         ):
             self.assertTrue(_is_forbidden(mod), mod)
         for mod in ("math", "openpyxl", "datetime"):

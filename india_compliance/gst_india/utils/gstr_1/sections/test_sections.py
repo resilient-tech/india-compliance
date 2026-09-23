@@ -12,7 +12,9 @@ import frappe
 from frappe.utils import flt
 
 from india_compliance.gst_returns.fields.gstr1 import (
+    CATEGORY_SUB_CATEGORY_MAPPING,
     B2BInvoiceType,
+    Category,
     DocumentNature,
     SubCategory,
 )
@@ -79,6 +81,35 @@ class TestKeyTables(unittest.TestCase):
         # two portal keys, one description. Summary is never filed back
         with self.assertRaises(ValueError):
             s.invert(summary.KEYS)
+
+    def test_every_category_reads_from_both_sources_and_writes_back(self):
+        """One category, one file, the same three functions -- whichever way the data flows."""
+        for module in (b2b, b2cl, exports, b2cs, nil_rated, cdnr, cdnur, hsn, doc_issue, supecom):
+            with self.subTest(module.__name__):
+                for name in ("to_canonical", "from_books", "to_gov"):
+                    self.assertTrue(callable(getattr(module, name, None)), f"missing {name}")
+
+        # advances read and write per direction, because received and adjusted differ only in sign;
+        for name in (
+            "from_books",
+            "received_to_canonical",
+            "adjusted_to_canonical",
+            "received_to_gov",
+            "adjusted_to_gov",
+        ):
+            self.assertTrue(callable(getattr(advances, name, None)), f"missing {name}")
+
+    def test_invoice_categories_claim_every_subcategory_between_them(self):
+        # the books query hands all five one bucket, so their claims must not overlap or leave gaps
+        claimed = [sub for m in (b2b, b2cl, exports, cdnr, cdnur) for sub in m.SUBCATEGORIES]
+        self.assertEqual(len(claimed), len(set(claimed)), "two categories claim the same subcategory")
+
+        reported = {
+            sub.value
+            for category in (Category.B2B, Category.B2CL, Category.EXP, Category.CDNR, Category.CDNUR)
+            for sub in CATEGORY_SUB_CATEGORY_MAPPING[category]
+        }
+        self.assertEqual(set(claimed), reported, "a subcategory no category claims")
 
     def test_every_category_is_registered(self):
         self.assertEqual(len(SECTIONS), 13)
@@ -782,6 +813,57 @@ class TestCategoryRules(unittest.TestCase):
         self.assertEqual(len(details), 1)
         self.assertEqual(details[0][raw.DOC_ISSUE_LIST][0][raw.FROM_SR], "3")
 
+    def test_an_advance_rate_snaps_to_the_nearest_notified_rate(self):
+        """Worked back from paisa-rounded amounts, the rate carries noise no return may file."""
+
+        def entry(taxable, tax):
+            return {
+                "party": "X",
+                "name": "PE-1",
+                "posting_date": "2026-08-01",
+                "place_of_supply": "27-Maharashtra",
+                "company_gstin": "27ZZRML1234R1Z4",
+                "taxable_value": taxable,
+                "tax_amount": tax,
+                "cess_amount": 0,
+            }
+
+        # a fractional rate is a real rate, not zero
+        self.assertEqual(list(advances.from_books([entry(10000, 25)])), ["27-Maharashtra - 0.25"])
+
+        # a ten-rupee advance works back to 18.05; that is noise, not a rate of its own
+        rows = advances.from_books([entry(10.03, 1.81)])
+        self.assertEqual(list(rows), ["27-Maharashtra - 18.0"])
+        self.assertEqual(rows["27-Maharashtra - 18.0"][0][doc.TAX_RATE], 18.0)
+
+    def test_nil_rated_books_and_portal_rows_group_under_the_same_key(self):
+        """Books rows already carry the readable supply type, so both sides key alike."""
+        line = frappe._dict(
+            billing_address_gstin="24AANFA2641L1ZF",
+            customer_name="X",
+            invoice_no="SINV-1",
+            posting_date="2026-08-01",
+            invoice_total=100,
+            place_of_supply="24-Gujarat",
+            is_reverse_charge=0,
+            is_debit_note=0,
+            is_return=0,
+            invoice_type=nil_rated.SUPPLY_TYPES["INTRB2B"],
+            gst_treatment="Nil-Rated",
+            taxable_value=100,
+        )
+
+        books = nil_rated.from_books({(nil_rated.SUBCATEGORY, "SINV-1"): {0.0: [line]}})
+        portal = nil_rated.to_canonical(
+            {raw.INVOICES: [{raw.SUPPLY_TYPE: "INTRB2B", raw.NIL_RATED_AMOUNT: 100}]}
+        )
+
+        self.assertEqual(
+            set(books[nil_rated.SUBCATEGORY]),
+            set(portal[nil_rated.SUBCATEGORY]),
+        )
+        self.assertEqual(list(books[nil_rated.SUBCATEGORY]), ["Inter-State supplies to registered persons"])
+
     def test_a_nil_rated_line_with_nothing_in_it_is_dropped(self):
         payload = {raw.INVOICES: [{raw.SUPPLY_TYPE: "INTRB2B", raw.EXEMPTED_AMOUNT: 0}]}
         self.assertEqual(nil_rated.to_canonical(payload), {nil_rated.SUBCATEGORY: {}})
@@ -836,6 +918,85 @@ class TestSummary(unittest.TestCase):
         overview = summary.to_overview(rows)
         self.assertEqual(overview[-1][doc.DESCRIPTION], "Net Liability from Amendments")
         self.assertEqual(overview[-1][doc.TAXABLE_VALUE], 250)
+
+
+class TestSplit(unittest.TestCase):
+    def assert_shares(self, pieces, weights, total):
+        self.assertEqual(s.money(sum(pieces)), total)
+        for piece in pieces:
+            self.assertEqual(piece, s.money(piece), f"not a settled amount: {pieces}")
+
+        for piece, weight in zip(pieces, weights, strict=True):
+            self.assertLessEqual(abs(piece - weight), 0.0101, f"{weights} -> {pieces}")
+
+            if weight > 0:
+                self.assertGreaterEqual(piece, 0.0, f"{weights} -> {pieces}")
+            elif weight < 0:
+                self.assertLessEqual(piece, 0.0, f"{weights} -> {pieces}")
+            else:
+                self.assertEqual(piece, 0.0, f"{weights} -> {pieces}")
+
+    def test_pieces_add_back_to_the_total(self):
+        self.assertEqual(sum(s.split(10.00, [3.333, 3.333, 3.334])), 10.00)
+
+    def test_no_piece_carries_everyone_elses_rounding(self):
+        self.assertEqual(s.split(10.00, [3.333, 3.333, 3.334]), [3.33, 3.34, 3.33])
+
+    def test_one_piece_takes_the_whole_total(self):
+        self.assertEqual(s.split(20.01, [20.01]), [20.01])
+
+    def test_credit_notes_share_out_a_negative_total(self):
+        pieces = s.split(-10.00, [-3.333, -3.333, -3.334])
+        self.assertEqual(sum(pieces), -10.00)
+        self.assertTrue(all(piece < 0 for piece in pieces))
+
+    def test_a_zero_weight_gets_nothing_and_the_total_still_holds(self):
+        pieces = s.split(10.00, [5.00, 0.0, 5.00])
+        self.assertEqual(pieces[1], 0.0)
+        self.assertEqual(sum(pieces), 10.00)
+
+    def test_total_is_honoured_even_when_it_disagrees_with_the_weights(self):
+        self.assertEqual(sum(s.split(10.01, [3.333, 3.333, 3.334])), 10.01)
+
+    def test_many_half_paisa_pieces_do_not_accumulate_drift(self):
+        weights = [0.005] * 100
+        self.assert_shares(s.split(s.money(sum(weights)), weights), weights, s.money(sum(weights)))
+
+    def test_no_piece_strays_from_the_weight_it_came_from(self):
+        for weights in (
+            [3.333, 3.333, 3.334],
+            [0.001, 0.004, 100.005, -100.005],
+            [33.335, -1000000.005, 33.335, 0.0],
+            [1000000.005, 0.005, -1000000.005],
+            [0.0, 0.005, 0.0],
+            [100.0, -100.0],
+            [-0.005] * 100,
+        ):
+            total = s.money(sum(weights))
+            self.assert_shares(s.split(total, weights), weights, total)
+
+    def test_weights_that_cancel_out_keep_their_own_amounts(self):
+        self.assertEqual(s.split(0.0, [100.0, -100.0]), [100.0, -100.0])
+
+    def test_a_total_next_to_nothing_does_not_inflate_the_pieces(self):
+        self.assert_shares(s.split(0.01, [1000.005, -1000.0]), [1000.005, -1000.0], 0.01)
+
+    def test_an_empty_weight_never_gets_a_piece(self):
+        # the remainder rides the last real weight, not merely the last row
+        weights = [33.335, -1000000.005, 33.335, 0.0]
+        total = s.money(sum(weights))
+        pieces = s.split(total, weights)
+
+        self.assertEqual(pieces[3], 0.0)
+        self.assertEqual(s.money(sum(pieces)), total)
+
+    def test_a_total_with_nothing_to_weigh_is_not_dropped(self):
+        self.assertEqual(sum(s.split(10.00, [0.0, 0.0, 0.0])), 10.00)
+        self.assertEqual(sum(s.split(-0.05, [0.0])), -0.05)
+
+    def test_nothing_anywhere_gives_nothing_anywhere(self):
+        self.assertEqual(s.split(0.0, []), [])
+        self.assertEqual(s.split(0.0, [0.0, 0.0, 0.0]), [0.0, 0.0, 0.0])
 
 
 if __name__ == "__main__":

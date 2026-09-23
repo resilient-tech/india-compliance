@@ -34,6 +34,7 @@ ADDRESS_FIELDS = {
     "Delivery Note": selling_address,
     "Purchase Receipt": buying_address,
     "Stock Entry": stock_entry_address,
+    "Asset Movement": stock_entry_address,
     "Subcontracting Receipt": buying_address,
 }
 
