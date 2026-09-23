@@ -4,6 +4,7 @@ from frappe import _
 from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.overrides.party import set_gst_category
 from india_compliance.gst_india.utils import (
+    get_pan_from_gstin,
     validate_gst_category,
     validate_gstin,
     validate_pincode,
@@ -32,7 +33,7 @@ def update_party_gstin_and_gst_category(doc, method=None):
         if party_gst_category != "Unregistered":
             continue
 
-        address_pan = doc.gstin[2:12]
+        address_pan = get_pan_from_gstin(doc.gstin)
         if party_pan and party_pan != address_pan:
             continue
 

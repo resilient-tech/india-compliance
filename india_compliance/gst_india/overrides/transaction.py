@@ -44,6 +44,7 @@ from india_compliance.gst_india.utils import (
     has_gst_taxes,
     is_import_transaction,
     is_inward_transaction,
+    is_oidar_gstin,
     is_overseas_doc,
     is_same_gstin_allowed,
     join_list_with_custom_separators,
@@ -742,6 +743,19 @@ def validate_overseas_gst_category(doc):
 
     if doc.doctype == "POS Invoice":
         frappe.throw(_("Cannot set GST Category to SEZ / Overseas in POS Invoice"))
+
+
+def validate_sales_to_oidar(doc):
+    gstin = doc.billing_address_gstin
+    if not gstin or not is_oidar_gstin(gstin):
+        return
+
+    frappe.throw(
+        _("Cannot create {0} against Non-Resident Online Services Provider (OIDAR) GSTIN {1}").format(
+            doc.doctype, frappe.bold(gstin)
+        ),
+        title=_("Invalid Customer GSTIN"),
+    )
 
 
 def get_regional_round_off_accounts(company, account_list, doc=None):
@@ -1759,6 +1773,9 @@ def validate_transaction(doc, method=None):
     else:
         gstin = doc.supplier_gstin
 
+    if is_sales_transaction:
+        validate_sales_to_oidar(doc)
+
     validate_gstin_status(gstin, doc)
     validate_gst_transporter_id(doc)
     validate_ecommerce_gstin(doc)
@@ -2030,6 +2047,9 @@ def sync_address_dependent_fields_after_submit(doc, method=None):
 
     validate_place_of_supply(doc)
     validate_overseas_gst_category(doc)
+
+    if is_sales_transaction:
+        validate_sales_to_oidar(doc)
 
     if gstin:
         validate_gstin_status(gstin, doc)

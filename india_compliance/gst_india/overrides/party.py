@@ -5,6 +5,7 @@ from frappe import _
 from frappe.contacts.doctype.address.address import get_address_display
 
 from india_compliance.gst_india.utils import (
+    get_pan_from_gstin,
     guess_gst_category,
     is_autofill_party_info_enabled,
     is_valid_pan,
@@ -65,7 +66,7 @@ def validate_pan(doc):
     """
 
     if doc.gstin:
-        doc.pan = pan_from_gstin if is_valid_pan(pan_from_gstin := doc.gstin[2:12]) else ""
+        doc.pan = get_pan_from_gstin(doc.gstin)
         return
 
     if not doc.pan:

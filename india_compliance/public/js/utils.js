@@ -2,6 +2,7 @@ import {
     GSTIN_REGEX,
     REGISTERED_REGEX,
     OVERSEAS_REGEX,
+    OIDAR_REGEX,
     UNBODY_REGEX,
     TDS_REGEX,
     TCS_REGEX,
@@ -423,6 +424,7 @@ Object.assign(india_compliance, {
         if (TCS_REGEX.test(gstin)) return "Tax Collector";
         if (REGISTERED_REGEX.test(gstin)) return "Registered Regular";
         if (UNBODY_REGEX.test(gstin)) return "UIN Holders";
+        if (OIDAR_REGEX.test(gstin)) return "Overseas";
         if (OVERSEAS_REGEX.test(gstin)) return "Overseas";
     },
 

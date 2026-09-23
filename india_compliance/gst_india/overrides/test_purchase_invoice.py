@@ -175,6 +175,20 @@ class TestPurchaseInvoice(IntegrationTestCase):
         )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_oidar_supplier_itc_classification(self):
+        pinv = create_purchase_invoice(
+            supplier="_Test OIDAR Supplier",
+            item_code="_Test Service Item",
+            is_reverse_charge=1,
+            do_not_submit=1,
+        )
+
+        self.assertEqual(pinv.gst_category, "Overseas")
+        self.assertEqual(pinv.supplier_gstin, "9917SGP29001OST")
+        self.assertEqual(pinv.itc_classification, "Import Of Service")
+        self.assertEqual(pinv.items[0].gst_treatment, "Taxable")
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_service_and_goods_import_invoice_itc_classification(self):
         test_cases = (
             ("Overseas", "_Test Foreign Supplier"),

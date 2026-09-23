@@ -199,6 +199,46 @@ class TestGstinInfo(IntegrationTestCase):
             },
         )
 
+    def test_oidar_gstin_info(self):
+        self.mock_public_api.return_value = Mock()
+        self.mock_public_api.return_value.get_gstin_info.return_value = frappe._dict(
+            {
+                "canclDt": "",
+                "ctb": "NA",
+                "ctj": (
+                    "State - CBIC,Zone - BENGALURU,Commissionerate - BENGALURU WEST,"
+                    "Division - WEST OIDAR SERVICES,Range - RANGE-BOIDAR (Jurisdictional Office)"
+                ),
+                "ctjCd": "YU1002",
+                "cxdt": "",
+                "dty": (
+                    "Non-Resident Online Services Provider and/or Non-Resident Online Money Gaming Supplier"
+                ),
+                "einvoiceStatus": "No",
+                "gstin": "9917SGP29001OST",
+                "lgnm": "GOOGLE ASIA PACIFIC PTE LTD",
+                "lstupdt": "",
+                "pradr": None,
+                "rgdt": "01/07/2017",
+                "rsnCd": "",
+                "stj": "NA",
+                "stjCd": "NA",
+                "sts": "Active",
+                "tradeNam": "",
+                "typeOfSup": "OIDAR",
+            }
+        )
+        gstin_info = get_gstin_info("9917SGP29001OST")
+        self.assertDictEqual(
+            gstin_info,
+            {
+                "gstin": "9917SGP29001OST",
+                "business_name": "Google Asia Pacific Pte LTD",
+                "gst_category": "Overseas",
+                "status": "Active",
+            },
+        )
+
 
 class TestGstinInvalidInfo(IntegrationTestCase):
     @responses.activate
