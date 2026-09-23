@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.utils import get_link_to_form
 
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
@@ -263,7 +264,10 @@ def _apply_changes(changes, tool=None):
 
     if skipped:
         frappe.msgprint(
-            [f"{frappe.bold(change.link_name)}: {message}" for change, message in skipped],
+            [
+                f"{get_link_to_form(change.doctype, change.link_name)}: {message}"
+                for change, message in skipped
+            ],
             title=_("Skipped {0} of {1} documents").format(len(skipped), len(changes)),
             indicator="orange",
             as_list=True,
