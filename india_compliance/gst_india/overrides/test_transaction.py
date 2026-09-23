@@ -944,13 +944,11 @@ class TestTransaction(FrappeTestCase):
                 **kwargs,
             )
 
-        # forward charge is permitted, and keeps the tax rows it was given
         doc = _oidar_purchase(is_out_state=True)
         self.assertEqual(doc.gst_category, "Overseas")
         self.assertEqual(doc.supplier_gstin, "9917SGP29001OST")
         self.assertTrue(doc.taxes)
 
-        # so is reverse charge
         doc = _oidar_purchase(is_out_state_rcm=True, is_reverse_charge=1)
         self.assertEqual(doc.gst_category, "Overseas")
         self.assertEqual(doc.supplier_gstin, "9917SGP29001OST")
