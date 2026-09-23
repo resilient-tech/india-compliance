@@ -1,7 +1,7 @@
 frappe.provide("reconciliation");
 
 Object.assign(reconciliation, {
-    COPYABLE_FIELDS: ["bill_no", "bill_date"],
+    COPYABLE_FIELDS: { bill_no: "Bill No", bill_date: "Bill Date" },
 
     // checked rows of the open tab, as invoices. a summary row stands for many
     get_affected_rows(frm) {
@@ -78,9 +78,6 @@ Object.assign(reconciliation, {
                 indicator: "red",
             });
 
-        // labels come off the reported side, since those are the values being copied
-        await frappe.model.with_doctype("GST Inward Supply");
-
         if (!fields?.length) {
             fields = await reconciliation.prompt_copy_fields();
             if (fields === null) return; // cancelled
@@ -106,7 +103,7 @@ Object.assign(reconciliation, {
         reconciliation.after_successful_action(
             tab,
             __("{0} copied to {1} of {2} documents", [
-                fields.map((field) => __(frappe.meta.get_label("GST Inward Supply", field))).join(", "),
+                fields.map((field) => __(reconciliation.COPYABLE_FIELDS[field])).join(", "),
                 copied_rows.length,
                 rows.length,
             ]),
@@ -117,19 +114,28 @@ Object.assign(reconciliation, {
         return new Promise((resolve) => {
             const dialog = new frappe.ui.Dialog({
                 title: __("Copy Values from 2A/2B"),
-                // the checks run across one section, so they read as a single choice
-                fields: reconciliation.COPYABLE_FIELDS.flatMap((fieldname, index) => [
-                    ...(index ? [{ fieldtype: "Column Break" }] : []),
+                fields: [
                     {
-                        fieldtype: "Check",
-                        fieldname,
-                        label: __(frappe.meta.get_label("GST Inward Supply", fieldname)),
-                        default: 1,
+                        fieldtype: "HTML",
+                        options: `<p class="help-box small text-extra-muted">${__(
+                            "Copy the values reported in 2A/2B to your books",
+                        )}</p>`,
                     },
-                ]),
+                    {
+                        fieldtype: "MultiCheck",
+                        fieldname: "fields",
+                        columns: 2,
+                        sort_options: false,
+                        options: Object.entries(reconciliation.COPYABLE_FIELDS).map(([value, label]) => ({
+                            value,
+                            label: __(label),
+                            checked: 1,
+                        })),
+                    },
+                ],
                 primary_action_label: __("Apply"),
                 primary_action(values) {
-                    resolve(reconciliation.COPYABLE_FIELDS.filter((fieldname) => values[fieldname]));
+                    resolve(values.fields);
                     dialog.hide();
                 },
             });

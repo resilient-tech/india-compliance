@@ -448,9 +448,9 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     _set_missing_doctype() {}
 
     setup_actions() {
-        const actions = this._get_custom_actions();
+        this.custom_actions = this._get_custom_actions();
 
-        actions.forEach((action) => {
+        this.custom_actions.forEach((action) => {
             this.dialog.add_custom_action(
                 action,
                 async () => {
@@ -468,9 +468,9 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         this.dialog.$wrapper.find(".btn.btn-secondary.not-grey").removeClass("btn-secondary");
         this.dialog.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
 
-        const $sync_btn = this.dialog.$wrapper.find(".modal-footer .sync-btn");
-        if ($sync_btn.length)
-            frappe.ui.tooltip($sync_btn, { text: __("Copy the values reported in 2A/2B to your books") });
+        const $copy_btn = this.dialog.$wrapper.find(".modal-footer .copy-btn");
+        if ($copy_btn.length)
+            frappe.ui.tooltip($copy_btn, { text: __("Copy the values reported in 2A/2B to your books") });
     }
 
     _get_custom_actions() {
@@ -484,7 +484,13 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     }
 
     toggle_link_btn(disabled) {
-        const btn = this.dialog.$wrapper.find(".modal-footer .link-document-btn");
+        const btn = this.dialog.$wrapper.find(".modal-footer .link-document-btn").prop("disabled", disabled);
+        if (disabled) btn.addClass("disabled");
+        else btn.removeClass("disabled");
+    }
+
+    toggle_copy_btn(disabled) {
+        const btn = this.dialog.$wrapper.find(".modal-footer .copy-btn").prop("disabled", disabled);
         if (disabled) btn.addClass("disabled");
         else btn.removeClass("disabled");
     }
@@ -547,15 +553,12 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
             }),
         );
         this._mark_differences(detail_table.$wrapper);
+        this._offer_copy(detail_table.$wrapper);
     }
 
     _mark_differences(wrapper) {
-        // one side missing: nothing to compare against, and nothing to copy over
         if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
 
-        const has_sync_action = this.dialog.$wrapper.find(".modal-footer .sync-btn").length;
-
-        // template marks the rows worth comparing
         wrapper.find("[data-compare]").each((_index, row) => {
             const field = $(row).data("compare");
             const booked = this.data._purchase_invoice[field];
@@ -566,37 +569,52 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                     ? flt(booked, 2) === flt(reported, 2)
                     : booked == reported;
 
-            if (same) return;
-
-            $(row).attr("title", __("Books and 2A/2B do not match")).addClass("not-matched");
-
-            // nothing to copy from a blank 2A/2B value
-            if (has_sync_action && reported && $(row).has("[data-sync-field]").length)
-                $(row).addClass("can-sync");
+            if (!same) $(row).attr("title", __("Books and 2A/2B do not match")).addClass("not-matched");
         });
+    }
 
-        wrapper.find("thead tr").toggleClass("can-sync", !!wrapper.find("tbody tr.can-sync").length);
+    _offer_copy(wrapper) {
+        this.copy_selection = new Set();
+        if (!this.custom_actions.includes("Copy")) return;
+        if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
 
-        wrapper.find("[data-sync-field]").on("change", (e) => {
-            const $cell = $(e.target).closest("tr").find("td:last-child");
-            $cell.find("span:first-child").toggleClass("strike text-muted", e.target.checked);
-            $cell.find("span:last-child").toggleClass("d-none", !e.target.checked);
+        wrapper.find("tr.not-matched [data-copy-field]").each((_index, input) => {
+            const reported = this.data._inward_supply[input.dataset.copyField];
+            if (reported) $(input).closest("tr").addClass("can-copy");
         });
 
         wrapper
-            .find("[data-sync-all]")
-            .on("change", (e) =>
+            .find("[data-copy-field], [data-copy-all]")
+            .attr("title", __("Copy the values reported in 2A/2B to your books"));
+
+        const copyable_rows = wrapper.find("tbody tr.can-copy").length;
+        wrapper.find("thead tr").toggleClass("can-copy", !!copyable_rows);
+        this.dialog.$wrapper.find(".modal-footer .copy-btn").toggleClass("hide", !copyable_rows);
+
+        wrapper
+            .off(".copy")
+            .on("change.copy", "[data-copy-field]", (e) => {
+                const $row = $(e.target).closest("tr");
+                $row.find("[data-booked]").toggleClass("strike text-muted", e.target.checked);
+                $row.find("[data-reported]").toggleClass("d-none", !e.target.checked);
+
+                if (e.target.checked) this.copy_selection.add(e.target.dataset.copyField);
+                else this.copy_selection.delete(e.target.dataset.copyField);
+
+                wrapper.find("[data-copy-all]").prop("checked", this.copy_selection.size === copyable_rows);
+                this.toggle_copy_btn(!this.copy_selection.size);
+            })
+            .on("change.copy", "[data-copy-all]", (e) =>
                 wrapper
-                    .find("tr.can-sync [data-sync-field]")
+                    .find("tbody tr.can-copy [data-copy-field]")
                     .prop("checked", e.target.checked)
                     .trigger("change"),
             );
+
+        this.toggle_copy_btn(true);
     }
 
     get copy_fields() {
-        return this.dialog.$wrapper
-            .find("[data-sync-field]:checked")
-            .map((_index, el) => el.dataset.syncField)
-            .get();
+        return Object.keys(reconciliation.COPYABLE_FIELDS).filter((field) => this.copy_selection?.has(field));
     }
 };

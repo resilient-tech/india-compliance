@@ -10,7 +10,7 @@
         width: 1%;
     }
 
-    tr:not(.can-sync) input[type="checkbox"] {
+    tr:not(.can-copy) input[type="checkbox"] {
         display: none;
     }
 }
@@ -24,10 +24,6 @@ tr.not-matched > td {
 // gstr-1 marks cells, not rows
 td.not-matched {
     color: var(--red-500);
-}
-
-.modal-dialog:not(:has([data-sync-field]:checked)) .sync-btn {
-    display: none;
 }
 
 .strike {

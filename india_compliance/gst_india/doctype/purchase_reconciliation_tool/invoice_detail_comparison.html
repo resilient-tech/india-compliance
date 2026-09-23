@@ -2,7 +2,7 @@
 	<table class="table table-bordered table-hover">
 		<thead>
 			<tr class="text-center">
-				<th><input type="checkbox" data-sync-all></th>
+				<th><input type="checkbox" data-copy-all></th>
 				<th></th>
 				<th>2A / 2B</th>
 				<th>{{ purchase_label }}</th>
@@ -43,23 +43,23 @@
 				{% endif %}
 			</tr>
 			<tr data-compare="bill_no">
-				<td><input type="checkbox" data-sync-field="bill_no"></td>
+				<td><input type="checkbox" data-copy-field="bill_no"></td>
 				<th>Bill No</th>
 				<td data-label="bill_no">{{ inward_supply.bill_no || '-' }}</td>
 				<td data-label="bill_no">
-					<span>{{ purchase.bill_no || '-' }}</span><br>
-					<span class="d-none">{{ inward_supply.bill_no }}</span>
+					<span data-booked>{{ purchase.bill_no || '-' }}</span><br>
+					<span data-reported class="d-none">{{ inward_supply.bill_no }}</span>
 				</td>
 			</tr>
 			<tr data-compare="bill_date">
-				<td><input type="checkbox" data-sync-field="bill_date"></td>
+				<td><input type="checkbox" data-copy-field="bill_date"></td>
 				<th>Bill Date</th>
 				<td data-label="bill_date">
 					{{ frappe.format(inward_supply.bill_date, {'fieldtype': 'Date'}) || '-' }}
 				</td>
 				<td data-label="bill_date">
-					<span>{{ frappe.format(purchase.bill_date, {'fieldtype': 'Date'}) || '-' }}</span><br>
-					<span class="d-none">{{ frappe.format(inward_supply.bill_date, {'fieldtype': 'Date'}) }}</span>
+					<span data-booked>{{ frappe.format(purchase.bill_date, {'fieldtype': 'Date'}) || '-' }}</span><br>
+					<span data-reported class="d-none">{{ frappe.format(inward_supply.bill_date, {'fieldtype': 'Date'}) }}</span>
 				</td>
 			</tr>
 			<tr data-compare="place_of_supply">

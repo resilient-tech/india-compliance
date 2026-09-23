@@ -877,6 +877,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
                 DOCTYPE,
             );
         } else if (action == "Copy") {
+            if (!this.copy_fields.length) return;
             return reconciliation.copy_details(this.frm, [this.row], this.copy_fields);
         } else {
             apply_action(this.frm, ACTION_MAP[action], [this.row.inward_supply_name]);
@@ -890,7 +891,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         if (action == "Pending") return "btn-warning not-grey";
         if (action == "Create") return "btn-primary not-grey";
         if (action == "Link") return "btn-primary not-grey link-document-btn disabled";
-        if (action == "Copy") return "btn-warning not-grey sync-btn";
+        if (action == "Copy") return "btn-warning not-grey copy-btn disabled";
     }
 
     _set_missing_doctype() {
