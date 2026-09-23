@@ -27,14 +27,14 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     Reconciler,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
+    copy_details as _copy_details,
+)
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     get_formatted_options,
     set_reconciliation_status,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     link_documents as _link_documents,
-)
-from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
-    sync_details as _sync_details,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     unlink_documents as _unlink_documents,
@@ -285,15 +285,15 @@ class PurchaseReconciliationTool(Document):
         return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()
-    def sync_details(self, data: str | list, fields: str | list | None = None):
+    def copy_details(self, data: str | list, fields: str | list | None = None):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        synced = _sync_details(data, fields, tool=self.doctype)
+        copied = _copy_details(data, fields, tool=self.doctype)
 
-        if not synced:
+        if not copied:
             return
 
-        purchases, inward_supplies = synced
+        purchases, inward_supplies = copied
 
         return self.ReconciledData.get(purchases, inward_supplies)
 

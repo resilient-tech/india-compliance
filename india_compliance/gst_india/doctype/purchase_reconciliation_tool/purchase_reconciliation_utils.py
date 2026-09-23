@@ -10,7 +10,7 @@ from india_compliance.gst_india.utils.itc_claim import set_itc_claim_period_on_m
 from india_compliance.utils.change_log_utils import update_docs, validate_update_access
 
 # same as client side public/js/reconciliation_components/actions.js
-SYNCABLE_FIELDS = ("bill_no", "bill_date")
+COPYABLE_FIELDS = ("bill_no", "bill_date")
 
 PURCHASE_FIELDNAME_MAP = {
     "Purchase Invoice": {"bill_no": "bill_no", "bill_date": "bill_date"},
@@ -123,7 +123,7 @@ def _unlink_documents(inward_supplies, exclude_from_reconciliation=False):
     )
 
 
-def sync_details(data, fields, tool=None):
+def copy_details(data, fields, tool=None):
     """
     Copy bill no / date reported in 2A/2B onto the linked purchase document.
 
@@ -133,7 +133,7 @@ def sync_details(data, fields, tool=None):
     if isinstance(fields, str):
         fields = frappe.parse_json(fields)
 
-    fields = _validate_sync_fields(fields)
+    fields = _validate_copy_fields(fields)
     data = frappe.parse_json(data) or []
 
     inward_supply_names = {
@@ -144,13 +144,13 @@ def sync_details(data, fields, tool=None):
     }
 
     if not inward_supply_names:
-        frappe.msgprint(_("Please select matched rows to sync"))
+        frappe.msgprint(_("Please select matched rows to copy"))
         return
 
-    changes = _get_changes_to_sync(inward_supply_names, fields)
+    changes = _get_changes_to_copy(inward_supply_names, fields)
 
     if not changes:
-        frappe.msgprint(_("No changes to sync"))
+        frappe.msgprint(_("No changes to copy"))
         return
 
     # the earliest access can be checked, and nothing is read or written before it
@@ -173,20 +173,20 @@ def sync_details(data, fields, tool=None):
     )
 
 
-def _validate_sync_fields(fields):
+def _validate_copy_fields(fields):
     if not isinstance(fields, list):
-        frappe.throw(_("Fields to sync must be a list"))
+        frappe.throw(_("Fields to copy must be a list"))
 
     if not fields:
-        frappe.throw(_("No fields to sync"))
+        frappe.throw(_("No fields to copy"))
 
-    if invalid := set(fields) - set(SYNCABLE_FIELDS):
-        frappe.throw(_("Not allowed to sync field {0}").format(frappe.bold(", ".join(sorted(invalid)))))
+    if invalid := set(fields) - set(COPYABLE_FIELDS):
+        frappe.throw(_("Not allowed to copy field {0}").format(frappe.bold(", ".join(sorted(invalid)))))
 
-    return [field for field in SYNCABLE_FIELDS if field in fields]
+    return [field for field in COPYABLE_FIELDS if field in fields]
 
 
-def _get_changes_to_sync(inward_supply_names, fields):
+def _get_changes_to_copy(inward_supply_names, fields):
     """
     return: linked pairs where a requested field differs, as rows of doctype, name
     (inward supply), link_name (purchase), company and new_values

@@ -2,7 +2,7 @@ frappe.provide("reconciliation");
 
 Object.assign(reconciliation, {
     // fields that can be synced from 2a/2b to invoice
-    SYNCABLE_FIELDS: ["bill_no", "bill_date"],
+    COPYABLE_FIELDS: ["bill_no", "bill_date"],
 
     // checked rows of the open tab, as invoices. a summary row stands for many
     get_affected_rows(frm) {
@@ -66,7 +66,7 @@ Object.assign(reconciliation, {
         reconciliation.after_successful_action(tab);
     },
 
-    async sync_details(frm, selected_rows, fields) {
+    async copy_details(frm, selected_rows, fields) {
         const _class = frm.reconciliation_tabs;
         const tab = _class.tabs[frm.get_active_tab()?.df.fieldname];
         if (!selected_rows) selected_rows = reconciliation.get_affected_rows(frm);
@@ -83,7 +83,7 @@ Object.assign(reconciliation, {
         await frappe.model.with_doctype("GST Inward Supply");
 
         if (!fields?.length) {
-            fields = await reconciliation.prompt_sync_fields();
+            fields = await reconciliation.prompt_copy_fields();
             if (fields === null) return; // cancelled
 
             if (!fields.length)
@@ -93,33 +93,33 @@ Object.assign(reconciliation, {
                 });
         }
 
-        const { message: synced_rows } = await frm._call("sync_details", { data: rows, fields });
+        const { message: copied_rows } = await frm._call("copy_details", { data: rows, fields });
 
-        if (!synced_rows) return; // nothing synced, server has said why
+        if (!copied_rows) return; // nothing synced, server has said why
 
         // drop the stale copies before pushing the refreshed ones back, else they double up
-        const synced_names = new Set(synced_rows.map((row) => row.inward_supply_name));
-        const new_data = _class.data.filter((row) => !synced_names.has(row.inward_supply_name));
+        const copied_names = new Set(copied_rows.map((row) => row.inward_supply_name));
+        const new_data = _class.data.filter((row) => !copied_names.has(row.inward_supply_name));
 
-        new_data.push(...synced_rows);
+        new_data.push(...copied_rows);
         _class.refresh(new_data);
 
         reconciliation.after_successful_action(
             tab,
             __("{0} copied to {1} of {2} documents", [
                 fields.map((field) => __(frappe.meta.get_label("GST Inward Supply", field))).join(", "),
-                synced_rows.length,
+                copied_rows.length,
                 rows.length,
             ]),
         );
     },
 
-    prompt_sync_fields() {
+    prompt_copy_fields() {
         return new Promise((resolve) => {
             const dialog = new frappe.ui.Dialog({
                 title: __("Copy Values from 2A/2B"),
                 // the checks run across one section, so they read as a single choice
-                fields: reconciliation.SYNCABLE_FIELDS.flatMap((fieldname, index) => [
+                fields: reconciliation.COPYABLE_FIELDS.flatMap((fieldname, index) => [
                     ...(index ? [{ fieldtype: "Column Break" }] : []),
                     {
                         fieldtype: "Check",
@@ -130,7 +130,7 @@ Object.assign(reconciliation, {
                 ]),
                 primary_action_label: __("Apply"),
                 primary_action(values) {
-                    resolve(reconciliation.SYNCABLE_FIELDS.filter((fieldname) => values[fieldname]));
+                    resolve(reconciliation.COPYABLE_FIELDS.filter((fieldname) => values[fieldname]));
                     dialog.hide();
                 },
             });

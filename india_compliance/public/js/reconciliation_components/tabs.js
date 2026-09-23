@@ -594,7 +594,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
             );
     }
 
-    get sync_fields() {
+    get copy_fields() {
         return this.dialog.$wrapper
             .find("[data-sync-field]:checked")
             .map((_index, el) => el.dataset.syncField)

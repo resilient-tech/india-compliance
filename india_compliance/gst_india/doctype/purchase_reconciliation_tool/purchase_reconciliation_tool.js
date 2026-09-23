@@ -704,7 +704,7 @@ class PurchaseReconciliationToolAction {
         );
         this.frm.add_custom_button(
             __("Copy Data"),
-            () => reconciliation.sync_details(this.frm),
+            () => reconciliation.copy_details(this.frm),
             action_group,
         );
         this.frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
@@ -788,7 +788,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
                 DOCTYPE,
             );
         } else if (action == "Copy") {
-            return reconciliation.sync_details(this.frm, [this.row], this.sync_fields);
+            return reconciliation.copy_details(this.frm, [this.row], this.copy_fields);
         } else {
             apply_action(this.frm, action, [this.row]);
         }

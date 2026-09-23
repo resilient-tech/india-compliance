@@ -23,7 +23,7 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.test_purchase_reconciliation_tool import (
     create_gst_inward_supply,
-    get_sync_versions,
+    get_copy_versions,
 )
 from india_compliance.gst_india.utils.api import create_integration_request
 from india_compliance.gst_india.utils.gstr_2.ims import IMSB2B, IMSB2BCN
@@ -649,7 +649,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
 
         self.assertFalse(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
 
-    def test_sync_details(self):
+    def test_copy_details(self):
         """
         Bill no / date reported in IMS are copied onto the linked Purchase Invoice, and
         the synced rows come back as IMS invoice data so the grid can be refreshed.
@@ -690,7 +690,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             "inward_supply_name": gst_is.name,
             "purchase_doctype": "Purchase Invoice",
         }
-        result = self.gst_ims.sync_details([row], fields=["bill_no", "bill_date"])
+        result = self.gst_ims.copy_details([row], fields=["bill_no", "bill_date"])
 
         self.assertEqual(
             frappe.db.get_value("Purchase Invoice", pinv.name, ["bill_no", "bill_date"], as_dict=True),
@@ -698,7 +698,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         )
 
         # set_value writes no version, so the sync records one itself
-        versions = get_sync_versions("Purchase Invoice", pinv.name, "GST Invoice Management System")
+        versions = get_copy_versions("Purchase Invoice", pinv.name, "GST Invoice Management System")
         self.assertEqual(len(versions), 1)
         self.assertEqual(versions[0]["bill_no"], "IMS-SYNC-001-A")
 
@@ -710,7 +710,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual(result[0].bill_no, "IMS-SYNC-001-A")
 
         # now in agreement: nothing left to sync
-        self.assertIsNone(self.gst_ims.sync_details([row], fields=["bill_no", "bill_date"]))
+        self.assertIsNone(self.gst_ims.copy_details([row], fields=["bill_no", "bill_date"]))
 
     def get_periods(self):
         periods = []
