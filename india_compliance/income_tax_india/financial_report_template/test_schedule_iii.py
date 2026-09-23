@@ -4,13 +4,8 @@
 import frappe
 from erpnext.accounts.doctype.financial_report_template.financial_report_engine import FinancialReportEngine
 from erpnext.accounts.utils import get_fiscal_year
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import today
-=======
-from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
->>>>>>> d9b1ada (fix: show correct COGS  in p&l report)
 
 from india_compliance.gst_india.utils.tests import create_purchase_invoice, create_sales_invoice
 from india_compliance.tests.erpnext_test_utils import (
