@@ -2,7 +2,11 @@ import frappe
 from frappe.utils import flt
 from frappe.utils.data import format_date
 
-from india_compliance.gst_india.constants import ACTION_MAP, STATE_NUMBERS
+from india_compliance.gst_india.constants import (
+    ACTION_MAP,
+    GST_TAX_TYPES,
+    STATE_NUMBERS,
+)
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     create_inward_supply,
 )
@@ -141,6 +145,10 @@ class IMS:
         return details
 
     def convert_data_to_gov_format(self, invoice):
+        # portal expects positive values
+        for field in (*GST_TAX_TYPES[:-1], "taxable_value"):
+            invoice[field] = abs(flt(invoice[field]))
+
         data = {
             raw.SUPPLIER_GSTIN: invoice.get(doc.SUPPLIER_GSTIN),
             raw.SUPPLY_TYPE: get_mapped_value(invoice.get(doc.SUPPLY_TYPE), REVERSE_GST_CATEGORY),
