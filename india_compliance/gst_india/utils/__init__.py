@@ -44,6 +44,7 @@ from india_compliance.gst_india.constants import (
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
     ISD_GST_CATEGORY,
+    OIDAR,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
@@ -427,6 +428,14 @@ def is_valid_pan(pan):
     return PAN_NUMBER.match(pan)
 
 
+def is_oidar_gstin(gstin):
+    return OIDAR.match(gstin)
+
+
+def get_pan_from_gstin(gstin):
+    return pan if is_valid_pan(pan := gstin[2:12]) else ""
+
+
 def validate_pincode(address):
     """
     Validate Pincode with following checks:
@@ -505,6 +514,9 @@ def guess_gst_category(gstin: str | None, country: str | None, gst_category: str
 
     if GSTIN_FORMATS["UIN Holders"].match(gstin):
         return "UIN Holders"
+
+    if is_oidar_gstin(gstin):
+        return "Overseas"
 
     if GSTIN_FORMATS["Overseas"].match(gstin):
         return "Overseas"

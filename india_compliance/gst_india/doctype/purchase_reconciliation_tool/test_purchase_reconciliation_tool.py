@@ -16,6 +16,9 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
     make_source_item,
     setup_isd_fixtures,
 )
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
+    BuildExcel,
+)
 from india_compliance.gst_india.utils.gstr_2 import save_gstr_2b
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
@@ -129,6 +132,23 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                 row,
                 self.reconciled_data.get((row.purchase_invoice_name, row.inward_supply_name)) or {},
             )
+
+        matched_row = next(
+            row for row in reconciled_data if row.purchase_invoice_name and row.inward_supply_name
+        )
+        details = purchase_reconciliation_tool.get_invoice_details(
+            matched_row.purchase_invoice_name, matched_row.inward_supply_name
+        )
+
+        self.assertEqual(details._inward_supply.return_period_2b, "122023")
+        self.assertEqual(details._purchase_invoice.itc_claim_period, "122023")
+
+        exported_fields = [
+            column["fieldname"] for column in BuildExcel(purchase_reconciliation_tool, {}).invoice_header
+        ]
+
+        self.assertIn("return_period_2b", exported_fields)
+        self.assertIn("itc_claim_period", exported_fields)
 
     @classmethod
     def create_test_data(cls):
