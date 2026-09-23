@@ -909,7 +909,6 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
-<<<<<<< HEAD
     def test_non_gst_transaction_with_gst_accounts(self):
         doc = create_transaction(
             **self.transaction_details,
@@ -926,7 +925,6 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
-=======
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_purchase_from_oidar_supplier(self):
         if self.is_sales_doctype:
@@ -972,9 +970,6 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
-<<<<<<< HEAD
->>>>>>> 581e9e2 (test: add OIDAR supplier and transaction tests, including GSTIN validation and ITC classification)
-=======
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_sales_to_oidar_is_blocked_after_submit(self):
         if self.doctype != "Sales Invoice":
@@ -996,7 +991,6 @@ class TestTransaction(FrappeTestCase):
             doc.save,
         )
 
->>>>>>> 172935f (fix: add validation to block sales to OIDAR after submission and enhance GSTIN utility tests)
     def test_invalid_charge_type_as_actual(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
         _append_taxes(doc, ["CGST", "SGST"], charge_type="Actual", tax_amount=9)
