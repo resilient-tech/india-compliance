@@ -3,7 +3,6 @@ import datetime
 import functools
 import inspect
 import io
-import re
 import tarfile
 from collections.abc import Callable
 
@@ -422,19 +421,10 @@ def is_valid_pan(pan):
 
 
 def is_oidar_gstin(gstin):
-    """
-    OIDAR (Non-Resident Online Services Provider and/or Non-Resident Online Money Gaming
-    Supplier) is registered under the Simplified Registration Scheme, available only to
-    suppliers located outside India.
-    """
-    return bool(re.match(OIDAR, gstin))
+    return OIDAR.match(gstin)
 
 
 def get_pan_from_gstin(gstin):
-    """
-    Characters 3-12 of a GSTIN are a PAN only for some formats. Overseas (eg OIDAR
-    9917SGP29001OST), UIN Holders and Tax Deductor yield a non-PAN string.
-    """
     return pan if is_valid_pan(pan := gstin[2:12]) else ""
 
 
@@ -516,6 +506,9 @@ def guess_gst_category(gstin: str | None, country: str | None, gst_category: str
 
     if GSTIN_FORMATS["UIN Holders"].match(gstin):
         return "UIN Holders"
+
+    if is_oidar_gstin(gstin):
+        return "Overseas"
 
     if GSTIN_FORMATS["Overseas"].match(gstin):
         return "Overseas"
