@@ -18,8 +18,7 @@ from erpnext.controllers.accounts_controller import (
     get_advance_payment_entries_for_regional,
 )
 from erpnext.controllers.stock_controller import show_accounting_ledger_preview
-from frappe.tests import change_settings
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
