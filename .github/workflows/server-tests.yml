@@ -26,6 +26,15 @@ on:
         version-16,
       ]
 
+    paths-ignore:
+      - "**.css"
+      - "**.js"
+      - "**.md"
+      - "**.svg"
+      - "**.png"
+      - "india_compliance/public/**/*.html"
+      - "**.csv"
+
   workflow_dispatch:
     inputs:
       frappe_remote:
@@ -73,14 +82,17 @@ jobs:
       - uses: dorny/paths-filter@v4
         id: filter
         with:
+          predicate-quantifier: every
           filters: |
             backend:
               - '**'
-              - '!**.css'
-              - '!**.js'
-              - '!**.md'
-              - '!**.html'
-              - '!**.csv'
+              - '!**/*.css'
+              - '!**/*.js'
+              - '!**/*.md'
+              - '!**/*.svg'
+              - '!**/*.png'
+              - '!india_compliance/public/**/*.html'
+              - '!**/*.csv'
 
   tests:
     runs-on: ubuntu-latest
@@ -180,8 +192,8 @@ jobs:
 
   coverage:
     name: Coverage Wrap Up
-    if: ${{ github.event_name == 'push' && needs.changes.outputs.backend == 'true' }}
-    needs: [changes, tests]
+    if: ${{ github.event_name == 'push' }}
+    needs: tests
     runs-on: ubuntu-latest
     steps:
       - name: Clone
