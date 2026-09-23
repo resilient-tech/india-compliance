@@ -441,7 +441,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
             default: frm.doc.mode_of_transport || "Road",
             onchange: () => {
                 update_generation_dialog(d, frm.doc);
-                update_vehicle_type(d);
+                update_vehicle_type(d, frm);
             },
         },
         {
@@ -877,7 +877,7 @@ async function show_update_vehicle_info_dialog(frm) {
                 options: `\nRoad\nAir\nRail\nShip`,
                 default: frm.doc.mode_of_transport,
                 mandatory_depends_on: "eval: doc.lr_no",
-                onchange: () => update_vehicle_type(d),
+                onchange: () => update_vehicle_type(d, frm),
             },
             {
                 label: "State",
@@ -1383,12 +1383,12 @@ function are_transport_details_available(doc) {
     );
 }
 
-function update_vehicle_type(dialog) {
-    dialog.set_value("gst_vehicle_type", get_vehicle_type(dialog.get_values(true)));
+function update_vehicle_type(dialog, frm) {
+    dialog.set_value("gst_vehicle_type", get_vehicle_type(dialog.get_values(true), frm.doc.gst_vehicle_type));
 }
 
-function get_vehicle_type(doc) {
-    if (doc.mode_of_transport == "Road") return "Regular";
+function get_vehicle_type(doc, saved_type) {
+    if (doc.mode_of_transport == "Road") return saved_type || "Regular";
     if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
     return "";
 }
