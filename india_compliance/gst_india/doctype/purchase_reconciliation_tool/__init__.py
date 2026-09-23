@@ -1048,6 +1048,7 @@ class ReconciledData(BaseReconciliation):
             "irn_source",
             "irn_number",
             "irn_gen_date",
+            "return_period_2b",
         ]
 
         return super().get_all_inward_supply(inward_supply_fields, names, only_names) or []
@@ -1060,6 +1061,7 @@ class ReconciledData(BaseReconciliation):
             "is_return",
             "gst_category",
             "reconciliation_status",
+            "itc_claim_period",
             *self.dimension_fields,
         ]
 
@@ -1130,6 +1132,8 @@ class ReconciledData(BaseReconciliation):
             "gstr_3b_filled": "",
             "itc_availability": "",
             "reason_itc_unavailability": "",
+            "return_period_2b": "",
+            "itc_claim_period": "",
             "irn_source": "",
             "irn_number": "",
             "irn_gen_date": "",
@@ -1188,6 +1192,8 @@ class ReconciledData(BaseReconciliation):
                 "gstr_3b_filled": inward_supply.get("gstr_3b_filled"),
                 "itc_availability": inward_supply.get("itc_availability"),
                 "reason_itc_unavailability": inward_supply.get("reason_itc_unavailability"),
+                "return_period_2b": inward_supply.get("return_period_2b"),
+                "itc_claim_period": purchase.get("itc_claim_period"),
                 "irn_source": inward_supply.get("irn_source"),
                 "irn_number": inward_supply.get("irn_number"),
                 "irn_gen_date": format_date(inward_supply.get("irn_gen_date")),
