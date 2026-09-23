@@ -20,6 +20,7 @@ function setup_e_waybill_actions(doctype) {
     frappe.ui.form.on(doctype, {
         mode_of_transport(frm) {
             frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
+            toggle_transport_fields(frm);
         },
         // these fields are fetch_if_empty, so clear them explicitly on removal
         transporter(frm) {
@@ -1030,6 +1031,11 @@ async function show_update_e_waybill_dialog(frm, { vehicle = false, transporter 
 }
 
 async function update_e_waybill(frm, values, { vehicle, transporter }) {
+    if (frm.is_dirty()) {
+        Object.assign(frm.doc, await get_saved_transport_fields(frm));
+        await frm._save_without_e_waybill_check("Update");
+    }
+
     const call = (method, values) =>
         frappe.call({
             method: `india_compliance.gst_india.utils.e_waybill.${method}`,
@@ -1492,12 +1498,18 @@ function can_update_e_waybill(frm) {
 }
 
 function toggle_transport_fields(frm) {
-    frm.toggle_enable(
-        [...E_WAYBILL_TRANSPORTER_FIELDS, ...E_WAYBILL_VEHICLE_FIELDS].filter(
-            (f) => f !== "gst_vehicle_type",
-        ),
-        !frm.doc.ewaybill || can_update_e_waybill(frm),
+    const editable = !frm.doc.ewaybill || can_update_e_waybill(frm);
+    frm.toggle_enable([...E_WAYBILL_TRANSPORTER_FIELDS, ...E_WAYBILL_VEHICLE_FIELDS], editable);
+
+    frm.toggle_enable("gst_vehicle_type", editable && frm.doc.mode_of_transport !== "Ship");
+}
+
+async function get_saved_transport_fields(frm) {
+    const fields = [...E_WAYBILL_TRANSPORTER_FIELDS, ...E_WAYBILL_VEHICLE_FIELDS].filter(
+        (f) => frm.fields_dict[f],
     );
+    const { message } = await frappe.db.get_value(frm.doctype, frm.docname, fields);
+    return message;
 }
 
 function intercept_update_for_e_waybill(frm) {
@@ -1514,11 +1526,8 @@ function intercept_update_for_e_waybill(frm) {
 async function open_e_waybill_update_dialog(frm) {
     if (frm.doc.docstatus !== 1 || !frm.doc.ewaybill || !can_update_e_waybill(frm)) return false;
 
-    const fields = [...E_WAYBILL_TRANSPORTER_FIELDS, ...E_WAYBILL_VEHICLE_FIELDS].filter(
-        (f) => frm.fields_dict[f],
-    );
-    const { message: saved } = await frappe.db.get_value(frm.doctype, frm.docname, fields);
-    const changed = fields.filter((f) => (saved[f] || "") != (frm.doc[f] || ""));
+    const saved = await get_saved_transport_fields(frm);
+    const changed = Object.keys(saved).filter((f) => (saved[f] || "") != (frm.doc[f] || ""));
 
     const vehicle = changed.some((f) => E_WAYBILL_VEHICLE_FIELDS.includes(f));
     const transporter = changed.some((f) => E_WAYBILL_TRANSPORTER_FIELDS.includes(f));

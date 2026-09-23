@@ -1605,7 +1605,6 @@ E_WAYBILL_DN_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.mode_of_transport == 'Ship'",
     },
 ]
 
@@ -1893,7 +1892,6 @@ E_WAYBILL_SCR_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.mode_of_transport == 'Ship'",
     },
 ]
 
