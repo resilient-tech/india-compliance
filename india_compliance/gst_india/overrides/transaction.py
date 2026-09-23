@@ -746,10 +746,6 @@ def validate_overseas_gst_category(doc):
 
 
 def validate_sales_to_oidar(doc):
-    """
-    An OIDAR registration (Form GST REG-10) is granted to a non-resident for outward
-    supplies only, carries no input tax credit, and is never the recipient of a supply.
-    """
     gstin = doc.billing_address_gstin
     if not gstin or not is_oidar_gstin(gstin):
         return

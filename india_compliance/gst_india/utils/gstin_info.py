@@ -306,8 +306,8 @@ def fetch_transporter_id_status(transporter_id, doc=None, throw=True):
 # "Tax Collector (e-Commerce Operator)"     29AABCF8078M1C8 27AAECG3736E1C2 29AAFCB7707D1C1
 
 # ###### CANNOT BE A PART OF GSTR1 ######
-# "Non-Resident Online Services Provider and/or Non-Resident Online Money Gaming Supplier"
-#                                           9917SGP29001OST      Google Asia Pacific Pte Ltd
+# "Non Resident Online Services Provider"   9917SGP29001OST      Google
+
 # "Non Resident Taxable Person"
 # "Government Department ID"
 
