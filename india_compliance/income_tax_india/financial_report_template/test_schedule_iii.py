@@ -5,8 +5,9 @@ import frappe
 from erpnext.accounts.doctype.financial_report_template.financial_report_engine import FinancialReportEngine
 from erpnext.accounts.utils import get_fiscal_year
 from frappe.tests import IntegrationTestCase
-from frappe.utils import today
+from frappe.utils import add_days, today
 
+from india_compliance.gst_india.utils.tests import create_purchase_invoice, create_sales_invoice
 from india_compliance.tests.erpnext_test_utils import (
     create_account as _create_account,
 )
@@ -14,6 +15,9 @@ from india_compliance.tests.erpnext_test_utils import (
     create_and_submit_transaction_deletion_doc,
     make_journal_entry,
 )
+
+CHANGES_IN_INVENTORIES = "3. Changes in Inventories of Finished Goods, Work-in-Progress and Stock-in-Trade"
+VARIANCE = "VARIANCE (Calculated vs Actual)"
 
 
 class TestScheduleIIITemplates(IntegrationTestCase):
@@ -164,6 +168,64 @@ class TestScheduleIIITemplates(IntegrationTestCase):
         # PROFIT_FOR_PERIOD = TOTAL_REVENUE - TOTAL_EXPENSES - TOTAL_TAX
         # TOTAL_EXPENSES = 3000+500+800+1000 = 5300
         self.assertEqual(self.get_row_total(data, "XV. Profit (Loss) for the Period (XI + XIV)"), -6200)
+
+    def test_profit_and_loss_schedule_iii_stock_lines(self):
+        """
+        Tests the stock lines of P&L (Schedule III) under perpetual inventory.
+
+        ERPNext cannot split raw material from stock-in-trade in the GL: consumption moves
+        value stock-to-stock and every warehouse account is just "Stock Assets". So:
+
+        - Cost of Materials Consumed carries no value
+        - Changes in Inventories is the period's stock movement, sign reversed
+        - Purchases of Stock-in-Trade is back-solved as COGS - Changes in Inventories
+        - the two together equal COGS as booked, so the statement ties to the GL
+
+        Expenses are debits, so they come out positive (the report is run with accumulated
+        values off, the P&L report's default).
+        """
+        # opening stock: 10 x 100 received before the report period
+        create_purchase_invoice(
+            update_stock=1, set_posting_time=1, posting_date=add_days(self.test_date, -1), qty=10, rate=100
+        )
+        # purchases in the period: 5 x 100
+        create_purchase_invoice(update_stock=1, qty=5, rate=100)
+        # sale in the period: 8 units at valuation 100 -> COGS 800, closing stock 700
+        create_sales_invoice(update_stock=1, qty=8, rate=150)
+
+        data = self.execute_report("Standard Profit and Loss (Schedule III)")
+
+        # raw material cannot be valued separately from stock-in-trade, so the line stays empty
+        self.assertEqual(self.get_row_total(data, "1. Cost of Materials Consumed"), 0)
+
+        # stock was drawn down from 1000 to 700, and a drawdown is an expense
+        self.assertEqual(self.get_row_total(data, CHANGES_IN_INVENTORIES), 300)
+
+        # COGS of 800 less the 300 drawn out of stock leaves the 500 purchased
+        self.assertEqual(self.get_row_total(data, "2. Purchases of Stock in Trade"), 500)
+
+        # the VARIANCE row hides itself only when the report ties back to the ledger
+        self.assertIsNone(self.get_row_total(data, VARIANCE))
+
+        # buy a further 10 x 100, so stock closes at 1700, above the opening 1000
+        create_purchase_invoice(update_stock=1, qty=10, rate=100)
+
+        data = self.execute_report("Standard Profit and Loss (Schedule III)")
+
+        # the line flips sign once inventory is built up rather than drawn down
+        self.assertEqual(self.get_row_total(data, CHANGES_IN_INVENTORIES), -700)
+
+        # back-solving still returns every rupee purchased during the period
+        self.assertEqual(self.get_row_total(data, "2. Purchases of Stock in Trade"), 1500)
+
+        self.assertIsNone(self.get_row_total(data, VARIANCE))
+
+        # Accumulated Values is deliberately not asserted. ERPNext's engine folds the
+        # opening balance into the period movement for every account, so a Stock Assets
+        # movement becomes its closing balance and the two line items above come out
+        # wrong. That is an ERPNext bug (it breaks the shipped Horizontal P&L and Cash
+        # Flow templates too) and must not be worked around here: the totals still tie,
+        # and this template will be correct in both modes once the engine is fixed.
 
     def test_balance_sheet_schedule_iii(self):
         """
