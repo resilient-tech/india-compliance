@@ -200,7 +200,6 @@ class TestGstinInfo(IntegrationTestCase):
         )
 
     def test_oidar_gstin_info(self):
-        """An OIDAR registration maps to Overseas, and has no address on the portal"""
         self.mock_public_api.return_value = Mock()
         self.mock_public_api.return_value.get_gstin_info.return_value = frappe._dict(
             {

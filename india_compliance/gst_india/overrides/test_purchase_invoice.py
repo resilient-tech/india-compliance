@@ -176,7 +176,6 @@ class TestPurchaseInvoice(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_oidar_supplier_itc_classification(self):
-        """OIDAR is always a service import, taxable under Reverse Charge"""
         pinv = create_purchase_invoice(
             supplier="_Test OIDAR Supplier",
             item_code="_Test Service Item",
