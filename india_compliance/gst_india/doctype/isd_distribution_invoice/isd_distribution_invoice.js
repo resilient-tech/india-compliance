@@ -69,7 +69,7 @@ frappe.ui.form.on("ISD Distribution Invoice", {
         frm.isd_controller.set_address_display("company_address", "company_address_display");
         await frm.isd_controller.set_place_of_supply("company_address", "company_pos");
         if (frm.__updating_isd_autofill) return;
-        await frm.isd_controller.recalculate();
+        await recalculate(frm);
     },
 
     async party_address(frm) {
@@ -81,7 +81,7 @@ frappe.ui.form.on("ISD Distribution Invoice", {
         }
         frm.isd_controller.set_address_display("party_address", "party_address_display");
         await frm.isd_controller.set_place_of_supply("party_address", "party_pos");
-        await frm.isd_controller.recalculate();
+        await recalculate(frm);
     },
 
     purchase_invoice: fetch_source_items,
@@ -120,12 +120,15 @@ async function fetch_source_items(frm) {
         for (const item of items || []) frm.add_child("source_items", item);
     }
     frm.refresh_field("source_items");
-    await frm.isd_controller.recalculate();
+    await recalculate(frm);
 }
 
 const recalculate = (frm) => {
     if (frm.doctype !== "ISD Distribution Invoice") return;
-    frm.isd_controller.recalculate();
+
+    frm.clear_table("taxes");
+    frm.isd_controller.set_available_taxes();
+    return frm.isd_controller.recalculate();
 };
 
 frappe.ui.form.on("ISD Source Item", {
