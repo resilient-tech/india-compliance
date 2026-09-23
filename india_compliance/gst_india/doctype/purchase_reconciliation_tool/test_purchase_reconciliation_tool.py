@@ -10,6 +10,9 @@ from frappe.tests.utils import FrappeTestCase, change_settings
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
 )
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
+    BuildExcel,
+)
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     format_period,
@@ -106,6 +109,23 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
                 row,
                 self.reconciled_data.get((row.purchase_invoice_name, row.inward_supply_name)) or {},
             )
+
+        matched_row = next(
+            row for row in reconciled_data if row.purchase_invoice_name and row.inward_supply_name
+        )
+        details = purchase_reconciliation_tool.get_invoice_details(
+            matched_row.purchase_invoice_name, matched_row.inward_supply_name
+        )
+
+        self.assertEqual(details._inward_supply.return_period_2b, "122023")
+        self.assertEqual(details._purchase_invoice.itc_claim_period, "122023")
+
+        exported_fields = [
+            column["fieldname"] for column in BuildExcel(purchase_reconciliation_tool, {}).invoice_header
+        ]
+
+        self.assertIn("return_period_2b", exported_fields)
+        self.assertIn("itc_claim_period", exported_fields)
 
     @classmethod
     def create_test_data(cls):
