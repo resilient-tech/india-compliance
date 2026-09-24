@@ -132,34 +132,8 @@ class GSTR:
     def get_supplier_details(self, supplier):
         return {}
 
-<<<<<<< HEAD
     def get_invoice_details(self, invoice):
         return {}
-=======
-    def get_items(self, document):
-        return None
-
-    def get_existing_transaction(self):
-        gst_is = frappe.qb.DocType("GST Inward Supply")
-        transactions = (
-            frappe.qb.from_(gst_is)
-            .select(
-                gst_is.name,
-                gst_is.supplier_gstin,
-                gst_is.bill_no,
-                gst_is.doc_type,
-                gst_is.classification,
-                gst_is.itc_availability,
-            )
-            .where(gst_is.classification == self.category)
-            .where(self.get_existing_transaction_filter(gst_is))
-        ).run(as_dict=True)
-
-        return {get_unique_key(transaction): transaction.get("name") for transaction in transactions}
-
-    def get_existing_transaction_filter(self, gst_is):
-        raise NotImplementedError
->>>>>>> 0eb0c04 (fix: some fixes for ISD PR (#4928))
 
     def get_download_details(self):
         return {}
