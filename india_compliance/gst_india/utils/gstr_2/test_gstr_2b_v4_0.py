@@ -293,7 +293,7 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
                 },
             )
         )
-        save_gstr_2b(self.gstin, self.return_period, rejected, store_raw=False)
+        save_gstr_2b(self.gstin, self.return_period, rejected)
 
         self.assertFalse(frappe.db.exists(self.doctype, credit_note.name))
         self.assertTrue(frappe.db.exists(self.doctype, invoice.name))

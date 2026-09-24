@@ -1404,7 +1404,6 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
                     },
                 )
             ),
-            store_raw=False,
         )
 
         # the two parts share supplier, number, date and type, so they key onto one inward supply
