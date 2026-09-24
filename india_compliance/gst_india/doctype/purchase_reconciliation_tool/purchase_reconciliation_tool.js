@@ -702,6 +702,11 @@ class PurchaseReconciliationToolAction {
             () => reconciliation.unlink_documents(this.frm),
             action_group,
         );
+        this.frm.add_custom_button(
+            __("Copy Data"),
+            () => reconciliation.copy_details(this.frm),
+            action_group,
+        );
         this.frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
 
         // Setup Actions
@@ -757,12 +762,11 @@ class PurchaseReconciliationToolAction {
 
 class DetailViewDialog extends reconciliation.detail_view_dialog {
     _get_custom_actions() {
-        const doctype = this.dialog.get_value("doctype") || this.missing_doctype;
         if (this.row.match_status == "Only in Books") return ["Link", "Ignore"];
         else if (this.row.match_status == "Only in 2A/2B")
-            if (doctype == "Purchase Invoice") return ["Create", "Link", "Pending", "Ignore"];
+            if (this.missing_doctype == "Purchase Invoice") return ["Create", "Link", "Pending", "Ignore"];
             else return ["Link", "Pending", "Ignore"];
-        else return ["Unlink", "Accept", "Pending"];
+        else return ["Unlink", "Accept", "Pending", "Copy"];
     }
 
     _apply_custom_action(action) {
@@ -783,6 +787,9 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
                 this.frm.doc.company_gstin,
                 DOCTYPE,
             );
+        } else if (action == "Copy") {
+            if (!this.copy_fields.length) return;
+            return reconciliation.copy_details(this.frm, [this.row], this.copy_fields);
         } else {
             apply_action(this.frm, action, [this.row]);
         }
@@ -795,6 +802,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         if (action == "Create") return "btn-primary not-grey";
         if (action == "Link") return "btn-primary not-grey link-document-btn disabled";
         if (action == "Accept") return "btn-primary not-grey";
+        if (action == "Copy") return "btn-warning not-grey copy-btn disabled";
     }
 
     _set_missing_doctype() {

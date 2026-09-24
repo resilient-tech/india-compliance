@@ -32,6 +32,9 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
     BuildExcel,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
+    copy_details as _copy_details,
+)
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     get_formatted_options,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
@@ -238,6 +241,19 @@ class GSTInvoiceManagementSystem(Document):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         purchases, inward_supplies = _unlink_documents(data, exclude_from_reconciliation)
+
+        return self.get_invoice_data(inward_supplies, purchases)
+
+    @frappe.whitelist()
+    def copy_details(self, data: str | list, fields: str | list | None = None):
+        frappe.has_permission("GST Invoice Management System", "write", throw=True)
+
+        copied = _copy_details(data, fields, tool=self.doctype)
+
+        if not copied:
+            return
+
+        purchases, inward_supplies = copied
 
         return self.get_invoice_data(inward_supplies, purchases)
 
