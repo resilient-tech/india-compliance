@@ -2,7 +2,7 @@ import frappe
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
-from frappe.query_builder import Case
+from frappe.query_builder import Case, EmptyCriterion
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Sum
 from frappe.utils import flt
@@ -233,24 +233,25 @@ class PurchaseInvoice:
             .groupby(self.PI.name)
         )
 
+        # instead of restriciting to names, widen the filter to include names
         if filters:
             query = self.apply_filters(query, filters, names)
 
         return query
 
     def apply_filters(self, query, filters, names=None):
+        # names widen the filter, not narrow it: a linked doc under another GSTIN must still show
         if filters.get("company"):
             query = query.where(self.PI.company == filters.company)
 
-        gstin_condition = None
+        gstin_condition = EmptyCriterion()
         if filters.get("company_gstin"):
             gstin_condition = self.PI.company_gstin == filters.company_gstin
 
         if names:
             gstin_condition = gstin_condition | self.PI.name.isin(names)
 
-        if gstin_condition:
-            query = query.where(gstin_condition)
+        query = query.where(gstin_condition)
 
         return query
 

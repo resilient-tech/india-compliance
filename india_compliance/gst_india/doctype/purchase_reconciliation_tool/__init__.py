@@ -450,6 +450,7 @@ class PurchaseInvoice:
         else:
             gstin_condition = self.company_gstin == self.PI.company_gstin
 
+        # include names despite of gstin mismatch
         if names:
             gstin_condition = gstin_condition | self.PI.name.isin(names)
 
@@ -594,6 +595,7 @@ class BillOfEntry:
         else:
             gstin_condition = self.company_gstin == self.BOE.company_gstin
 
+        # include names despite of gstin mismatch
         if names:
             gstin_condition = gstin_condition | self.BOE.name.isin(names)
 

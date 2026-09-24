@@ -7,6 +7,7 @@ from frappe.utils import add_to_date
 
 from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     InwardSupply,
+    PurchaseInvoice,
     apply_declared_overrides,
 )
 from india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system import (
@@ -553,6 +554,38 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual(result.purchase_invoice_name, pinv.name)
         self.assertEqual(result.match_status, "Only in Books")
         self.assertIsNone(result.inward_supply_name)
+
+    def test_matched_gst_inward_supplies_never_show_up_in_unmatched(self):
+        pi_args = {
+            "bill_date": "2024-12-12",
+            "posting_date": "2024-12-12",
+            "supplier": "_Test Registered Supplier",
+            "supplier_gstin": "24AABCR6898M1ZN",
+            "company": "_Test Indian Registered Company",
+            "company_gstin": "24AAQCA8719H1ZC",
+            "items": [{"item_code": "_Test Trading Goods 1", "qty": 1}],
+        }
+        pinv = create_purchase_invoice(**pi_args, bill_no="IMS-GID-003")
+        other_pinv = create_purchase_invoice(**pi_args, bill_no="IMS-GID-004")
+
+        self.assertEqual(list(PurchaseInvoice().get_all(names=[pinv.name])), [pinv.name])
+
+        # difference is company_gstin should not filter out already matched invoices
+        filters = frappe._dict(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+            }
+        )
+        self.assertEqual(
+            list(PurchaseInvoice().get_all(names=[pinv.name], filters=filters)),
+            [pinv.name],
+        )
+
+        self.assertEqual(
+            sorted(PurchaseInvoice().get_all(names=[pinv.name, other_pinv.name])),
+            sorted([pinv.name, other_pinv.name]),
+        )
 
     def test_link_documents_with_none_purchase_invoice_name(self):
         """
