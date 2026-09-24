@@ -54,7 +54,17 @@ class GSTR2b(GSTR):
                 "supplier_gstin": transaction.supplier_gstin,
             }
 
-            frappe.delete_doc("GST Inward Supply", filters, ignore_permissions=True)
+            if transaction.get("doc_type"):
+                filters["doc_type"] = transaction.doc_type
+
+            # eligible and ineligible parts of one ISD number are separate inward supplies
+            if transaction.classification in ("ISD", "ISDA"):
+                filters["itc_availability"] = transaction.get("itc_availability") or ("is", "not set")
+
+            name = frappe.db.get_value("GST Inward Supply", filters)
+            # delete doc allows passing only name
+            if name:
+                frappe.delete_doc("GST Inward Supply", name, ignore_permissions=True)
 
     def get_transaction(self, supplier, invoice):
         transaction = super().get_transaction(supplier, invoice)

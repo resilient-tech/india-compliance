@@ -33,7 +33,7 @@ frappe.query_reports["HSN-wise-summary of inward supplies"] = {
             reqd: 1,
             get_query() {
                 const company = frappe.query_report.get_filter_value("company");
-                return india_compliance.get_gstin_query(company);
+                return india_compliance.get_gstin_query(company, "Company", true);
             },
         },
         {

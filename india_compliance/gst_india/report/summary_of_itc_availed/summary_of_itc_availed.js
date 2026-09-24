@@ -30,7 +30,7 @@ frappe.query_reports["Summary of ITC Availed"] = {
             fieldtype: "Autocomplete",
             get_query: function () {
                 const company = frappe.query_report.get_filter_value("company");
-                return india_compliance.get_gstin_query(company);
+                return india_compliance.get_gstin_query(company, "Company", true);
             },
         },
         {
