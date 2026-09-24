@@ -349,6 +349,8 @@
                     "irn_source": null,
                     "itc_availability": "Yes",
                     "reason_itc_unavailability": null,
+                    "return_period_2b": "122023",
+                    "itc_claim_period": "122023",
                     "gstin_status": "",
                     "gstin_cancelled_date": ""
                 }
