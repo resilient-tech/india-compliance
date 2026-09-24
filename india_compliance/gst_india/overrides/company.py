@@ -135,8 +135,40 @@ def make_default_tax_templates(company: str, gst_rate: float | None = None):
     frappe.has_permission("Company", ptype="write", doc=company, throw=True)
 
     default_taxes = get_tax_defaults(gst_rate)
+    use_existing_default_tax_categories(default_taxes)
     from_detailed_data(company, default_taxes)
     update_gst_settings(company)
+
+
+def use_existing_default_tax_categories(default_taxes):
+    existing_defaults = {
+        (category.is_inter_state, category.is_reverse_charge): category.name
+        for category in frappe.get_all(
+            "Tax Category",
+            filters={"is_india_compliance_default": 1, "disabled": 0},
+            fields=["name", "is_inter_state", "is_reverse_charge"],
+        )
+    }
+
+    replaced_categories = {}
+    tax_categories = []
+    for category in default_taxes["tax_categories"]:
+        existing = category.get("is_india_compliance_default") and existing_defaults.get(
+            (category.get("is_inter_state", 0), category.get("is_reverse_charge", 0))
+        )
+        if existing:
+            replaced_categories[category["title"]] = existing
+            continue
+
+        tax_categories.append(category)
+
+    default_taxes["tax_categories"] = tax_categories
+
+    for template_type in ("sales_tax_templates", "purchase_tax_templates"):
+        for template in default_taxes["chart_of_accounts"]["*"][template_type]:
+            template["tax_category"] = replaced_categories.get(
+                template["tax_category"], template["tax_category"]
+            )
 
 
 def get_tax_defaults(gst_rate=None):
