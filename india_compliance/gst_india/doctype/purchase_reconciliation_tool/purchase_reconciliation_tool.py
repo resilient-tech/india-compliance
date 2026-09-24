@@ -414,6 +414,7 @@ def download_gstr(
             return download_gstr_2b(company_gstin, periods)
 
     except Exception as e:
+        frappe.log_error(title="2A/2B Download Failed")
         frappe.publish_realtime(
             "gstr_2a_2b_download_message",
             {
@@ -1355,6 +1356,18 @@ class BuildExcel:
                     "bg_color": self.COLOR_PALLATE.dark_pink,
                     "width": 25,
                 },
+            },
+            {
+                "label": "GSTR-2B Period",
+                "fieldname": "return_period_2b",
+                "data_format": {"horizontal": "center"},
+                "header_format": {"width": 15},
+            },
+            {
+                "label": "ITC Claim Period (Books)",
+                "fieldname": "itc_claim_period",
+                "data_format": {"horizontal": "center"},
+                "header_format": {"width": 15},
             },
             {
                 "label": "ITC Availability",
