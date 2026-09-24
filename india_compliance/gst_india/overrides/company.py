@@ -145,8 +145,67 @@ def make_default_tax_templates(company: str, gst_rate: float | None = None):
     frappe.has_permission("Company", ptype="write", doc=company, throw=True)
 
     default_taxes = get_tax_defaults(gst_rate)
+    default_taxes = reuse_existing_tax_defaults(company, default_taxes)
     from_detailed_data(company, default_taxes)
     update_gst_settings(company)
+
+
+def reuse_existing_tax_defaults(company, default_taxes):
+    default_taxes["tax_categories"], category_replacements = replace_default_tax_categories(
+        default_taxes["tax_categories"]
+    )
+
+    tax_templates = default_taxes["chart_of_accounts"]["*"]
+    for template_type, doctype in (
+        ("sales_tax_templates", "Sales Taxes and Charges Template"),
+        ("purchase_tax_templates", "Purchase Taxes and Charges Template"),
+    ):
+        tax_templates[template_type] = get_missing_tax_templates(
+            company, doctype, tax_templates[template_type], category_replacements
+        )
+
+    return default_taxes
+
+
+def replace_default_tax_categories(tax_categories):
+    existing_defaults = {
+        (category.is_inter_state, category.is_reverse_charge): category.name
+        for category in frappe.get_all(
+            "Tax Category",
+            filters={"is_india_compliance_default": 1, "disabled": 0},
+            fields=["name", "is_inter_state", "is_reverse_charge"],
+        )
+    }
+
+    new_categories = []
+    category_replacements = {}
+    for category in tax_categories:
+        key = (category.get("is_inter_state", 0), category.get("is_reverse_charge", 0))
+
+        if category.get("is_india_compliance_default") and key in existing_defaults:
+            category_replacements[category["title"]] = existing_defaults[key]
+        else:
+            new_categories.append(category)
+
+    return new_categories, category_replacements
+
+
+def get_missing_tax_templates(company, doctype, templates, category_replacements):
+    existing_categories = set(
+        frappe.get_all(
+            doctype,
+            filters={"company": company, "disabled": 0, "tax_category": ["is", "set"]},
+            pluck="tax_category",
+        )
+    )
+
+    new_templates = []
+    for template in templates:
+        tax_category = category_replacements.get(template["tax_category"], template["tax_category"])
+        if tax_category not in existing_categories:
+            new_templates.append({**template, "tax_category": tax_category})
+
+    return new_templates
 
 
 def get_tax_defaults(gst_rate=None):
