@@ -175,6 +175,9 @@ class TestGSTR1B2B(FrappeTestCase):
         address = frappe.copy_doc(frappe.get_doc("Address", "_Test Indian Registered Company-Billing"))
         address.address_title = "_Test Company Without GSTIN"
         address.gstin = None
+        # a preferred copy would unset the preference on the company's own billing address
+        address.is_primary_address = 0
+        address.is_shipping_address = 0
         address.insert()
 
         # leaving it behind makes any later transaction that picks it up fail on mandatory GSTIN
@@ -362,7 +365,7 @@ def create_test_items():
     sales_invoice = create_sales_invoices(
         1, do_not_submit=True, company_address="_Test Indian Registered Company-Billing"
     )[0]
-    sales_invoice.customer_address = sales_invoice.company_address
+    sales_invoice.customer_address = "_Test Same GSTIN Customer-Billing"
     sales_invoice.save()
     sales_invoice.submit()
 
