@@ -5,6 +5,7 @@ from frappe.utils.data import format_date
 from india_compliance.gst_india.constants import (
     ACTION_MAP,
     GST_CATEGORY_MAP,
+    GST_TAX_TYPES,
     STATE_NUMBERS,
 )
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
@@ -131,6 +132,10 @@ class IMS:
         }
 
     def convert_data_to_gov_format(self, invoice):
+        # portal expects positive values
+        for field in (*GST_TAX_TYPES[:-1], "taxable_value"):
+            invoice[field] = abs(flt(invoice[field]))
+
         data = {
             "stin": invoice.supplier_gstin,
             "inv_typ": get_mapped_value(invoice.supply_type, self.VALUE_MAPS.reverse_gst_category),
@@ -201,7 +206,12 @@ class IMS:
         inward_supply = frappe.qb.DocType("GST Inward Supply")
         existing_transactions = (
             frappe.qb.from_(inward_supply)
-            .select(inward_supply.name, inward_supply.supplier_gstin, inward_supply.bill_no)
+            .select(
+                inward_supply.name,
+                inward_supply.supplier_gstin,
+                inward_supply.bill_no,
+                inward_supply.doc_type,
+            )
             .where(inward_supply.is_downloaded_from_2b == 0)
             .where(inward_supply.is_downloaded_from_2a == 0)
             .where(inward_supply.is_downloaded_from_ims == 1)

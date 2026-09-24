@@ -2,6 +2,7 @@ import {
     GSTIN_REGEX,
     REGISTERED_REGEX,
     OVERSEAS_REGEX,
+    OIDAR_REGEX,
     UNBODY_REGEX,
     TDS_REGEX,
     TCS_REGEX,
@@ -123,13 +124,37 @@ Object.assign(india_compliance, {
         };
     },
 
-    async get_gstin_options(party, party_type = "Company") {
-        const { query, params } = india_compliance.get_gstin_query(party, party_type);
+    async get_gstin_options(party, party_type = "Company", exclude_isd = false) {
+        const { query, params } = india_compliance.get_gstin_query(party, party_type, exclude_isd);
         const { message } = await frappe.call({
             method: query,
             args: params,
         });
-        return message;
+        return message || [];
+    },
+
+    async set_gstin_filter_options(report, exclude_isd = false, refresh = true) {
+        const company = report.get_filter_value("company");
+        const options = company
+            ? await india_compliance.get_gstin_options(company, "Company", exclude_isd)
+            : [];
+
+        // company changed again while loading
+        if (report.get_filter_value("company") !== company) return;
+
+        const gstin_field = report.get_filter("company_gstin");
+        gstin_field.set_data(options);
+
+        // keep a selection that is still valid, eg. restored from the url on reload
+        let gstin = gstin_field.get_value();
+        if (!options.includes(gstin)) gstin = options.length === 1 ? options[0] : "";
+
+        if (gstin !== gstin_field.get_value()) {
+            // frappe refreshes the report on its own when a filter is set
+            report.set_filter_value("company_gstin", gstin);
+        } else if (refresh) {
+            report.refresh();
+        }
     },
 
     async get_account_options(company) {
@@ -344,6 +369,7 @@ Object.assign(india_compliance, {
         if (TCS_REGEX.test(gstin)) return "Tax Collector";
         if (REGISTERED_REGEX.test(gstin)) return "Registered Regular";
         if (UNBODY_REGEX.test(gstin)) return "UIN Holders";
+        if (OIDAR_REGEX.test(gstin)) return "Overseas";
         if (OVERSEAS_REGEX.test(gstin)) return "Overseas";
     },
 
@@ -376,20 +402,37 @@ Object.assign(india_compliance, {
                 posting_date: frm.doc.posting_date,
             },
         }));
+
+        frappe.meta.get_docfield(frm.doctype, "itc_claim_period").ignore_validation = 1;
+
+        // options label the period with a status badge; the input shows the period alone
+        frm.get_field("itc_claim_period").format_for_input = (value) => value;
     },
 
-    set_itc_claim_period_status(frm) {
-        frm.set_df_property("itc_claim_period", "ignore_validation", 1);
+    update_itc_claim_period(frm) {
+        if (frm.doc.docstatus !== 0 || !frm.doc.posting_date) return;
 
-        const is_filed = frm.doc.__onload?.is_itc_period_filed;
-        frm.set_df_property("itc_claim_period", "read_only", is_filed ? 1 : 0);
-        frm.set_df_property(
-            "itc_claim_period",
-            "description",
-            is_filed
-                ? __("GSTR-3B for {0} is filed", [frm.doc.itc_claim_period])
-                : __("GSTR-3B period for claiming ITC (MMYYYY) or 'Deferred' to postpone."),
+        // Deferred is a deliberate user choice; only a period follows the posting date
+        if (frm.doc.itc_claim_period === "Deferred") return;
+
+        const posting_month = moment(frm.doc.posting_date);
+        const period = posting_month.format("MMYYYY");
+        if (period === frm.doc.itc_claim_period) return;
+
+        frm.set_value("itc_claim_period", period);
+        frappe.show_alert(
+            {
+                message: __("ITC Claim Period set to {0}.", [posting_month.format("MMM YYYY")]),
+                indicator: "blue",
+            },
+            7,
         );
+    },
+
+    // client_action target for msgprint primary actions, args: { doctype, fieldname }
+    scroll_to_field({ doctype, fieldname }) {
+        frappe.hide_msgprint(true);
+        frappe.views.formview[doctype]?.frm.scroll_to_field(fieldname);
     },
 
     set_reconciliation_status(frm, field) {

@@ -36,6 +36,8 @@
                     "irn_source": null,
                     "itc_availability": "Yes",
                     "reason_itc_unavailability": null,
+                    "return_period_2b": "122023",
+                    "itc_claim_period": "122023",
                     "gstin_status": "",
                     "gstin_cancelled_date": ""
                 }
@@ -93,6 +95,8 @@
                     "irn_source": null,
                     "itc_availability": "Yes",
                     "reason_itc_unavailability": null,
+                    "return_period_2b": "122023",
+                    "itc_claim_period": "122023",
                     "gstin_status": "",
                     "gstin_cancelled_date": ""
                 }
@@ -144,6 +148,8 @@
                     "irn_source": null,
                     "itc_availability": "Yes",
                     "reason_itc_unavailability": null,
+                    "return_period_2b": "122023",
+                    "itc_claim_period": "122023",
                     "gstin_status": "",
                     "gstin_cancelled_date": ""
                 }
@@ -187,6 +193,8 @@
                     "irn_source": null,
                     "itc_availability": "Yes",
                     "reason_itc_unavailability": null,
+                    "return_period_2b": "122023",
+                    "itc_claim_period": "122023",
                     "gstin_status": "",
                     "gstin_cancelled_date": ""
                 }
@@ -237,6 +245,8 @@
                     "irn_source": null,
                     "itc_availability": "Yes",
                     "reason_itc_unavailability": null,
+                    "return_period_2b": "122023",
+                    "itc_claim_period": "122023",
                     "gstin_status": "",
                     "gstin_cancelled_date": ""
                 }
@@ -278,6 +288,69 @@
                     "irn_source": null,
                     "itc_availability": "Yes",
                     "reason_itc_unavailability": null,
+                    "return_period_2b": "122023",
+                    "itc_claim_period": "122023",
+                    "gstin_status": "",
+                    "gstin_cancelled_date": ""
+                }
+            }
+        ],
+        "TEST_BOE_BILL_NO_SUGGESTED_MATCH": [
+            {
+                "BILL_OF_ENTRY": {
+                    "bill_no": "BILL-23-00012"
+                },
+                "INWARD_SUPPLY": {
+                    "supplier_name": "_Test Foreign Supplier",
+                    "bill_no": "BILL-23-00012-A",
+                    "bill_date": "2023-12-15",
+                    "classification": "IMPG",
+                    "doc_type": "Bill of Entry",
+                    "supply_type": "",
+                    "place_of_supply": null,
+                    "items": [
+                        {
+                            "taxable_value": 10000,
+                            "rate": 18,
+                            "igst": 1800
+                        }
+                    ],
+                    "document_value": 11800,
+                    "supplier_gstin": null,
+                    "itc_availability": "Yes",
+                    "return_period_2b": "122023",
+                    "gen_date_2b": "2023-12-11"
+                },
+                "RECONCILED_DATA": {
+                    "action": "No Action",
+                    "bill_date": "2023-12-11",
+                    "bill_no": "BILL-23-00012",
+                    "classification": "IMPG",
+                    "differences": "BILL_NO, BILL_DATE",
+                    "inward_supply_company_gstin": "24AAQCA8719H1ZC",
+                    "inward_supply_name": "",
+                    "is_reverse_charge": 0,
+                    "is_supplier_return_filed": 0,
+                    "match_status": "Suggested Match",
+                    "purchase_company_gstin": "24AAQCA8719H1ZC",
+                    "purchase_doctype": "Bill of Entry",
+                    "purchase_invoice_name": "",
+                    "supplier": "_Test Foreign Supplier",
+                    "supplier_gstin": "_Test Foreign Supplier",
+                    "supplier_name": "_Test Foreign Supplier",
+                    "tax_difference": 0.0,
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": "",
+                    "gstr_1_filled": 0,
+                    "gstr_3b_filled": 0,
+                    "irn_gen_date": "",
+                    "irn_number": null,
+                    "irn_source": null,
+                    "itc_availability": "Yes",
+                    "reason_itc_unavailability": null,
+                    "return_period_2b": "122023",
+                    "itc_claim_period": "122023",
                     "gstin_status": "",
                     "gstin_cancelled_date": ""
                 }
@@ -298,7 +371,7 @@
                     "bill_date": "2023-12-11",
                     "bill_no": "BILL-2324-50",
                     "classification": "B2B",
-                    "differences": "BILL_NO",
+                    "differences": "BILL_NO, BILL_DATE",
                     "inward_supply_company_gstin": "24AAQCA8719H1ZC",
                     "inward_supply_name": "",
                     "is_reverse_charge": 0,
@@ -321,6 +394,8 @@
                     "irn_source": null,
                     "itc_availability": "Yes",
                     "reason_itc_unavailability": null,
+                    "return_period_2b": "122023",
+                    "itc_claim_period": "122023",
                     "gstin_status": "",
                     "gstin_cancelled_date": ""
                 }
@@ -351,7 +426,7 @@
                     "bill_date": "2023-12-11",
                     "bill_no": "BILL-2324-1234",
                     "classification": "B2B",
-                    "differences": "BILL_NO",
+                    "differences": "BILL_NO, BILL_DATE",
                     "inward_supply_company_gstin": "24AAQCA8719H1ZC",
                     "inward_supply_name": "",
                     "is_reverse_charge": 0,
@@ -374,6 +449,8 @@
                     "irn_source": null,
                     "itc_availability": "Yes",
                     "reason_itc_unavailability": null,
+                    "return_period_2b": "122023",
+                    "itc_claim_period": "122023",
                     "gstin_status": "",
                     "gstin_cancelled_date": ""
                 }
@@ -405,7 +482,7 @@
                     "bill_date": "2023-12-11",
                     "bill_no": "BILL-2324-00056",
                     "classification": "B2B",
-                    "differences": "SUPPLIER_GSTIN, BILL_NO",
+                    "differences": "SUPPLIER_GSTIN, BILL_NO, BILL_DATE",
                     "inward_supply_company_gstin": "24AAQCA8719H1ZC",
                     "inward_supply_name": "",
                     "is_reverse_charge": 0,
@@ -428,6 +505,8 @@
                     "irn_source": null,
                     "itc_availability": "Yes",
                     "reason_itc_unavailability": null,
+                    "return_period_2b": "122023",
+                    "itc_claim_period": "122023",
                     "gstin_status": "",
                     "gstin_cancelled_date": ""
                 }
@@ -492,6 +571,8 @@
                     "irn_source": null,
                     "itc_availability": "Yes",
                     "reason_itc_unavailability": null,
+                    "return_period_2b": "122023",
+                    "itc_claim_period": "122023",
                     "gstin_status": "",
                     "gstin_cancelled_date": ""
                 }

@@ -13,7 +13,14 @@ class GSTR2b(GSTR):
         gst_is = frappe.qb.DocType("GST Inward Supply")
         existing_transactions = (
             frappe.qb.from_(gst_is)
-            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no)
+            .select(
+                gst_is.name,
+                gst_is.supplier_gstin,
+                gst_is.bill_no,
+                gst_is.doc_type,
+                gst_is.classification,
+                gst_is.itc_availability,
+            )
             .where(gst_is.return_period_2b == self.return_period)
             .where(gst_is.classification == self.category)
         ).run(as_dict=True)
@@ -54,7 +61,17 @@ class GSTR2b(GSTR):
                 "supplier_gstin": transaction.supplier_gstin,
             }
 
-            frappe.delete_doc("GST Inward Supply", filters, ignore_permissions=True)
+            if transaction.get("doc_type"):
+                filters["doc_type"] = transaction.doc_type
+
+            # eligible and ineligible parts of one ISD number are separate inward supplies
+            if transaction.classification in ("ISD", "ISDA"):
+                filters["itc_availability"] = transaction.get("itc_availability") or ("is", "not set")
+
+            name = frappe.db.get_value("GST Inward Supply", filters)
+            # delete doc allows passing only name
+            if name:
+                frappe.delete_doc("GST Inward Supply", name, ignore_permissions=True)
 
     def get_transaction(self, supplier, invoice):
         transaction = super().get_transaction(supplier, invoice)

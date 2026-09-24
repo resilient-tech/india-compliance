@@ -18,9 +18,9 @@ from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_
     get_hsn_wise_json_data,
 )
 from india_compliance.gst_india.utils import (
+    get_company_gstin_number,
     get_escaped_name,
     get_gst_accounts_by_type,
-    get_gstin_list,
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
@@ -85,11 +85,15 @@ class Gstr1Report:
         """
 
     def run(self):
+        self.validate_filters()
         self.get_columns()
         self.gst_accounts = get_gst_accounts_by_type(self.filters.company, "Output")
         self.get_data()
 
         return self.columns, self.data
+
+    def validate_filters(self):
+        self.filters.company_gstin = validate_and_get_company_gstin(self.filters)
 
     def get_data(self):
         if self.filters.get("type_of_business") in ("B2C Small", "B2C Large"):
@@ -1652,9 +1656,7 @@ def set_gst_defaults(filters):
     if isinstance(filters, str):
         filters = json.loads(filters)
 
-    gstin = filters.get("company_gstin") or get_company_gstin_number(
-        filters.get("company"), filters.get("company_address")
-    )
+    gstin = validate_and_get_company_gstin(filters)
 
     date = getdate(filters["to_date"])
     fp = f"{date.month:02d}{date.year}"
@@ -2085,25 +2087,14 @@ def get_rate_and_tax_details(row, gstin, num):
     return {"num": int(num), "itm_det": itm_det}
 
 
-def get_company_gstin_number(company, address=None, all_gstins=False):
-    gstin = ""
-    if address:
-        gstin = frappe.db.get_value("Address", address, "gstin")
+def validate_and_get_company_gstin(filters):
+    """Resolve the GSTIN a GSTR-1 report runs for, from its company / address / GSTIN filters."""
+    if not filters.get("company_address") and not filters.get("company_gstin"):
+        frappe.throw(_("Please select Company GSTIN"), title=_("Missing Filter"))
 
-    if not gstin:
-        gstin = get_gstin_list(company)
-        if gstin and not all_gstins:
-            gstin = gstin[0]
-
-    if not gstin:
-        address = frappe.bold(address) if address else ""
-        frappe.throw(
-            _("Please set valid GSTIN No. in Company Address {} for company {}").format(
-                address, frappe.bold(company)
-            )
-        )
-
-    return gstin
+    return get_company_gstin_number(
+        filters["company"], filters.get("company_address"), filters.get("company_gstin")
+    )
 
 
 @frappe.whitelist()

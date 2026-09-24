@@ -54,6 +54,7 @@ from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
     create_purchase_invoice,
+    create_sales_invoice,
     create_transaction,
 )
 
@@ -924,6 +925,72 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_purchase_from_oidar_supplier(self):
+        if self.is_sales_doctype:
+            return
+
+        def _oidar_purchase(**kwargs):
+            details = self.transaction_details.copy()
+            if self.doctype == "Purchase Invoice":
+                details["bill_no"] = frappe.generate_hash(length=5)
+
+            return create_transaction(
+                **details,
+                supplier="_Test OIDAR Supplier",
+                item_code="_Test Service Item",
+                **kwargs,
+            )
+
+        doc = _oidar_purchase(is_out_state=True)
+        self.assertEqual(doc.gst_category, "Overseas")
+        self.assertEqual(doc.supplier_gstin, "9917SGP29001OST")
+        self.assertTrue(doc.taxes)
+
+        doc = _oidar_purchase(is_out_state_rcm=True, is_reverse_charge=1)
+        self.assertEqual(doc.gst_category, "Overseas")
+        self.assertEqual(doc.supplier_gstin, "9917SGP29001OST")
+        self.assertTrue(doc.taxes)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_sales_to_oidar_is_blocked(self):
+        if not self.is_sales_doctype:
+            return
+
+        details = self.transaction_details.copy()
+        details["customer"] = "_Test OIDAR Customer"
+        if self.doctype == "Quotation":
+            details["party_name"] = "_Test OIDAR Customer"
+
+        doc = create_transaction(**details, item_code="_Test Service Item", do_not_save=True)
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Non-Resident Online Services Provider.*)$"),
+            doc.insert,
+        )
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_sales_to_oidar_is_blocked_after_submit(self):
+        if self.doctype != "Sales Invoice":
+            return
+
+        doc = create_sales_invoice(
+            customer="_Test Registered Customer",
+            shipping_address_name="_Test Registered Customer-Billing",
+            item_code="_Test Service Item",
+            is_in_state=True,
+        )
+        self.assertEqual(doc.docstatus, 1)
+
+        doc.customer_address = "_Test OIDAR Customer-Billing"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Non-Resident Online Services Provider.*)$"),
+            doc.save,
+        )
+
     def test_invalid_charge_type_as_actual(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
         _append_taxes(doc, ["CGST", "SGST"], charge_type="Actual", tax_amount=9)
@@ -1211,6 +1278,32 @@ class TestTransaction(FrappeTestCase):
         # Place of Supply as Gujarat for Shipping Address in Gujarat
         self.assertEqual(doc.gst_category, "Overseas")
         self.assertEqual(doc.place_of_supply, "24-Gujarat")
+
+    def test_other_countries_place_of_supply_requires_overseas(self):
+        if not self.is_sales_doctype:
+            return
+
+        for customer, customer_address in (
+            ("_Test Unregistered Customer", None),
+            ("_Test Registered Customer", "_Test Registered Customer-Billing"),
+        ):
+            doc = create_transaction(
+                **{
+                    **self.transaction_details,
+                    "customer": customer,
+                    "party_name": customer,
+                },
+                customer_address=customer_address,
+                place_of_supply="96-Other Countries",
+                is_out_state=True,
+                do_not_save=True,
+            )
+
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"^(Place of Supply .*96-Other Countries.* is only allowed for GST Category .*)$"),
+                doc.save,
+            )
 
     def test_purchase_with_different_place_of_supply(self):
         if self.is_sales_doctype:
@@ -2195,7 +2288,7 @@ class TestPlaceOfSupply(FrappeTestCase):
         doc_args = {
             "doctype": "Sales Invoice",
             "customer": "_Test Registered Composition Customer",
-            "shipping_address_name": "_Test Indian Registered Company-Billing",
+            "shipping_address_name": "_Test Same GSTIN Customer-Billing",
         }
 
         settings = ["Accounts Settings", None, "determine_address_tax_category_from"]

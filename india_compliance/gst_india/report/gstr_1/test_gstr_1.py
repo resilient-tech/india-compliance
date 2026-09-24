@@ -169,6 +169,55 @@ class TestGSTR1B2B(FrappeTestCase):
         total_tax_2 = item_det_2.get("iamt", 0) + item_det_2.get("camt", 0) + item_det_2.get("samt", 0)
         self.assertGreater(total_tax_2, 0, "Invoice should have tax amount")
 
+    def test_company_address_without_gstin_throws(self):
+        # a GSTIN-less address of a company that has other GSTINs: the report used to fall
+        # back to one of those and silently file the return under it
+        address = frappe.copy_doc(frappe.get_doc("Address", "_Test Indian Registered Company-Billing"))
+        address.address_title = "_Test Company Without GSTIN"
+        address.gstin = None
+        # a preferred copy would unset the preference on the company's own billing address
+        address.is_primary_address = 0
+        address.is_shipping_address = 0
+        address.insert()
+
+        # leaving it behind makes any later transaction that picks it up fail on mandatory GSTIN
+        self.addCleanup(address.delete)
+
+        filters = {
+            "company": "_Test Indian Registered Company",
+            "company_address": address.name,
+            "from_date": str(getdate()),
+            "to_date": str(getdate()),
+            "type_of_business": "B2B",
+        }
+
+        self.assertRaisesRegex(frappe.ValidationError, "Please set GSTIN in Address", execute, filters)
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "Please set GSTIN in Address",
+            get_gstr1_json,
+            json.dumps(filters),
+        )
+
+    def test_gstin_not_belonging_to_company_throws(self):
+        filters = {
+            "company": "_Test Indian Registered Company",
+            "company_gstin": "27AAQCA8719H1Z6",
+            "from_date": str(getdate()),
+            "to_date": str(getdate()),
+            "type_of_business": "B2B",
+        }
+
+        self.assertRaisesRegex(frappe.ValidationError, "does not belong to", execute, filters)
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "does not belong to",
+            get_gstr1_json,
+            json.dumps(filters),
+        )
+
 
 class TestGSTR1B2CL(FrappeTestCase):
     def test_b2cl_item_num_resets_per_invoice(self):
@@ -316,7 +365,7 @@ def create_test_items():
     sales_invoice = create_sales_invoices(
         1, do_not_submit=True, company_address="_Test Indian Registered Company-Billing"
     )[0]
-    sales_invoice.customer_address = sales_invoice.company_address
+    sales_invoice.customer_address = "_Test Same GSTIN Customer-Billing"
     sales_invoice.save()
     sales_invoice.submit()
 

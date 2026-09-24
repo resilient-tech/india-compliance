@@ -6,6 +6,8 @@ from frappe.utils import flt
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     IMPORT_GST_CATEGORIES,
+    ISD_GST_CATEGORY,
+    SERVICE_HSN_PREFIX,
     VALID_HSN_LENGTHS,
 )
 from india_compliance.gst_india.overrides.sales_invoice import (
@@ -26,7 +28,6 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.itc_claim import (
-    _is_gstr3b_filed,
     set_or_validate_itc_claim_period,
     validate_itc_claim_period_on_update_after_submit,
 )
@@ -37,12 +38,6 @@ def onload(doc, method=None):
         doc.set_onload(
             "has_pending_boe_qty",
             any(item.pending_boe_qty > 0 for item in doc.items),
-        )
-
-    if doc.docstatus == 1 and doc.get("itc_claim_period"):
-        doc.set_onload(
-            "is_itc_period_filed",
-            _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period),
         )
 
     if not doc.get("ewaybill"):
@@ -72,6 +67,9 @@ def validate(doc, method=None):
     set_ineligibility_reason(doc)
     set_itc_classification(doc)
     set_boe_applicability(doc)
+    set_is_isd_applicable(doc)
+    notify_isd_invoice_creation(doc)
+    notify_goods_in_isd_invoice(doc)
     validate_reverse_charge(doc)
     validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
@@ -135,6 +133,21 @@ def set_boe_applicability(doc):
     )
 
 
+def set_is_isd_applicable(doc):
+    doc.is_isd_applicable = 0
+
+    if (
+        doc.is_reverse_charge
+        or doc.is_opening == "Yes"
+        or doc.ineligibility_reason == "ITC restricted due to PoS rules"
+    ):
+        return
+
+    gst_category = frappe.db.get_value("Address", doc.billing_address, "gst_category")
+    if gst_category == ISD_GST_CATEGORY:
+        doc.is_isd_applicable = 1
+
+
 def is_b2b_invoice(doc):
     return not (
         doc.supplier_gstin in ["", None]
@@ -153,10 +166,49 @@ def set_itc_classification(doc):
         doc.itc_classification = "Import Of Service"
     elif doc.is_reverse_charge:
         doc.itc_classification = "ITC on Reverse Charge"
-    elif doc.gst_category == "Input Service Distributor" and doc.is_internal_transfer():
+    elif doc.gst_category == ISD_GST_CATEGORY:
         doc.itc_classification = "Input Service Distributor"
     else:
         doc.itc_classification = "All Other ITC"
+
+
+def notify_isd_invoice_creation(doc):
+    """
+    Credit distributed by an ISD is claimed on an ISD Recipient Invoice.
+    """
+    if doc.gst_category != ISD_GST_CATEGORY or not doc.is_new():
+        return
+
+    frappe.msgprint(
+        _(
+            "Create an {0} to claim the credit distributed by this Input Service Distributor."
+            " It is no longer claimed through the Purchase Invoice."
+        ).format(frappe.bold(_("ISD Recipient Invoice"))),
+        indicator="orange",
+    )
+
+
+def notify_goods_in_isd_invoice(doc):
+    if not doc.is_isd_applicable:
+        return
+
+    goods_rows = [
+        [item.idx, item.item_name, item.gst_hsn_code]
+        for item in doc.items
+        if item.gst_hsn_code and not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
+    ]
+    if not goods_rows:
+        return
+
+    frappe.msgprint(
+        [
+            _("Row #{0}: {1} - {2}").format(idx, frappe.bold(item_name), frappe.bold(hsn_code))
+            for idx, item_name, hsn_code in goods_rows
+        ],
+        title=_("Non-Service Items found in ISD applicable invoice"),
+        as_list=True,
+        indicator="orange",
+    )
 
 
 def validate_supplier_invoice_number(doc):
@@ -182,6 +234,7 @@ def get_dashboard_data(data):
         transactions.append(reference_section)
 
     reference_section["items"].append("Bill of Entry")
+    reference_section["items"].append("ISD Distribution Invoice")
 
     update_dashboard_with_gst_logs(
         "Purchase Invoice",

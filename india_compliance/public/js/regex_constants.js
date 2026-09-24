@@ -10,6 +10,7 @@ const TCS = "^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[C]{1}[0-9A-Z]{1}$";
 
 export const REGISTERED_REGEX = new RegExp([NORMAL, GOVT_DEPTID].join("|"));
 export const OVERSEAS_REGEX = new RegExp([NRI_ID, OIDAR].join("|"));
+export const OIDAR_REGEX = new RegExp(OIDAR);
 export const UNBODY_REGEX = new RegExp(UNBODY);
 export const TDS_REGEX = new RegExp(TDS);
 export const TCS_REGEX = new RegExp(TCS);
