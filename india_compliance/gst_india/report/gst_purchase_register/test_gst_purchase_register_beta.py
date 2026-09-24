@@ -8,7 +8,17 @@ from frappe.utils import getdate
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
 )
+<<<<<<< HEAD:india_compliance/gst_india/report/gst_purchase_register/test_gst_purchase_register_beta.py
 from india_compliance.gst_india.report.gst_purchase_register_beta.gst_purchase_register_beta import (
+=======
+from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
+    create_recipient_invoice,
+    make_isd_pi,
+    make_source_item,
+    setup_isd_fixtures,
+)
+from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
+>>>>>>> 0f98f96 (feat: add Input Service Distribution (ISD) invoicing (#4524)):india_compliance/gst_india/report/gst_purchase_register/test_gst_purchase_register.py
     execute,
 )
 from india_compliance.gst_india.utils.tests import (
@@ -41,12 +51,14 @@ class TestGSTPurchaseRegisterITCJournalEntries(FrappeTestCase):
         super().setUpClass()
 
         cls.today = getdate()
+        setup_isd_fixtures(cls)
         cls._create_itc_reversal_42_43()
         cls._create_itc_reversal_others()
         cls._create_itc_reclaim()
         cls._create_sez_service_pi()
         cls._create_overseas_import_service_pi()
         cls._create_boe_import_goods()
+        cls._create_isd_recipient_invoice()
 
     @classmethod
     def _create_itc_reversal_42_43(cls):
@@ -54,6 +66,7 @@ class TestGSTPurchaseRegisterITCJournalEntries(FrappeTestCase):
             posting_date=cls.today,
             ineligibility_reason="As per rules 42 & 43 of CGST Rules",
             tax_amount=9,
+            company_gstin=COMPANY_GSTIN,
         )
 
     @classmethod
@@ -62,6 +75,7 @@ class TestGSTPurchaseRegisterITCJournalEntries(FrappeTestCase):
             posting_date=cls.today,
             ineligibility_reason="Others",
             tax_amount=6,
+            company_gstin=COMPANY_GSTIN,
         )
 
     @classmethod
@@ -69,6 +83,7 @@ class TestGSTPurchaseRegisterITCJournalEntries(FrappeTestCase):
         cls.reclaim_je = create_itc_reclaim_journal_entry(
             posting_date=cls.today,
             tax_amount=9,
+            company_gstin=COMPANY_GSTIN,
         )
 
     @classmethod
@@ -110,8 +125,15 @@ class TestGSTPurchaseRegisterITCJournalEntries(FrappeTestCase):
         cls.boe = boe
 
     @classmethod
-    def tearDownClass(cls):
-        frappe.db.rollback()
+    def _create_isd_recipient_invoice(cls):
+        """Credit received from an external ISD, on the reporting GSTIN."""
+        pi = make_isd_pi(cls.isd_address.name)
+        cls.isd_recipient_invoice = create_recipient_invoice(
+            company_address="_Test Indian Registered Company-Billing",
+            party_address=cls.isd_address.name,
+            external_isd_invoice_number="ISD-PR-001",
+            source_items=make_source_item(pi),
+        )
 
     def test_reversal_of_itc_je_is_in_purchase_register(self):
         _, data = execute(_filters(self.today))
@@ -249,3 +271,24 @@ class TestGSTPurchaseRegisterITCJournalEntries(FrappeTestCase):
         self.assertIn(p1.name, voucher_nos)
         self.assertIn(p2.name, voucher_nos)
         self.assertNotIn(p3.name, voucher_nos)
+
+    def test_isd_recipient_invoice_is_in_purchase_register(self):
+        _, data = execute(_filters(self.today))
+
+        row = next(
+            (r for r in data if r.get("voucher_no") == self.isd_recipient_invoice.name),
+            None,
+        )
+        self.assertIsNotNone(row, "the credit received from an ISD must be reported")
+
+        source_row = self.isd_recipient_invoice.source_items[0]
+        self.assertEqual(row["voucher_type"], "ISD Recipient Invoice")
+        self.assertEqual(row["invoice_sub_category"], "Input Service Distributor")
+        self.assertEqual(row["cgst_amount"], source_row.distributed_cgst)
+        self.assertEqual(row["sgst_amount"], source_row.distributed_sgst)
+        self.assertEqual(row["total_tax"], source_row.distributed_cgst + source_row.distributed_sgst)
+        self.assertEqual(row["taxable_value"], source_row.distributed_expense)
+        self.assertEqual(
+            row["total_amount"],
+            source_row.distributed_expense + source_row.distributed_cgst + source_row.distributed_sgst,
+        )

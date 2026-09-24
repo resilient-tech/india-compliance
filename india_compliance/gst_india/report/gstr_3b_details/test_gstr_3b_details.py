@@ -2,10 +2,23 @@
 # See license.txt
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import get_first_day, get_last_day, get_month, getdate
 
 from india_compliance.gst_india.report.gst_purchase_register_beta.gst_purchase_register_beta import (
+=======
+from frappe.tests import IntegrationTestCase
+from frappe.utils import flt, get_first_day, get_last_day, get_month, getdate
+
+from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
+    create_recipient_invoice,
+    make_isd_pi,
+    make_source_item,
+    setup_isd_fixtures,
+)
+from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
+>>>>>>> 0f98f96 (feat: add Input Service Distribution (ISD) invoicing (#4524))
     execute as run_purchase_register,
 )
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
@@ -17,7 +30,18 @@ from india_compliance.gst_india.utils.tests import (
 )
 
 
+<<<<<<< HEAD
 class TestGSTR3BDetails(FrappeTestCase):
+=======
+class TestGSTR3BDetails(IntegrationTestCase):
+    COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_isd_fixtures(cls)
+
+>>>>>>> 0f98f96 (feat: add Input Service Distribution (ISD) invoicing (#4524))
     def setUp(self):
         frappe.set_user("Administrator")
         filters = {"company": "_Test Indian Registered Company"}
@@ -76,7 +100,9 @@ class TestGSTR3BDetails(FrappeTestCase):
         self.assertNotIn(pi.name, [row["voucher_no"] for row in rows])
 
     def test_itc_details_report_includes_itc_reclaim_entries(self):
-        journal_entry = create_itc_reclaim_journal_entry(posting_date=getdate(), tax_amount=9)
+        journal_entry = create_itc_reclaim_journal_entry(
+            posting_date=getdate(), tax_amount=9, company_gstin="24AAQCA8719H1ZC"
+        )
 
         _, data = self.get_details("4")
         row = next((item for item in data if item["voucher_no"] == journal_entry.name), None)
@@ -113,7 +139,9 @@ class TestGSTR3BDetails(FrappeTestCase):
             supplier_address="_Test Registered Supplier-Billing",
         )
         # ITC Reclaim Journal Entry ("Reclaim of ITC Reversal")
-        create_itc_reclaim_journal_entry(posting_date=getdate(), tax_amount=9)
+        create_itc_reclaim_journal_entry(
+            posting_date=getdate(), tax_amount=9, company_gstin="24AAQCA8719H1ZC"
+        )
 
     def test_invoice_sub_category_filter_narrows_rows(self):
         self.create_section_4_documents()
@@ -153,3 +181,22 @@ class TestGSTR3BDetails(FrappeTestCase):
                 }
             )
         )
+
+    def test_itc_details_report_includes_isd_recipient_invoices(self):
+        """4(A)(4) is the only 3B row an ISD Recipient Invoice reaches, so if the drill-down misses
+        it the summary reports credit the details cannot account for."""
+        doc = create_recipient_invoice(
+            company_address=self.COMPANY_ADDRESS,
+            party_address=self.isd_address.name,
+            external_isd_invoice_number=frappe.generate_hash(length=8),
+            source_items=make_source_item(make_isd_pi(self.isd_address.name)),
+        )
+        source_row = doc.source_items[0]
+
+        _, data = self.get_details("4")
+        row = next((item for item in data if item["voucher_no"] == doc.name), None)
+
+        self.assertIsNotNone(row)
+        self.assertEqual(row["invoice_sub_category"], "Input Service Distributor")
+        self.assertEqual(row["cgst_amount"], flt(source_row.distributed_cgst, 2))
+        self.assertEqual(row["sgst_amount"], flt(source_row.distributed_sgst, 2))

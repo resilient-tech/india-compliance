@@ -235,6 +235,9 @@ def set_default_gst_settings():
         "enable_gstr_1_api": 1,
         "compare_unfiled_data": 1,
         "freeze_transactions": 1,
+        # ISD
+        "distribute_expense_with_isd_credit": 1,
+        "auto_create_isd_recipient_invoice": 1,
     }
 
     if frappe.conf.developer_mode:
