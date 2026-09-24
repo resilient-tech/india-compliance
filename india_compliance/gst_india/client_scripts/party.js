@@ -97,7 +97,7 @@ function show_overseas_disabled_warning(doctype) {
         after_save(frm) {
             if (
                 !gst_settings.enable_overseas_transactions &&
-                ["SEZ", "Overseas"].includes(frm.doc.gst_category)
+                frappe.boot.import_gst_categories.includes(frm.doc.gst_category)
             ) {
                 frappe.msgprint({
                     message: __(

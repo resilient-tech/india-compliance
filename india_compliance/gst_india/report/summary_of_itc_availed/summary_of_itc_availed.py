@@ -121,7 +121,7 @@ class ITCAvailedData:
         )
 
     def _get_data(self) -> list[dict]:
-        return self._get_bill_of_entry_data() + self._get_purchase_invoice_data()
+        return self._get_bill_of_entry_data() + self._get_purchase_invoice_data() + self._get_isd_data()
 
     def _get_purchase_invoice_data(self) -> list[dict]:
         doc = frappe.qb.DocType("Purchase Invoice")
@@ -142,6 +142,7 @@ class ITCAvailedData:
                 (doc.company_gstin != IfNull(doc.supplier_gstin, ""))
                 & (doc.is_opening == "No")
                 & (doc.is_boe_applicable == 0)
+                & (IfNull(doc.is_isd_applicable, 0) == 0)
             )
         )
 
@@ -167,6 +168,31 @@ class ITCAvailedData:
         )
 
         query = self._add_tax_fields_and_filters(query, doc, doc_item)
+
+        return query.run(as_dict=True)
+
+    def _get_isd_data(self) -> list[dict]:
+        doc = frappe.qb.DocType("ISD Recipient Invoice")
+        doc_item = frappe.qb.DocType("ISD Source Item")
+
+        query = (
+            frappe.qb.from_(doc)
+            .inner_join(doc_item)
+            .on((doc.name == doc_item.parent) & (doc_item.parenttype == "ISD Recipient Invoice"))
+            .select(
+                ConstantColumn("Input Service Distributor").as_("itc_classification"),
+                doc_item.distributed_cgst.as_("cgst_amount"),
+                doc_item.distributed_sgst.as_("sgst_amount"),
+                doc_item.distributed_igst.as_("igst_amount"),
+                (doc_item.distributed_cess + doc_item.distributed_cess_non_advol).as_("cess_amount"),
+            )
+            .where((doc.docstatus == 1) & (doc.company == self.filters.get("company")))
+        )
+
+        query = self.apply_itc_period_filter(query, doc)
+
+        if self.filters.get("company_gstin"):
+            query = query.where(doc.company_gstin == self.filters.get("company_gstin"))
 
         return query.run(as_dict=True)
 

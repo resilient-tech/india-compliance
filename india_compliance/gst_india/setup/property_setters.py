@@ -38,6 +38,13 @@ def get_property_setters(*, include_defaults=False):
             "value": "1",
         },
         {
+            "doctype": "Address",
+            "doctype_or_field": "DocType",
+            "property": "search_fields",
+            "property_type": "Data",
+            "value": "gstin, country, state",
+        },
+        {
             "doctype": "Accounts Settings",
             "fieldname": "determine_address_tax_category_from",
             "property": "read_only",

@@ -19,10 +19,10 @@ from india_compliance.gst_india.utils.gstr_2 import (
 
 
 class TestGSTRMixin:
-    def get_doc(self, category):
+    def get_doc(self, category, **filters):
         docname = frappe.get_value(
             self.doctype,
-            {"company_gstin": self.gstin, "classification": category.value},
+            {"company_gstin": self.gstin, "classification": category.value, **filters},
         )
         self.assertIsNotNone(docname)
         return frappe.get_doc(self.doctype, docname)
