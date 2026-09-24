@@ -52,33 +52,49 @@ class TestCompany(IntegrationTestCase):
         frappe.db.savepoint("before_existing_default")
         self.addCleanup(frappe.db.rollback, save_point="before_existing_default")
 
-        in_state = frappe.get_doc("Tax Category", "In-State")
-        in_state.is_india_compliance_default = 0
-        in_state.save()
-        frappe.get_doc(
-            {"doctype": "Tax Category", "title": "_Test Intra State", "is_india_compliance_default": 1}
-        ).insert()
+        template_doctypes = ("Sales Taxes and Charges Template", "Purchase Taxes and Charges Template")
+        # (shipped default, replacement default, is_inter_state, is_reverse_charge)
+        scenarios = (
+            ("In-State", "_Test Intra State", 0, 0),
+            ("Reverse Charge Out-State", "_Test RCM Inter State", 1, 1),
+        )
+
+        for shipped, replacement, is_inter_state, is_reverse_charge in scenarios:
+            category = frappe.get_doc("Tax Category", shipped)
+            category.is_india_compliance_default = 0
+            category.save()
+            frappe.get_doc(
+                {
+                    "doctype": "Tax Category",
+                    "title": replacement,
+                    "is_inter_state": is_inter_state,
+                    "is_reverse_charge": is_reverse_charge,
+                    "is_india_compliance_default": 1,
+                }
+            ).insert()
 
         company = self.create_company("_Test Existing Default Company", "_TEDC")
 
-        for doctype in ("Sales Taxes and Charges Template", "Purchase Taxes and Charges Template"):
-            template = get_tax_template(doctype, company.name, is_inter_state=False, is_reverse_charge=False)
-            self.assertEqual(frappe.db.get_value(doctype, template, "tax_category"), "_Test Intra State")
+        for shipped, replacement, is_inter_state, is_reverse_charge in scenarios:
+            for doctype in template_doctypes:
+                template = get_tax_template(doctype, company.name, is_inter_state, is_reverse_charge)
+                self.assertEqual(frappe.db.get_value(doctype, template, "tax_category"), replacement)
 
-            default_template = frappe.get_doc(doctype, template)
-            own_template = frappe.copy_doc(default_template)
-            own_template.title = "_Test Own Intra State"
-            default_template.delete()
-            own_template.insert()
+                default_template = frappe.get_doc(doctype, template)
+                own_template = frappe.copy_doc(default_template)
+                own_template.title = f"_Test Own {shipped}"
+                default_template.delete()
+                own_template.insert()
 
         make_default_tax_templates(company.name)
 
-        for doctype in ("Sales Taxes and Charges Template", "Purchase Taxes and Charges Template"):
-            template = get_tax_template(doctype, company.name, is_inter_state=False, is_reverse_charge=False)
-            self.assertEqual(template, f"_Test Own Intra State - {company.abbr}")
-            self.assertEqual(
-                frappe.db.count(doctype, {"company": company.name, "tax_category": "_Test Intra State"}), 1
-            )
+        for shipped, replacement, is_inter_state, is_reverse_charge in scenarios:
+            for doctype in template_doctypes:
+                template = get_tax_template(doctype, company.name, is_inter_state, is_reverse_charge)
+                self.assertEqual(template, f"_Test Own {shipped} - {company.abbr}")
+                self.assertEqual(
+                    frappe.db.count(doctype, {"company": company.name, "tax_category": replacement}), 1
+                )
 
     def test_get_tax_defaults(self):
         gst_rate = 12

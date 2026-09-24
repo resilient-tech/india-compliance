@@ -135,12 +135,12 @@ def make_default_tax_templates(company: str, gst_rate: float | None = None):
     frappe.has_permission("Company", ptype="write", doc=company, throw=True)
 
     default_taxes = get_tax_defaults(gst_rate)
-    use_existing_default_tax_categories(company, default_taxes)
+    default_taxes = skip_existing_tax_defaults(company, default_taxes)
     from_detailed_data(company, default_taxes)
     update_gst_settings(company)
 
 
-def use_existing_default_tax_categories(company, default_taxes):
+def skip_existing_tax_defaults(company, default_taxes):
     existing_defaults = {
         (category.is_inter_state, category.is_reverse_charge): category.name
         for category in frappe.get_all(
@@ -186,6 +186,8 @@ def use_existing_default_tax_categories(company, default_taxes):
             templates.append(template)
 
         tax_templates[template_type] = templates
+
+    return default_taxes
 
 
 def get_tax_defaults(gst_rate=None):
