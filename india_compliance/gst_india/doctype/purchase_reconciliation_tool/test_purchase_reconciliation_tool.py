@@ -5,7 +5,8 @@ import datetime
 import json
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings, make_test_objects
+from frappe.test_runner import make_test_objects
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import formatdate, getdate
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (

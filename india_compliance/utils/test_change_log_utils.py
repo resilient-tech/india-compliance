@@ -2,13 +2,13 @@
 # See license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import formatdate, getdate
 
 from india_compliance.utils.change_log_utils import add_versions_in_bulk, update_docs
 
 
-class TestUpdateDocs(IntegrationTestCase):
+class TestUpdateDocs(FrappeTestCase):
     def setUp(self):
         self.todos = [
             frappe.get_doc(
