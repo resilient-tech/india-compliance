@@ -2,14 +2,26 @@
 # See license.txt
 
 import datetime
+import json
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.tests.utils import make_test_objects
+from frappe.utils import formatdate, getdate
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
 )
+from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
+    create_recipient_invoice,
+    make_isd_pi,
+    make_source_item,
+    setup_isd_fixtures,
+)
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
+    BuildExcel,
+)
+from india_compliance.gst_india.utils.gstr_2 import save_gstr_2b
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     format_period,
@@ -62,15 +74,20 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
     def setUpClass(cls):
         super().setUpClass()
 
-        # create 2023-2024 fiscal year
-        fiscal_year = frappe.new_doc("Fiscal Year")
-        fiscal_year.update(
-            {
-                "year_start_date": "2023-04-01",
-                "year_end_date": "2024-03-31",
-                "year": "2023-2024",
-            }
-        ).insert(ignore_if_duplicate=True)
+        # create 2023-2024 fiscal year. ignore_if_duplicate only covers a clash on the name, and
+        # Fiscal Year rejects any overlap: a site carrying ERPNext's calendar-year fixtures
+        # already covers these dates, so there is nothing to create.
+        if not frappe.db.exists(
+            "Fiscal Year",
+            {"year_start_date": ("<=", "2024-03-31"), "year_end_date": (">=", "2023-04-01")},
+        ):
+            frappe.new_doc("Fiscal Year").update(
+                {
+                    "year_start_date": "2023-04-01",
+                    "year_end_date": "2024-03-31",
+                    "year": "2023-2024",
+                }
+            ).insert()
 
         cls.test_data = frappe.get_file_json(
             frappe.get_app_path(
@@ -82,6 +99,15 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         )
 
         cls.create_test_data()
+        setup_isd_fixtures(cls)
+
+    def setUp(self):
+        recipients = frappe.get_all(
+            "ISD Recipient Invoice", filters={"company": "_Test Indian Registered Company"}, pluck="name"
+        )
+        if recipients:
+            frappe.db.delete("ISD Source Item", {"parent": ("in", recipients)})
+            frappe.db.delete("ISD Recipient Invoice", {"name": ("in", recipients)})
 
     def test_purchase_reconciliation_tool(self):
         purchase_reconciliation_tool = frappe.get_doc("Purchase Reconciliation Tool")
@@ -103,11 +129,34 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                 if isinstance(value, datetime.date):
                     row[key] = str(value)
 
+        matched = 0
+
         for row in reconciled_data:
-            self.assertDictEqual(
-                row,
-                self.reconciled_data.get((row.purchase_invoice_name, row.inward_supply_name)) or {},
-            )
+            expected = self.reconciled_data.get((row.purchase_invoice_name, row.inward_supply_name))
+            if not expected:
+                continue
+
+            self.assertDictEqual(row, expected)
+            matched += 1
+
+        self.assertEqual(matched, len(self.reconciled_data))
+
+        matched_row = next(
+            row for row in reconciled_data if row.purchase_invoice_name and row.inward_supply_name
+        )
+        details = purchase_reconciliation_tool.get_invoice_details(
+            matched_row.purchase_invoice_name, matched_row.inward_supply_name
+        )
+
+        self.assertEqual(details._inward_supply.return_period_2b, "122023")
+        self.assertEqual(details._purchase_invoice.itc_claim_period, "122023")
+
+        exported_fields = [
+            column["fieldname"] for column in BuildExcel(purchase_reconciliation_tool, {}).invoice_header
+        ]
+
+        self.assertIn("return_period_2b", exported_fields)
+        self.assertIn("itc_claim_period", exported_fields)
 
     @classmethod
     def create_test_data(cls):
@@ -646,6 +695,276 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertIn(pinv.name, names)
         self.assertIn(gst_is.name, names)
 
+    def test_copy_details_for_purchase_invoice(self):
+        prt = self.get_reconciliation_tool()
+        pinv, gst_is = self.get_fixture_pair("BILL-2324-50")
+        matched_pinv, matched_gst_is = self.get_fixture_pair("BILL-23-00001")
+        self.addCleanup(
+            frappe.db.set_value,
+            "Purchase Invoice",
+            pinv,
+            {"bill_no": "BILL-2324-50", "bill_date": "2023-12-11"},
+        )
+
+        result = prt.copy_details(
+            [
+                self.format_data_for_copy(pinv, gst_is),
+                self.format_data_for_copy(matched_pinv, matched_gst_is),
+            ],
+            fields=["bill_no", "bill_date"],
+        )
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv, ["bill_no", "bill_date"], as_dict=True),
+            {"bill_no": "BILL-23-24-50", "bill_date": getdate("2023-12-18")},
+        )
+        self.assertEqual(
+            get_copy_version("Purchase Invoice", pinv),
+            {"bill_no": "BILL-23-24-50", "bill_date": formatdate("2023-12-18")},
+        )
+        self.assertIsNone(get_copy_version("Purchase Invoice", matched_pinv))
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", matched_pinv, "bill_no"), "BILL-23-00001")
+        self.assertEqual([row.purchase_invoice_name for row in result], [pinv])
+
+    def test_copy_details_for_a_single_field(self):
+        prt = self.get_reconciliation_tool()
+        pinv, gst_is = self.get_fixture_pair("BILL-2324-50")
+        self.addCleanup(frappe.db.set_value, "Purchase Invoice", pinv, "bill_date", "2023-12-11")
+
+        row = self.format_data_for_copy(pinv, gst_is)
+        prt.copy_details(json.dumps([row]), fields=json.dumps(["bill_date"]))
+
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv, ["bill_no", "bill_date"], as_dict=True),
+            {"bill_no": "BILL-2324-50", "bill_date": getdate("2023-12-18")},
+        )
+        with self.assertRaises(frappe.ValidationError):
+            prt.copy_details([row], fields=["supplier_gstin"])
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv, "bill_no"), "BILL-2324-50")
+
+    def test_copy_details_for_bill_of_entry(self):
+        prt = self.get_reconciliation_tool()
+        boe, gst_is = self.get_fixture_pair("BILL-23-00012")
+        matched_boe, matched_gst_is = self.get_fixture_pair("BILL-23-00011")
+        self.addCleanup(
+            frappe.db.set_value,
+            "Bill of Entry",
+            boe,
+            {"bill_of_entry_no": "BILL-23-00012", "bill_of_entry_date": "2023-12-11"},
+        )
+
+        result = prt.copy_details(
+            [self.format_data_for_copy(boe, gst_is), self.format_data_for_copy(matched_boe, matched_gst_is)],
+            fields=["bill_no", "bill_date"],
+        )
+
+        self.assertEqual(
+            frappe.db.get_value(
+                "Bill of Entry",
+                boe,
+                ["bill_of_entry_no", "bill_of_entry_date"],
+                as_dict=True,
+            ),
+            {"bill_of_entry_no": "BILL-23-00012-A", "bill_of_entry_date": getdate("2023-12-15")},
+        )
+
+        self.assertEqual(
+            get_copy_version("Bill of Entry", boe),
+            {"bill_of_entry_no": "BILL-23-00012-A", "bill_of_entry_date": formatdate("2023-12-15")},
+        )
+        self.assertEqual(
+            frappe.db.get_value("Bill of Entry", matched_boe, "bill_of_entry_no"), "BILL-23-00011"
+        )
+        self.assertIsNone(get_copy_version("Bill of Entry", matched_boe))
+        self.assertEqual([row.purchase_invoice_name for row in result], [boe])
+
+    def test_copy_details_bulk(self):
+        prt = self.get_reconciliation_tool()
+        pinv, pinv_gst_is = self.get_fixture_pair("BILL-2324-50")
+        boe, boe_gst_is = self.get_fixture_pair("BILL-23-00012")
+        blocked_pinv, blocked_gst_is = self.get_fixture_pair("BILL-23-00040")
+        frappe.db.set_value("GST Inward Supply", blocked_gst_is, "bill_no", "BILL-23-00001")
+        self.addCleanup(frappe.db.set_value, "GST Inward Supply", blocked_gst_is, "bill_no", "BILL-23-00045")
+        self.addCleanup(
+            frappe.db.set_value,
+            "Purchase Invoice",
+            pinv,
+            {"bill_no": "BILL-2324-50", "bill_date": "2023-12-11"},
+        )
+        self.addCleanup(
+            frappe.db.set_value,
+            "Bill of Entry",
+            boe,
+            {"bill_of_entry_no": "BILL-23-00012", "bill_of_entry_date": "2023-12-11"},
+        )
+
+        with change_settings("Accounts Settings", {"check_supplier_invoice_uniqueness": 1}):
+            result = prt.copy_details(
+                [
+                    self.format_data_for_copy(blocked_pinv, blocked_gst_is),
+                    self.format_data_for_copy(pinv, pinv_gst_is),
+                    self.format_data_for_copy(boe, boe_gst_is),
+                ],
+                fields=["bill_no", "bill_date"],
+            )
+
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv, ["bill_no", "bill_date"], as_dict=True),
+            {"bill_no": "BILL-23-24-50", "bill_date": getdate("2023-12-18")},
+        )
+        self.assertEqual(
+            get_copy_version("Purchase Invoice", pinv),
+            {"bill_no": "BILL-23-24-50", "bill_date": formatdate("2023-12-18")},
+        )
+
+        self.assertEqual(
+            frappe.db.get_value(
+                "Bill of Entry",
+                boe,
+                ["bill_of_entry_no", "bill_of_entry_date"],
+                as_dict=True,
+            ),
+            {"bill_of_entry_no": "BILL-23-00012-A", "bill_of_entry_date": getdate("2023-12-15")},
+        )
+        self.assertEqual(
+            get_copy_version("Bill of Entry", boe),
+            {"bill_of_entry_no": "BILL-23-00012-A", "bill_of_entry_date": formatdate("2023-12-15")},
+        )
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", blocked_pinv, "bill_no"), "BILL-23-00040")
+        messages = frappe.as_json(frappe.get_message_log())
+        self.assertIn(blocked_pinv, messages)
+        self.assertIn("Supplier Invoice No exists in Purchase Invoice", messages)
+
+        self.assertEqual({row.purchase_invoice_name for row in result}, {pinv, boe})
+
+    def test_copy_details_uses_the_stored_link_doctype(self):
+        """
+        The grid row carries a purchase_doctype, but the server never reads it. The
+        link_doctype stored on the GST Inward Supply decides whether the values land on
+        a Purchase Invoice or a Bill of Entry, so a missing or stale value on the row
+        cannot misroute the write.
+        """
+        prt = self.get_reconciliation_tool()
+        boe, gst_is = self.get_fixture_pair("BILL-23-00011")
+
+        frappe.db.set_value("GST Inward Supply", gst_is, "bill_no", "BILL-23-00011-A")
+        self.addCleanup(frappe.db.set_value, "GST Inward Supply", gst_is, "bill_no", "BILL-23-00011")
+        self.addCleanup(frappe.db.set_value, "Bill of Entry", boe, "bill_of_entry_no", "BILL-23-00011")
+
+        row = self.format_data_for_copy(boe, gst_is)
+        row.pop("purchase_doctype")
+
+        result = prt.copy_details([row], fields=["bill_no"])
+
+        self.assertEqual(frappe.db.get_value("Bill of Entry", boe, "bill_of_entry_no"), "BILL-23-00011-A")
+        self.assertEqual([row.purchase_invoice_name for row in result], [boe])
+
+    def test_copy_details_permission_checks(self):
+        """
+        Two gates, both checked before anything is written.
+
+        Company: a user restricted to another company cannot copy onto a purchase
+        booked elsewhere, and can once that company is permitted.
+
+        Field: bill_no on Purchase Invoice sits at permlevel 1, so a user without
+        Accounts Manager cannot write it. One such row blocks the whole batch, so the
+        Bill of Entry row the user could write stays untouched too.
+        """
+        prt = self.get_reconciliation_tool()
+        boe, boe_gst_is = self.get_fixture_pair("BILL-23-00011")
+        pinv, pinv_gst_is = self.get_fixture_pair("BILL-23-00040")
+
+        frappe.db.set_value("GST Inward Supply", boe_gst_is, "bill_no", "BILL-23-00011-A")
+        self.addCleanup(frappe.db.set_value, "GST Inward Supply", boe_gst_is, "bill_no", "BILL-23-00011")
+        self.addCleanup(frappe.db.set_value, "Bill of Entry", boe, "bill_of_entry_no", "BILL-23-00011")
+        self.addCleanup(frappe.db.set_value, "Purchase Invoice", pinv, "bill_no", "BILL-23-00040")
+
+        test_user = frappe.get_doc("User", "test@example.com")
+        test_user.add_roles("Accounts User")
+        self.addCleanup(test_user.remove_roles, "Accounts User")
+        self.addCleanup(frappe.clear_cache, user=test_user.name)
+        frappe.clear_cache(user=test_user.name)
+
+        rows = [self.format_data_for_copy(pinv, pinv_gst_is)]
+        user_permission = frappe.get_doc(
+            {
+                "doctype": "User Permission",
+                "user": test_user.name,
+                "allow": "Company",
+                "for_value": "_Test Indian Unregistered Company",
+            }
+        ).insert(ignore_permissions=True)
+        frappe.clear_cache(user=test_user.name)
+
+        with self.set_user(test_user.name):
+            self.assertRaises(frappe.PermissionError, prt.copy_details, rows, ["bill_no"])
+
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv, "bill_no"), "BILL-23-00040")
+        user_permission.db_set("for_value", "_Test Indian Registered Company")
+        frappe.clear_cache(user=test_user.name)
+
+        with self.set_user(test_user.name):
+            prt.copy_details(rows, ["bill_no"])
+
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv, "bill_no"), "BILL-23-00045")
+        self.assertEqual(get_copy_version("Purchase Invoice", pinv), {"bill_no": "BILL-23-00045"})
+
+        user_permission.delete(ignore_permissions=True)
+        frappe.db.set_value("Purchase Invoice", pinv, "bill_no", "BILL-23-00040")
+        test_user.remove_roles("Accounts Manager")
+        self.addCleanup(test_user.add_roles, "Accounts Manager")
+        frappe.clear_cache(user=test_user.name)
+        frappe.make_property_setter(
+            {
+                "doctype": "Purchase Invoice",
+                "fieldname": "bill_no",
+                "property": "permlevel",
+                "value": 1,
+                "property_type": "Int",
+            },
+            validate_fields_for_doctype=False,
+        )
+        self.addCleanup(frappe.clear_cache, doctype="Purchase Invoice")
+        self.addCleanup(frappe.db.delete, "Property Setter", {"doc_type": "Purchase Invoice"})
+        frappe.clear_cache(doctype="Purchase Invoice")
+
+        rows = [self.format_data_for_copy(boe, boe_gst_is), self.format_data_for_copy(pinv, pinv_gst_is)]
+
+        with self.set_user(test_user.name):
+            self.assertRaises(frappe.PermissionError, prt.copy_details, rows, ["bill_no"])
+        self.assertEqual(frappe.db.get_value("Bill of Entry", boe, "bill_of_entry_no"), "BILL-23-00011")
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv, "bill_no"), "BILL-23-00040")
+        self.assertIsNone(get_copy_version("Bill of Entry", boe))
+
+    def get_fixture_pair(self, bill_no):
+        for names, row in self.reconciled_data.items():
+            if row.get("bill_no") == bill_no:
+                return names
+
+        self.fail(f"No test fixture with bill no {bill_no}")
+
+    def format_data_for_copy(self, purchase_name, inward_supply_name):
+        return {
+            "purchase_invoice_name": purchase_name,
+            "inward_supply_name": inward_supply_name,
+            "purchase_doctype": frappe.db.get_value("GST Inward Supply", inward_supply_name, "link_doctype"),
+        }
+
+    def get_reconciliation_tool(self):
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2023-12-01",
+                "to_date": "2024-02-29",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        # rebuilds ReconciledData for these filters, as the tool does on Generate
+        prt.reconcile_and_generate_data()
+
+        return prt
+
     def test_cdnr_debit_note_matches_regular_purchase_invoice(self):
         """
         A supplier's debit note is booked as a regular purchase invoice (not a
@@ -678,6 +997,104 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.reconcile_and_generate_data()
 
         self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+
+        # a debit note adds to the ITC, so it stays positive on both sides
+        detail = prt.get_invoice_details(pinv.name, gst_is.name)
+        self.assertEqual(detail._purchase_invoice.taxable_value, 10000)
+        self.assertEqual(detail._inward_supply.taxable_value, 10000)
+
+    def test_cdnr_credit_note_is_signed_on_both_sides(self):
+        """
+        A supplier's credit note reduces the ITC. It is booked as a return invoice,
+        so both sides must report it negative and difference out to zero.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="CN-23-00001",
+            bill_date="2023-09-15",
+            posting_date="2023-09-15",
+            is_return=1,
+            qty=-5,
+        )
+
+        gst_is = create_gst_inward_supply(
+            bill_no="CN-23-00001",
+            bill_date="2023-09-15",
+            classification="CDNR",
+            doc_type="Credit Note",
+            return_period_2b="092023",
+            # 2A/2B reports note values as positive
+            items=[{"taxable_value": 5000, "rate": 18, "sgst": 450, "cgst": 450}],
+            document_value=5900,
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2023-09-01",
+                "to_date": "2023-09-30",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        rows = [row for row in prt.reconcile_and_generate_data() if row.purchase_invoice_name == pinv.name]
+
+        self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].classification, "CDNR")
+        self.assertEqual(rows[0].taxable_value_difference, 0)
+        self.assertEqual(rows[0].tax_difference, 0)
+
+        detail = prt.get_invoice_details(pinv.name, gst_is.name)
+        purchase, inward_supply = detail._purchase_invoice, detail._inward_supply
+
+        self.assertEqual(purchase.taxable_value, -5000)
+        self.assertEqual(purchase.cgst, -450)
+        self.assertEqual(purchase.sgst, -450)
+
+        self.assertEqual(inward_supply.taxable_value, -5000)
+        self.assertEqual(inward_supply.cgst, -450)
+        self.assertEqual(inward_supply.sgst, -450)
+
+    def test_credit_note_nets_off_the_invoice_in_books(self):
+        """
+        An invoice and its credit note, neither reported in 2A/2B, must net to the
+        amount actually claimable rather than adding up to the gross.
+        """
+        dates = {"bill_date": "2023-10-15", "posting_date": "2023-10-15"}
+
+        # own amounts, so no other invoice can claim these by a residual match
+        invoice = create_purchase_invoice(bill_no="NET-23-00001", qty=7, rate=1100, **dates)
+        credit_note = create_purchase_invoice(bill_no="NET-23-00002", is_return=1, qty=-2, rate=1100, **dates)
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2023-10-01",
+                "to_date": "2023-10-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        rows = {
+            row.purchase_invoice_name: row
+            for row in prt.reconcile_and_generate_data()
+            if row.purchase_invoice_name in (invoice.name, credit_note.name)
+        }
+
+        self.assertEqual(len(rows), 2)
+        for row in rows.values():
+            self.assertEqual(row.match_status, "Only in Books")
+
+        # nothing in 2A/2B, so each difference is the negated book value
+        self.assertEqual(rows[invoice.name].taxable_value_difference, -7700)
+        self.assertEqual(rows[credit_note.name].taxable_value_difference, 2200)
+
+        # what the summary rolls up: the net claimable, not the gross of both documents
+        self.assertEqual(sum(row.taxable_value_difference for row in rows.values()), -5500)
+        self.assertEqual(sum(row.tax_difference for row in rows.values()), -990)
 
     def test_purchase_posted_after_period_is_not_matched(self):
         """
@@ -722,6 +1139,361 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.reconcile_and_generate_data()
 
         self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+
+    # ------------------------------------------------------------------ ISD Recipient Invoice
+    COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
+
+    POSTING_DATE = "2023-08-11"
+
+    def create_recipient_invoice(
+        self, external_isd_invoice_number, is_credit_note=0, is_ineligible_for_itc=0
+    ):
+        pi = make_isd_pi(self.isd_address.name, posting_date=self.POSTING_DATE, set_posting_time=1)
+
+        return create_recipient_invoice(
+            company_address=self.COMPANY_ADDRESS,
+            party_address=self.isd_address.name,
+            posting_date=self.POSTING_DATE,
+            external_isd_invoice_number=external_isd_invoice_number,
+            is_credit_note=is_credit_note,
+            is_ineligible_for_itc=is_ineligible_for_itc,
+            source_items=make_source_item(pi, is_credit_note=is_credit_note),
+        )
+
+    def reconcile(self):
+        tool = frappe.get_doc("Purchase Reconciliation Tool")
+        tool.update(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2023-08-01",
+                "to_date": "2023-08-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        return tool, tool.reconcile_and_generate_data()
+
+    def isd_row(self, rows, doc):
+        return next(row for row in rows if row.purchase_invoice_name == doc.name)
+
+    def test_unmatched_isd_invoice_is_reported_as_missing_in_2b(self):
+        doc = self.create_recipient_invoice("ISD-REC-001")
+        source_row = doc.source_items[0]
+
+        _, rows = self.reconcile()
+        row = self.isd_row(rows, doc)
+
+        self.assertEqual(row.purchase_doctype, "ISD Recipient Invoice")
+        self.assertEqual(row.classification, "ISD")
+        self.assertEqual(row.match_status, "Only in Books")
+
+        # the counterparty is the ISD registration, not a supplier
+        self.assertEqual(row.supplier_gstin, self.isd_address.gstin)
+        self.assertEqual(row.bill_no, "ISD-REC-001")
+
+        # nothing to reconcile against, so the difference is the credit received
+        self.assertEqual(row.tax_difference, -(source_row.distributed_cgst + source_row.distributed_sgst))
+
+    def test_isd_invoice_matched_against_2b_isd_row(self):
+        doc = self.create_recipient_invoice("ISD-REC-002")
+        source_row = doc.source_items[0]
+
+        # 2A/2B reports neither a place of supply nor a taxable value for ISD invoices (see
+        # GSTR2bISD and ISDInvoice.get_fields), so only the tax heads carry values
+        create_gst_inward_supply(
+            classification="ISD",
+            doc_type="ISD Invoice",
+            bill_no="ISD-REC-002",
+            bill_date=self.POSTING_DATE,
+            supplier_gstin=self.isd_address.gstin,
+            supplier_name="_Test ISD Distribution Address",
+            place_of_supply="",
+            itc_availability="",
+            items=[
+                {
+                    "taxable_value": 0,
+                    "cgst": source_row.distributed_cgst,
+                    "sgst": source_row.distributed_sgst,
+                }
+            ],
+            document_value=source_row.distributed_cgst + source_row.distributed_sgst,
+            return_period_2b="082023",
+            gen_date_2b=self.POSTING_DATE,
+        )
+
+        _, rows = self.reconcile()
+        row = self.isd_row(rows, doc)
+
+        self.assertEqual(row.classification, "ISD")
+        self.assertEqual(row.match_status, "Exact Match")
+        self.assertEqual(row.tax_difference, 0)
+
+        self.assertEqual(
+            frappe.db.get_value("ISD Recipient Invoice", doc.name, "reconciliation_status"),
+            "Match Found",
+        )
+
+    def test_legacy_isd_credit_booked_as_a_purchase_invoice_still_matches(self):
+        """Before the ISD doctypes existed the credit was booked as a Purchase Invoice against the
+        distributor. Those are submitted, so they keep that shape forever -- the ISD categories have
+        to offer them as candidates alongside ISD Recipient Invoices, or upgraded sites stop
+        reconciling every ISD document they already had."""
+        pinv = create_purchase_invoice(
+            supplier="_Test ISD Distributor Supplier",
+            bill_no="ISD-LEGACY-001",
+            bill_date=self.POSTING_DATE,
+            posting_date=self.POSTING_DATE,
+        )
+
+        gst_is = create_gst_inward_supply(
+            classification="ISD",
+            doc_type="ISD Invoice",
+            bill_no="ISD-LEGACY-001",
+            bill_date=self.POSTING_DATE,
+            supplier_gstin="24AAQCA8719H2ZB",
+            supplier_name="_Test ISD Distributor Supplier",
+            place_of_supply="",
+            itc_availability="",
+            return_period_2b="082023",
+            gen_date_2b=self.POSTING_DATE,
+        )
+
+        self.reconcile()
+
+        self.assertEqual(
+            frappe.db.get_value("GST Inward Supply", gst_is.name, ["link_doctype", "link_name"]),
+            ("Purchase Invoice", pinv.name),
+        )
+
+    def test_legacy_isd_credit_note_matches_the_return_invoice_only(self):
+        dates = {"bill_date": self.POSTING_DATE, "posting_date": self.POSTING_DATE}
+        return_invoice = create_purchase_invoice(
+            supplier="_Test ISD Distributor Supplier",
+            bill_no="ISD-LEGACY-CN-001",
+            is_return=1,
+            qty=-10,
+            **dates,
+        )
+        invoice = create_purchase_invoice(
+            supplier="_Test ISD Distributor Supplier", bill_no="ISD-LEGACY-CN-002", **dates
+        )
+
+        credit_notes = [
+            create_gst_inward_supply(
+                classification="ISD",
+                doc_type="ISD Credit Note",
+                bill_no=bill_no,
+                bill_date=self.POSTING_DATE,
+                supplier_gstin="24AAQCA8719H2ZB",
+                supplier_name="_Test ISD Distributor Supplier",
+                place_of_supply="",
+                itc_availability="",
+                return_period_2b="082023",
+                gen_date_2b=self.POSTING_DATE,
+            )
+            for bill_no in ("ISD-LEGACY-CN-001", "ISD-LEGACY-CN-002")
+        ]
+
+        _, rows = self.reconcile()
+
+        self.assertEqual(
+            frappe.db.get_value("GST Inward Supply", credit_notes[0].name, "link_name"), return_invoice.name
+        )
+        matched = self.isd_row(rows, return_invoice)
+        self.assertEqual(matched.tax_difference, 0)
+        self.assertEqual(matched.taxable_value_difference, 0)
+
+        self.assertFalse(frappe.db.get_value("GST Inward Supply", credit_notes[1].name, "link_name"))
+        self.assertEqual(self.isd_row(rows, invoice).match_status, "Only in Books")
+
+    def _create_isd_2b_row(self, bill_no, doc_type, cgst, sgst):
+        create_gst_inward_supply(
+            classification="ISD",
+            doc_type=doc_type,
+            bill_no=bill_no,
+            bill_date=self.POSTING_DATE,
+            supplier_gstin=self.isd_address.gstin,
+            supplier_name="_Test ISD Distribution Address",
+            place_of_supply="",
+            itc_availability="",
+            items=[{"taxable_value": 0, "cgst": cgst, "sgst": sgst}],
+            document_value=cgst + sgst,
+            return_period_2b="082023",
+            gen_date_2b=self.POSTING_DATE,
+        )
+
+    def test_isd_credit_note_matching(self):
+        """distributed_* is stored negative on a credit note while 2B reports the magnitude, so the
+        comparison has to be on magnitudes -- otherwise no ISD credit note ever matches. And since
+        distributors number invoices and credit notes from one series, the two document types must
+        not match each other."""
+        credit_note = self.create_recipient_invoice("ISD-CN-001", is_credit_note=1)
+        cn_row = credit_note.source_items[0]
+        self._create_isd_2b_row(
+            "ISD-CN-001", "ISD Credit Note", abs(cn_row.distributed_cgst), abs(cn_row.distributed_sgst)
+        )
+
+        # a book invoice whose number a 2B credit note also carries
+        invoice = self.create_recipient_invoice("ISD-SHARED-001")
+        inv_row = invoice.source_items[0]
+        self._create_isd_2b_row(
+            "ISD-SHARED-001", "ISD Credit Note", inv_row.distributed_cgst, inv_row.distributed_sgst
+        )
+
+        tool, rows = self.reconcile()
+
+        matched = self.isd_row(rows, credit_note)
+        self.assertEqual(matched.match_status, "Exact Match")
+        self.assertEqual(matched.tax_difference, 0)
+
+        detail = tool.get_invoice_details(credit_note.name, matched.inward_supply_name)
+        self.assertEqual(detail._purchase_invoice.cgst, cn_row.distributed_cgst)
+        self.assertEqual(detail._inward_supply.cgst, cn_row.distributed_cgst)
+        self.assertLess(detail._purchase_invoice.cgst, 0)
+
+        # the invoice stays unmatched rather than absorbing the credit note
+        self.assertEqual(self.isd_row(rows, invoice).match_status, "Only in Books")
+
+    def test_one_2b_isd_row_against_an_eligible_and_an_ineligible_book_invoice(self):
+        """An external ISD distributes the eligible and the ineligible part of one doc, so the
+        books carry two ISD Recipient Invoices under one number"""
+        eligible = self.create_recipient_invoice("ISD-ELIG-001")
+        ineligible = self.create_recipient_invoice("ISD-ELIG-001", is_ineligible_for_itc=1)
+
+        eligible_row = eligible.source_items[0]
+        ineligible_row = ineligible.source_items[0]
+
+        save_gstr_2b(
+            "24AAQCA8719H1ZC",
+            "082023",
+            frappe._dict(
+                data=frappe._dict(
+                    gstin="24AAQCA8719H1ZC",
+                    rtnprd="082023",
+                    gendt="11-08-2023",
+                    docdata={
+                        "isd": [
+                            {
+                                "ctin": self.isd_address.gstin,
+                                "trdnm": "_Test ISD Distribution Address",
+                                "supprd": "072023",
+                                "supfildt": "11-08-2023",
+                                "doclist": [
+                                    {
+                                        "doctyp": "ISDI",
+                                        "docnum": "ISD-ELIG-001",
+                                        "docdt": "11-08-2023",
+                                        "igst": 0,
+                                        "cgst": eligible_row.distributed_cgst,
+                                        "sgst": eligible_row.distributed_sgst,
+                                        "cess": 0,
+                                        "itcelg": "Y",
+                                    },
+                                    {
+                                        "doctyp": "ISDI",
+                                        "docnum": "ISD-ELIG-001",
+                                        "docdt": "11-08-2023",
+                                        "igst": 0,
+                                        "cgst": ineligible_row.distributed_cgst,
+                                        "sgst": ineligible_row.distributed_sgst,
+                                        "cess": 0,
+                                        "itcelg": "N",
+                                    },
+                                ],
+                            }
+                        ]
+                    },
+                )
+            ),
+            store_raw=False,
+        )
+
+        # the two parts share supplier, number, date and type, so they key onto one inward supply
+        self.assertEqual(
+            frappe.db.count("GST Inward Supply", {"bill_no": "ISD-ELIG-001", "classification": "ISD"}),
+            2,
+        )
+
+        _, rows = self.reconcile()
+
+        self.assertEqual(self.isd_row(rows, eligible).match_status, "Exact Match")
+        self.assertEqual(self.isd_row(rows, ineligible).match_status, "Exact Match")
+
+    def test_isd_invoice_manual_link_and_unlink(self):
+        """Manually linking an ISD Recipient Invoice writes the status back onto the document, and
+        unlinking reverts it -- the ISD branches of link_documents / unlink_documents."""
+        doc = self.create_recipient_invoice("ISD-REC-003")
+
+        # a different bill number, so it stays unmatched and has to be linked by hand
+        gst_is = create_gst_inward_supply(
+            classification="ISD",
+            doc_type="ISD Invoice",
+            bill_no="ISD-2B-ONLY",
+            bill_date=self.POSTING_DATE,
+            supplier_gstin=self.isd_address.gstin,
+            supplier_name="_Test ISD Distribution Address",
+            place_of_supply="",
+            itc_availability="",
+            items=[{"taxable_value": 0, "cgst": 100, "sgst": 100}],
+            document_value=200,
+            return_period_2b="082023",
+            gen_date_2b=self.POSTING_DATE,
+        )
+
+        tool, _rows = self.reconcile()
+        self.assertEqual(
+            frappe.db.get_value("ISD Recipient Invoice", doc.name, "reconciliation_status"),
+            "Unreconciled",
+        )
+
+        tool.link_documents(
+            purchase_invoice_name=doc.name,
+            inward_supply_name=gst_is.name,
+            link_doctype="ISD Recipient Invoice",
+        )
+
+        linked = frappe.db.get_value(
+            "GST Inward Supply", gst_is.name, ["link_doctype", "link_name", "match_status"], as_dict=True
+        )
+        self.assertEqual(linked.link_doctype, "ISD Recipient Invoice")
+        self.assertEqual(linked.link_name, doc.name)
+        self.assertEqual(linked.match_status, "Manual Match")
+        self.assertEqual(
+            frappe.db.get_value("ISD Recipient Invoice", doc.name, "reconciliation_status"),
+            "Match Found",
+        )
+
+        tool.unlink_documents(
+            [
+                {
+                    "inward_supply_name": gst_is.name,
+                    "purchase_doctype": "ISD Recipient Invoice",
+                    "purchase_invoice_name": doc.name,
+                }
+            ]
+        )
+
+        unlinked = frappe.db.get_value(
+            "GST Inward Supply", gst_is.name, ["link_name", "match_status"], as_dict=True
+        )
+        self.assertEqual(unlinked.link_name, "")
+        self.assertEqual(unlinked.match_status, "")
+        self.assertEqual(
+            frappe.db.get_value("ISD Recipient Invoice", doc.name, "reconciliation_status"),
+            "Unreconciled",
+        )
+
+
+def get_copy_version(doctype, name, tool="Purchase Reconciliation Tool"):
+    version = frappe.db.get_value(
+        "Version", {"ref_doctype": doctype, "docname": name}, "data", order_by="creation desc"
+    )
+    data = json.loads(version or "{}")
+    if (data.get("updater_reference") or {}).get("doctype") != tool:
+        return None
+
+    return {row[0]: row[2] for row in data["changed"]}
 
 
 def create_purchase_invoice(**kwargs):

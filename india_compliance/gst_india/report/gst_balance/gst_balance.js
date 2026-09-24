@@ -11,10 +11,7 @@ frappe.query_reports["GST Balance"] = {
             options: "Company",
             default: frappe.defaults.get_user_default("Company"),
             on_change: (report) => {
-                set_gstin_options(report);
-                report.set_filter_value({
-                    company_gstin: "",
-                });
+                india_compliance.set_gstin_filter_options(report);
                 add_custom_button_to_update_gstin(report);
             },
             reqd: 1,
@@ -23,7 +20,10 @@ frappe.query_reports["GST Balance"] = {
             fieldname: "company_gstin",
             label: __("Company GSTIN"),
             fieldtype: "Autocomplete",
-            get_data: () => set_gstin_options(frappe.query_report),
+            get_query() {
+                const company = frappe.query_report.get_filter_value("company");
+                return india_compliance.get_gstin_query(company);
+            },
         },
         {
             fieldname: "from_date",
@@ -78,20 +78,12 @@ frappe.query_reports["GST Balance"] = {
 
     onload(report) {
         toggle_filters(report);
-        set_gstin_options(report);
+        india_compliance.set_gstin_filter_options(report, false, false);
         add_custom_button_to_update_gstin(report);
     },
 };
 
 erpnext.utils.add_dimensions("GST Balance", 4);
-
-async function set_gstin_options(report) {
-    const options = await india_compliance.get_gstin_options(report.get_filter_value("company"));
-    const gstin_field = report.get_filter("company_gstin");
-    gstin_field.set_data(options);
-
-    if (options.length === 1) gstin_field.set_value(options[0]);
-}
 
 function toggle_filters(report) {
     const show_summary = report.get_filter_value("show_summary");
