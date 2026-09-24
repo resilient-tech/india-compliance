@@ -33,6 +33,7 @@ class ISDController(Document):
     get_gl_dict = AccountsController.get_gl_dict
     get_value_in_transaction_currency = AccountsController.get_value_in_transaction_currency
     get_voucher_subtype = AccountsController.get_voucher_subtype
+    validate_account_currency = AccountsController.validate_account_currency
     company_currency = AccountsController.company_currency
     _remove_references_in_repost_doctypes = AccountsController._remove_references_in_repost_doctypes
     _remove_references_in_unreconcile = AccountsController._remove_references_in_unreconcile
