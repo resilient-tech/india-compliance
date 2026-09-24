@@ -84,7 +84,10 @@ frappe.ui.form.on("ISD Distribution Invoice", {
         await recalculate(frm);
     },
 
-    purchase_invoice: fetch_source_items,
+    async purchase_invoice(frm) {
+        await set_company_address_from_purchase_invoice(frm);
+        await fetch_source_items(frm);
+    },
 
     is_ineligible_for_itc(frm) {
         frm.isd_controller.set_labels();
@@ -106,6 +109,20 @@ frappe.ui.form.on("ISD Distribution Invoice", {
         frm.isd_controller.recalculate();
     },
 });
+
+async function set_company_address_from_purchase_invoice(frm) {
+    if (!frm.doc.purchase_invoice) return;
+
+    const { message } = await frappe.db.get_value(
+        "Purchase Invoice",
+        frm.doc.purchase_invoice,
+        "billing_address",
+    );
+
+    const billing_address = message?.billing_address;
+    if (billing_address && billing_address !== frm.doc.company_address)
+        await frm.set_value("company_address", billing_address);
+}
 
 async function fetch_source_items(frm) {
     const { purchase_invoice, is_ineligible_for_itc } = frm.doc;
