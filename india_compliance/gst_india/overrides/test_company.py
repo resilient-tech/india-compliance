@@ -74,10 +74,13 @@ class TestCompany(FrappeTestCase):
             ).insert()
 
         company = self.create_company("_Test Existing Default Company", "_TEDC")
+        state_code = company.gstin[:2]
 
         for shipped, replacement, is_inter_state, is_reverse_charge in scenarios:
             for doctype in template_doctypes:
-                template = get_tax_template(doctype, company.name, is_inter_state, is_reverse_charge)
+                template = get_tax_template(
+                    doctype, company.name, is_inter_state, state_code, is_reverse_charge
+                )
                 self.assertEqual(frappe.db.get_value(doctype, template, "tax_category"), replacement)
 
                 default_template = frappe.get_doc(doctype, template)
@@ -90,7 +93,9 @@ class TestCompany(FrappeTestCase):
 
         for shipped, replacement, is_inter_state, is_reverse_charge in scenarios:
             for doctype in template_doctypes:
-                template = get_tax_template(doctype, company.name, is_inter_state, is_reverse_charge)
+                template = get_tax_template(
+                    doctype, company.name, is_inter_state, state_code, is_reverse_charge
+                )
                 self.assertEqual(template, f"_Test Own {shipped} - {company.abbr}")
                 self.assertEqual(
                     frappe.db.count(doctype, {"company": company.name, "tax_category": replacement}), 1
