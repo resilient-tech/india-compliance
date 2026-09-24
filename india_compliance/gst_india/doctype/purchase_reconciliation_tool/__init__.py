@@ -782,7 +782,7 @@ class ISDInvoice:
         return fields
 
     def query_tax_amount(self, field):
-        return Abs(Sum(getattr(self.ISD_ITEM, field)))
+        return Sum(getattr(self.ISD_ITEM, field))
 
     @staticmethod
     def query_match_isd_invoices(from_date=None, to_date=None):

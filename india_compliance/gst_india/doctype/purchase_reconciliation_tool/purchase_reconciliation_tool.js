@@ -766,6 +766,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         else if (this.row.match_status == "Only in 2A/2B")
             if (this.missing_doctype == "Purchase Invoice") return ["Create", "Link", "Pending", "Ignore"];
             else return ["Link", "Pending", "Ignore"];
+        else if (this.row.purchase_doctype == "ISD Recipient Invoice") return ["Unlink", "Accept", "Pending"];
         else return ["Unlink", "Accept", "Pending", "Copy"];
     }
 

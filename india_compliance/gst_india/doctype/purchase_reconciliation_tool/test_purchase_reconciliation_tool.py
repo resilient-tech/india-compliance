@@ -1266,6 +1266,47 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             ("Purchase Invoice", pinv.name),
         )
 
+    def test_legacy_isd_credit_note_matches_the_return_invoice_only(self):
+        dates = {"bill_date": self.POSTING_DATE, "posting_date": self.POSTING_DATE}
+        return_invoice = create_purchase_invoice(
+            supplier="_Test ISD Distributor Supplier",
+            bill_no="ISD-LEGACY-CN-001",
+            is_return=1,
+            qty=-10,
+            **dates,
+        )
+        invoice = create_purchase_invoice(
+            supplier="_Test ISD Distributor Supplier", bill_no="ISD-LEGACY-CN-002", **dates
+        )
+
+        credit_notes = [
+            create_gst_inward_supply(
+                classification="ISD",
+                doc_type="ISD Credit Note",
+                bill_no=bill_no,
+                bill_date=self.POSTING_DATE,
+                supplier_gstin="24AAQCA8719H2ZB",
+                supplier_name="_Test ISD Distributor Supplier",
+                place_of_supply="",
+                itc_availability="",
+                return_period_2b="082023",
+                gen_date_2b=self.POSTING_DATE,
+            )
+            for bill_no in ("ISD-LEGACY-CN-001", "ISD-LEGACY-CN-002")
+        ]
+
+        _, rows = self.reconcile()
+
+        self.assertEqual(
+            frappe.db.get_value("GST Inward Supply", credit_notes[0].name, "link_name"), return_invoice.name
+        )
+        matched = self.isd_row(rows, return_invoice)
+        self.assertEqual(matched.tax_difference, 0)
+        self.assertEqual(matched.taxable_value_difference, 0)
+
+        self.assertFalse(frappe.db.get_value("GST Inward Supply", credit_notes[1].name, "link_name"))
+        self.assertEqual(self.isd_row(rows, invoice).match_status, "Only in Books")
+
     def _create_isd_2b_row(self, bill_no, doc_type, cgst, sgst):
         create_gst_inward_supply(
             classification="ISD",
@@ -1300,11 +1341,16 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             "ISD-SHARED-001", "ISD Credit Note", inv_row.distributed_cgst, inv_row.distributed_sgst
         )
 
-        _, rows = self.reconcile()
+        tool, rows = self.reconcile()
 
         matched = self.isd_row(rows, credit_note)
         self.assertEqual(matched.match_status, "Exact Match")
         self.assertEqual(matched.tax_difference, 0)
+
+        detail = tool.get_invoice_details(credit_note.name, matched.inward_supply_name)
+        self.assertEqual(detail._purchase_invoice.cgst, cn_row.distributed_cgst)
+        self.assertEqual(detail._inward_supply.cgst, cn_row.distributed_cgst)
+        self.assertLess(detail._purchase_invoice.cgst, 0)
 
         # the invoice stays unmatched rather than absorbing the credit note
         self.assertEqual(self.isd_row(rows, invoice).match_status, "Only in Books")
