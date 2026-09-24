@@ -4,11 +4,8 @@ from frappe.utils.data import format_date
 
 from india_compliance.gst_india.constants import (
     ACTION_MAP,
-<<<<<<< HEAD
     GST_CATEGORY_MAP,
-=======
     GST_TAX_TYPES,
->>>>>>> 8da812a (fix: handle credit notes as negative values in IMS)
     STATE_NUMBERS,
 )
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
