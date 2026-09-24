@@ -2,10 +2,12 @@
 # See license.txt
 
 import datetime
+import json
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.tests.utils import make_test_objects
+from frappe.utils import formatdate, getdate
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -106,11 +108,17 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                 if isinstance(value, datetime.date):
                     row[key] = str(value)
 
+        matched = 0
+
         for row in reconciled_data:
-            self.assertDictEqual(
-                row,
-                self.reconciled_data.get((row.purchase_invoice_name, row.inward_supply_name)) or {},
-            )
+            expected = self.reconciled_data.get((row.purchase_invoice_name, row.inward_supply_name))
+            if not expected:
+                continue
+
+            self.assertDictEqual(row, expected)
+            matched += 1
+
+        self.assertEqual(matched, len(self.reconciled_data))
 
         matched_row = next(
             row for row in reconciled_data if row.purchase_invoice_name and row.inward_supply_name
@@ -666,6 +674,276 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertIn(pinv.name, names)
         self.assertIn(gst_is.name, names)
 
+    def test_copy_details_for_purchase_invoice(self):
+        prt = self.get_reconciliation_tool()
+        pinv, gst_is = self.get_fixture_pair("BILL-2324-50")
+        matched_pinv, matched_gst_is = self.get_fixture_pair("BILL-23-00001")
+        self.addCleanup(
+            frappe.db.set_value,
+            "Purchase Invoice",
+            pinv,
+            {"bill_no": "BILL-2324-50", "bill_date": "2023-12-11"},
+        )
+
+        result = prt.copy_details(
+            [
+                self.format_data_for_copy(pinv, gst_is),
+                self.format_data_for_copy(matched_pinv, matched_gst_is),
+            ],
+            fields=["bill_no", "bill_date"],
+        )
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv, ["bill_no", "bill_date"], as_dict=True),
+            {"bill_no": "BILL-23-24-50", "bill_date": getdate("2023-12-18")},
+        )
+        self.assertEqual(
+            get_copy_version("Purchase Invoice", pinv),
+            {"bill_no": "BILL-23-24-50", "bill_date": formatdate("2023-12-18")},
+        )
+        self.assertIsNone(get_copy_version("Purchase Invoice", matched_pinv))
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", matched_pinv, "bill_no"), "BILL-23-00001")
+        self.assertEqual([row.purchase_invoice_name for row in result], [pinv])
+
+    def test_copy_details_for_a_single_field(self):
+        prt = self.get_reconciliation_tool()
+        pinv, gst_is = self.get_fixture_pair("BILL-2324-50")
+        self.addCleanup(frappe.db.set_value, "Purchase Invoice", pinv, "bill_date", "2023-12-11")
+
+        row = self.format_data_for_copy(pinv, gst_is)
+        prt.copy_details(json.dumps([row]), fields=json.dumps(["bill_date"]))
+
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv, ["bill_no", "bill_date"], as_dict=True),
+            {"bill_no": "BILL-2324-50", "bill_date": getdate("2023-12-18")},
+        )
+        with self.assertRaises(frappe.ValidationError):
+            prt.copy_details([row], fields=["supplier_gstin"])
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv, "bill_no"), "BILL-2324-50")
+
+    def test_copy_details_for_bill_of_entry(self):
+        prt = self.get_reconciliation_tool()
+        boe, gst_is = self.get_fixture_pair("BILL-23-00012")
+        matched_boe, matched_gst_is = self.get_fixture_pair("BILL-23-00011")
+        self.addCleanup(
+            frappe.db.set_value,
+            "Bill of Entry",
+            boe,
+            {"bill_of_entry_no": "BILL-23-00012", "bill_of_entry_date": "2023-12-11"},
+        )
+
+        result = prt.copy_details(
+            [self.format_data_for_copy(boe, gst_is), self.format_data_for_copy(matched_boe, matched_gst_is)],
+            fields=["bill_no", "bill_date"],
+        )
+
+        self.assertEqual(
+            frappe.db.get_value(
+                "Bill of Entry",
+                boe,
+                ["bill_of_entry_no", "bill_of_entry_date"],
+                as_dict=True,
+            ),
+            {"bill_of_entry_no": "BILL-23-00012-A", "bill_of_entry_date": getdate("2023-12-15")},
+        )
+
+        self.assertEqual(
+            get_copy_version("Bill of Entry", boe),
+            {"bill_of_entry_no": "BILL-23-00012-A", "bill_of_entry_date": formatdate("2023-12-15")},
+        )
+        self.assertEqual(
+            frappe.db.get_value("Bill of Entry", matched_boe, "bill_of_entry_no"), "BILL-23-00011"
+        )
+        self.assertIsNone(get_copy_version("Bill of Entry", matched_boe))
+        self.assertEqual([row.purchase_invoice_name for row in result], [boe])
+
+    def test_copy_details_bulk(self):
+        prt = self.get_reconciliation_tool()
+        pinv, pinv_gst_is = self.get_fixture_pair("BILL-2324-50")
+        boe, boe_gst_is = self.get_fixture_pair("BILL-23-00012")
+        blocked_pinv, blocked_gst_is = self.get_fixture_pair("BILL-23-00040")
+        frappe.db.set_value("GST Inward Supply", blocked_gst_is, "bill_no", "BILL-23-00001")
+        self.addCleanup(frappe.db.set_value, "GST Inward Supply", blocked_gst_is, "bill_no", "BILL-23-00045")
+        self.addCleanup(
+            frappe.db.set_value,
+            "Purchase Invoice",
+            pinv,
+            {"bill_no": "BILL-2324-50", "bill_date": "2023-12-11"},
+        )
+        self.addCleanup(
+            frappe.db.set_value,
+            "Bill of Entry",
+            boe,
+            {"bill_of_entry_no": "BILL-23-00012", "bill_of_entry_date": "2023-12-11"},
+        )
+
+        with change_settings("Accounts Settings", {"check_supplier_invoice_uniqueness": 1}):
+            result = prt.copy_details(
+                [
+                    self.format_data_for_copy(blocked_pinv, blocked_gst_is),
+                    self.format_data_for_copy(pinv, pinv_gst_is),
+                    self.format_data_for_copy(boe, boe_gst_is),
+                ],
+                fields=["bill_no", "bill_date"],
+            )
+
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv, ["bill_no", "bill_date"], as_dict=True),
+            {"bill_no": "BILL-23-24-50", "bill_date": getdate("2023-12-18")},
+        )
+        self.assertEqual(
+            get_copy_version("Purchase Invoice", pinv),
+            {"bill_no": "BILL-23-24-50", "bill_date": formatdate("2023-12-18")},
+        )
+
+        self.assertEqual(
+            frappe.db.get_value(
+                "Bill of Entry",
+                boe,
+                ["bill_of_entry_no", "bill_of_entry_date"],
+                as_dict=True,
+            ),
+            {"bill_of_entry_no": "BILL-23-00012-A", "bill_of_entry_date": getdate("2023-12-15")},
+        )
+        self.assertEqual(
+            get_copy_version("Bill of Entry", boe),
+            {"bill_of_entry_no": "BILL-23-00012-A", "bill_of_entry_date": formatdate("2023-12-15")},
+        )
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", blocked_pinv, "bill_no"), "BILL-23-00040")
+        messages = frappe.as_json(frappe.get_message_log())
+        self.assertIn(blocked_pinv, messages)
+        self.assertIn("Supplier Invoice No exists in Purchase Invoice", messages)
+
+        self.assertEqual({row.purchase_invoice_name for row in result}, {pinv, boe})
+
+    def test_copy_details_uses_the_stored_link_doctype(self):
+        """
+        The grid row carries a purchase_doctype, but the server never reads it. The
+        link_doctype stored on the GST Inward Supply decides whether the values land on
+        a Purchase Invoice or a Bill of Entry, so a missing or stale value on the row
+        cannot misroute the write.
+        """
+        prt = self.get_reconciliation_tool()
+        boe, gst_is = self.get_fixture_pair("BILL-23-00011")
+
+        frappe.db.set_value("GST Inward Supply", gst_is, "bill_no", "BILL-23-00011-A")
+        self.addCleanup(frappe.db.set_value, "GST Inward Supply", gst_is, "bill_no", "BILL-23-00011")
+        self.addCleanup(frappe.db.set_value, "Bill of Entry", boe, "bill_of_entry_no", "BILL-23-00011")
+
+        row = self.format_data_for_copy(boe, gst_is)
+        row.pop("purchase_doctype")
+
+        result = prt.copy_details([row], fields=["bill_no"])
+
+        self.assertEqual(frappe.db.get_value("Bill of Entry", boe, "bill_of_entry_no"), "BILL-23-00011-A")
+        self.assertEqual([row.purchase_invoice_name for row in result], [boe])
+
+    def test_copy_details_permission_checks(self):
+        """
+        Two gates, both checked before anything is written.
+
+        Company: a user restricted to another company cannot copy onto a purchase
+        booked elsewhere, and can once that company is permitted.
+
+        Field: bill_no on Purchase Invoice sits at permlevel 1, so a user without
+        Accounts Manager cannot write it. One such row blocks the whole batch, so the
+        Bill of Entry row the user could write stays untouched too.
+        """
+        prt = self.get_reconciliation_tool()
+        boe, boe_gst_is = self.get_fixture_pair("BILL-23-00011")
+        pinv, pinv_gst_is = self.get_fixture_pair("BILL-23-00040")
+
+        frappe.db.set_value("GST Inward Supply", boe_gst_is, "bill_no", "BILL-23-00011-A")
+        self.addCleanup(frappe.db.set_value, "GST Inward Supply", boe_gst_is, "bill_no", "BILL-23-00011")
+        self.addCleanup(frappe.db.set_value, "Bill of Entry", boe, "bill_of_entry_no", "BILL-23-00011")
+        self.addCleanup(frappe.db.set_value, "Purchase Invoice", pinv, "bill_no", "BILL-23-00040")
+
+        test_user = frappe.get_doc("User", "test@example.com")
+        test_user.add_roles("Accounts User")
+        self.addCleanup(test_user.remove_roles, "Accounts User")
+        self.addCleanup(frappe.clear_cache, user=test_user.name)
+        frappe.clear_cache(user=test_user.name)
+
+        rows = [self.format_data_for_copy(pinv, pinv_gst_is)]
+        user_permission = frappe.get_doc(
+            {
+                "doctype": "User Permission",
+                "user": test_user.name,
+                "allow": "Company",
+                "for_value": "_Test Indian Unregistered Company",
+            }
+        ).insert(ignore_permissions=True)
+        frappe.clear_cache(user=test_user.name)
+
+        with self.set_user(test_user.name):
+            self.assertRaises(frappe.PermissionError, prt.copy_details, rows, ["bill_no"])
+
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv, "bill_no"), "BILL-23-00040")
+        user_permission.db_set("for_value", "_Test Indian Registered Company")
+        frappe.clear_cache(user=test_user.name)
+
+        with self.set_user(test_user.name):
+            prt.copy_details(rows, ["bill_no"])
+
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv, "bill_no"), "BILL-23-00045")
+        self.assertEqual(get_copy_version("Purchase Invoice", pinv), {"bill_no": "BILL-23-00045"})
+
+        user_permission.delete(ignore_permissions=True)
+        frappe.db.set_value("Purchase Invoice", pinv, "bill_no", "BILL-23-00040")
+        test_user.remove_roles("Accounts Manager")
+        self.addCleanup(test_user.add_roles, "Accounts Manager")
+        frappe.clear_cache(user=test_user.name)
+        frappe.make_property_setter(
+            {
+                "doctype": "Purchase Invoice",
+                "fieldname": "bill_no",
+                "property": "permlevel",
+                "value": 1,
+                "property_type": "Int",
+            },
+            validate_fields_for_doctype=False,
+        )
+        self.addCleanup(frappe.clear_cache, doctype="Purchase Invoice")
+        self.addCleanup(frappe.db.delete, "Property Setter", {"doc_type": "Purchase Invoice"})
+        frappe.clear_cache(doctype="Purchase Invoice")
+
+        rows = [self.format_data_for_copy(boe, boe_gst_is), self.format_data_for_copy(pinv, pinv_gst_is)]
+
+        with self.set_user(test_user.name):
+            self.assertRaises(frappe.PermissionError, prt.copy_details, rows, ["bill_no"])
+        self.assertEqual(frappe.db.get_value("Bill of Entry", boe, "bill_of_entry_no"), "BILL-23-00011")
+        self.assertEqual(frappe.db.get_value("Purchase Invoice", pinv, "bill_no"), "BILL-23-00040")
+        self.assertIsNone(get_copy_version("Bill of Entry", boe))
+
+    def get_fixture_pair(self, bill_no):
+        for names, row in self.reconciled_data.items():
+            if row.get("bill_no") == bill_no:
+                return names
+
+        self.fail(f"No test fixture with bill no {bill_no}")
+
+    def format_data_for_copy(self, purchase_name, inward_supply_name):
+        return {
+            "purchase_invoice_name": purchase_name,
+            "inward_supply_name": inward_supply_name,
+            "purchase_doctype": frappe.db.get_value("GST Inward Supply", inward_supply_name, "link_doctype"),
+        }
+
+    def get_reconciliation_tool(self):
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2023-12-01",
+                "to_date": "2024-02-29",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        # rebuilds ReconciledData for these filters, as the tool does on Generate
+        prt.reconcile_and_generate_data()
+
+        return prt
+
     def test_cdnr_debit_note_matches_regular_purchase_invoice(self):
         """
         A supplier's debit note is booked as a regular purchase invoice (not a
@@ -840,6 +1118,17 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         prt.reconcile_and_generate_data()
 
         self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+
+
+def get_copy_version(doctype, name, tool="Purchase Reconciliation Tool"):
+    version = frappe.db.get_value(
+        "Version", {"ref_doctype": doctype, "docname": name}, "data", order_by="creation desc"
+    )
+    data = json.loads(version or "{}")
+    if (data.get("updater_reference") or {}).get("doctype") != tool:
+        return None
+
+    return {row[0]: row[2] for row in data["changed"]}
 
 
 def create_purchase_invoice(**kwargs):
