@@ -16,6 +16,7 @@ from india_compliance.gst_india.utils.isd import (
     calculate_distribution,
     distribute_expense_with_isd_credit,
     get_purchase_doc,
+    get_source_items_from_purchase_invoice,
     is_inter_state_distribution,
     sum_row_tax_by_type,
     throw_invalid_rows,
@@ -76,7 +77,10 @@ class ISDDistributionInvoice(ISDController):
         current_invoice_distributed_itc = sum(
             sum_row_tax_by_type(row, "distributed") for row in self.source_items
         )
-        total_itc_available = sum(sum_row_tax_by_type(row, "total") for row in self.source_items)
+        total_itc_available = sum(
+            sum_row_tax_by_type(row, "total")
+            for row in get_source_items_from_purchase_invoice(self.purchase_invoice)
+        )
 
         net_distributed_itc = already.itc
         if include_current:
