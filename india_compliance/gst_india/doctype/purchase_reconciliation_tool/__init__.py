@@ -381,7 +381,7 @@ class PurchaseInvoice:
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
-        query = self.get_query(additional_fields)
+        query = self.get_query(additional_fields, names=names)
         match_found = ("Reconciled", "Match Found")
 
         if only_names and not names:
@@ -434,7 +434,7 @@ class PurchaseInvoice:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_query(self, additional_fields=None, is_return=False):
+    def get_query(self, additional_fields=None, is_return=False, names=None):
         fields = self.get_fields(additional_fields, is_return)
 
         query = (
@@ -457,9 +457,15 @@ class PurchaseInvoice:
             query = query.where(self.company == self.PI.company)
 
         if self.company_gstin == "All":
-            query = query.where(self.PI.company_gstin.notnull())
+            gstin_condition = self.PI.company_gstin.notnull()
         else:
-            query = query.where(self.company_gstin == self.PI.company_gstin)
+            gstin_condition = self.company_gstin == self.PI.company_gstin
+
+        # include names despite of gstin mismatch
+        if names:
+            gstin_condition = gstin_condition | self.PI.name.isin(names)
+
+        query = query.where(gstin_condition)
 
         if self.include_ignored == 0:
             query = query.where(IfNull(self.PI.reconciliation_status, "") != "Ignored")
@@ -532,7 +538,7 @@ class BillOfEntry:
         self.PI = frappe.qb.DocType("Purchase Invoice")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
-        query = self.get_query(additional_fields)
+        query = self.get_query(additional_fields, names=names)
         match_found = ("Reconciled", "Match Found")
 
         if only_names and not names:
@@ -575,7 +581,7 @@ class BillOfEntry:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_query(self, additional_fields=None):
+    def get_query(self, additional_fields=None, names=None):
         fields = self.get_fields(additional_fields)
 
         query = (
@@ -596,9 +602,15 @@ class BillOfEntry:
             query = query.where(self.company == self.BOE.company)
 
         if self.company_gstin == "All":
-            query = query.where(self.BOE.company_gstin.notnull())
+            gstin_condition = self.BOE.company_gstin.notnull()
         else:
-            query = query.where(self.company_gstin == self.BOE.company_gstin)
+            gstin_condition = self.company_gstin == self.BOE.company_gstin
+
+        # include names despite of gstin mismatch
+        if names:
+            gstin_condition = gstin_condition | self.BOE.name.isin(names)
+
+        query = query.where(gstin_condition)
 
         if self.include_ignored == 0:
             query = query.where(IfNull(self.BOE.reconciliation_status, "") != "Ignored")

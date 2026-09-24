@@ -533,6 +533,44 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             if data._inward_supply.bill_no == "BILL-24-00001":
                 self.assertEqual(data._purchase_invoice.name, self.pinv.name)
 
+    def test_linked_purchase_invoice_on_another_company_gstin_is_shown(self):
+        gst_is = create_gst_inward_supply(
+            bill_no="IMS-GSTIN-DIFF-001",
+            bill_date="2024-12-13",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-13",
+            previous_ims_action="No Action",
+            ims_action="No Action",
+        )
+        pinv = create_purchase_invoice(
+            bill_no="IMS-GSTIN-DIFF-001",
+            bill_date="2024-12-13",
+            posting_date="2024-12-13",
+            qty=10,
+            rate=1000,
+            is_in_state=1,
+            supplier="_Test Registered Supplier",
+            supplier_gstin="24AABCR6898M1ZN",
+        )
+
+        frappe.db.set_value("Purchase Invoice", pinv.name, "company_gstin", "27AAQCA8719H1Z6")
+        frappe.db.set_value(
+            "GST Inward Supply",
+            gst_is.name,
+            {
+                "match_status": "Mismatch",
+                "link_doctype": "Purchase Invoice",
+                "link_name": pinv.name,
+            },
+        )
+
+        invoice_data = self.gst_ims.autoreconcile_and_get_data().get("invoice_data")
+        row = next(row for row in invoice_data if row.inward_supply_name == gst_is.name)
+
+        self.assertEqual(row.purchase_invoice_name, pinv.name)
+        self.assertIn(row.match_status, ("Mismatch", "Suggested Match"))
+        self.assertEqual(row.differences, "COMPANY_GSTIN")
+
     def test_get_invoice_details_with_none_purchase_name(self):
         """
         Regression test: IMS detail view sends purchase_name=None for
@@ -603,6 +641,38 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual(result.purchase_invoice_name, pinv.name)
         self.assertEqual(result.match_status, "Only in Books")
         self.assertIsNone(result.inward_supply_name)
+
+    def test_matched_gst_inward_supplies_never_show_up_in_unmatched(self):
+        pi_args = {
+            "bill_date": "2024-12-12",
+            "posting_date": "2024-12-12",
+            "supplier": "_Test Registered Supplier",
+            "supplier_gstin": "24AABCR6898M1ZN",
+            "company": "_Test Indian Registered Company",
+            "company_gstin": "24AAQCA8719H1ZC",
+            "items": [{"item_code": "_Test Trading Goods 1", "qty": 1}],
+        }
+        pinv = create_purchase_invoice(**pi_args, bill_no="IMS-GID-003")
+        other_pinv = create_purchase_invoice(**pi_args, bill_no="IMS-GID-004")
+
+        self.assertEqual(list(PurchaseInvoice().get_all(names=[pinv.name])), [pinv.name])
+
+        # difference is company_gstin should not filter out already matched invoices
+        filters = frappe._dict(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+            }
+        )
+        self.assertEqual(
+            list(PurchaseInvoice().get_all(names=[pinv.name], filters=filters)),
+            [pinv.name],
+        )
+
+        self.assertEqual(
+            sorted(PurchaseInvoice().get_all(names=[pinv.name, other_pinv.name])),
+            sorted([pinv.name, other_pinv.name]),
+        )
 
     def test_link_documents_with_none_purchase_invoice_name(self):
         """
