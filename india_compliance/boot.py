@@ -9,6 +9,8 @@ from india_compliance.audit_trail.utils import (
 )
 from india_compliance.gst_india.constants import (
     GST_PARTY_TYPES,
+    GST_TAX_TYPES,
+    IMPORT_GST_CATEGORIES,
     INDIAN_STATES,
 )
 
@@ -17,6 +19,8 @@ def set_bootinfo(bootinfo):
     bootinfo["sales_doctypes"] = sales_doctypes
     bootinfo["purchase_doctypes"] = purchase_doctypes
     bootinfo["gst_party_types"] = GST_PARTY_TYPES
+    bootinfo["gst_tax_types"] = GST_TAX_TYPES
+    bootinfo["import_gst_categories"] = IMPORT_GST_CATEGORIES
 
     gst_settings = frappe.get_cached_doc("GST Settings").as_dict()
     gst_settings.api_secret = "***" if gst_settings.api_secret else ""
