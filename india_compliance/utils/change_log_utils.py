@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from uuid import uuid7
+from uuid import uuid4
 
 import frappe
 from frappe import _
@@ -47,7 +47,7 @@ def add_versions_in_bulk(
 
         version.update(
             {
-                "name": str(uuid7()),
+                "name": str(uuid4()),
                 "creation": timestamp,
                 "modified": timestamp,
                 "modified_by": user,
