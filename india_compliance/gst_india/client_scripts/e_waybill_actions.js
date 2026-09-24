@@ -845,6 +845,7 @@ function get_cancel_e_waybill_dialog_fields(frm) {
 // one dialog for vehicle and/or transporter; both at once become two pages
 async function show_update_e_waybill_dialog(frm, { vehicle = false, transporter = false }) {
     const both = vehicle && transporter;
+    const steps = { vehicle, transporter };
     const page = (name) => (both ? `eval: doc.page == '${name}'` : "");
     const source_address = vehicle ? await get_source_destination_address(frm, "source_address") : {};
 
@@ -885,7 +886,7 @@ async function show_update_e_waybill_dialog(frm, { vehicle = false, transporter 
             options: `\nRoad\nAir\nRail\nShip`,
             default: frm.doc.mode_of_transport,
             mandatory_depends_on: "eval: doc.lr_no",
-            onchange: () => update_vehicle_type(d),
+            onchange: () => update_vehicle_type(d, frm),
         },
         {
             label: "State",
@@ -1008,8 +1009,7 @@ async function show_update_e_waybill_dialog(frm, { vehicle = false, transporter 
         primary_action(values) {
             if (both && values.page === "vehicle") return show_page("transporter");
 
-            d.hide();
-            update_e_waybill(frm, values, { vehicle, transporter });
+            update_e_waybill(frm, values, steps).then(() => d.hide());
         },
     });
     // HACK!
@@ -1030,12 +1030,7 @@ async function show_update_e_waybill_dialog(frm, { vehicle = false, transporter 
     }
 }
 
-async function update_e_waybill(frm, values, { vehicle, transporter }) {
-    if (frm.is_dirty()) {
-        Object.assign(frm.doc, await get_saved_transport_fields(frm));
-        await frm._save_without_e_waybill_check("Update");
-    }
-
+async function update_e_waybill(frm, values, steps) {
     const call = (method, values) =>
         frappe.call({
             method: `india_compliance.gst_india.utils.e_waybill.${method}`,
@@ -1043,15 +1038,24 @@ async function update_e_waybill(frm, values, { vehicle, transporter }) {
             freeze: true,
         });
 
-    // portal takes Part-B from the generator only while no transporter is assigned, so vehicle goes first
-    if (vehicle)
-        await call("update_vehicle_info", {
-            ...values,
-            update_e_waybill_data: transporter ? 0 : values.update_e_waybill_data,
-        });
-    if (transporter) await call("update_transporter", values);
+    try {
+        if (frm.is_dirty()) {
+            Object.assign(frm.doc, await get_saved_transport_fields(frm));
+            await frm._save_without_e_waybill_check("Update");
+        }
 
-    frm.refresh();
+        // portal takes Part-B from the generator only while no transporter is assigned, so vehicle goes first
+        if (steps.vehicle) {
+            await call("update_vehicle_info", {
+                ...values,
+                update_e_waybill_data: steps.transporter ? 0 : values.update_e_waybill_data,
+            });
+            steps.vehicle = false;
+        }
+        if (steps.transporter) await call("update_transporter", values);
+    } finally {
+        frm.refresh();
+    }
 }
 
 async function show_extend_validity_dialog(frm) {
