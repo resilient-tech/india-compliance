@@ -1470,13 +1470,14 @@ function setup_gst_update_notifications(doctype) {
 
     frappe.ui.form.on(doctype, {
         setup(frm) {
-            frappe.realtime.on("ic_doc_sync", (doc) => {
+            frappe.realtime.on("ic_doc_sync", (message) => {
+                const doc = message.docs;
                 if (doc.doctype !== frm.doctype || doc.name !== frm.doc?.name) return;
 
                 // unsaved changes: leave it to frappe
                 if (frm.is_dirty()) return;
 
-                frappe.model.sync(doc);
+                frappe.model.sync(message);
                 frm.refresh();
             });
         },

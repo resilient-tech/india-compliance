@@ -13,7 +13,7 @@ from erpnext.accounts.utils import get_fiscal_year
 from erpnext.stock.get_item_details import purchase_doctypes
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
-from frappe.desk.form.load import run_onload
+from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.query_builder.functions import Length
 from frappe.utils import (
     add_months,
@@ -177,6 +177,7 @@ def send_updated_doc(doc):
 
     doc.apply_fieldlevel_read_permissions()
     frappe.response.docs.append(doc)
+    get_docinfo(doc)
 
 
 def publish_doc_update(doc):
@@ -186,9 +187,10 @@ def publish_doc_update(doc):
             run_onload(doc)  # the form needs onload info too
 
         doc.apply_fieldlevel_read_permissions()
+        get_docinfo(doc)
         frappe.publish_realtime(
             "ic_doc_sync",
-            doc.as_dict(),
+            {"docs": doc.as_dict(), "docinfo": frappe.response["docinfo"]},
             user=frappe.session.user,
             after_commit=True,
         )
@@ -1213,6 +1215,7 @@ def handle_server_errors(settings, doc, document_type, error):
         error_message += " " + _("Please try again after some time.")
 
     doc.db_set({document_status_field: document_status})
+    doc.save_version()
 
     notify_user(error_message, title=error_message_title.get(type(error)), indicator="yellow", doc=doc)
 
@@ -1488,6 +1491,7 @@ def _rollback_and_set_status(doc, fieldname, status):
     # if response is pending, other viewers refetch on doc_update;
     # else the pushed doc (publish_doc_update) notifies them
     doc.db_set(fieldname, status, notify=is_response_pending())
+    doc.save_version()
     commit()
 
 
