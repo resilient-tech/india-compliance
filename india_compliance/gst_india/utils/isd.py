@@ -387,6 +387,7 @@ def get_distribution_addresses(
 
     frappe.has_permission(party_type, doc=party, ptype="read", throw=True)
     frappe.has_permission("Address", ptype="read", throw=True)
+    frappe.has_permission("Turnover Record", ptype="read", throw=True)
 
     fy_from, fy_to = get_relevant_period(pi_posting_date)
 
@@ -481,6 +482,7 @@ def bulk_create_isd_distribution_invoices(
 ):
     frappe.has_permission("ISD Distribution Invoice", "create", throw=True)
     frappe.has_permission("Purchase Invoice", "read", doc=purchase_invoice, throw=True)
+    frappe.has_permission("Turnover Record", "create", throw=True)
 
     if isinstance(distribution_table, str):
         distribution_table = frappe.parse_json(distribution_table)
