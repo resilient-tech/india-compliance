@@ -145,12 +145,12 @@ def make_default_tax_templates(company: str, gst_rate: float | None = None):
     frappe.has_permission("Company", ptype="write", doc=company, throw=True)
 
     default_taxes = get_tax_defaults(gst_rate)
-    use_existing_default_tax_categories(default_taxes)
+    use_existing_default_tax_categories(company, default_taxes)
     from_detailed_data(company, default_taxes)
     update_gst_settings(company)
 
 
-def use_existing_default_tax_categories(default_taxes):
+def use_existing_default_tax_categories(company, default_taxes):
     existing_defaults = {
         (category.is_inter_state, category.is_reverse_charge): category.name
         for category in frappe.get_all(
@@ -174,11 +174,28 @@ def use_existing_default_tax_categories(default_taxes):
 
     default_taxes["tax_categories"] = tax_categories
 
-    for template_type in ("sales_tax_templates", "purchase_tax_templates"):
-        for template in default_taxes["chart_of_accounts"]["*"][template_type]:
+    tax_templates = default_taxes["chart_of_accounts"]["*"]
+    for template_type, doctype in (
+        ("sales_tax_templates", "Sales Taxes and Charges Template"),
+        ("purchase_tax_templates", "Purchase Taxes and Charges Template"),
+    ):
+        existing_categories = frappe.get_all(
+            doctype,
+            filters={"company": company, "disabled": 0, "tax_category": ["is", "set"]},
+            pluck="tax_category",
+        )
+
+        templates = []
+        for template in tax_templates[template_type]:
             template["tax_category"] = replaced_categories.get(
                 template["tax_category"], template["tax_category"]
             )
+            if template["tax_category"] in existing_categories:
+                continue
+
+            templates.append(template)
+
+        tax_templates[template_type] = templates
 
 
 def get_tax_defaults(gst_rate=None):
