@@ -346,7 +346,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
             ]
 
         # what save_gstr does
-        GSTR2bISD(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
+        GSTR2bISD(self.company, self.gstin, period, None).create_transactions(
             [{**supplier, "doclist": doclist("Y", "N")}], None
         )
 
@@ -360,7 +360,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         self.assertEqual(eligible.return_period_2b, period)
         self.assertEqual(ineligible.return_period_2b, period)
 
-        GSTR2bISD(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
+        GSTR2bISD(self.company, self.gstin, period, None).create_transactions(
             [{**supplier, "doclist": doclist("Y")}], None
         )
 
