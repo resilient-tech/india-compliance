@@ -3,6 +3,7 @@
 
 """Adapters (summary math, storage) and the tool's endpoints."""
 
+from functools import partial
 from typing import ClassVar
 from unittest.mock import patch
 
@@ -21,12 +22,11 @@ from india_compliance.gst_india.doctype.gst_return_export.return_adapters import
     section_rank,
     sum_summaries,
 )
-from india_compliance.gst_india.doctype.gst_return_export.template_exporter import merge_raw
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     get_raw_return_data,
     store_raw_return_data,
 )
-from india_compliance.gst_india.utils import get_data_file_path
+from india_compliance.gst_india.utils import get_data_file_path, merge_dicts
 from india_compliance.gst_india.utils.gstr_2 import save_gstr_2a, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
@@ -34,33 +34,36 @@ GSTIN = "01AABCE2207R1Z5"
 PERIOD_2B = "032020"
 
 
-class TestMergeRaw(IntegrationTestCase):
+merge_months = partial(merge_dicts, add_numbers=True)
+
+
+class TestMergeMonths(IntegrationTestCase):
     def test_lists_concatenate(self):
-        self.assertEqual(merge_raw({"b2b": [1]}, {"b2b": [2, 3]}), {"b2b": [1, 2, 3]})
+        self.assertEqual(merge_months({"b2b": [1]}, {"b2b": [2, 3]}), {"b2b": [1, 2, 3]})
 
     def test_numbers_add(self):
-        self.assertEqual(merge_raw({"igst": 5}, {"igst": 3}), {"igst": 8})
+        self.assertEqual(merge_months({"igst": 5}, {"igst": 3}), {"igst": 8})
 
     def test_dicts_recurse(self):
         self.assertEqual(
-            merge_raw({"a": {"x": [1], "n": 2}}, {"a": {"x": [2], "n": 3, "y": 9}}),
+            merge_months({"a": {"x": [1], "n": 2}}, {"a": {"x": [2], "n": 3, "y": 9}}),
             {"a": {"x": [1, 2], "n": 5, "y": 9}},
         )
 
     def test_itcsumm_numbers_sum_deeply(self):
         self.assertEqual(
-            merge_raw({"itcsumm": {"itcavl": {"igst": 10}}}, {"itcsumm": {"itcavl": {"igst": 5}}}),
+            merge_months({"itcsumm": {"itcavl": {"igst": 10}}}, {"itcsumm": {"itcavl": {"igst": 5}}}),
             {"itcsumm": {"itcavl": {"igst": 15}}},
         )
 
     def test_new_key_added_and_scalar_newer_wins(self):
-        self.assertEqual(merge_raw({"a": "x"}, {"a": "y", "b": 1}), {"a": "y", "b": 1})
+        self.assertEqual(merge_months({"a": "x"}, {"a": "y", "b": 1}), {"a": "y", "b": 1})
 
     def test_empty_existing_returns_new(self):
-        self.assertEqual(merge_raw({}, {"b2b": [1]}), {"b2b": [1]})
+        self.assertEqual(merge_months({}, {"b2b": [1]}), {"b2b": [1]})
 
     def test_null_does_not_clobber_accumulated_data(self):
-        self.assertEqual(merge_raw({"b2b": [1, 2]}, {"b2b": None}), {"b2b": [1, 2]})
+        self.assertEqual(merge_months({"b2b": [1, 2]}, {"b2b": None}), {"b2b": [1, 2]})
 
 
 class TestSummaryHelpers(IntegrationTestCase):
@@ -311,6 +314,18 @@ class TestRawReturnDataRoundTrip(IntegrationTestCase):
 
         store_raw_return_data(GSTIN, ReturnType.GSTR2B.value, period, raw)
         self.assertFalse(frappe.db.get_value("GST Return Log", log_name, "section_summary"))
+
+    def test_tool_sync_stores_the_summary(self):
+        """The tool's sync builds the summary right after the download; nothing waits for a read."""
+        period = "102024"
+        raw = {"docdata": {"b2b": [{"ctin": GSTIN, "trdnm": "X", "inv": [{"inum": "I1"}, {"inum": "I2"}]}]}}
+        store_raw_return_data(GSTIN, ReturnType.GSTR2B.value, period, raw)  # what the download leaves behind
+        with patch.object(GSTR2BAdapter, "download"):
+            controller._sync_return_data(GSTIN, ReturnType.GSTR2B.value, [period])
+
+        log_name = f"{ReturnType.GSTR2B.value}-{period}-{GSTIN}"
+        summary = frappe.parse_json(frappe.db.get_value("GST Return Log", log_name, "section_summary"))
+        self.assertEqual(summary["totals"]["documents"], 2)
 
 
 class TestGSTReturnExportController(IntegrationTestCase):

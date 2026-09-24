@@ -1087,8 +1087,11 @@ def get_timespan_date_range(timespan: str, company: str | None = None) -> tuple 
     return
 
 
-def merge_dicts(d1: dict, d2: dict) -> dict:
+def merge_dicts(d1: dict, d2: dict, add_numbers: bool = False) -> dict:
     """
+    Fold d2 into d1: dicts recurse (d1 gets its own), lists join (shared), anything else d2 wins.
+    add_numbers=True: numbers add instead, a null never erases.
+
     Sample Input:
     -------------
     d1 = {
@@ -1113,14 +1116,30 @@ def merge_dicts(d1: dict, d2: dict) -> dict:
         'key4': 'value4',
         'key5': 'value5'
     }
+
+    Sample Output, add_numbers=True:
+    --------------------------------
+    {
+        'key1': 'value1 + value2',
+        'key2': {'nested': 'value', 'key': 'value3'},
+        'key3': ['value1', 'value2'],
+        'key4': 'value4',
+        'key5': 'value5'
+    }
     """
     for key in set(d1.keys()) | set(d2.keys()):
         if key in d2 and key in d1:
             if isinstance(d1[key], dict) and isinstance(d2[key], dict):
-                merge_dicts(d1[key], d2[key])
+                merge_dicts(d1[key], d2[key], add_numbers)
 
             elif isinstance(d1[key], list) and isinstance(d2[key], list):
                 d1[key] = d1[key] + d2[key]
+
+            elif add_numbers and isinstance(d1[key], int | float) and isinstance(d2[key], int | float):
+                d1[key] = d1[key] + d2[key]
+
+            elif add_numbers and d2[key] is None:
+                continue
 
             else:
                 d1[key] = copy.deepcopy(d2[key])

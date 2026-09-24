@@ -1,7 +1,7 @@
 # Copyright (c) 2026, Resilient Tech and contributors
 # For license information, please see license.txt
 
-"""GSTR-2A/2B exporters. 2B rows from the sync's readers; 2A straight from the raw data."""
+"""GSTR-2A/2B exporters, both straight from the stored raw data."""
 
 from functools import partial
 from typing import ClassVar
@@ -10,6 +10,7 @@ import frappe
 from frappe.query_builder.functions import Max
 from frappe.utils import flt
 
+from india_compliance.gst_india.constants import GST_CATEGORY_MAP
 from india_compliance.gst_india.doctype.gst_return_export.return_adapters import (
     GSTR2AAdapter,
     GSTR2BAdapter,
@@ -18,32 +19,40 @@ from india_compliance.gst_india.doctype.gst_return_export.template_exporter impo
     GovReturnExporter,
     amend_text,
     as_section_dict,
-    date_text,
     financial_year,
     normalize_label,
     percent_text,
     period_text,
     raw_date_text,
-    raw_yes_no_text,
     reformat_date,
     split_label,
     state_from_code,
-    state_text,
     write_cell,
-    yes_no_text,
 )
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     DOCTYPE as RETURN_LOG,
 )
+from india_compliance.gst_india.utils.gstr_2.sections.b2b import ITC_AVAILABILITY, ITC_REASONS
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
-from india_compliance.gst_returns.fields.gstr2 import DocField as doc
+from india_compliance.gst_returns.fields.gstr2 import DIFF_PERCENT, ISD_TYPE_2B, NOTE_TYPE, YES_NO
 from india_compliance.gst_returns.fields.gstr2 import RawField2a as raw2a
 from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
+from india_compliance.gst_returns.steps import set_item_totals
 
 # A workbook tab the exporter leaves empty on purpose; the comment beside it says why.
 NOT_FILLED = None
 
 SOURCE_PERIOD = "_period"
+
+
+def documents(groups, docs_key):
+    """(supplier, document) pairs; no key means the group is the document."""
+    return [
+        (group, record)
+        for group in groups
+        for record in ((group.get(docs_key) or []) if docs_key else [group])
+    ]
+
 
 # each sheet generation worded the supplier filing header differently
 SUPPLIER_HEADERS = (
@@ -58,72 +67,77 @@ SUPPLIER_HEADERS = (
 )
 
 
+def applicable_percent(source, exporter):
+    """The portal omits the key when the full rate applies."""
+    rate = DIFF_PERCENT.get(source.get(raw2b.DIFF_PERCENT))
+    return percent_text(rate) if rate is not None else None
+
+
 class GSTR2BExporter(GovReturnExporter):
-    """2B: document sheets from the sync's rows, ITC summary sheets from itcsumm."""
+    """2B: document sheets straight from the raw records, ITC summary sheets from itcsumm."""
 
     adapter = GSTR2BAdapter
     template = "gstr2b_excel_template_v1.1.xlsx"
     NUMBER_FORMAT = "0.00"
 
-    # column label -> our field name, with a formatter where the cell shows it differently
+    # column label -> portal key, with the sync's label table where the cell shows a word for a code
     FIELDS: ClassVar[dict] = {
-        "gstin of supplier": doc.SUPPLIER_GSTIN,
-        "gstin of isd": doc.SUPPLIER_GSTIN,
-        "gstin of eco": doc.SUPPLIER_GSTIN,
-        "trade/legal name": doc.SUPPLIER_NAME,
-        **{f"{head} period": (doc.SUP_RETURN_PERIOD, period_text) for head in SUPPLIER_HEADERS},
-        **{f"{head} filing date": (doc.GSTR_1_FILING_DATE, date_text) for head in SUPPLIER_HEADERS},
-        "invoice details | invoice number": doc.BILL_NO,
-        "invoice details | invoice type": doc.SUPPLY_TYPE,
-        "invoice details | invoice date": (doc.BILL_DATE, date_text),
-        "invoice details | invoice value": doc.DOC_VALUE,
-        "document details | document number": doc.BILL_NO,  # ECO
-        "document details | document type": doc.SUPPLY_TYPE,
-        "document details | document date": (doc.BILL_DATE, date_text),
-        "document details | document value": doc.DOC_VALUE,
-        "credit note/debit note details | note number": doc.BILL_NO,
-        "credit note/debit note details | note type": doc.DOC_TYPE,
-        "credit note/debit note details | note supply type": doc.SUPPLY_TYPE,
-        "credit note/debit note details | note date": (doc.BILL_DATE, date_text),
-        "credit note/debit note details | note value": doc.DOC_VALUE,
-        "debit note details | note number": doc.BILL_NO,  # B2B-DNR (ITC reversal)
-        "debit note details | note type": doc.DOC_TYPE,
-        "debit note details | note supply type": doc.SUPPLY_TYPE,
-        "debit note details | note date": (doc.BILL_DATE, date_text),
-        "debit note details | note value": doc.DOC_VALUE,
-        "place of supply": (doc.POS, state_text),
-        "supply attract reverse charge": (doc.REVERSE_CHARGE, yes_no_text),
-        "taxable value": doc.TAXABLE_VALUE,
-        "tax amount | integrated tax": doc.IGST,
-        "tax amount | central tax": doc.CGST,
-        "tax amount | state/ut tax": doc.SGST,
-        "tax amount | cess": doc.CESS,
-        "itc availability": doc.ITC_AVAILABILITY,
-        "eligibility of itc": doc.ITC_AVAILABILITY,
-        "reason": doc.ITC_REASON,
-        "applicable % of tax rate": (doc.DIFF_PERCENTAGE, percent_text),
-        "source": doc.IRN_SOURCE,
-        "irn": doc.IRN_NUMBER,
-        "irn date": (doc.IRN_GEN_DATE, date_text),
-        "isd document type": doc.DOC_TYPE,
-        "isd document number": doc.BILL_NO,
-        "isd document date": (doc.BILL_DATE, date_text),
-        "input tax distribution by isd | integrated tax": doc.IGST,
-        "input tax distribution by isd | central tax": doc.CGST,
-        "input tax distribution by isd | state/ut tax": doc.SGST,
-        "input tax distribution by isd | cess": doc.CESS,
-        "port code": doc.PORT_CODE,
-        "bill of entry details | number": doc.BILL_NO,
-        "bill of entry details | date": (doc.BILL_DATE, date_text),
-        "bill of entry details | taxable value": doc.TAXABLE_VALUE,
-        "amount of tax | integrated tax": doc.IGST,
-        "amount of tax | cess": doc.CESS,
-        # columns the portal copies back that our rows lack; the raw record's keys sit under the row
-        "original invoice number": raw2b.ORIGINAL_INVOICE_NUMBER,
+        "gstin of supplier": raw2b.SUPPLIER_GSTIN,
+        "gstin of isd": raw2b.SUPPLIER_GSTIN,
+        "gstin of eco": raw2b.SUPPLIER_GSTIN,
+        "trade/legal name": raw2b.SUPPLIER_NAME,
+        **{f"{head} period": (raw2b.SUP_RETURN_PERIOD, period_text) for head in SUPPLIER_HEADERS},
+        **{f"{head} filing date": (raw2b.GSTR_1_FILING_DATE, raw_date_text) for head in SUPPLIER_HEADERS},
+        "invoice details | invoice number": raw2b.DOC_NUMBER,
+        "invoice details | invoice type": (raw2b.INVOICE_TYPE, GST_CATEGORY_MAP.get),
+        "invoice details | invoice date": (raw2b.DOC_DATE, raw_date_text),
+        "invoice details | invoice value": raw2b.DOC_VALUE,
+        "document details | document number": raw2b.DOC_NUMBER,  # ECO
+        "document details | document type": (raw2b.INVOICE_TYPE, GST_CATEGORY_MAP.get),
+        "document details | document date": (raw2b.DOC_DATE, raw_date_text),
+        "document details | document value": raw2b.DOC_VALUE,
+        "credit note/debit note details | note number": raw2b.NOTE_NUMBER,
+        "credit note/debit note details | note type": (raw2b.INVOICE_TYPE, NOTE_TYPE.get),
+        "credit note/debit note details | note supply type": (raw2b.SUPPLY_TYPE, GST_CATEGORY_MAP.get),
+        "credit note/debit note details | note date": (raw2b.DOC_DATE, raw_date_text),
+        "credit note/debit note details | note value": raw2b.DOC_VALUE,
+        "debit note details | note number": raw2b.NOTE_NUMBER,  # B2B-DNR (ITC reversal)
+        "debit note details | note type": (raw2b.INVOICE_TYPE, NOTE_TYPE.get),
+        "debit note details | note supply type": (raw2b.SUPPLY_TYPE, GST_CATEGORY_MAP.get),
+        "debit note details | note date": (raw2b.DOC_DATE, raw_date_text),
+        "debit note details | note value": raw2b.DOC_VALUE,
+        "place of supply": (raw2b.POS, state_from_code),
+        "supply attract reverse charge": (raw2b.REVERSE_CHARGE, YES_NO.get),
+        "taxable value": raw2b.TAXABLE_VALUE,
+        "tax amount | integrated tax": raw2b.IGST,
+        "tax amount | central tax": raw2b.CGST,
+        "tax amount | state/ut tax": raw2b.SGST,
+        "tax amount | cess": raw2b.CESS,
+        "itc availability": (raw2b.ITC_AVAILABILITY, ITC_AVAILABILITY.get),
+        "eligibility of itc": (raw2b.ITC_ELIGIBILITY, YES_NO.get),  # ISD
+        "reason": (raw2b.ITC_REASON, ITC_REASONS.get),
+        "applicable % of tax rate": applicable_percent,
+        "source": raw2b.IRN_SOURCE,
+        "irn": raw2b.IRN,
+        "irn date": (raw2b.IRN_DATE, raw_date_text),
+        "isd document type": (raw2b.ISD_DOC_TYPE, ISD_TYPE_2B.get),
+        "isd document number": raw2b.ISD_DOC_NUMBER,
+        "isd document date": (raw2b.ISD_DOC_DATE, raw_date_text),
+        "input tax distribution by isd | integrated tax": raw2b.IGST,
+        "input tax distribution by isd | central tax": raw2b.CGST,
+        "input tax distribution by isd | state/ut tax": raw2b.SGST,
+        "input tax distribution by isd | cess": raw2b.CESS,
+        "port code": raw2b.PORT_CODE,
+        "bill of entry details | number": raw2b.BOE_NUMBER,
+        "bill of entry details | date": (raw2b.BOE_DATE, raw_date_text),
+        "bill of entry details | taxable value": raw2b.TAXABLE_VALUE,
+        "amount of tax | integrated tax": raw2b.IGST,
+        "amount of tax | cess": raw2b.CESS,
+        "original invoice number": raw2b.ORIGINAL_INVOICE_NUMBER,  # the invoice behind an ISD document
         "original invoice date": (raw2b.ORIGINAL_INVOICE_DATE, raw_date_text),
         "icegate reference date": (raw2b.ICEGATE_REF_DATE, raw_date_text),
         "type of amendment": (raw2b.AMEND_TYPE, amend_text),
-        "whether itc to be reduced (taxpayer's input)": (raw2b.ITC_REDUCTION_REQUIRED, raw_yes_no_text),
+        "whether itc to be reduced (taxpayer's input)": (raw2b.ITC_REDUCTION_REQUIRED, YES_NO.get),
         "amount declared by taxpayer for itc reduction | integrated tax": raw2b.DECLARED_IGST,
         "amount declared by taxpayer for itc reduction | central tax": raw2b.DECLARED_CGST,
         "amount declared by taxpayer for itc reduction | state/ut tax": raw2b.DECLARED_SGST,
@@ -131,17 +145,29 @@ class GSTR2BExporter(GovReturnExporter):
         "remarks": raw2b.REMARKS,
     }
 
-    # 'original details' block: every wording lands on the same three fields
+    # 'original details' block; each document kind keeps its own keys
     ORIGINAL_FIELDS: ClassVar[dict] = {
-        "invoice number": doc.ORIGINAL_BILL_NO,
-        "invoice date": (doc.ORIGINAL_BILL_DATE, date_text),
-        "note type": doc.ORIGINAL_DOC_TYPE,
-        "note number": doc.ORIGINAL_BILL_NO,
-        "note date": (doc.ORIGINAL_BILL_DATE, date_text),
-        "isd document type": doc.ORIGINAL_DOC_TYPE,
-        "document number": doc.ORIGINAL_BILL_NO,
-        "document date": (doc.ORIGINAL_BILL_DATE, date_text),
+        "invoice number": raw2b.ORIGINAL_DOC_NUMBER,  # B2BA
+        "invoice date": (raw2b.ORIGINAL_DOC_DATE, raw_date_text),
+        "document number": raw2b.ORIGINAL_DOC_NUMBER,  # ECOA
+        "document date": (raw2b.ORIGINAL_DOC_DATE, raw_date_text),
+        "note type": (raw2b.ORIGINAL_NOTE_TYPE, NOTE_TYPE.get),  # CDNRA
+        "note number": raw2b.ORIGINAL_NOTE_NUMBER,
+        "note date": (raw2b.ORIGINAL_NOTE_DATE, raw_date_text),
+        "isd document type": (raw2b.ORIGINAL_ISD_DOC_TYPE, ISD_TYPE_2B.get),  # ISDA
     }
+
+    # ISDA's original block says "document" but means the ISD document
+    SHEET_FIELDS: ClassVar[dict] = {
+        sheet: {
+            "original details | document number": raw2b.ORIGINAL_ISD_DOC_NUMBER,
+            "original details | document date": (raw2b.ORIGINAL_ISD_DOC_DATE, raw_date_text),
+        }
+        for sheet in ("ISDA", "ISDA(Rejected)")
+    }
+
+    # a reversal record carries these per rate line; the sync sums them, so do we
+    NUMERIC_KEYS: ClassVar[tuple] = (raw2b.TAXABLE_VALUE, raw2b.IGST, raw2b.CGST, raw2b.SGST, raw2b.CESS)
 
     # The 2B workbook, in tab order. Read this next to the tabs.
     SHEETS: ClassVar[dict] = {
@@ -234,14 +260,9 @@ class GSTR2BExporter(GovReturnExporter):
         # document sheets
         filled = False
         for sheet, (block, category, amended) in self.SHEETS.items():
-            groups = blocks[block].get(category.lower()) or []
-            if not groups:
-                continue
-            documents = self._section_documents(category, groups)
+            sources = self._sources(category, blocks[block].get(category.lower()) or [])
             if amended is not None:
-                documents = [d for d in documents if bool(d[0].get(doc.IS_AMENDED)) == amended]
-            # our row over the raw record: the map reads either by key
-            sources = [{**record, **row} for row, record in documents]
+                sources = [s for s in sources if (s.get(raw2b.IS_AMENDED) == "Y") == amended]
             if sources and self.render(sheet, partial(self.rows_for, sheet, sources=sources)):
                 filled = True
 
@@ -253,15 +274,14 @@ class GSTR2BExporter(GovReturnExporter):
                     filled = True
         return filled
 
-    def _section_documents(self, category, groups):
-        """(our row, raw record) pairs. Pairing trusts the raw order."""
-        reader = self.adapter(self.gstin).get_handler(self.periods[-1], category)
-        _get_details, docs_key, _has_items = reader.SECTIONS[category]
-        if docs_key:
-            records = [record for group in groups for record in group.get(docs_key) or []]
-        else:
-            records = list(groups)
-        return list(zip(reader.get_all_transactions(groups), records, strict=True))
+    def _sources(self, category, groups):
+        """One row per document, its supplier folded in; reversal records carry amounts in rate lines."""
+        _details, docs_key, _items = self.adapter.handler_class.SECTIONS[category]
+        sources = [self._source(supplier, record) for supplier, record in documents(groups, docs_key)]
+        for source in sources:
+            if items := source.get(raw2b.ITEMS):
+                set_item_totals(source, items, self.NUMERIC_KEYS)
+        return sources
 
     def _fill_itc_sheet(self, sheet, itcsumm):
         """Walk row labels: total row set the bucket, detail row read from it. Absent = 0."""
@@ -329,8 +349,7 @@ class GSTR2AExporter(GovReturnExporter):
     adapter = GSTR2AAdapter
     template = "gstr2a_excel_template_v1.0.xlsx"
 
-    # absent numeric = 0, like the portal
-    NUMERIC_ZERO_KEYS: ClassVar[set] = {
+    NUMERIC_KEYS: ClassVar[tuple] = (
         raw2a.TAX_RATE,
         raw2a.TAXABLE_VALUE,
         raw2a.IGST,
@@ -338,7 +357,7 @@ class GSTR2AExporter(GovReturnExporter):
         raw2a.SGST,
         raw2a.CESS,
         raw2a.ISD_CESS,
-    }
+    )
 
     FIELDS: ClassVar[dict] = {
         "gstin of supplier": raw2a.SUPPLIER_GSTIN,
@@ -556,34 +575,22 @@ class GSTR2AExporter(GovReturnExporter):
         """Item rows, then a total row and a blank, per document; flat sections one row each."""
         # sources
         sources, totals = [], []
-        for supplier in groups:
-            for record in (supplier.get(list_key) or []) if list_key else [supplier]:
-                if not item_key:
-                    sources.append(self._source(supplier, record))
-                    continue
+        for supplier, record in documents(groups, list_key):
+            if not item_key:
+                sources.append(self._source(supplier, record))
+                continue
 
-                items = [entry.get(raw2a.ITEM_DETAILS, entry) for entry in record.get(item_key) or []]
-                item_totals = {
-                    key: sum(flt(item.get(key)) for item in items) for key in self.NUMERIC_ZERO_KEYS
-                }
-                sources.extend(self._source(supplier, record, item) for item in items)
-                sources.append(self._source(supplier, record, item_totals))
-                totals.append(len(sources) - 1)
-                sources.append(None)
+            items = [entry.get(raw2a.ITEM_DETAILS, entry) for entry in record.get(item_key) or []]
+            sources.extend(self._source(supplier, record, item) for item in items)
+            sources.append(self._source(supplier, record, set_item_totals({}, items, self.NUMERIC_KEYS)))
+            totals.append(len(sources) - 1)
+            sources.append(None)
 
         # rows, total rows marked
         rows = self.rows_for(sheet, labels, sources)
         for index in totals:
             rows[index] = self._total_row(rows[index], labels)
         return rows
-
-    def _source(self, *parts):
-        """Supplier, document, item folded into one dict, later winning. Absent amounts are 0."""
-        source = {key: value for part in parts for key, value in part.items()}
-        for key in self.NUMERIC_ZERO_KEYS:
-            if source.get(key) is None:
-                source[key] = 0
-        return source
 
     NUMBER_LABELS = ("invoice number", "note number", "document number")
 

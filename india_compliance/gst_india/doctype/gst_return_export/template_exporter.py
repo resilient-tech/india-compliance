@@ -15,7 +15,7 @@ from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     get_raw_return_data,
 )
-from india_compliance.gst_india.utils import get_data_file_path
+from india_compliance.gst_india.utils import get_data_file_path, merge_dicts
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 
 HEADER_START_ROW = 5
@@ -90,30 +90,13 @@ def split_label(label):
 # ---- stored raw data
 
 
-def merge_raw(existing, new):
-    """Merge months' raw data: lists join, numbers add, null never wins."""
-    if isinstance(existing, dict) and isinstance(new, dict):
-        merged = dict(existing)
-        for key, value in new.items():
-            merged[key] = merge_raw(merged[key], value) if key in merged else value
-        return merged
-
-    if isinstance(existing, list) and isinstance(new, list):
-        return existing + new
-
-    if isinstance(existing, (int, float)) and isinstance(new, (int, float)):
-        return existing + new
-
-    return existing if new is None else new
-
-
 def as_section_dict(obj):
     """Portal wraps this block in a list. Fold every element."""
     if isinstance(obj, list):
         merged = {}
         for item in obj:
             if isinstance(item, dict):
-                merged = merge_raw(merged, item)
+                merge_dicts(merged, item)
         return merged
     return obj or {}
 
@@ -129,10 +112,6 @@ def reformat_date(value, source_format, target_format):
         return value or ""
 
 
-def date_text(value):  # date -> "21/05/2026"
-    return value.strftime("%d/%m/%Y")
-
-
 def raw_date_text(value):  # "DD-MM-YYYY" -> "DD/MM/YYYY"
     return reformat_date(value, "%d-%m-%Y", "%d/%m/%Y")
 
@@ -144,20 +123,8 @@ def period_text(value):  # "042026" -> "Apr'26"
 _NUMBER_TO_STATE = {number: name for name, number in STATE_NUMBERS.items()}
 
 
-def state_text(value):  # "24-Gujarat" -> "Gujarat"
-    return str(value).split("-", 1)[-1]
-
-
 def state_from_code(value):  # "24" -> "Gujarat" (2A keeps the bare state code)
     return _NUMBER_TO_STATE.get(str(value).zfill(2), value)
-
-
-def yes_no_text(value):  # stored check -> the portal's word
-    return {1: "Yes", 0: "No"}.get(value, "")
-
-
-def raw_yes_no_text(value):
-    return {"Y": "Yes", "N": "No"}.get(value, "")
 
 
 def percent_text(value):  # 0.65 -> "65%"
@@ -241,6 +208,8 @@ class GovReturnExporter:
     FIELDS: ClassVar[dict] = {}
     ORIGINAL_FIELDS: ClassVar[dict] = {}
     SHEET_FIELDS: ClassVar[dict] = {}
+    # a record's or rate line's numeric keys: summed off the lines, 0 when absent like the portal prints
+    NUMERIC_KEYS: ClassVar[tuple] = ()
 
     def __init__(self, gstin, periods):
         self.gstin = gstin
@@ -254,7 +223,7 @@ class GovReturnExporter:
             raw = get_raw_return_data(gstin, self.return_type, period)
             if isinstance(raw, dict):
                 self.raw_by_period[period] = raw
-                self.raw = merge_raw(self.raw, raw)
+                merge_dicts(self.raw, raw, add_numbers=True)
 
     def build(self):
         """(file_name, bytes); None when no data so grouped runs skip, not fail."""
@@ -332,6 +301,14 @@ class GovReturnExporter:
             return overrides[label]
         base, is_original = split_label(label)
         return (cls.ORIGINAL_FIELDS if is_original else cls.FIELDS).get(base)
+
+    def _source(self, supplier, record, item=None):
+        """Supplier, document, item folded flat, deeper winning. Absent numbers are 0, like the portal prints."""
+        source = {**supplier, **record, **(item or {})}
+        for key in self.NUMERIC_KEYS:
+            if source.get(key) is None:
+                source[key] = 0
+        return source
 
     # ---- for subclass fill_readme
 
