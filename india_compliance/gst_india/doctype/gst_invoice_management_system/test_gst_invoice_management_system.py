@@ -3,10 +3,11 @@
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import add_to_date
+from frappe.utils import add_to_date, formatdate, getdate
 
 from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     InwardSupply,
+    PurchaseInvoice,
     apply_declared_overrides,
 )
 from india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system import (
@@ -23,6 +24,7 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.test_purchase_reconciliation_tool import (
     create_gst_inward_supply,
+    get_copy_version,
 )
 from india_compliance.gst_india.utils.api import create_integration_request
 from india_compliance.gst_india.utils.gstr_2.ims import IMSB2B, IMSB2BCN
@@ -149,6 +151,92 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
 
         upload_data = get_data_for_upload("24AAQCA8719H1ZC", "reset")
         self.assertEqual("BILL-24-00002", upload_data["b2b"][0]["inum"])
+
+    def test_credit_note_is_signed_on_screen_but_not_for_upload(self):
+        """
+        A credit note reduces the ITC, so it reads negative wherever it is shown or
+        matched. The portal is sent back the values it reported, so those stay positive.
+        """
+        # the class shares one transaction across its tests, so these must not outlive it
+        credit_note = create_gst_inward_supply(
+            bill_no="CN-24-00001",
+            bill_date="2024-12-11",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-11",
+            classification="CDNR",
+            doc_type="Credit Note",
+            # 2A/2B reports note values as positive
+            items=[{"taxable_value": 5000, "rate": 18, "sgst": 450, "cgst": 450}],
+            document_value=5900,
+            previous_ims_action="No Action",
+            action="Pending",
+        )
+        self.addCleanup(frappe.delete_doc, "GST Inward Supply", credit_note.name, force=True)
+
+        return_invoice = create_purchase_invoice(
+            bill_no="CN-24-00001",
+            bill_date="2024-12-11",
+            posting_date="2024-12-11",
+            supplier_gstin="24AABCR6898M1ZN",
+            is_in_state=1,
+            is_return=1,
+            qty=-5,
+            rate=1000,
+        )
+        # cleanups run last in first out, so this cancels before the delete above it
+        self.addCleanup(frappe.delete_doc, "Purchase Invoice", return_invoice.name, force=True)
+        self.addCleanup(return_invoice.cancel)
+
+        # on screen: both sides negative, so the note nets off the invoice it reverses
+        shown = InwardSupply().get_all("24AAQCA8719H1ZC", names=[credit_note.name])[0]
+        self.assertEqual(shown.taxable_value, -5000)
+        self.assertEqual(shown.cgst, -450)
+        self.assertEqual(shown.sgst, -450)
+
+        booked = PurchaseInvoice().get_all(names=[return_invoice.name])[return_invoice.name]
+        self.assertEqual(booked.taxable_value, -5000)
+        self.assertEqual(booked.cgst, -450)
+        self.assertEqual(booked.sgst, -450)
+
+        # on upload: the portal gets back exactly the values it reported
+        self.gst_ims.update_action((credit_note.name,), "Accepted")
+        uploaded = next(
+            row
+            for row in get_data_for_upload("24AAQCA8719H1ZC", "save")["b2bcn"]
+            if row["nt_num"] == "CN-24-00001"
+        )
+        self.assertEqual(uploaded["txval"], 5000)
+        self.assertEqual(uploaded["camt"], 450)
+        self.assertEqual(uploaded["samt"], 450)
+
+    def test_full_reversal_on_a_signed_credit_note_omits_declared_values(self):
+        """
+        set_itc_reduction compares the declared reversal against the supplier's own
+        amounts. Those read negative, so the comparison has to be made on magnitudes
+        or a full reversal would be sent as a partial one.
+        """
+        handler = IMSB2BCN(self.gst_ims.company, self.gst_ims.company_gstin)
+
+        # as the query hands it over: a credit note, signed for the screen
+        signed = self.gov_invoice(
+            igst=0,
+            cgst=-900,
+            sgst=-900,
+            cess=0,
+            taxable_value=-10000,
+            declared_cgst=900,
+            declared_sgst=900,
+        )
+        data = handler.convert_data_to_gov_format(signed)
+
+        # the portal reads an absent declared block as a full reversal
+        self.assertEqual(data["itcRedReq"], "Y")
+        self.assertNotIn("declCgst", data)
+        self.assertNotIn("declSgst", data)
+
+        self.assertEqual(data["camt"], 900)
+        self.assertEqual(data["samt"], 900)
+        self.assertEqual(data["txval"], 10000)
 
     def test_gov_format_itc_reduction(self):
         handler = IMSB2BCN(self.gst_ims.company, self.gst_ims.company_gstin)
@@ -647,6 +735,70 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         )
 
         self.assertFalse(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
+
+    def test_copy_details(self):
+        """
+        Bill no / date reported in IMS are copied onto the linked Purchase Invoice, and
+        the synced rows come back as IMS invoice data so the grid can be refreshed.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="IMS-SYNC-001",
+            bill_date="2024-12-11",
+            posting_date="2024-12-11",
+            supplier="_Test Registered Supplier",
+            supplier_gstin="24AABCR6898M1ZN",
+            company="_Test Indian Registered Company",
+            company_gstin="24AAQCA8719H1ZC",
+            items=[
+                {
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1,
+                }
+            ],
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="IMS-SYNC-001-A",
+            bill_date="2024-12-15",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-15",
+            previous_ims_action="No Action",
+            ims_action="No Action",
+        )
+        self.addCleanup(self.delete_inward_supply, gst_is.name)
+        frappe.db.set_value(
+            "GST Inward Supply",
+            gst_is.name,
+            {"link_doctype": "Purchase Invoice", "link_name": pinv.name},
+        )
+
+        # the grid sends the row back as it was rendered, purchase_doctype and all
+        row = {
+            "purchase_invoice_name": pinv.name,
+            "inward_supply_name": gst_is.name,
+            "purchase_doctype": "Purchase Invoice",
+        }
+        result = self.gst_ims.copy_details([row], fields=["bill_no", "bill_date"])
+
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv.name, ["bill_no", "bill_date"], as_dict=True),
+            {"bill_no": "IMS-SYNC-001-A", "bill_date": getdate("2024-12-15")},
+        )
+
+        # set_value writes no version, so the sync records one itself
+        self.assertEqual(
+            get_copy_version("Purchase Invoice", pinv.name, "GST Invoice Management System"),
+            {"bill_no": "IMS-SYNC-001-A", "bill_date": formatdate("2024-12-15")},
+        )
+
+        # rows come back IMS shaped, with what a re-sync of the same row needs
+        self.assertEqual([synced.inward_supply_name for synced in result], [gst_is.name])
+        self.assertEqual(result[0].purchase_invoice_name, pinv.name)
+        self.assertEqual(result[0].purchase_doctype, "Purchase Invoice")
+        self.assertEqual(result[0].ims_action, "No Action")
+        self.assertEqual(result[0].bill_no, "IMS-SYNC-001-A")
+
+        # now in agreement: nothing left to sync
+        self.assertIsNone(self.gst_ims.copy_details([row], fields=["bill_no", "bill_date"]))
 
     def get_periods(self):
         periods = []

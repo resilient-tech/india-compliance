@@ -35,6 +35,7 @@ class Fields(Enum):
     SUPPLIER_GSTIN = "supplier_gstin"
     COMPANY_GSTIN = "company_gstin"
     BILL_NO = "bill_no"
+    BILL_DATE = "bill_date"
     PLACE_OF_SUPPLY = "place_of_supply"
     REVERSE_CHARGE = "is_reverse_charge"
     TAXABLE_VALUE = "taxable_value"
@@ -91,6 +92,10 @@ DOC_TYPES_BY_CATEGORY = {
     "CDNR": CDNR_DOC_TYPES,
     **dict.fromkeys(ISD_CATEGORY, ISD_DOC_TYPES),
 }
+
+# 2A/2B reports note values as positive. Credit notes reduce ITC, so they are signed
+# negative to match the books, where they are booked as return invoices.
+CREDIT_NOTE_DOC_TYPES = ("Credit Note", "ISD Credit Note")
 
 GSTIN_RULES = (
     {
@@ -367,7 +372,13 @@ class InwardSupply:
 
     def get_tax_fields(self):
         fields = (*GST_TAX_TYPES[:-1], "taxable_value")
-        return [self.GSTR2[field] for field in fields]
+        return [
+            Case()
+            .when(self.GSTR2.doc_type.isin(CREDIT_NOTE_DOC_TYPES), -self.GSTR2[field])
+            .else_(self.GSTR2[field])
+            .as_(field)
+            for field in fields
+        ]
 
 
 class PurchaseInvoice:
@@ -474,7 +485,7 @@ class PurchaseInvoice:
             "place_of_supply",
             "is_reverse_charge",
             "itc_classification",
-            Abs(Sum(self.PI_ITEM.taxable_value)).as_("taxable_value"),
+            Sum(self.PI_ITEM.taxable_value).as_("taxable_value"),
             *tax_fields,
         ]
 
@@ -499,7 +510,7 @@ class PurchaseInvoice:
         return fields
 
     def query_tax_amount(self, field):
-        return Abs(Sum(getattr(self.PI_ITEM, field)))
+        return Sum(getattr(self.PI_ITEM, field))
 
     @staticmethod
     def query_matched_purchase_invoice(from_date=None, to_date=None):
