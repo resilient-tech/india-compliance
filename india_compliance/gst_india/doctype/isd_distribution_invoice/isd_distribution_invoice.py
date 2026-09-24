@@ -13,6 +13,7 @@ from frappe.utils import cint, flt, format_date, get_link_to_form, getdate
 from india_compliance.gst_india.constants import GST_TAX_TYPES, ISD_GST_CATEGORY
 from india_compliance.gst_india.utils import validate_invoice_number
 from india_compliance.gst_india.utils.isd import (
+    _get_source_items_from_purchase_invoice,
     calculate_distribution,
     distribute_expense_with_isd_credit,
     get_purchase_doc,
@@ -71,12 +72,15 @@ class ISDDistributionInvoice(ISDController):
         self.sync_distribution_percentage(include_current=False)
 
     def sync_distribution_percentage(self, include_current=True):
-        already = self.get_distributed_for_purchase_invoice()
+        already = self.get_distributed_for_purchase_invoice(with_eligibility=False)
 
         current_invoice_distributed_itc = sum(
             sum_row_tax_by_type(row, "distributed") for row in self.source_items
         )
-        total_itc_available = sum(sum_row_tax_by_type(row, "total") for row in self.source_items)
+        total_itc_available = sum(
+            sum_row_tax_by_type(row, "total")
+            for row in _get_source_items_from_purchase_invoice(self.purchase_invoice)
+        )
 
         net_distributed_itc = already.itc
         if include_current:
@@ -195,16 +199,13 @@ class ISDDistributionInvoice(ISDController):
         """One to One mapping of purchase invoice items and source items"""
         # validate_purchase_invoice (runs first) guarantees self.purchase_invoice is set
         pi_item = frappe.qb.DocType("Purchase Invoice Item")
-        item = frappe.qb.DocType("Item")
         isd_source_items = [item.item_code for item in self.source_items]
         pi_items = {
             item.name: item
             for item in frappe.qb.from_(pi_item)
-            .join(item)
-            .on(pi_item.item_code == item.name)
             .where(
                 (pi_item.parent == self.purchase_invoice)
-                & (item.is_ineligible_for_itc == cint(self.is_ineligible_for_itc))
+                & (pi_item.is_ineligible_for_itc == cint(self.is_ineligible_for_itc))
                 & (pi_item.item_code.isin(isd_source_items))
             )
             .select(
@@ -411,7 +412,7 @@ class ISDDistributionInvoice(ISDController):
             row.set(field, flt(flt(row.get(field)) - share, precision))
             remaining = flt(remaining - share, precision)
 
-    def get_distributed_for_purchase_invoice(self):
+    def get_distributed_for_purchase_invoice(self, with_eligibility=True):
         """Sum of distributed ITC and expense on every other submitted ISD Distribution Invoice
         that distributes self.purchase_invoice (excludes this document)."""
         isd_source_item = frappe.qb.DocType("ISD Source Item")
@@ -424,20 +425,22 @@ class ISDDistributionInvoice(ISDController):
                 for gst_tax_type in GST_TAX_TYPES
             ),
         )
-        result = (
+        query = (
             frappe.qb.from_(isd_source_item)
             .join(isd_invoice)
             .on(isd_source_item.parent == isd_invoice.name)
             .where(isd_invoice.purchase_invoice == self.purchase_invoice)
-            .where(isd_invoice.is_ineligible_for_itc == cint(self.is_ineligible_for_itc))
             .where(isd_invoice.docstatus == 1)
             .where(isd_invoice.name != (self.name or ""))
             .select(
                 Coalesce(Sum(distributed_itc), 0).as_("itc"),
                 Coalesce(Sum(isd_source_item.distributed_expense), 0).as_("expense"),
             )
-            .run(as_dict=True)
         )
+        if with_eligibility:
+            query = query.where(isd_invoice.is_ineligible_for_itc == cint(self.is_ineligible_for_itc))
+
+        result = query.run(as_dict=True)
         row = result[0] if result else {}
         return frappe._dict(
             itc=row.get("itc"),

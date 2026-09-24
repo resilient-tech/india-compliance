@@ -24,7 +24,14 @@ class GSTR2a(GSTR):
         gst_is = frappe.qb.DocType("GST Inward Supply")
         existing_transactions = (
             frappe.qb.from_(gst_is)
-            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no, gst_is.doc_type)
+            .select(
+                gst_is.name,
+                gst_is.supplier_gstin,
+                gst_is.bill_no,
+                gst_is.doc_type,
+                gst_is.classification,
+                gst_is.itc_availability,
+            )
             .where(gst_is.sup_return_period == self.return_period)
             .where(gst_is.classification == self.category)
             .where(gst_is.gstr_1_filled == 0)
