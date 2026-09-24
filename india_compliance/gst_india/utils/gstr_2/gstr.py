@@ -16,7 +16,12 @@ def get_unique_key(transaction):
     bill_no = transaction.get("bill_no") or ""
     doc_type = transaction.get("doc_type") or ""
 
-    return f"{supplier_gstin}-{bill_no}-{doc_type}"
+    key = f"{supplier_gstin}-{bill_no}-{doc_type}"
+
+    if transaction.get("classification") in ("ISD", "ISDA"):
+        key = f"{key}-{transaction.get('itc_availability') or ''}"
+
+    return key
 
 
 class GSTR:
