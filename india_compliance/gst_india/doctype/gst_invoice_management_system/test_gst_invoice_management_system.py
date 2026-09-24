@@ -2,13 +2,8 @@
 # See license.txt
 
 import frappe
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import add_to_date
-=======
-from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_to_date, formatdate, getdate
->>>>>>> 541da67 (feat: add sync functionality for purchase invoice and bill of entry d… (#4799))
 
 from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     InwardSupply,

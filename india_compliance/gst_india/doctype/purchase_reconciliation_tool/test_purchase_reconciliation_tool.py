@@ -5,14 +5,8 @@ import datetime
 import json
 
 import frappe
-<<<<<<< HEAD
-from frappe.test_runner import make_test_objects
-from frappe.tests.utils import FrappeTestCase, change_settings
-=======
-from frappe.tests import IntegrationTestCase, change_settings
-from frappe.tests.utils import make_test_objects
+from frappe.tests.utils import FrappeTestCase, change_settings, make_test_objects
 from frappe.utils import formatdate, getdate
->>>>>>> 541da67 (feat: add sync functionality for purchase invoice and bill of entry d… (#4799))
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
