@@ -7,6 +7,15 @@ from frappe.tests.utils import make_test_objects
 from frappe.utils import getdate
 from frappe.utils.nestedset import get_root_of
 
+# Tests post vouchers into past financial years and a site set up today only has
+# the current one. Pinned to the oldest year any test uses rather than a rolling
+# window, which would silently stop covering these dates as years pass.
+#
+#   2022-2023  gst_india/utils/test_utils.py
+#   2023-2024  purchase_reconciliation_tool, bill_of_entry_summary, MSME
+#   2025-2026  gstr_1/test_gstr_1_books_data.py
+EARLIEST_TEST_FISCAL_YEAR = 2022
+
 
 def before_tests():
     frappe.clear_cache()
@@ -38,6 +47,7 @@ def before_tests():
         )
 
     set_default_settings_for_tests()
+    create_fiscal_years()
     create_test_records()
     set_default_company_for_tests()
     frappe.db.commit()  # nosemgrep
@@ -60,6 +70,31 @@ def set_default_settings_for_tests():
 
     # Enable Sandbox Mode in GST Settings
     frappe.db.set_single_value("GST Settings", "sandbox_mode", 1)
+
+
+def create_fiscal_years():
+    """Every financial year from the oldest one tests use up to the current one.
+
+    Left without companies, which makes a Fiscal Year apply to every company -
+    see erpnext.accounts.utils._get_fiscal_years.
+    """
+    today = getdate()
+    current_start_year = today.year if today.month > 3 else today.year - 1
+
+    for start_year in range(EARLIEST_TEST_FISCAL_YEAR, current_start_year + 1):
+        year = f"{start_year}-{start_year + 1}"
+
+        if frappe.db.exists("Fiscal Year", year):
+            continue
+
+        frappe.get_doc(
+            {
+                "doctype": "Fiscal Year",
+                "year": year,
+                "year_start_date": f"{start_year}-04-01",
+                "year_end_date": f"{start_year + 1}-03-31",
+            }
+        ).insert(ignore_permissions=True)
 
 
 def create_test_records():

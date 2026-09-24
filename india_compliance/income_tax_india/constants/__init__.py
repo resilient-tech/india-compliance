@@ -1,3 +1,5 @@
+import re
+
 # Income Tax Act 1961 (pre FY 2026-27)
 OLD_TDS_SECTIONS = [
     "192A",
@@ -603,6 +605,13 @@ NEW_TDS_SECTIONS = (
 )
 
 TDS_ENTITY_TYPE = ["Individual", "Company", "Company Assessee", "No PAN / Invalid PAN"]
+
+
+FISCAL_YEAR_START_MONTH = 4
+
+
+# Indian income-tax financial year, e.g. 2024-2025
+FINANCIAL_YEAR_REGEX = re.compile(r"^\d{4}-\d{4}$")
 
 
 def get_tds_section_value(entry: dict) -> str:

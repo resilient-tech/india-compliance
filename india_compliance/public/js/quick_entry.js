@@ -399,6 +399,118 @@ class ItemQuickEntryForm extends frappe.ui.form.QuickEntryForm {
 
 frappe.ui.form.ItemQuickEntryForm = ItemQuickEntryForm;
 
+class MSMERegistrationQuickEntryForm extends frappe.ui.form.QuickEntryForm {
+    /**
+     * Frappe skips Quick Entry for doctypes with a child table, so the first
+     * classification is captured as plain fields and appended before insert.
+     * Creating a registration this way keeps it classified from the start.
+     */
+    render_dialog() {
+        // underscore-prefixed: frappe replaces a dialog field that shares a real
+        // fieldname with the doctype's own docfield, dropping onchange and description
+        this.docfields = [
+            ...this.docfields.filter((df) => !["udyam_number", "registration_date"].includes(df.fieldname)),
+            this.get_udyam_number_field(),
+            {
+                fieldname: "_registration_date",
+                label: __("Registration Date"),
+                fieldtype: "Date",
+                description: __("Supplies accepted before this date are not covered by MSME."),
+                onchange: () => this.set_financial_year_options(),
+            },
+            ...this.get_classification_fields(),
+        ];
+        super.render_dialog();
+    }
+
+    get_udyam_number_field() {
+        return {
+            ...frappe.meta.get_docfield(this.doctype, "udyam_number"),
+            fieldname: "_udyam_number",
+            onchange: () => {
+                const d = this.dialog;
+                const udyam_number = d.doc._udyam_number;
+
+                // validate only once the full number is entered (UDYAM-XX-00-0000000)
+                if (!udyam_number || udyam_number.length < 19) return;
+
+                d.set_value("_udyam_number", india_compliance.validate_udyam_number(udyam_number));
+            },
+        };
+    }
+
+    set_financial_year_options() {
+        const registration_date = this.dialog.doc._registration_date || undefined;
+        const field = this.dialog.get_field("_financial_year");
+
+        field.set_data(india_compliance.get_indian_fiscal_year_options(9, 1, registration_date));
+        this.dialog.set_value("_financial_year", india_compliance.get_indian_fiscal_year(registration_date));
+    }
+
+    get_classification_fields() {
+        return [
+            {
+                fieldname: "classification_section",
+                label: __("Classification"),
+                fieldtype: "Section Break",
+                collapsible: 0,
+            },
+            {
+                fieldname: "_financial_year",
+                label: __("Financial Year"),
+                fieldtype: "Autocomplete",
+                options: india_compliance.get_indian_fiscal_year_options(),
+                default: india_compliance.get_indian_fiscal_year(),
+                reqd: 1,
+            },
+            {
+                fieldname: "_enterprise_type",
+                label: __("Enterprise Type"),
+                fieldtype: "Select",
+                options: ["", "Micro", "Small", "Medium", "Not MSME"],
+                reqd: 1,
+            },
+            {
+                fieldtype: "Column Break",
+            },
+            {
+                fieldname: "_activity",
+                label: __("Activity"),
+                fieldtype: "Select",
+                options: ["", "Manufacturing", "Service", "Trading"],
+                reqd: 1,
+                description: __("Traders are excluded from Section 43B(h)."),
+            },
+            {
+                fieldname: "_not_written_agreement",
+                label: __("No Written Agreement"),
+                fieldtype: "Check",
+                default: 0,
+                description: __(
+                    "Tick when there is no written agreement on payment terms. The Section 15 limit is then 15 days instead of 45.",
+                ),
+            },
+        ];
+    }
+
+    update_doc() {
+        const doc = super.update_doc();
+
+        doc.udyam_number = india_compliance.validate_udyam_number(doc._udyam_number);
+        doc.registration_date = doc._registration_date;
+
+        const classification = frappe.model.add_child(doc, "India MSME Classification", "classifications");
+        classification.financial_year = doc._financial_year;
+        classification.enterprise_type = doc._enterprise_type;
+        classification.activity = doc._activity;
+        classification.not_written_agreement = doc._not_written_agreement;
+
+        return doc;
+    }
+}
+
+frappe.ui.form.MSMERegistrationQuickEntryForm = MSMERegistrationQuickEntryForm;
+
 async function autofill_fields(dialog) {
     const gstin = dialog.doc._gstin;
     const gstin_field = dialog.get_field("_gstin");
