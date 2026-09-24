@@ -322,6 +322,58 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         self.assertEqual(credit_note.return_period_2b, period)
         self.assertEqual(invoice.return_period_2b, "")
 
+    def test_isd_number_reported_as_eligible_and_ineligible_settles_each_half_separately(self):
+        period = "052020"
+        ctin = "27AABCE2207R1Z5"
+        supplier = {
+            "ctin": ctin,
+            "trdnm": "GSTN Mixed Eligibility",
+            "supprd": "022020",
+            "supfildt": "02-03-2020",
+        }
+
+        def doclist(*eligibility):
+            return [
+                {
+                    "doctyp": "ISDI",
+                    "docnum": "S9500",
+                    "docdt": "03-03-2016",
+                    "igst": 0,
+                    "cgst": 200,
+                    "sgst": 200,
+                    "cess": 0,
+                    "itcelg": itcelg,
+                }
+                for itcelg in eligibility
+            ]
+
+        # what save_gstr does
+        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
+            [{**supplier, "doclist": doclist("Y", "N")}], None
+        )
+
+        eligible = self.get_doc(
+            GSTRCategory.ISD, supplier_gstin=ctin, bill_no="S9500", itc_availability="Yes"
+        )
+        ineligible = self.get_doc(
+            GSTRCategory.ISD, supplier_gstin=ctin, bill_no="S9500", itc_availability="No"
+        )
+        self.assertNotEqual(eligible.name, ineligible.name)
+        self.assertEqual(eligible.return_period_2b, period)
+        self.assertEqual(ineligible.return_period_2b, period)
+
+        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
+            [{**supplier, "doclist": doclist("Y")}], None
+        )
+
+        eligible.reload()
+        ineligible.reload()
+
+        self.assertEqual(eligible.return_period_2b, period)
+        self.assertEqual(eligible.is_downloaded_from_2b, 1)
+        self.assertEqual(ineligible.return_period_2b, "")
+        self.assertEqual(ineligible.is_downloaded_from_2b, 0)
+
     def test_gstr2b_isda(self):
         doc = self.get_doc(GSTRCategory.ISDA, supplier_gstin="16DEFPS8555D1Z7")
         self.assertDocumentEqual(

@@ -484,7 +484,6 @@ india_compliance.ISDController = class ISDController {
                     docstatus: 1,
                     is_isd_applicable: 1,
                     company: frm.doc.company,
-                    company_gstin: frm.doc.company_gstin,
                 },
             }));
             frm.set_query("credit_note_against", () => ({

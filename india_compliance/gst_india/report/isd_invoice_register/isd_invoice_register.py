@@ -96,7 +96,7 @@ def get_purchase_invoice_data(filters):
             supply_type,
             pi.is_return,
             rate,
-            Sum(pi_item.net_amount).as_("taxable_value"),
+            Sum(pi_item.base_net_amount).as_("taxable_value"),
             Sum(pi_item.cgst_amount).as_("cgst_amount"),
             Sum(pi_item.sgst_amount).as_("sgst_amount"),
             Sum(pi_item.igst_amount).as_("igst_amount"),
