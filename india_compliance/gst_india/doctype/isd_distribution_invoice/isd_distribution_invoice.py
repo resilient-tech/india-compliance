@@ -13,10 +13,10 @@ from frappe.utils import cint, flt, format_date, get_link_to_form, getdate
 from india_compliance.gst_india.constants import GST_TAX_TYPES, ISD_GST_CATEGORY
 from india_compliance.gst_india.utils import validate_invoice_number
 from india_compliance.gst_india.utils.isd import (
+    _get_source_items_from_purchase_invoice,
     calculate_distribution,
     distribute_expense_with_isd_credit,
     get_purchase_doc,
-    get_source_items_from_purchase_invoice,
     is_inter_state_distribution,
     sum_row_tax_by_type,
     throw_invalid_rows,
@@ -79,7 +79,7 @@ class ISDDistributionInvoice(ISDController):
         )
         total_itc_available = sum(
             sum_row_tax_by_type(row, "total")
-            for row in get_source_items_from_purchase_invoice(self.purchase_invoice)
+            for row in _get_source_items_from_purchase_invoice(self.purchase_invoice)
         )
 
         net_distributed_itc = already.itc

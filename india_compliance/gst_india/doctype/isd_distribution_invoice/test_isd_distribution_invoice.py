@@ -17,10 +17,10 @@ from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
     upsert_turnover_record,
 )
 from india_compliance.gst_india.utils.isd import (
+    _get_source_items_from_purchase_invoice,
     bulk_create_isd_distribution_invoices,
     get_input_gst_accounts,
     get_isd_autofill_values,
-    get_source_items_from_purchase_invoice,
     sum_row_tax_by_type,
 )
 from india_compliance.gst_india.utils.tests import create_purchase_invoice, create_sales_invoice
@@ -953,7 +953,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             purchase_invoice=pi,
             branch_turnover=100,
             total_turnover=100,
-            source_items=get_source_items_from_purchase_invoice(pi.name),
+            source_items=_get_source_items_from_purchase_invoice(pi.name),
             **kwargs,
         )
 
@@ -1461,7 +1461,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
                 branch_turnover=100,
                 total_turnover=100,
                 is_ineligible_for_itc=is_ineligible_for_itc,
-                source_items=get_source_items_from_purchase_invoice(pi.name, is_ineligible_for_itc),
+                source_items=_get_source_items_from_purchase_invoice(pi.name, is_ineligible_for_itc),
             )
             return flt(frappe.db.get_value("Purchase Invoice", pi.name, "isd_credit_distributed_percent"))
 

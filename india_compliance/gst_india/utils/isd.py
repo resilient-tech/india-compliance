@@ -163,7 +163,10 @@ def get_source_items_from_purchase_invoice(purchase_invoice: str, is_ineligible_
         return []
 
     frappe.has_permission("Purchase Invoice", "read", doc=purchase_invoice, throw=True)
+    return _get_source_items_from_purchase_invoice(purchase_invoice, is_ineligible_for_itc)
 
+
+def _get_source_items_from_purchase_invoice(purchase_invoice: str, is_ineligible_for_itc: int | None = None):
     filters = {"parent": purchase_invoice}
     if is_ineligible_for_itc is not None:
         filters["is_ineligible_for_itc"] = cint(is_ineligible_for_itc)
@@ -500,7 +503,7 @@ def bulk_create_isd_distribution_invoices(
     source_items_by_eligibility = {
         is_ineligible_for_itc: items
         for is_ineligible_for_itc in (0, 1)
-        if (items := get_source_items_from_purchase_invoice(purchase_invoice, is_ineligible_for_itc))
+        if (items := _get_source_items_from_purchase_invoice(purchase_invoice, is_ineligible_for_itc))
     }
 
     invoices, failed = [], []
