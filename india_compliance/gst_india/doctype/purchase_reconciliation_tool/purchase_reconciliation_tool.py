@@ -1374,6 +1374,18 @@ class BuildExcel:
                 },
             },
             {
+                "label": "GSTR-2B Period",
+                "fieldname": "return_period_2b",
+                "data_format": {"horizontal": "center"},
+                "header_format": {"width": 15},
+            },
+            {
+                "label": "ITC Claim Period (Books)",
+                "fieldname": "itc_claim_period",
+                "data_format": {"horizontal": "center"},
+                "header_format": {"width": 15},
+            },
+            {
                 "label": "ITC Availability",
                 "fieldname": "itc_availability",
                 "data_format": {"horizontal": "left"},
