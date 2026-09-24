@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase, change_settings
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_days, today
 
 from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
@@ -17,7 +17,7 @@ from india_compliance.gst_india.utils.isd import sum_row_tax_by_type
 COMPANY = "_Test Indian Registered Company"
 
 
-class TestISDInvoiceRegister(IntegrationTestCase):
+class TestISDInvoiceRegister(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

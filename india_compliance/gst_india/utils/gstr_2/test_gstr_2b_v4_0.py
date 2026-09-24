@@ -4,14 +4,10 @@ import frappe
 from frappe import parse_json, read_file
 from frappe.tests.utils import FrappeTestCase
 
-<<<<<<< HEAD
-from india_compliance.gst_india.utils import get_data_file_path
-=======
 from india_compliance.gst_india.utils import get_data_file_path, get_party_for_gstin, merge_dicts
->>>>>>> 0f98f96 (feat: add Input Service Distribution (ISD) invoicing (#4524))
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
-from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2b
+from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2bISD
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
 
 
@@ -309,10 +305,8 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
         supplier_isd_credit_note = {**supplier, "doclist": [supplier["doclist"][1]]}  # doctype ISDC, cgst 30
         period = "042020"
 
-        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
-            [supplier_isd], None
-        )
-        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
+        GSTR2bISD(self.company, self.gstin, period, None).create_transactions([supplier_isd], None)
+        GSTR2bISD(self.company, self.gstin, period, None).create_transactions(
             [supplier_isd_credit_note], None
         )
 
@@ -462,13 +456,10 @@ class TestGetUniqueKey(FrappeTestCase):
 
     def test_normal_gstin(self):
         t = frappe._dict(supplier_gstin="01AABCE2207R1Z5", bill_no="INV-1")
-<<<<<<< HEAD
-        self.assertEqual(get_unique_key(t), "01AABCE2207R1Z5-INV-1")
-=======
         self.assertEqual(get_unique_key(t), "01AABCE2207R1Z5-INV-1-")
 
 
-class TestMultiFileRawMerge(IntegrationTestCase):
+class TestMultiFileRawMerge(FrappeTestCase):
     def test_docs_concat_summary_not_doubled(self):
         combined = {}
         file1 = {"itcsumm": {"itcavl": 100}, "docdata": {"b2b": [{"inum": "1"}]}}
@@ -479,4 +470,3 @@ class TestMultiFileRawMerge(IntegrationTestCase):
         self.assertEqual(combined["docdata"]["b2b"], [{"inum": "1"}, {"inum": "2"}])
         self.assertEqual(combined["docdata"]["cdnr"], [{"nt": "9"}])
         self.assertEqual(combined["itcsumm"]["itcavl"], 150)
->>>>>>> 0f98f96 (feat: add Input Service Distribution (ISD) invoicing (#4524))

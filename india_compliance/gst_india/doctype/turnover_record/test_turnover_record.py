@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import frappe
 from erpnext.accounts.utils import get_fiscal_year
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_months, add_years, getdate, today
 
 from india_compliance.gst_india.doctype.turnover_record.turnover_record import (
@@ -39,7 +39,7 @@ def make_turnover_record(
     ).insert()
 
 
-class TestTurnoverRecord(IntegrationTestCase):
+class TestTurnoverRecord(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

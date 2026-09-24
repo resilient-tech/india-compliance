@@ -6,13 +6,8 @@ import re
 from unittest.mock import patch
 
 import frappe
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import add_months, get_month, getdate
-=======
-from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_months, flt, get_month, getdate
->>>>>>> 0f98f96 (feat: add Input Service Distribution (ISD) invoicing (#4524))
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -44,13 +39,9 @@ from india_compliance.gst_india.utils.tests import (
 )
 
 
-<<<<<<< HEAD
 class TestGSTR3BReport(FrappeTestCase):
-=======
-class TestGSTR3BReport(IntegrationTestCase):
     COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
 
->>>>>>> 0f98f96 (feat: add Input Service Distribution (ISD) invoicing (#4524))
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

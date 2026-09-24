@@ -4,7 +4,7 @@
 from unittest.mock import patch
 
 import frappe
-from frappe.tests import IntegrationTestCase, change_settings
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_months, flt, today
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
@@ -317,7 +317,7 @@ def setup_isd_fixtures(cls):
     cls.pi = make_isd_pi(cls.isd_address.name)
 
 
-class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
+class IntegrationTestISDDistributionInvoice(FrappeTestCase):
     """Basic validations and GL entries for ISD Distribution Invoice (excludes bulk generation)."""
 
     @classmethod
@@ -1434,7 +1434,7 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
         self.assertFalse(get_gl_rows(doc))
 
 
-class IntegrationTestISDBulkDistribution(IntegrationTestCase):
+class IntegrationTestISDBulkDistribution(FrappeTestCase):
     """bulk_create_isd_distribution_invoices: the bulk dialog's entry point, which raises one draft
     per recipient branch from a single Purchase Invoice."""
 

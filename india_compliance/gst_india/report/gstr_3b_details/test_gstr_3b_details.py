@@ -2,13 +2,7 @@
 # See license.txt
 
 import frappe
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import get_first_day, get_last_day, get_month, getdate
-
-from india_compliance.gst_india.report.gst_purchase_register_beta.gst_purchase_register_beta import (
-=======
-from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, get_first_day, get_last_day, get_month, getdate
 
 from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
@@ -17,8 +11,7 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
     make_source_item,
     setup_isd_fixtures,
 )
-from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
->>>>>>> 0f98f96 (feat: add Input Service Distribution (ISD) invoicing (#4524))
+from india_compliance.gst_india.report.gst_purchase_register_beta.gst_purchase_register_beta import (
     execute as run_purchase_register,
 )
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
@@ -30,10 +23,7 @@ from india_compliance.gst_india.utils.tests import (
 )
 
 
-<<<<<<< HEAD
 class TestGSTR3BDetails(FrappeTestCase):
-=======
-class TestGSTR3BDetails(IntegrationTestCase):
     COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
 
     @classmethod
@@ -41,7 +31,6 @@ class TestGSTR3BDetails(IntegrationTestCase):
         super().setUpClass()
         setup_isd_fixtures(cls)
 
->>>>>>> 0f98f96 (feat: add Input Service Distribution (ISD) invoicing (#4524))
     def setUp(self):
         frappe.set_user("Administrator")
         filters = {"company": "_Test Indian Registered Company"}

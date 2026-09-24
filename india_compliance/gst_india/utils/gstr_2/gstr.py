@@ -11,11 +11,7 @@ def get_mapped_value(value, mapping):
 
 
 def get_unique_key(transaction):
-<<<<<<< HEAD
-    # Build the supplier_gstin-bill_no key used to match existing inward supplies.
-=======
     # supplier_gstin-bill_no-doc_type key matches existing inward supplies
->>>>>>> 0f98f96 (feat: add Input Service Distribution (ISD) invoicing (#4524))
     supplier_gstin = transaction.get("supplier_gstin") or ""
     bill_no = transaction.get("bill_no") or ""
     doc_type = transaction.get("doc_type") or ""
@@ -131,27 +127,8 @@ class GSTR:
     def get_supplier_details(self, supplier):
         return {}
 
-<<<<<<< HEAD
     def get_invoice_details(self, invoice):
         return {}
-=======
-    def get_items(self, document):
-        return None
-
-    def get_existing_transaction(self):
-        gst_is = frappe.qb.DocType("GST Inward Supply")
-        transactions = (
-            frappe.qb.from_(gst_is)
-            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no, gst_is.doc_type)
-            .where(gst_is.classification == self.category)
-            .where(self.get_existing_transaction_filter(gst_is))
-        ).run(as_dict=True)
-
-        return {get_unique_key(transaction): transaction.get("name") for transaction in transactions}
-
-    def get_existing_transaction_filter(self, gst_is):
-        raise NotImplementedError
->>>>>>> 0f98f96 (feat: add Input Service Distribution (ISD) invoicing (#4524))
 
     def get_download_details(self):
         return {}

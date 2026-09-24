@@ -8,17 +8,13 @@ from frappe.utils import getdate
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
 )
-<<<<<<< HEAD:india_compliance/gst_india/report/gst_purchase_register/test_gst_purchase_register_beta.py
-from india_compliance.gst_india.report.gst_purchase_register_beta.gst_purchase_register_beta import (
-=======
 from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
     create_recipient_invoice,
     make_isd_pi,
     make_source_item,
     setup_isd_fixtures,
 )
-from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
->>>>>>> 0f98f96 (feat: add Input Service Distribution (ISD) invoicing (#4524)):india_compliance/gst_india/report/gst_purchase_register/test_gst_purchase_register.py
+from india_compliance.gst_india.report.gst_purchase_register_beta.gst_purchase_register_beta import (
     execute,
 )
 from india_compliance.gst_india.utils.tests import (

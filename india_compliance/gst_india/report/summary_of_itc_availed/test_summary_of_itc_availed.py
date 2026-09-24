@@ -33,16 +33,12 @@ def _filters(posting_date):
     )
 
 
-<<<<<<< HEAD
 class TestSummaryOfITCAvailed(FrappeTestCase):
-=======
-class TestSummaryOfITCAvailed(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         setup_isd_fixtures(cls)
 
->>>>>>> 0f98f96 (feat: add Input Service Distribution (ISD) invoicing (#4524))
     def setUp(self):
         filters = {"company": COMPANY}
         for doctype in ("Purchase Invoice", "Bill of Entry", "ISD Recipient Invoice"):

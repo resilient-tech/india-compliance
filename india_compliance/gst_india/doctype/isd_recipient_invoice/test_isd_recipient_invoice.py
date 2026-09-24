@@ -4,7 +4,7 @@
 import re
 
 import frappe
-from frappe.tests import IntegrationTestCase, change_settings
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_months, flt, formatdate, getdate
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
@@ -57,7 +57,7 @@ IGNORE_TEST_RECORD_DEPENDENCIES = [
 ]
 
 
-class IntegrationTestISDRecipientInvoice(IntegrationTestCase):
+class IntegrationTestISDRecipientInvoice(FrappeTestCase):
     """Basic validations and GL entries for ISD Recipient Invoice (excludes bulk generation)."""
 
     @classmethod
