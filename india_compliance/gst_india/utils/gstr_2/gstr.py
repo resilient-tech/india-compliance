@@ -34,7 +34,12 @@ def get_unique_key(transaction):
     bill_no = transaction.get("bill_no") or ""
     doc_type = transaction.get("doc_type") or ""
 
-    return f"{supplier_gstin}-{bill_no}-{doc_type}"
+    key = f"{supplier_gstin}-{bill_no}-{doc_type}"
+
+    if transaction.get("classification") in ("ISD", "ISDA"):
+        key = f"{key}-{transaction.get('itc_availability') or ''}"
+
+    return key
 
 
 def add_original_details(row, document, keys):
@@ -138,7 +143,14 @@ class GSTR:
         gst_is = frappe.qb.DocType("GST Inward Supply")
         transactions = (
             frappe.qb.from_(gst_is)
-            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no, gst_is.doc_type)
+            .select(
+                gst_is.name,
+                gst_is.supplier_gstin,
+                gst_is.bill_no,
+                gst_is.doc_type,
+                gst_is.classification,
+                gst_is.itc_availability,
+            )
             .where(gst_is.classification == self.category)
             .where(self.get_existing_transaction_filter(gst_is))
         ).run(as_dict=True)
