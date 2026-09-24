@@ -1,4 +1,5 @@
 import "./utils";
+import "./isd";
 import "./gst_api_handler";
 import "./quick_entry";
 import "./transaction";
