@@ -16,7 +16,9 @@ from india_compliance.gst_india.constants.custom_fields import (
     EDUCATION_CUSTOM_FIELDS,
     HEALTHCARE_CUSTOM_FIELDS,
     HRMS_CUSTOM_FIELDS,
+    MARGIN_FIELDS,
     PURCHASE_REVERSE_CHARGE_FIELDS,
+    RSP_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
@@ -337,6 +339,8 @@ def get_all_custom_fields():
         PURCHASE_REVERSE_CHARGE_FIELDS,
         E_INVOICE_FIELDS,
         E_WAYBILL_FIELDS,
+        RSP_FIELDS,
+        MARGIN_FIELDS,
     ):
         for doctypes, fields in custom_fields.items():
             if isinstance(fields, dict):

@@ -29,6 +29,9 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
     restrict_gstr_1_transaction_for,
 )
 from india_compliance.gst_india.doctype.gstin.gstin import get_and_validate_gstin_status
+from india_compliance.gst_india.overrides.taxable_value import (
+    get_item_taxable_value,
+)
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_changed_fields,
@@ -120,7 +123,7 @@ def update_taxable_values(doc):
         has_no_qty_value = True
 
     for item in doc.items:
-        item.taxable_value = item.base_net_amount
+        item.taxable_value = get_item_taxable_value(doc, item, item.base_net_amount)
 
         if not total_charges:
             continue
@@ -1388,7 +1391,6 @@ class ItemGSTDetails:
                 expected_amt = self.get_item_tax_amount(item, item.get(f"{tax}_rate"), tax)
 
                 diff = abs(item.get(f"{tax}_amount") - expected_amt)
-
                 if diff > ALLOWED_TAX_DIFFERENCE:
                     invalid_rows[item.idx].append(tax.upper())
 
@@ -1445,7 +1447,13 @@ class ItemGSTDetails:
         return tax_row.rate
 
     def get_item_tax_amount(self, item, tax_rate, tax):
-        multiplier = item.qty if tax == "cess_non_advol" else item.taxable_value / 100
+        if tax == "cess_non_advol":
+            multiplier = item.qty
+        else:
+            # RSP etc.: tax is on a deemed base, not taxable_value
+            deemed_base = getattr(item, "_deemed_taxable_value", None)
+            base = flt(deemed_base) if deemed_base is not None else item.taxable_value
+            multiplier = base / 100
 
         return tax_rate * multiplier
 
