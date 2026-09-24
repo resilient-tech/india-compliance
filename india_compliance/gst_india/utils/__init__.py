@@ -43,6 +43,7 @@ from india_compliance.gst_india.constants import (
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
+    ISD_GST_CATEGORY,
     OIDAR,
     PAN_NUMBER,
     PINCODE_FORMAT,
@@ -222,7 +223,7 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
     }
 
     if exclude_isd:
-        filters.update({"gst_category": ["!=", "Input Service Distributor"]})
+        filters.update({"gst_category": ["!=", ISD_GST_CATEGORY]})
 
     gstin_list = frappe.get_all(
         "Address",
@@ -231,9 +232,15 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
         distinct=True,
     )
 
-    default_gstin = frappe.db.get_value(party_type, party, "gstin")
-    if default_gstin and default_gstin not in gstin_list:
-        gstin_list.insert(0, default_gstin)
+    default_gstin, default_gst_category = frappe.db.get_value(party_type, party, ("gstin", "gst_category"))
+    if not default_gstin or default_gstin in gstin_list:
+        return gstin_list
+
+    # don't add default gstin to the list if it is ISD and exclude_isd is True
+    if exclude_isd and default_gst_category == ISD_GST_CATEGORY:
+        return gstin_list
+
+    gstin_list.insert(0, default_gstin)
 
     return gstin_list
 
@@ -265,14 +272,14 @@ def get_party_for_gstin(gstin: str, party_type: str = "Supplier"):
         return party[0][0]
 
 
-def validate_company_access(company, doctype="GST Inward Supply"):
+def validate_company_access(company, doctype="GST Inward Supply", perm="read"):
     """Throw unless the user may read doctype data for company."""
     if not company:
         return
 
     reference = frappe.new_doc(doctype)
     reference.company = company
-    if not frappe.has_permission(doctype, "read", doc=reference):
+    if not frappe.has_permission(doctype, perm, doc=reference):
         frappe.throw(
             _("You are not permitted to access data for Company {0}.").format(company),
             frappe.PermissionError,

@@ -95,6 +95,7 @@ EXPORT_TYPES = (
 
 TAXABLE_GST_TREATMENTS = ("Taxable", "Zero-Rated")
 IMPORT_GST_CATEGORIES = ("Overseas", "SEZ")
+ISD_GST_CATEGORY = "Input Service Distributor"
 
 
 STATE_NUMBERS = {

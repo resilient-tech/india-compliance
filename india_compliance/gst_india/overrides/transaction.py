@@ -8,7 +8,7 @@ from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_default_address
 from frappe.model.meta import get_field_precision
 from frappe.model.utils import get_fetch_values
-from frappe.utils import cint, flt, format_date
+from frappe.utils import cint, flt, format_date, get_link_to_form
 
 from india_compliance.gst_india.constants import (
     CUSTOM_ADDRESS_FIELDS_DOCTYPES,
@@ -16,6 +16,7 @@ from india_compliance.gst_india.constants import (
     GST_REFUND_TAX_TYPES,
     GST_TAX_TYPES,
     LOCAL_ONLY_TRANSPORTER_FIELDS,
+    ISD_GST_CATEGORY,
     SALES_DOCTYPES,
     SUBCONTRACTING_DOCTYPES,
     TAX_TYPES,
@@ -1677,6 +1678,23 @@ def validate_company_address_field(doc):
         return False
 
 
+def validate_isd_not_supplier(doc):
+    company_address = doc.get("company_address")
+    if not company_address:
+        return
+
+    if frappe.get_cached_value("Address", company_address, "gst_category") != ISD_GST_CATEGORY:
+        return
+
+    frappe.throw(
+        _(
+            "Company Address {0} is registered as an Input Service Distributor (ISD)."
+            " An ISD cannot make any outward supply."
+        ).format(get_link_to_form("Address", company_address)),
+        title=_("Invalid Company Address"),
+    )
+
+
 def before_validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
@@ -1765,6 +1783,7 @@ def validate_transaction(doc, method=None):
     validate_overseas_gst_category(doc)
 
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
+        validate_isd_not_supplier(doc)
         validate_hsn_codes(doc)
         validate_sales_reverse_charge(doc)
         gstin = doc.billing_address_gstin
