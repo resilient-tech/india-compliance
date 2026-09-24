@@ -13,12 +13,7 @@ from erpnext.accounts.utils import get_fiscal_year
 from erpnext.stock.get_item_details import purchase_doctypes
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
-<<<<<<< HEAD
-from frappe.desk.form.load import run_onload
-=======
-from frappe.database.utils import commit_after_response
 from frappe.desk.form.load import get_docinfo, run_onload
->>>>>>> 511eadf (fix: set docinfo and minor fixes)
 from frappe.query_builder.functions import Length
 from frappe.utils import (
     add_months,
