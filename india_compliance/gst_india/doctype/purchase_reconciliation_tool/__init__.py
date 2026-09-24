@@ -33,6 +33,7 @@ class Fields(Enum):
     SUPPLIER_GSTIN = "supplier_gstin"
     COMPANY_GSTIN = "company_gstin"
     BILL_NO = "bill_no"
+    BILL_DATE = "bill_date"
     PLACE_OF_SUPPLY = "place_of_supply"
     REVERSE_CHARGE = "is_reverse_charge"
     TAXABLE_VALUE = "taxable_value"
@@ -83,6 +84,10 @@ class MatchStatus(Enum):
 
 # CDNR covers both note types: (inward supply doc_type, purchase is_return)
 CDNR_DOC_TYPES = (("Debit Note", 0), ("Credit Note", 1))
+
+# 2A/2B reports note values as positive. Credit notes reduce ITC, so they are signed
+# negative to match the books, where they are booked as return invoices.
+CREDIT_NOTE_DOC_TYPES = ("Credit Note", "ISD Credit Note")
 
 GSTIN_RULES = (
     {
@@ -359,7 +364,13 @@ class InwardSupply:
 
     def get_tax_fields(self):
         fields = (*GST_TAX_TYPES[:-1], "taxable_value")
-        return [self.GSTR2[field] for field in fields]
+        return [
+            Case()
+            .when(self.GSTR2.doc_type.isin(CREDIT_NOTE_DOC_TYPES), -self.GSTR2[field])
+            .else_(self.GSTR2[field])
+            .as_(field)
+            for field in fields
+        ]
 
 
 class PurchaseInvoice:
@@ -466,7 +477,7 @@ class PurchaseInvoice:
             "place_of_supply",
             "is_reverse_charge",
             "itc_classification",
-            Abs(Sum(self.PI_ITEM.taxable_value)).as_("taxable_value"),
+            Sum(self.PI_ITEM.taxable_value).as_("taxable_value"),
             *tax_fields,
         ]
 
@@ -491,7 +502,7 @@ class PurchaseInvoice:
         return fields
 
     def query_tax_amount(self, field):
-        return Abs(Sum(getattr(self.PI_ITEM, field)))
+        return Sum(getattr(self.PI_ITEM, field))
 
     @staticmethod
     def query_matched_purchase_invoice(from_date=None, to_date=None):
@@ -1048,6 +1059,7 @@ class ReconciledData(BaseReconciliation):
             "irn_source",
             "irn_number",
             "irn_gen_date",
+            "return_period_2b",
         ]
 
         return super().get_all_inward_supply(inward_supply_fields, names, only_names) or []
@@ -1060,6 +1072,7 @@ class ReconciledData(BaseReconciliation):
             "is_return",
             "gst_category",
             "reconciliation_status",
+            "itc_claim_period",
             *self.dimension_fields,
         ]
 
@@ -1130,6 +1143,8 @@ class ReconciledData(BaseReconciliation):
             "gstr_3b_filled": "",
             "itc_availability": "",
             "reason_itc_unavailability": "",
+            "return_period_2b": "",
+            "itc_claim_period": "",
             "irn_source": "",
             "irn_number": "",
             "irn_gen_date": "",
@@ -1188,6 +1203,8 @@ class ReconciledData(BaseReconciliation):
                 "gstr_3b_filled": inward_supply.get("gstr_3b_filled"),
                 "itc_availability": inward_supply.get("itc_availability"),
                 "reason_itc_unavailability": inward_supply.get("reason_itc_unavailability"),
+                "return_period_2b": inward_supply.get("return_period_2b"),
+                "itc_claim_period": purchase.get("itc_claim_period"),
                 "irn_source": inward_supply.get("irn_source"),
                 "irn_number": inward_supply.get("irn_number"),
                 "irn_gen_date": format_date(inward_supply.get("irn_gen_date")),

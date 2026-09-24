@@ -43,6 +43,7 @@ from india_compliance.gst_india.constants import (
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
+    OIDAR,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
@@ -264,14 +265,14 @@ def get_party_for_gstin(gstin: str, party_type: str = "Supplier"):
         return party[0][0]
 
 
-def validate_company_access(company, doctype="GST Inward Supply"):
+def validate_company_access(company, doctype="GST Inward Supply", perm="read"):
     """Throw unless the user may read doctype data for company."""
     if not company:
         return
 
     reference = frappe.new_doc(doctype)
     reference.company = company
-    if not frappe.has_permission(doctype, "read", doc=reference):
+    if not frappe.has_permission(doctype, perm, doc=reference):
         frappe.throw(
             _("You are not permitted to access data for Company {0}.").format(company),
             frappe.PermissionError,
@@ -420,6 +421,14 @@ def is_valid_pan(pan):
     return PAN_NUMBER.match(pan)
 
 
+def is_oidar_gstin(gstin):
+    return OIDAR.match(gstin)
+
+
+def get_pan_from_gstin(gstin):
+    return pan if is_valid_pan(pan := gstin[2:12]) else ""
+
+
 def validate_pincode(address):
     """
     Validate Pincode with following checks:
@@ -498,6 +507,9 @@ def guess_gst_category(gstin: str | None, country: str | None, gst_category: str
 
     if GSTIN_FORMATS["UIN Holders"].match(gstin):
         return "UIN Holders"
+
+    if is_oidar_gstin(gstin):
+        return "Overseas"
 
     if GSTIN_FORMATS["Overseas"].match(gstin):
         return "Overseas"
@@ -1401,25 +1413,35 @@ def enable_autocommit(fn):
     return wrapper
 
 
-def get_company_gstin_number(company, address=None, all_gstins=False):
-    gstin = ""
+def get_company_gstin_number(company, address=None, gstin=None):
+    """Resolve the GSTIN a report is filed for. Never picks one on the user's behalf."""
     if address:
-        gstin = frappe.db.get_value("Address", address, "gstin")
-
-    if not gstin:
-        gstin = get_gstin_list(company)
-        if gstin and not all_gstins:
-            gstin = gstin[0]
-
-    if not gstin:
-        address = frappe.bold(address) if address else ""
-        frappe.throw(
-            _("Please set valid GSTIN No. in Company Address {} for company {}").format(
-                address, frappe.bold(company)
-            )
+        # an address determines the GSTIN, so resolve it through the company it is linked to
+        linked_address = frappe.get_all(
+            "Address",
+            filters={"name": address, "link_doctype": "Company", "link_name": company},
+            pluck="gstin",
         )
 
-    return gstin
+        if not linked_address:
+            frappe.throw(
+                _("Address {0} is not linked to {1}").format(frappe.bold(address), frappe.bold(company))
+            )
+
+        if not linked_address[0]:
+            frappe.throw(_("Please set GSTIN in Address {0}").format(frappe.bold(address)))
+
+        return linked_address[0]
+
+    if gstin:
+        if gstin not in get_gstin_list(company):
+            frappe.throw(
+                _("GSTIN {0} does not belong to {1}").format(frappe.bold(gstin), frappe.bold(company))
+            )
+
+        return gstin
+
+    frappe.throw(_("Please select Company GSTIN"), title=_("Missing Filter"))
 
 
 def has_permission_of_page(page_name, throw=False):

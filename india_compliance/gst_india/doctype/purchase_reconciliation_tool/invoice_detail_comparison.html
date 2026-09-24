@@ -2,6 +2,7 @@
 	<table class="table table-bordered table-hover">
 		<thead>
 			<tr class="text-center">
+				<th><input type="checkbox" data-copy-all></th>
 				<th></th>
 				<th>2A / 2B</th>
 				<th>{{ purchase_label }}</th>
@@ -9,11 +10,13 @@
 		</thead>
 		<tbody data-label="detail-view-content">
 			<tr data-compare="company_gstin">
+				<td></td>
 				<th>Company GSTIN</th>
 				<td data-label="company_gstin">{{ inward_supply.company_gstin || '-' }}</td>
 				<td data-label="company_gstin">{{ purchase.company_gstin || '-' }}</td>
 			</tr>
 			<tr data-compare="supplier_gstin">
+				<td></td>
 				<th>Supplier GSTIN</th>
 				<td data-label="supplier_gstin">
 					{{ inward_supply.supplier_gstin || '-' }}
@@ -23,6 +26,7 @@
 				</td>
 			</tr>
 			<tr>
+				<td></td>
 				<th>Document Links</td>
 					{% if inward_supply.name %}
 				<td data-label="name">{{ frappe.utils.get_form_link("GST Inward Supply",
@@ -39,31 +43,40 @@
 				{% endif %}
 			</tr>
 			<tr data-compare="bill_no">
+				<td><input type="checkbox" data-copy-field="bill_no"></td>
 				<th>Bill No</th>
 				<td data-label="bill_no">{{ inward_supply.bill_no || '-' }}</td>
-				<td data-label="bill_no">{{ purchase.bill_no || '-' }}</td>
+				<td data-label="bill_no">
+					<span data-booked>{{ purchase.bill_no || '-' }}</span><br>
+					<span data-reported class="d-none">{{ inward_supply.bill_no }}</span>
+				</td>
 			</tr>
 			<tr data-compare="bill_date">
+				<td><input type="checkbox" data-copy-field="bill_date"></td>
 				<th>Bill Date</th>
 				<td data-label="bill_date">
 					{{ frappe.format(inward_supply.bill_date, {'fieldtype': 'Date'}) || '-' }}
 				</td>
 				<td data-label="bill_date">
-					{{ frappe.format(purchase.bill_date, {'fieldtype': 'Date'}) || '-' }}
+					<span data-booked>{{ frappe.format(purchase.bill_date, {'fieldtype': 'Date'}) || '-' }}</span><br>
+					<span data-reported class="d-none">{{ frappe.format(inward_supply.bill_date, {'fieldtype': 'Date'}) }}</span>
 				</td>
 			</tr>
 			<tr data-compare="place_of_supply">
+				<td></td>
 				<th>Place of Supply</th>
 				<td data-label="place_of_supply">{{ inward_supply.place_of_supply || '-' }}</td>
 				<td data-label="place_of_supply">{{ purchase.place_of_supply || '-' }}</td>
 			</tr>
 			<tr data-compare="is_reverse_charge">
+				<td></td>
 				<th>Reverse Charge</th>
 				<td data-label="is_reverse_charge">{{ inward_supply.is_reverse_charge || '-' }}</td>
 				<td data-label="is_reverse_charge">{{ purchase.is_reverse_charge || '-' }}</td>
 			</tr>
 			{% if purchase.cgst || inward_supply.cgst %}
 			<tr data-compare="cgst">
+				<td></td>
 				<th>CGST</th>
 				<td data-label="cgst">{{ inward_supply.cgst ? format_number(inward_supply.cgst, null, 2) : '-' }}</td>
 				<td data-label="cgst">{{ purchase.cgst ? format_number(purchase.cgst, null, 2) : '-' }}</td>
@@ -71,6 +84,7 @@
 			{% endif %}
 			{% if purchase.sgst || inward_supply.sgst %}
 			<tr data-compare="sgst">
+				<td></td>
 				<th>SGST</th>
 				<td data-label="sgst">{{ inward_supply.sgst ? format_number(inward_supply.sgst, null, 2) : '-' }}</td>
 				<td data-label="sgst">{{ purchase.sgst ? format_number(purchase.sgst, null, 2) : '-' }}</td>
@@ -78,6 +92,7 @@
 			{% endif %}
 			{% if purchase.igst || inward_supply.igst %}
 			<tr data-compare="igst">
+				<td></td>
 				<th>IGST</th>
 				<td data-label="igst">{{ inward_supply.igst ? format_number(inward_supply.igst, null, 2) : '-' }}</td>
 				<td data-label="igst">{{ purchase.igst ? format_number(purchase.igst, null, 2) : '-' }}</td>
@@ -85,18 +100,35 @@
 			{% endif %}
 			{% if purchase.cess || inward_supply.cess %}
 			<tr data-compare="cess">
+				<td></td>
 				<th>CESS</th>
 				<td data-label="cess">{{ inward_supply.cess ? format_number(inward_supply.cess, null, 2) : '-' }}</td>
 				<td data-label="cess">{{ purchase.cess ? format_number(purchase.cess, null, 2) : '-' }}</td>
 			</tr>
 			{% endif %}
 			<tr data-compare="taxable_value">
+				<td></td>
 				<th>Taxable Amount</th>
 				<td data-label="taxable_value">{{ inward_supply.taxable_value ? format_number(inward_supply.taxable_value, null, 2) : '-' }}</td>
 				<td data-label="taxable_value">{{ purchase.taxable_value ? format_number(purchase.taxable_value, null, 2) : '-' }}</td>
 			</tr>
+			{% if inward_supply.return_period_2b %}
+			<tr>
+				<th>GSTR-2B Period</th>
+				<td data-label="return_period_2b">{{ inward_supply.return_period_2b }}</td>
+				<td data-label="return_period_2b">-</td>
+			</tr>
+			{% endif %}
+			{% if purchase.itc_claim_period %}
+			<tr>
+				<th>ITC Claim Period (Books)</th>
+				<td data-label="itc_claim_period">-</td>
+				<td data-label="itc_claim_period">{{ purchase.itc_claim_period }}</td>
+			</tr>
+			{% endif %}
 			{% if inward_supply.reason_itc_unavailability %}
 			<tr>
+				<td></td>
 				<th>Reason for ITC Unavailability</th>
 				<td data-label="reason_itc_unavailability">{{ inward_supply.reason_itc_unavailability || '-' }}</td>
 				<td data-label="reason_itc_unavailability">-</td>
@@ -104,6 +136,7 @@
 			{% endif %}
 			{% if inward_supply.gstr_1_filled != null || inward_supply.gstr_3b_filled != null %}
 			<tr>
+				<td></td>
 				<th>GSTR-1 Filed</th>
 				<td data-label="gstr_1_filled">
 					{{ inward_supply.gstr_1_filled == null ? '-' : (inward_supply.gstr_1_filled ? 'Yes' : 'No') }}
@@ -111,6 +144,7 @@
 				<td data-label="gstr_1_filled">-</td>
 			</tr>
 			<tr>
+				<td></td>
 				<th>GSTR-3B Filed</th>
 				<td data-label="gstr_3b_filled">
 					{{ inward_supply.gstr_3b_filled == null ? '-' : (inward_supply.gstr_3b_filled ? 'Yes' : 'No') }}
@@ -121,6 +155,7 @@
 
 			{% if inward_supply.name %}
 			<tr>
+				<td></td>
 				<th>IRN</th>
 				<td data-label="irn">{{ inward_supply.irn_number ? 'Yes' : 'No' }}</td>
 				<td data-label="irn">-</td>

@@ -17,7 +17,7 @@ from erpnext.controllers.accounts_controller import (
     get_advance_payment_entries_for_regional,
 )
 from erpnext.controllers.stock_controller import show_accounting_ledger_preview
-from frappe.tests import IntegrationTestCase
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.utils.gstr_1 import DocField as doc
@@ -497,18 +497,25 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
 
         return invoice_doc
 
-    def _create_payment_entry(self, do_not_submit=False):
+    def _create_payment_entry(
+        self,
+        do_not_submit=False,
+        do_not_save=False,
+        party="_Test Registered Customer",
+        customer_address="_Test Registered Customer-Billing",
+        is_in_state=1,
+    ):
         payment_doc = create_transaction(
             doctype="Payment Entry",
             payment_type="Receive",
             mode_of_payment="Cash",
             company_address="_Test Indian Registered Company-Billing",
             party_type="Customer",
-            party="_Test Registered Customer",
-            customer_address="_Test Registered Customer-Billing",
+            party=party,
+            customer_address=customer_address,
             paid_to="Cash - _TIRC",
             paid_amount=500,
-            is_in_state=1,
+            is_in_state=is_in_state,
             do_not_save=True,
         )
 
@@ -516,12 +523,42 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         payment_doc.set_missing_values()
         payment_doc.set_exchange_rate()
         payment_doc.received_amount = payment_doc.paid_amount / payment_doc.target_exchange_rate
+
+        if do_not_save:
+            return payment_doc
+
         payment_doc.save()
 
         if not do_not_submit:
             payment_doc.submit()
 
         return payment_doc
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_receipt_from_oidar_party_without_gst_is_allowed(self):
+        payment_doc = self._create_payment_entry(
+            party="_Test OIDAR Customer",
+            customer_address="_Test OIDAR Customer-Billing",
+            is_in_state=0,
+            do_not_submit=True,
+        )
+
+        self.assertEqual(payment_doc.billing_address_gstin, "9917SGP29001OST")
+        self.assertFalse(payment_doc.taxes)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_advance_from_oidar_party_with_gst_is_blocked(self):
+        payment_doc = self._create_payment_entry(
+            party="_Test OIDAR Customer",
+            customer_address="_Test OIDAR Customer-Billing",
+            do_not_save=True,
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Non-Resident Online Services Provider.*)$"),
+            payment_doc.save,
+        )
 
     def _create_invoice_then_payment(self):
         invoice_doc = self._create_sales_invoice()
