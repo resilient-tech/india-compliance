@@ -5,6 +5,7 @@ from india_compliance.gst_india.overrides.company import (
     GST_SETTINGS_CHILD_TABLES_WITH_COMPANY,
     SINGLE_DOCTYPES_WITH_COMPANY_FIELD,
     get_tax_defaults,
+    make_default_tax_templates,
 )
 from india_compliance.gst_india.overrides.transaction import get_tax_template
 
@@ -57,6 +58,21 @@ class TestCompany(IntegrationTestCase):
         for doctype in ("Sales Taxes and Charges Template", "Purchase Taxes and Charges Template"):
             template = get_tax_template(doctype, company.name, is_inter_state=False, is_reverse_charge=False)
             self.assertEqual(frappe.db.get_value(doctype, template, "tax_category"), "_Test Intra State")
+
+            default_template = frappe.get_doc(doctype, template)
+            own_template = frappe.copy_doc(default_template)
+            own_template.title = "_Test Own Intra State"
+            default_template.delete()
+            own_template.insert()
+
+        make_default_tax_templates(company.name)
+
+        for doctype in ("Sales Taxes and Charges Template", "Purchase Taxes and Charges Template"):
+            template = get_tax_template(doctype, company.name, is_inter_state=False, is_reverse_charge=False)
+            self.assertEqual(template, f"_Test Own Intra State - {company.abbr}")
+            self.assertEqual(
+                frappe.db.count(doctype, {"company": company.name, "tax_category": "_Test Intra State"}), 1
+            )
 
     def test_get_tax_defaults(self):
         gst_rate = 12
