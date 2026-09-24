@@ -49,12 +49,18 @@ class TestCompany(IntegrationTestCase):
             self.assertEqual(actual, expected)
 
     def test_tax_templates_use_existing_default_tax_category(self):
-        frappe.rename_doc("Tax Category", "In-State", "_Test Intra State", force=True)
-        self.addCleanup(frappe.rename_doc, "Tax Category", "_Test Intra State", "In-State", force=True)
+        frappe.db.savepoint("before_existing_default")
+        self.addCleanup(frappe.db.rollback, save_point="before_existing_default")
 
-        company = self.create_company("_Test Renamed Default Company", "_TRDC")
+        in_state = frappe.get_doc("Tax Category", "In-State")
+        in_state.is_india_compliance_default = 0
+        in_state.save()
+        frappe.get_doc(
+            {"doctype": "Tax Category", "title": "_Test Intra State", "is_india_compliance_default": 1}
+        ).insert()
 
-        self.assertFalse(frappe.db.exists("Tax Category", "In-State"))
+        company = self.create_company("_Test Existing Default Company", "_TEDC")
+
         for doctype in ("Sales Taxes and Charges Template", "Purchase Taxes and Charges Template"):
             template = get_tax_template(doctype, company.name, is_inter_state=False, is_reverse_charge=False)
             self.assertEqual(frappe.db.get_value(doctype, template, "tax_category"), "_Test Intra State")
