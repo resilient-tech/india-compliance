@@ -68,7 +68,6 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.e_waybill_actions import (
     is_e_waybill_auto_cancellable,
     is_e_waybill_cancellable,
-    is_e_waybill_info_enabled,
 )
 from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
@@ -1105,29 +1104,6 @@ def update_transaction(doc, values):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
     if doc.doctype in ("Delivery Note", "Stock Entry", "Asset Movement"):
         doc._sub_supply_desc = values.sub_supply_desc
-
-
-def set_e_waybill_info(doc):
-    if not doc.get("ewaybill") or not is_e_waybill_info_enabled():
-        return
-
-    if e_waybill_info := get_e_waybill_info(doc):
-        e_waybill_info.cancellable = is_e_waybill_cancellable(doc, e_waybill_info)
-        doc.set_onload("e_waybill_info", e_waybill_info)
-
-
-def get_e_waybill_info(doc):
-    return frappe.db.get_value(
-        "e-Waybill Log",
-        doc.ewaybill,
-        (
-            "created_on",
-            "valid_upto",
-            "is_generated_in_sandbox_mode",
-            "extension_scheduled",
-        ),
-        as_dict=True,
-    )
 
 
 def get_validated_e_waybill_number(ewaybill: str):

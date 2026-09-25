@@ -33,11 +33,19 @@ def is_e_waybill_auto_generatable(doc):
     return get_e_waybill_applicability(doc).is_auto_generatable()
 
 
-def set_e_waybill_applicability(doc, method=None):
+def set_e_waybill_onload(doc, method=None):
+    # applicability only matters until the e-Waybill is generated
+    if doc.get("ewaybill"):
+        if is_e_waybill_info_enabled() and (e_waybill_info := get_e_waybill_info(doc)):
+            e_waybill_info.cancellable = is_e_waybill_cancellable(doc, e_waybill_info)
+            doc.set_onload("e_waybill_info", e_waybill_info)
+
+        return
+
     e_waybill_applicability = get_e_waybill_applicability(doc)
 
     # the client reads a missing key as all flags off
-    if doc.get("ewaybill") or not e_waybill_applicability.is_enabled():
+    if not e_waybill_applicability.is_enabled():
         return
 
     applicability = e_waybill_applicability.get()
@@ -77,4 +85,18 @@ def is_e_waybill_cancellable(doc, e_waybill_info=None):
 def is_e_waybill_auto_cancellable(doc, e_waybill_info=None):
     return bool(frappe.get_cached_doc("GST Settings").auto_cancel_e_waybill) and is_e_waybill_cancellable(
         doc, e_waybill_info
+    )
+
+
+def get_e_waybill_info(doc):
+    return frappe.db.get_value(
+        "e-Waybill Log",
+        doc.ewaybill,
+        (
+            "created_on",
+            "valid_upto",
+            "is_generated_in_sandbox_mode",
+            "extension_scheduled",
+        ),
+        as_dict=True,
     )

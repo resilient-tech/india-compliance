@@ -7,7 +7,6 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_transaction,
 )
 from india_compliance.gst_india.utils import update_dashboard_with_gst_logs
-from india_compliance.gst_india.utils.e_waybill import set_e_waybill_info
 
 
 def get_dashboard_data(data):
@@ -30,9 +29,6 @@ def onload(doc, method=None):
         return
 
     set_ineligibility_reason(doc, show_alert=False)
-
-    # Load e-waybill info if applicable
-    set_e_waybill_info(doc)
 
 
 def validate(doc, method=None):

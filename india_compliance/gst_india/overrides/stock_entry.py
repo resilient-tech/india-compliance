@@ -6,7 +6,6 @@ from india_compliance.gst_india.utils import is_inward_transaction, is_outward_s
 from india_compliance.gst_india.utils.custom_transaction_controller import (
     set_gstin_fields_for_e_waybill,
 )
-from india_compliance.gst_india.utils.e_waybill import set_e_waybill_info
 
 STOCK_ENTRY_FIELD_MAP = {"total_taxable_value": "total_taxable_value"}
 
@@ -45,8 +44,6 @@ def onload(doc, method=None):
     # e-Waybill data generation reads these; they are only set here, so they are
     # available after run_onload (load_doc) and not on a bare frappe.get_doc.
     set_gstin_fields_for_e_waybill(doc)
-
-    set_e_waybill_info(doc)
 
 
 def get_dashboard_data(data):

@@ -20,7 +20,6 @@ from india_compliance.gst_india.utils import (
     get_items,
 )
 from india_compliance.gst_india.utils.custom_transaction_controller import CustomEwaybillController
-from india_compliance.gst_india.utils.e_waybill import set_e_waybill_info
 
 
 # Functions to perform operations before and after mapping of transactions
@@ -217,10 +216,6 @@ def set_taxes(doc):
 # Common Functions for Subcontracting Transactions
 def get_dashboard_data(data):
     return SubcontractingReceiptController.get_dashboard_data(data)
-
-
-def onload(doc, method=None):
-    set_e_waybill_info(doc)
 
 
 class SubcontractingController(CustomEwaybillController):

@@ -9,7 +9,6 @@ from india_compliance.gst_india.utils.custom_transaction_controller import (
     CustomEwaybillController,
     set_gstin_fields_for_e_waybill,
 )
-from india_compliance.gst_india.utils.e_waybill import set_e_waybill_info
 
 ASSET_MOVEMENT_FIELD_MAP = {"amount": "taxable_value"}
 
@@ -82,8 +81,6 @@ def onload(doc, method=None):
     # e-Waybill data generation reads these; they are only set here, so they are
     # available after run_onload (load_doc) and not on a bare frappe.get_doc.
     set_gstin_fields_for_e_waybill(doc)
-
-    set_e_waybill_info(doc)
 
 
 def get_dashboard_data(data):

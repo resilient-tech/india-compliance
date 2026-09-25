@@ -37,7 +37,6 @@ from india_compliance.gst_india.utils.e_invoice import (
 )
 from india_compliance.gst_india.utils.e_waybill import (
     generate_e_waybill,
-    set_e_waybill_info,
 )
 from india_compliance.gst_india.utils.e_waybill_actions import (
     is_e_waybill_auto_cancellable,
@@ -61,8 +60,6 @@ def onload(doc, method=None):
 
     if not is_api_enabled(gst_settings):
         return
-
-    set_e_waybill_info(doc)
 
     if gst_settings.enable_e_invoice and doc.irn and (e_invoice_info := get_e_invoice_info(doc)):
         doc.set_onload("e_invoice_info", e_invoice_info)

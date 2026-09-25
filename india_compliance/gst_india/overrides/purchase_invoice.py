@@ -23,7 +23,6 @@ from india_compliance.gst_india.utils import (
     update_dashboard_with_gst_logs,
     validate_invoice_number,
 )
-from india_compliance.gst_india.utils.e_waybill import set_e_waybill_info
 from india_compliance.gst_india.utils.itc_claim import (
     set_or_validate_itc_claim_period,
     validate_itc_claim_period_on_update_after_submit,
@@ -36,8 +35,6 @@ def onload(doc, method=None):
             "has_pending_boe_qty",
             any(item.pending_boe_qty > 0 for item in doc.items),
         )
-
-    set_e_waybill_info(doc)
 
 
 def validate(doc, method=None):
