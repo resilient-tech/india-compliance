@@ -68,6 +68,7 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.e_waybill_actions import (
     is_e_waybill_auto_cancellable,
     is_e_waybill_cancellable,
+    is_e_waybill_info_enabled,
 )
 from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
@@ -121,8 +122,7 @@ def enqueue_bulk_e_waybill_generation(doctype: str, docnames: str):
     """
     frappe.has_permission(doctype, "submit", throw=True)
 
-    gst_settings = frappe.get_cached_doc("GST Settings")
-    if not is_api_enabled(gst_settings) or not gst_settings.enable_e_waybill:
+    if not is_e_waybill_info_enabled():
         frappe.throw(_("Please enable e-Waybill in GST Settings first."))
 
     docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
@@ -302,7 +302,7 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
     data = {"ewaybill": e_waybill_number}
     status = result.get("e_waybill_status") or "Generated"
 
-    if doc.doctype == "Sales Invoice":
+    if doc.meta.has_field("e_waybill_status"):
         data["e_waybill_status"] = status
 
     if distance := result.get("distance"):
@@ -390,7 +390,7 @@ def log_and_process_e_waybill_cancellation(doc, values, result):
 
     data = {"ewaybill": ""}
 
-    if doc.doctype == "Sales Invoice":
+    if doc.meta.has_field("e_waybill_status"):
         data["e_waybill_status"] = result.get("e_waybill_status") or "Cancelled"
 
     doc.db_set(data)

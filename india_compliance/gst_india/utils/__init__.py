@@ -1565,7 +1565,7 @@ def _rollback_and_set_status(doc, fieldname, status):
     if not frappe.flags.in_test:
         frappe.db.rollback()
 
-    if doc.doctype != "Sales Invoice":
+    if not doc.meta.has_field(fieldname):
         return
 
     # if response is pending, other viewers refetch on doc_update;
