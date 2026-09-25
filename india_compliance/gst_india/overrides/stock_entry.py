@@ -3,7 +3,7 @@ from india_compliance.gst_india.overrides.subcontracting_transaction import (
     SubcontractingController,
     set_address_display,
 )
-from india_compliance.gst_india.utils import is_outward_stock_entry
+from india_compliance.gst_india.utils import is_internal_stock_transfer, is_inward_transaction
 from india_compliance.gst_india.utils.custom_transaction_controller import (
     set_gstin_fields_for_e_waybill,
 )
@@ -17,8 +17,8 @@ class StockEntryController(SubcontractingController):
     VALIDATES_TRANSACTION_NAME = True
 
     def is_e_waybill_applicable(self):
-        # Inward purposes (Delivery, RM Return) carry only an e-Waybill; the
-        # principal reports them in ITC-04 / GSTR-1, not the company (job worker).
+        # Purposes not in the eligible set (e.g. Manufacture, Repack — same-premises,
+        # no movement of goods between locations) carry no e-Waybill.
         return super().is_e_waybill_applicable() and self.doc.purpose in E_WAYBILL_STOCK_ENTRY_PURPOSES
 
     def ignore_gst_validations(self):
@@ -26,10 +26,10 @@ class StockEntryController(SubcontractingController):
             return True
 
         # ignore if company address is not set
-        if is_outward_stock_entry(self.doc) and not self.doc.bill_from_address:
+        if is_internal_stock_transfer(self.doc) and not self.doc.bill_from_address:
             return True
 
-        return bool(self.doc.is_return and not self.doc.bill_to_address)
+        return bool(is_inward_transaction(self.doc) and not self.doc.bill_to_address)
 
 
 def is_e_waybill_applicable(doc):

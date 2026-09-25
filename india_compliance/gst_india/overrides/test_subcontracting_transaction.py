@@ -943,6 +943,9 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
 
         scio.reload()
         sc_return = frappe.new_doc("Stock Entry").update(scio.make_subcontracting_return())
+        # ERPNext leaves the target warehouse for the returned finished goods to the user
+        for item in sc_return.items:
+            item.t_warehouse = "Finished Goods - _TIRC"
         sc_return.save()
 
         self.assertEqual(sc_return.purpose, "Subcontracting Return")
@@ -961,6 +964,9 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
 
         scio.reload()
         sc_return = frappe.new_doc("Stock Entry").update(scio.make_subcontracting_return())
+        # ERPNext leaves the target warehouse for the returned finished goods to the user
+        for item in sc_return.items:
+            item.t_warehouse = "Finished Goods - _TIRC"
         sc_return.save()
 
         priced_rows = 0

@@ -245,16 +245,12 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
         let message_list = [];
 
-        if (india_compliance.is_job_worker_inward_entry(this.frm.doc)) {
-            if (!this.frm.doc.bill_from_address) {
-                is_ewb_generatable = false;
-                message_list.push("Bill From address is mandatory to generate e-Waybill.");
-            }
-            if (!this.frm.doc.bill_to_address) {
-                is_ewb_generatable = false;
-                message_list.push("Bill To address is mandatory to generate e-Waybill.");
-            }
-        } else if (!this.frm.doc.bill_to_address) {
+        if (india_compliance.is_job_worker_inward_entry(this.frm.doc) && !this.frm.doc.bill_from_address) {
+            is_ewb_generatable = false;
+            message_list.push(__("Bill From address is mandatory to generate e-Waybill."));
+        }
+
+        if (!this.frm.doc.bill_to_address) {
             is_ewb_generatable = false;
             message_list.push(__("Bill To address is mandatory to generate e-Waybill."));
         }
