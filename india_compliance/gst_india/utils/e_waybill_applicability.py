@@ -110,7 +110,9 @@ class EWaybillApplicability:
         if self.SAME_GSTIN_ALLOWED or is_same_gstin_allowed(self.doc):
             return False
 
-        return self.doc.get(self.fields.company_gstin_field) == self.doc.get(self.fields.party_gstin_field)
+        # a missing company GSTIN is reported on its own, not as a match
+        company_gstin = self.doc.get(self.fields.company_gstin_field)
+        return bool(company_gstin) and company_gstin == self.doc.get(self.fields.party_gstin_field)
 
     def get_company_gstin_reasons(self):
         if self.doc.get(self.fields.company_gstin_field):

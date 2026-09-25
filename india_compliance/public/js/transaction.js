@@ -394,16 +394,15 @@ function _set_e_commerce_ecommerce_supply_type(frm) {
 }
 
 function fetch_party_details(doctype) {
-    let company_gstin_field = "company_gstin";
-
-    if (doctype === "Stock Entry") {
-        company_gstin_field = "bill_from_gstin";
-    }
-
     frappe.ui.form.on(doctype, {
         supplier(frm) {
-            if (frm.doc.doctype === "Stock Entry" && india_compliance.is_inward_transaction(frm.doc)) {
-                company_gstin_field = "bill_to_gstin";
+            // per form: the handler is shared by every form of this doctype
+            let company_gstin_field = "company_gstin";
+
+            if (frm.doc.doctype === "Stock Entry") {
+                company_gstin_field = india_compliance.is_inward_transaction(frm.doc)
+                    ? "bill_to_gstin"
+                    : "bill_from_gstin";
             }
 
             setTimeout(() => {

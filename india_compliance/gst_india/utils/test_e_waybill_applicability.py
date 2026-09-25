@@ -91,6 +91,21 @@ class TestEWaybillApplicability(IntegrationTestCase):
 
         self.assertFalse(si.get_onload().e_waybill_applicability.required)
 
+    def test_missing_company_gstin_is_not_a_same_gstin_match(self):
+        si = create_sales_invoice(customer="_Test Unregistered Customer", rate=100000, do_not_submit=True)
+        si.db_set("company_gstin", None)
+
+        self.assertApplicability(
+            si,
+            applicable=True,
+            generatable=False,
+            reasons=[
+                f"{si.meta.get_label('company_gstin')} is not set. Ensure it's set in the Company Address.",
+                f"{si.meta.get_label('customer_address')} is required to generate e-Waybill",
+            ],
+        )
+        self.assertRaises(frappe.MandatoryError, EWaybillData(si).validate_applicability)
+
     def test_purchase_invoice(self):
         self.assertApplicability(
             create_purchase_invoice(bill_no="EWB-APPL-1"), applicable=True, generatable=True
