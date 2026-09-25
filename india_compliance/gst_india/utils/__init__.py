@@ -1030,7 +1030,7 @@ def get_place_of_supply_options(*, as_list=False):
 def are_goods_supplied(doc):
     return any(
         item
-        for item in doc.items
+        for item in get_items(doc)
         if item.gst_hsn_code and not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX) and item.qty != 0
     )
 

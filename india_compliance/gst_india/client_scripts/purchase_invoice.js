@@ -34,12 +34,11 @@ frappe.ui.form.on(DOCTYPE, {
         india_compliance.update_itc_claim_period(frm);
     },
 
-    async after_save(frm) {
+    after_save(frm) {
         if (
             frm.doc.supplier_address ||
             !(frm.doc.gst_category == "Unregistered" || frm.doc.is_return) ||
-            !is_e_waybill_applicable(frm) ||
-            !(await has_e_waybill_threshold_met(frm))
+            !is_e_waybill_required(frm)
         )
             return;
 

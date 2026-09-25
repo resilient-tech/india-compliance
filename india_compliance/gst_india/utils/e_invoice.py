@@ -60,11 +60,11 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.e_waybill import (
     _cancel_e_waybill,
-    _get_e_waybill_threshold,
     auto_cancel_e_waybill,
     generate_pending_e_waybills,
     log_and_process_e_waybill_generation,
 )
+from india_compliance.gst_india.utils.e_waybill_applicability import _get_e_waybill_threshold
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 
 

@@ -15,11 +15,11 @@ from india_compliance.gst_india.overrides.test_subcontracting_transaction import
 )
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
-    can_auto_cancel_e_waybill,
     mark_e_waybill_as_generated,
 )
 from india_compliance.gst_india.utils.e_waybill_applicability import (
     get_e_waybill_applicability_reasons,
+    is_e_waybill_auto_cancellable,
 )
 from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice,
@@ -48,11 +48,17 @@ class TestEWaybillApplicability(IntegrationTestCase):
             },
         )
 
-    def assertApplicability(self, doc, applicable, generatable, reasons=()):
+    def assertApplicability(self, doc, applicable, generatable, reasons=(), required=False):
         run_onload(doc)
         self.assertEqual(
             doc.get_onload().e_waybill_applicability,
-            {"api_enabled": True, "applicable": applicable, "generatable": generatable, "cancellable": False},
+            {
+                "api_enabled": True,
+                "applicable": applicable,
+                "generatable": generatable,
+                "required": required,
+                "cancellable": False,
+            },
         )
         self.assertEqual(get_e_waybill_applicability_reasons(doc.doctype, doc.name), list(reasons))
 
@@ -65,6 +71,15 @@ class TestEWaybillApplicability(IntegrationTestCase):
             generatable=False,
             reasons=["e-Waybill cannot be generated because all items have service HSN codes"],
         )
+
+    def test_opening_sales_invoice_gets_no_e_waybill_status(self):
+        si = create_sales_invoice(is_opening="Yes", rate=100000, do_not_save=True)
+        si.items[0].income_account = "Temporary Opening - _TIRC"
+        si.insert()
+        si.submit()
+
+        # opening entries skip GST validation, so they never reach the e-Waybill status
+        self.assertFalse(si.e_waybill_status)
 
     def test_purchase_invoice(self):
         self.assertApplicability(
@@ -127,14 +142,14 @@ class TestEWaybillApplicability(IntegrationTestCase):
         self.mark_generated(pi, "351002721242", add_to_date(now_datetime(), days=-2))
 
         self.assertFalse(pi.get_onload().e_waybill_applicability.cancellable)
-        self.assertFalse(can_auto_cancel_e_waybill(pi))
+        self.assertFalse(is_e_waybill_auto_cancellable(pi))
 
     @change_settings("GST Settings", {"auto_cancel_e_waybill": 1, "enable_api": 0})
     def test_auto_cancel_needs_the_api(self):
         pi = create_purchase_invoice(bill_no="EWB-APPL-7")
         self.mark_generated(pi, "351002721243", now_datetime())
 
-        self.assertFalse(can_auto_cancel_e_waybill(pi))
+        self.assertFalse(is_e_waybill_auto_cancellable(pi))
 
     def test_purchase_receipt(self):
         self.assertApplicability(

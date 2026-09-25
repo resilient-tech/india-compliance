@@ -1233,28 +1233,6 @@ function is_e_waybill_valid(frm) {
     );
 }
 
-async function has_e_waybill_threshold_met(frm) {
-    const threshold = await get_e_waybill_threshold(frm);
-    if (threshold != null && Math.abs(frm.doc.base_grand_total) >= threshold) {
-        return true;
-    }
-
-    return false;
-}
-
-async function get_e_waybill_threshold(frm) {
-    const { message } = await frappe.call(
-        "india_compliance.gst_india.utils.e_waybill.get_e_waybill_threshold",
-        { doctype: frm.doctype, docname: frm.doc.name },
-    );
-
-    if (message === undefined) {
-        return Infinity;
-    }
-
-    return message;
-}
-
 function is_e_waybill_applicable(frm) {
     return Boolean(frm.doc.__onload?.e_waybill_applicability?.applicable);
 }
@@ -1265,6 +1243,14 @@ function is_e_waybill_api_enabled(frm) {
 
 function is_e_waybill_generatable(frm) {
     return Boolean(frm.doc.__onload?.e_waybill_applicability?.generatable);
+}
+
+function is_e_waybill_required(frm) {
+    return Boolean(frm.doc.__onload?.e_waybill_applicability?.required);
+}
+
+function is_e_waybill_cancellable(frm) {
+    return Boolean(frm.doc.__onload?.e_waybill_applicability?.cancellable);
 }
 
 function get_hours(date, hours, date_time_format = frappe.defaultDatetimeFormat) {
@@ -1287,10 +1273,6 @@ function has_extend_validity_expired(frm) {
 
     if (now > extend_before) return true;
     return false;
-}
-
-function is_e_waybill_cancellable(frm) {
-    return Boolean(frm.doc.__onload?.e_waybill_applicability?.cancellable);
 }
 
 function can_cancel_e_waybill(frm) {

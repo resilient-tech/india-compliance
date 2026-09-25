@@ -32,13 +32,12 @@ frappe.ui.form.on(DOCTYPE, {
         show_sandbox_mode_indicator();
     },
 
-    async after_save(frm) {
+    after_save(frm) {
         if (
             frm.doc.customer_address ||
             frm.doc.is_return ||
             frm.doc.is_debit_note ||
-            !is_e_waybill_applicable(frm) ||
-            !(await has_e_waybill_threshold_met(frm))
+            !is_e_waybill_required(frm)
         )
             return;
 

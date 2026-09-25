@@ -22,12 +22,11 @@ frappe.ui.form.on(DOCTYPE, {
         if (india_compliance.is_e_waybill_enabled_for(DOCTYPE)) show_sandbox_mode_indicator();
     },
 
-    async after_save(frm) {
+    after_save(frm) {
         if (
             frm.doc.supplier_address ||
             !(frm.doc.gst_category == "Unregistered" || frm.doc.is_return) ||
-            !is_e_waybill_applicable(frm) ||
-            !(await has_e_waybill_threshold_met(frm))
+            !is_e_waybill_required(frm)
         )
             return;
 

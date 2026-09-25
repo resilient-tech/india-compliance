@@ -24,7 +24,6 @@ from india_compliance.gst_india.constants import (
 from india_compliance.gst_india.constants.e_waybill import SUB_SUPPLY_TYPES
 from india_compliance.gst_india.overrides.sales_invoice import (
     cancel_e_waybill_e_invoice,
-    is_e_waybill_applicable,
 )
 from india_compliance.gst_india.overrides.test_asset_movement import (
     create_asset_movement,
@@ -41,7 +40,6 @@ from india_compliance.gst_india.utils.e_invoice import (
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
     _generate_e_waybill,
-    _get_e_waybill_threshold,
     auto_cancel_e_waybill_for_doc,
     cancel_e_waybill,
     fetch_e_waybill_data,
@@ -54,6 +52,10 @@ from india_compliance.gst_india.utils.e_waybill import (
     update_transaction,
     update_transporter,
     update_vehicle_info,
+)
+from india_compliance.gst_india.utils.e_waybill_applicability import (
+    _get_e_waybill_threshold,
+    is_e_waybill_required,
 )
 from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_FINISHED_ITEM_TG,
@@ -2246,7 +2248,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
         )
 
-        self.assertTrue(is_e_waybill_applicable(si))
+        self.assertTrue(is_e_waybill_required(si))
 
     @with_intrastate_config(
         [
@@ -2265,7 +2267,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
         )
 
-        self.assertFalse(is_e_waybill_applicable(si))
+        self.assertFalse(is_e_waybill_required(si))
 
     @with_intrastate_config(
         [
@@ -2284,7 +2286,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
         )
 
-        self.assertFalse(is_e_waybill_applicable(si))
+        self.assertFalse(is_e_waybill_required(si))
 
     @with_intrastate_config([])
     def test_is_e_waybill_applicable_inter_state_threshold_met(self):
@@ -2297,7 +2299,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
         )
 
-        self.assertTrue(is_e_waybill_applicable(si))
+        self.assertTrue(is_e_waybill_required(si))
 
 
 class TestSubcontractingInwardEWaybill(IntegrationTestCase):

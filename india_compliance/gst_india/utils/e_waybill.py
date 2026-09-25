@@ -47,10 +47,6 @@ from india_compliance.gst_india.constants.e_waybill import (
     TRANSIT_TYPES,
     UPDATE_VEHICLE_REASON_CODES,
 )
-from india_compliance.gst_india.overrides.transaction import (
-    get_source_state_code,
-    is_inter_state_supply,
-)
 from india_compliance.gst_india.utils import (
     commit,
     get_items,
@@ -69,7 +65,12 @@ from india_compliance.gst_india.utils import (
     send_updated_doc,
     update_onload,
 )
-from india_compliance.gst_india.utils.e_waybill_applicability import E_WAYBILL_APPLICABILITY
+from india_compliance.gst_india.utils.e_waybill_applicability import (
+    get_e_waybill_applicability,
+    is_e_waybill_auto_cancellable,
+    is_e_waybill_cancellable,
+    is_e_waybill_info_enabled,
+)
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 from india_compliance.utils.change_log_utils import create_change_log_comment
 
@@ -1103,7 +1104,7 @@ def update_transaction(doc, values):
 
 
 def set_e_waybill_info(doc):
-    if not doc.get("ewaybill") or not E_WAYBILL_APPLICABILITY[doc.doctype](doc).is_info_enabled():
+    if not doc.get("ewaybill") or not is_e_waybill_info_enabled(doc):
         return
 
     if e_waybill_info := get_e_waybill_info(doc):
@@ -1328,7 +1329,7 @@ class EWaybillData(GSTTransactionData):
             )
 
     def validate_applicability(self):
-        applicability = E_WAYBILL_APPLICABILITY[self.doc.doctype](self.doc)
+        applicability = get_e_waybill_applicability(self.doc)
 
         if not applicability.is_enabled():
             frappe.throw(
@@ -1410,7 +1411,7 @@ class EWaybillData(GSTTransactionData):
             )
 
     def validate_if_ewaybill_can_be_cancelled(self):
-        if not E_WAYBILL_APPLICABILITY[self.doc.doctype](self.doc).is_cancellable():
+        if not is_e_waybill_cancellable(self.doc):
             frappe.throw(_("e-Waybill can be cancelled only within 24 Hours of its generation"))
 
     def get_all_item_details(self):
@@ -1819,9 +1820,9 @@ def before_cancel(doc, method=None):
     if not doc.get("ewaybill") or not is_api_enabled():
         return
 
-    run_onload(doc)  # can_auto_cancel_e_waybill reads e_waybill_info
+    run_onload(doc)  # is_auto_cancellable reads e_waybill_info
 
-    if not can_auto_cancel_e_waybill(doc):
+    if not is_e_waybill_auto_cancellable(doc):
         return
 
     run_after_response_or_enqueue(
@@ -1842,19 +1843,10 @@ def auto_cancel_e_waybill_for_doc(doctype: str, docname: str):
     auto_cancel_e_waybill(doc)
 
 
-def can_auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
-    """auto-cancel setting on + e-Waybill still within the 24h cancel window?"""
-    gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
-
-    return bool(gst_settings.auto_cancel_e_waybill) and E_WAYBILL_APPLICABILITY[doc.doctype](
-        doc
-    ).is_cancellable(e_waybill_info)
-
-
 def auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
     gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
 
-    if not can_auto_cancel_e_waybill(doc, gst_settings, e_waybill_info):
+    if not is_e_waybill_auto_cancellable(doc, e_waybill_info):
         return
 
     values = frappe._dict(
@@ -1867,61 +1859,3 @@ def auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
     _cancel_e_waybill(doc, values)
 
     return True
-
-
-#######################################################################################
-### e-Waybill Threshold Utils #########################################################
-#######################################################################################
-
-
-@frappe.whitelist()
-def get_e_waybill_threshold(doctype: str, docname: str):
-    frappe.has_permission(doctype, doc=docname, ptype="read", throw=True)
-
-    doc = frappe.get_doc(doctype, docname)
-    return _get_e_waybill_threshold(doc)
-
-
-def _get_e_waybill_threshold(doc, gst_settings=None):
-    if not gst_settings:
-        gst_settings = frappe.get_cached_doc("GST Settings")
-
-    if is_inter_state_supply(doc):
-        return gst_settings.e_waybill_threshold
-
-    return get_intrastate_threshold(doc, gst_settings)
-
-
-def get_intrastate_threshold(doc, gst_settings=None):
-    if not gst_settings:
-        gst_settings = frappe.get_cached_doc("GST Settings")
-
-    state = get_source_state_code(doc)
-
-    state_config = get_state_code_wise_config(gst_settings)
-
-    if state in state_config:
-        config = state_config[state]
-        if not config.get("intrastate_applicable"):
-            return None
-
-        return config.get("intrastate_threshold")
-
-    return gst_settings.e_waybill_threshold
-
-
-def get_state_code_wise_config(gst_settings=None):
-    if not gst_settings:
-        gst_settings = frappe.get_cached_doc("GST Settings")
-
-    state_config = {}
-    for row in gst_settings.get("e_waybill_threshold_for_intrastate") or []:
-        if not (state_code := STATE_NUMBERS.get(row.state)):
-            continue
-
-        state_config[state_code] = {
-            "intrastate_applicable": row.intrastate_applicable,
-            "intrastate_threshold": row.intrastate_threshold,
-        }
-
-    return state_config

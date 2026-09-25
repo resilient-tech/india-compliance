@@ -21,7 +21,9 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils import (
     validate_invoice_number as validate_transaction_name,
 )
-from india_compliance.gst_india.utils.e_waybill_applicability import E_WAYBILL_APPLICABILITY
+from india_compliance.gst_india.utils.e_waybill_applicability import (
+    is_e_waybill_api_enabled,
+)
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
     update_gst_details,
@@ -56,7 +58,7 @@ class CustomEwaybillController:
         return update_dashboard_with_gst_logs(cls.DOCTYPE, data, "e-Waybill Log", "Integration Request")
 
     def is_e_waybill_applicable(self):
-        return E_WAYBILL_APPLICABILITY[self.doc.doctype](self.doc).is_api_enabled()
+        return is_e_waybill_api_enabled(self.doc)
 
     def ignore_gst_validations(self):
         return bool(ignore_gst_validations(self.doc))

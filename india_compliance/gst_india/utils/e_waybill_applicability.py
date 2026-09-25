@@ -6,12 +6,16 @@ from frappe.utils import add_days, get_datetime
 
 from india_compliance.gst_india.constants import (
     E_WAYBILL_STOCK_ENTRY_PURPOSES,
-    SERVICE_HSN_PREFIX,
+    STATE_NUMBERS,
 )
 from india_compliance.gst_india.constants.e_waybill import ADDRESS_FIELDS, PERMITTED_DOCTYPES
-from india_compliance.gst_india.overrides.transaction import _get_address_fields
+from india_compliance.gst_india.overrides.transaction import (
+    _get_address_fields,
+    get_source_state_code,
+    is_inter_state_supply,
+)
 from india_compliance.gst_india.utils import (
-    get_items,
+    are_goods_supplied,
     is_api_enabled,
     is_same_gstin_allowed,
 )
@@ -30,21 +34,15 @@ class EWaybillApplicability:
     def get(self):
         applicability = frappe._dict(
             api_enabled=self.is_api_enabled(),
-            applicable=False,
-            generatable=False,
+            applicable=self.is_applicable(),
+            generatable=self.is_generatable(),
+            required=self.is_required(),
             cancellable=self.is_cancellable(),
             reasons=[],
         )
 
-        if not self.is_enabled():
-            return applicability
-
-        applicability.reasons = self.get_applicability_reasons()
-        applicability.applicable = not applicability.reasons
-
-        generation_reasons = self.get_generation_reasons()
-        applicability.generatable = applicability.applicable and not generation_reasons
-        applicability.reasons.extend(generation_reasons)
+        if self.is_enabled():
+            applicability.reasons = self.get_applicability_reasons() + self.get_generation_reasons()
 
         return applicability
 
@@ -53,6 +51,27 @@ class EWaybillApplicability:
 
     def is_api_enabled(self):
         return bool(self.settings.enable_api and self.is_enabled())
+
+    def is_applicable(self):
+        return self.is_enabled() and not self.get_applicability_reasons()
+
+    def is_generatable(self):
+        return self.is_applicable() and not self.get_generation_reasons()
+
+    def is_required(self):
+        consignment_value = self.get_consignment_value()
+        if consignment_value is None or self.doc.get("ewaybill") or not self.is_applicable():
+            return False
+
+        threshold = _get_e_waybill_threshold(self.doc, self.settings)
+        return threshold is not None and abs(consignment_value) >= threshold
+
+    def get_consignment_value(self):
+        # None where the e-Waybill threshold is not checked
+        return None
+
+    def is_auto_generatable(self):
+        return False
 
     def is_info_enabled(self):
         # the doctype switch governs new e-Waybills; an existing one stays manageable
@@ -68,6 +87,9 @@ class EWaybillApplicability:
         # the portal allows cancelling for 24 hours after generation
         return bool(generated_on) and add_days(generated_on, 1) >= get_datetime()
 
+    def is_auto_cancellable(self, e_waybill_info=None):
+        return bool(self.settings.auto_cancel_e_waybill) and self.is_cancellable(e_waybill_info)
+
     def get_applicability_reasons(self):
         reasons = []
 
@@ -76,7 +98,7 @@ class EWaybillApplicability:
                 _("e-Waybill cannot be generated for transaction with 'Is Opening Entry' set to Yes.")
             )
 
-        if not self.has_goods_item():
+        if not are_goods_supplied(self.doc):
             reasons.append(_("e-Waybill cannot be generated because all items have service HSN codes"))
 
         if self.has_same_gstin():
@@ -86,12 +108,6 @@ class EWaybillApplicability:
 
     def get_generation_reasons(self):
         return self.get_company_gstin_reasons() + self.get_address_reasons()
-
-    def has_goods_item(self):
-        return any(
-            item.gst_hsn_code and not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
-            for item in get_items(self.doc)
-        )
 
     def has_same_gstin(self):
         if self.SAME_GSTIN_ALLOWED or is_same_gstin_allowed(self.doc):
@@ -119,8 +135,24 @@ class EWaybillApplicability:
         ]
 
 
+class SalesInvoiceApplicability(EWaybillApplicability):
+    def get_consignment_value(self):
+        return self.doc.base_grand_total
+
+    def is_auto_generatable(self):
+        return bool(
+            self.settings.auto_generate_e_waybill
+            and is_api_enabled(self.settings)
+            and self.doc.e_waybill_status == "Pending"
+            and not (self.doc.is_return or self.doc.is_debit_note)
+        )
+
+
 class PurchaseInvoiceApplicability(EWaybillApplicability):
     SWITCH = "enable_e_waybill_from_pi"
+
+    def get_consignment_value(self):
+        return self.doc.base_grand_total
 
     def get_generation_reasons(self):
         reasons = super().get_generation_reasons()
@@ -134,10 +166,16 @@ class PurchaseInvoiceApplicability(EWaybillApplicability):
 class PurchaseReceiptApplicability(EWaybillApplicability):
     SWITCH = "enable_e_waybill_from_pr"
 
+    def get_consignment_value(self):
+        return self.doc.base_grand_total
+
 
 class DeliveryNoteApplicability(EWaybillApplicability):
     SWITCH = "enable_e_waybill_from_dn"
     SAME_GSTIN_ALLOWED = True
+
+    def get_consignment_value(self):
+        return self.doc.base_grand_total
 
 
 class StockEntryApplicability(EWaybillApplicability):
@@ -162,7 +200,7 @@ class SubcontractingReceiptApplicability(EWaybillApplicability):
 
 
 E_WAYBILL_APPLICABILITY = {
-    "Sales Invoice": EWaybillApplicability,
+    "Sales Invoice": SalesInvoiceApplicability,
     "Purchase Invoice": PurchaseInvoiceApplicability,
     "Purchase Receipt": PurchaseReceiptApplicability,
     "Delivery Note": DeliveryNoteApplicability,
@@ -173,8 +211,48 @@ E_WAYBILL_APPLICABILITY = {
 }
 
 
+def get_e_waybill_applicability(doc):
+    return E_WAYBILL_APPLICABILITY[doc.doctype](doc)
+
+
+def is_e_waybill_enabled(doc):
+    return get_e_waybill_applicability(doc).is_enabled()
+
+
+def is_e_waybill_api_enabled(doc):
+    return get_e_waybill_applicability(doc).is_api_enabled()
+
+
+def is_e_waybill_applicable(doc):
+    return get_e_waybill_applicability(doc).is_applicable()
+
+
+def is_e_waybill_generatable(doc):
+    return get_e_waybill_applicability(doc).is_generatable()
+
+
+def is_e_waybill_required(doc):
+    return get_e_waybill_applicability(doc).is_required()
+
+
+def is_e_waybill_auto_generatable(doc):
+    return get_e_waybill_applicability(doc).is_auto_generatable()
+
+
+def is_e_waybill_info_enabled(doc):
+    return get_e_waybill_applicability(doc).is_info_enabled()
+
+
+def is_e_waybill_cancellable(doc, e_waybill_info=None):
+    return get_e_waybill_applicability(doc).is_cancellable(e_waybill_info)
+
+
+def is_e_waybill_auto_cancellable(doc, e_waybill_info=None):
+    return get_e_waybill_applicability(doc).is_auto_cancellable(e_waybill_info)
+
+
 def set_e_waybill_applicability(doc, method=None):
-    e_waybill_applicability = E_WAYBILL_APPLICABILITY[doc.doctype](doc)
+    e_waybill_applicability = get_e_waybill_applicability(doc)
 
     # the client reads a missing key as all flags off
     if not (e_waybill_applicability.is_enabled() or doc.get("ewaybill")):
@@ -193,4 +271,49 @@ def get_e_waybill_applicability_reasons(doctype: str, docname: str):
 
     doc = frappe.get_lazy_doc(doctype, docname, check_permission="read")
 
-    return E_WAYBILL_APPLICABILITY[doctype](doc).get().reasons
+    return get_e_waybill_applicability(doc).get().reasons
+
+
+def _get_e_waybill_threshold(doc, gst_settings=None):
+    if not gst_settings:
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if is_inter_state_supply(doc):
+        return gst_settings.e_waybill_threshold
+
+    return get_intrastate_threshold(doc, gst_settings)
+
+
+def get_intrastate_threshold(doc, gst_settings=None):
+    if not gst_settings:
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
+    state = get_source_state_code(doc)
+
+    state_config = get_state_code_wise_config(gst_settings)
+
+    if state in state_config:
+        config = state_config[state]
+        if not config.get("intrastate_applicable"):
+            return None
+
+        return config.get("intrastate_threshold")
+
+    return gst_settings.e_waybill_threshold
+
+
+def get_state_code_wise_config(gst_settings=None):
+    if not gst_settings:
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
+    state_config = {}
+    for row in gst_settings.get("e_waybill_threshold_for_intrastate") or []:
+        if not (state_code := STATE_NUMBERS.get(row.state)):
+            continue
+
+        state_config[state_code] = {
+            "intrastate_applicable": row.intrastate_applicable,
+            "intrastate_threshold": row.intrastate_threshold,
+        }
+
+    return state_config
