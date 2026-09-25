@@ -21,9 +21,7 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils import (
     validate_invoice_number as validate_transaction_name,
 )
-from india_compliance.gst_india.utils.e_waybill_actions import (
-    is_e_waybill_api_enabled,
-)
+from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
     update_gst_details,
@@ -57,9 +55,6 @@ class CustomEwaybillController:
     def get_dashboard_data(cls, data):
         return update_dashboard_with_gst_logs(cls.DOCTYPE, data, "e-Waybill Log", "Integration Request")
 
-    def is_e_waybill_api_enabled(self):
-        return is_e_waybill_api_enabled(self.doc)
-
     def ignore_gst_validations(self):
         return bool(ignore_gst_validations(self.doc))
 
@@ -73,7 +68,7 @@ class CustomEwaybillController:
             tax_controller.set_taxes_and_totals()
             return
 
-        if not self.is_e_waybill_api_enabled():
+        if not get_e_waybill_applicability(self.doc).is_api_enabled():
             tax_controller.set_taxes_and_totals()
             return
 
@@ -92,7 +87,7 @@ class CustomEwaybillController:
         update_gst_details(self.doc)
 
     def before_save(self):
-        if not self.is_e_waybill_api_enabled():
+        if not get_e_waybill_applicability(self.doc).is_api_enabled():
             self.doc.taxes_and_charges = ""
             self.doc.taxes = []
             return

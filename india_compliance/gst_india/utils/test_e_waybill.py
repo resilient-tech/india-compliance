@@ -53,8 +53,10 @@ from india_compliance.gst_india.utils.e_waybill import (
     update_transporter,
     update_vehicle_info,
 )
-from india_compliance.gst_india.utils.e_waybill_actions import is_e_waybill_required
-from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_threshold
+from india_compliance.gst_india.utils.e_waybill_applicability import (
+    get_e_waybill_applicability,
+    get_e_waybill_threshold,
+)
 from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_FINISHED_ITEM_TG,
     _append_taxes,
@@ -2246,7 +2248,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
         )
 
-        self.assertTrue(is_e_waybill_required(si))
+        self.assertTrue(get_e_waybill_applicability(si).is_required())
 
     @with_intrastate_config(
         [
@@ -2265,7 +2267,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
         )
 
-        self.assertFalse(is_e_waybill_required(si))
+        self.assertFalse(get_e_waybill_applicability(si).is_required())
 
     @with_intrastate_config(
         [
@@ -2284,7 +2286,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
         )
 
-        self.assertFalse(is_e_waybill_required(si))
+        self.assertFalse(get_e_waybill_applicability(si).is_required())
 
     @with_intrastate_config([])
     def test_is_e_waybill_applicable_inter_state_threshold_met(self):
@@ -2297,7 +2299,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
         )
 
-        self.assertTrue(is_e_waybill_required(si))
+        self.assertTrue(get_e_waybill_applicability(si).is_required())
 
 
 class TestSubcontractingInwardEWaybill(IntegrationTestCase):

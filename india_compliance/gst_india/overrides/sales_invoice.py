@@ -38,11 +38,8 @@ from india_compliance.gst_india.utils.e_invoice import (
 from india_compliance.gst_india.utils.e_waybill import (
     generate_e_waybill,
 )
-from india_compliance.gst_india.utils.e_waybill_actions import (
-    is_e_waybill_auto_cancellable,
-    is_e_waybill_auto_generatable,
-    is_e_waybill_required,
-)
+from india_compliance.gst_india.utils.e_waybill_actions import is_e_waybill_auto_cancellable
+from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
 from india_compliance.gst_india.utils.transaction_data import (
     validate_unique_hsn_and_uom,
 )
@@ -50,7 +47,7 @@ from india_compliance.gst_india.utils.transaction_data import (
 
 def onload(doc, method=None):
     if not doc.get("ewaybill"):
-        if doc.gst_category == "Overseas" and is_e_waybill_required(doc):
+        if doc.gst_category == "Overseas" and get_e_waybill_applicability(doc).is_required():
             doc.set_onload("shipping_address_in_india", is_shipping_address_in_india(doc))
 
         if not doc.get("irn"):
@@ -130,7 +127,7 @@ def validate_fields_and_set_status_for_e_invoice(doc, gst_settings=None):
 def validate_port_address(doc):
     if (
         doc.gst_category != "Overseas"
-        or not is_e_waybill_required(doc)
+        or not get_e_waybill_applicability(doc).is_required()
         or doc.port_address
         or is_shipping_address_in_india(doc)
     ):
@@ -177,7 +174,7 @@ def on_submit(doc, method=None):
         )
         return
 
-    if is_e_waybill_auto_generatable(doc):
+    if get_e_waybill_applicability(doc).is_auto_generatable():
         run_after_response_or_enqueue(
             generate_e_waybill, doc, _("e-Waybill generation failed"), doctype=doc.doctype, docname=doc.name
         )
@@ -267,7 +264,7 @@ def set_e_waybill_status(doc, gst_settings=None):
 
     e_waybill_status = "Not Applicable"
 
-    if is_e_waybill_required(doc):
+    if get_e_waybill_applicability(doc).is_required():
         e_waybill_status = "Pending"
 
     if doc.ewaybill:

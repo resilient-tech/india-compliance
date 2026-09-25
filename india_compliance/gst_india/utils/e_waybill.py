@@ -957,9 +957,6 @@ def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
     log = log_e_waybill(log_data, comment)
 
     # rebuilt from the saved log, as the document goes back to the form
-    for key in ("e_waybill_info", "e_waybill_applicability"):
-        doc.get_onload().pop(key, None)
-
     set_e_waybill_onload(doc)
 
     if log.is_cancelled or fetch:

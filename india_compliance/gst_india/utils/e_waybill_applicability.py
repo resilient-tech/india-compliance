@@ -33,18 +33,19 @@ class EWaybillApplicability:
         self.fields = _get_address_fields(doc.doctype, doc)
 
     def get(self):
-        applicability = frappe._dict(
+        return frappe._dict(
             api_enabled=self.is_api_enabled(),
             applicable=self.is_applicable(),
             generatable=self.is_generatable(),
             required=self.is_required(),
-            reasons=[],
         )
 
-        if self.is_enabled():
-            applicability.reasons = self.applicability_reasons + self.generation_reasons
+    @property
+    def reasons(self):
+        if not self.is_enabled():
+            return []
 
-        return applicability
+        return self.applicability_reasons + self.generation_reasons
 
     def is_enabled(self):
         return bool(self.settings.enable_e_waybill and self.settings.get(self.SWITCH))
@@ -174,9 +175,13 @@ class DeliveryNoteApplicability(EWaybillApplicability):
         return self.doc.base_grand_total
 
 
-class StockEntryApplicability(EWaybillApplicability):
+class SubcontractingApplicability(EWaybillApplicability):
+    """Every doctype behind the "e-Waybill for Subcontracting" switch."""
+
     SWITCH = "enable_e_waybill_for_sc"
 
+
+class StockEntryApplicability(SubcontractingApplicability):
     def is_enabled(self):
         # Inward purposes (Delivery, RM Return) carry only an e-Waybill; the
         # principal reports them in ITC-04 / GSTR-1, not the company (job worker).
@@ -187,14 +192,6 @@ class AssetMovementApplicability(EWaybillApplicability):
     SWITCH = "enable_e_waybill_from_asset_movement"
 
 
-class SubcontractingOrderApplicability(EWaybillApplicability):
-    SWITCH = "enable_e_waybill_for_sc"
-
-
-class SubcontractingReceiptApplicability(EWaybillApplicability):
-    SWITCH = "enable_e_waybill_for_sc"
-
-
 E_WAYBILL_APPLICABILITY = {
     "Sales Invoice": SalesInvoiceApplicability,
     "Purchase Invoice": PurchaseInvoiceApplicability,
@@ -202,8 +199,8 @@ E_WAYBILL_APPLICABILITY = {
     "Delivery Note": DeliveryNoteApplicability,
     "Stock Entry": StockEntryApplicability,
     "Asset Movement": AssetMovementApplicability,
-    "Subcontracting Order": SubcontractingOrderApplicability,
-    "Subcontracting Receipt": SubcontractingReceiptApplicability,
+    "Subcontracting Order": SubcontractingApplicability,
+    "Subcontracting Receipt": SubcontractingApplicability,
 }
 
 

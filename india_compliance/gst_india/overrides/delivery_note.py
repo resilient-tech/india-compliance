@@ -6,14 +6,12 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_transaction,
 )
 from india_compliance.gst_india.utils import update_dashboard_with_gst_logs
-from india_compliance.gst_india.utils.e_waybill_actions import (
-    is_e_waybill_required,
-)
+from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
 
 
 def onload(doc, method=None):
     if not doc.get("ewaybill"):
-        if doc.gst_category == "Overseas" and is_e_waybill_required(doc):
+        if doc.gst_category == "Overseas" and get_e_waybill_applicability(doc).is_required():
             doc.set_onload("shipping_address_in_india", is_shipping_address_in_india(doc))
 
 

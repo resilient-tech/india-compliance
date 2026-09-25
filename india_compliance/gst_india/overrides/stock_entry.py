@@ -26,10 +26,6 @@ class StockEntryController(SubcontractingController):
         return bool(is_inward_transaction(self.doc) and not self.doc.bill_to_address)
 
 
-def is_e_waybill_api_enabled(doc):
-    return StockEntryController(doc).is_e_waybill_api_enabled()
-
-
 def validate(doc, method=None):
     StockEntryController(doc).validate()
 

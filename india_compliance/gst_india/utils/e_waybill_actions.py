@@ -11,19 +11,11 @@ from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
 
 
-def is_e_waybill_api_enabled(doc):
-    return get_e_waybill_applicability(doc).is_api_enabled()
-
-
-def is_e_waybill_required(doc):
-    return get_e_waybill_applicability(doc).is_required()
-
-
-def is_e_waybill_auto_generatable(doc):
-    return get_e_waybill_applicability(doc).is_auto_generatable()
-
-
 def set_e_waybill_onload(doc, method=None):
+    # rebuilt after every logged action, so stale keys from the previous state go first
+    for key in ("e_waybill_info", "e_waybill_applicability"):
+        doc.get_onload().pop(key, None)
+
     # applicability only matters until the e-Waybill is generated
     if doc.get("ewaybill"):
         if is_e_waybill_info_enabled() and (e_waybill_info := get_e_waybill_info(doc)):
@@ -43,10 +35,7 @@ def set_e_waybill_onload(doc, method=None):
     if not e_waybill_applicability.is_enabled():
         return
 
-    applicability = e_waybill_applicability.get()
-    applicability.pop("reasons")
-
-    doc.set_onload("e_waybill_applicability", applicability)
+    doc.set_onload("e_waybill_applicability", e_waybill_applicability.get())
 
 
 @frappe.whitelist()
@@ -56,11 +45,11 @@ def get_e_waybill_applicability_reasons(doctype: str, docname: str):
 
     doc = frappe.get_lazy_doc(doctype, docname, check_permission="read")
 
-    return get_e_waybill_applicability(doc).get().reasons
+    return get_e_waybill_applicability(doc).reasons
 
 
-def is_e_waybill_info_enabled(gst_settings=None):
-    gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
+def is_e_waybill_info_enabled():
+    gst_settings = frappe.get_cached_doc("GST Settings")
 
     # the doctype switch governs new e-Waybills; an existing one stays manageable
     return bool(gst_settings.enable_e_waybill and is_api_enabled(gst_settings))
