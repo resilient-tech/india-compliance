@@ -2,7 +2,7 @@ import frappe
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
-from frappe.query_builder import Case, EmptyCriterion
+from frappe.query_builder import Case, Criterion
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Sum
 from frappe.utils import flt
@@ -180,11 +180,19 @@ class PurchaseInvoice:
         self.PI = frappe.qb.DocType("Purchase Invoice")
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
-    def get_all(self, names=None, filters=None):
+    def get_all(self, filters, names=None, only_names=False):
         dimension_fields = [*get_accounting_dimensions(), "cost_center", "project"]
         additional_fields = [*dimension_fields, "posting_date"]
 
-        query = self.get_query(filters=filters, additional_fields=additional_fields, names=names)
+        if only_names and not names:
+            return {}
+
+        query = self.get_query(additional_fields=additional_fields)
+
+        if only_names:
+            query = query.where(self.PI.name.isin(names))
+        else:
+            query = query.where(self.get_filter_criterion(filters, names))
 
         purchases = query.run(as_dict=True)
 
@@ -213,7 +221,7 @@ class PurchaseInvoice:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_query(self, filters=None, additional_fields=None, is_return=False, names=None):
+    def get_query(self, filters=None, additional_fields=None, is_return=False):
         fields = self.get_fields(additional_fields, is_return)
 
         query = (
@@ -233,27 +241,27 @@ class PurchaseInvoice:
             .groupby(self.PI.name)
         )
 
-        # instead of restriciting to names, widen the filter to include names
-        if filters:
-            query = self.apply_filters(query, filters, names)
+        if not filters:
+            return query
 
-        return query
+        return query.where(self.get_filter_criterion(filters))
 
-    def apply_filters(self, query, filters, names=None):
-        # names widen the filter, not narrow it: a linked doc under another GSTIN must still show
-        if filters.get("company"):
-            query = query.where(self.PI.company == filters.company)
+    def get_filter_criterion(self, filters, names=None):
 
-        gstin_condition = EmptyCriterion()
+        conditions = []
         if filters.get("company_gstin"):
-            gstin_condition = self.PI.company_gstin == filters.company_gstin
+            conditions = [self.PI.company_gstin == filters.company_gstin]
 
+        if filters.get("company"):
+            conditions.append(self.PI.company == filters.company)
+
+        criterion = Criterion.all(conditions)
+
+        # a linked invoice stays in despite every filter above
         if names:
-            gstin_condition = gstin_condition | self.PI.name.isin(names)
+            criterion = criterion | self.PI.name.isin(names)
 
-        query = query.where(gstin_condition)
-
-        return query
+        return criterion
 
     def get_fields(self, additional_fields=None, is_return=False):
         fields = [

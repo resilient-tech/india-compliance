@@ -567,25 +567,23 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         }
         pinv = create_purchase_invoice(**pi_args, bill_no="IMS-GID-003")
         other_pinv = create_purchase_invoice(**pi_args, bill_no="IMS-GID-004")
+        frappe.db.set_value("Purchase Invoice", other_pinv.name, "company_gstin", "27AAQCA8719H1Z6")
 
-        self.assertEqual(list(PurchaseInvoice().get_all(names=[pinv.name])), [pinv.name])
-
-        # difference is company_gstin should not filter out already matched invoices
         filters = frappe._dict(
             {
                 "company": "_Test Indian Registered Company",
                 "company_gstin": "24AAQCA8719H1ZC",
             }
         )
-        self.assertEqual(
-            list(PurchaseInvoice().get_all(names=[pinv.name], filters=filters)),
-            [pinv.name],
-        )
 
-        self.assertEqual(
-            sorted(PurchaseInvoice().get_all(names=[pinv.name, other_pinv.name])),
-            sorted([pinv.name, other_pinv.name]),
-        )
+        purchases = PurchaseInvoice().get_all(filters=filters)
+        self.assertIn(pinv.name, purchases)
+        self.assertNotIn(other_pinv.name, purchases)
+
+        # company_gstin must not filter out an already matched invoice
+        purchases = PurchaseInvoice().get_all(filters=filters, names=[other_pinv.name])
+        self.assertIn(pinv.name, purchases)
+        self.assertIn(other_pinv.name, purchases)
 
     def test_link_documents_with_none_purchase_invoice_name(self):
         """

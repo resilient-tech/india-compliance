@@ -205,7 +205,12 @@ class GSTInvoiceManagementSystem(Document):
             if inward_supply_names
             else []
         )
-        purchases = PurchaseInvoice().get_all(names=purchase_names) if purchase_names else {}
+        filters = frappe._dict({"company": self.company, "company_gstin": self.company_gstin})
+        purchases = (
+            PurchaseInvoice().get_all(filters=filters, names=purchase_names, only_names=True)
+            if purchase_names
+            else {}
+        )
 
         reconciliation_data = [
             frappe._dict(
