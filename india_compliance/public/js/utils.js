@@ -53,47 +53,22 @@ Object.assign(india_compliance, {
     HSN_BIFURCATION_FROM: frappe.datetime.str_to_obj("2025-05-01"),
 
     // Stock Entry purposes for Subcontracting Inward (company is the job worker)
-    SUBCONTRACTING_INWARD_PURPOSES: ["Subcontracting Delivery", "Return Raw Material to Customer"],
+    SUBCONTRACTING_INWARD_PURPOSES: frappe.boot.subcontracting_inward_purposes,
 
     // Stock Entry purposes where goods move between subcontracting parties
-    SUBCONTRACTING_PURPOSES: [
-        "Send to Subcontractor",
-        "Subcontracting Delivery",
-        "Return Raw Material to Customer",
-    ],
+    SUBCONTRACTING_PURPOSES: frappe.boot.subcontracting_purposes,
 
     // Stock Entry purposes eligible for e-Waybill
-    E_WAYBILL_STOCK_ENTRY_PURPOSES: [
-        "Material Transfer",
-        "Material Issue",
-        "Send to Subcontractor",
-        "Subcontracting Delivery",
-        "Return Raw Material to Customer",
-    ],
+    E_WAYBILL_STOCK_ENTRY_PURPOSES: frappe.boot.e_waybill_stock_entry_purposes,
 
     // purposes moving the company's own goods, so both sides may share a GSTIN
-    SAME_GSTIN_PURPOSES: {
-        "Stock Entry": ["Material Transfer", "Material Issue"],
-        "Asset Movement": ["Issue", "Receipt", "Transfer", "Transfer and Issue"],
-    },
+    SAME_GSTIN_PURPOSES: frappe.boot.same_gstin_purposes,
 
     // purposes that bring goods to the company without being a return
-    INWARD_PURPOSES: { "Asset Movement": ["Receipt"] },
-
-    // GST Settings switch each doctype needs on top of enable_e_waybill
-    E_WAYBILL_SWITCHES: {
-        "Sales Invoice": "enable_e_waybill",
-        "Purchase Invoice": "enable_e_waybill_from_pi",
-        "Purchase Receipt": "enable_e_waybill_from_pr",
-        "Delivery Note": "enable_e_waybill_from_dn",
-        "Stock Entry": "enable_e_waybill_for_sc",
-        "Subcontracting Order": "enable_e_waybill_for_sc",
-        "Subcontracting Receipt": "enable_e_waybill_for_sc",
-        "Asset Movement": "enable_e_waybill_from_asset_movement",
-    },
+    INWARD_PURPOSES: frappe.boot.inward_purposes,
 
     is_e_waybill_enabled_for(doctype) {
-        return Boolean(gst_settings.enable_e_waybill && gst_settings[this.E_WAYBILL_SWITCHES[doctype]]);
+        return frappe.boot.e_waybill_enabled_doctypes.includes(doctype);
     },
 
     is_subcontracting_inward_entry(doc) {

@@ -223,8 +223,9 @@ class TestEWaybillApplicability(IntegrationTestCase):
     def test_stock_entry(self):
         self.assertApplicability(make_subcontracting_stock_entry(), applicable=True, generatable=True)
 
-        same_gstin = make_subcontracting_stock_entry(do_not_submit=True)
-        same_gstin.db_set("bill_to_gstin", same_gstin.bill_from_gstin)
+        same_gstin = make_subcontracting_stock_entry(
+            do_not_submit=True, bill_to_address="_Test Indian Registered Company-Billing"
+        )
         self.assertApplicability(
             same_gstin,
             applicable=False,

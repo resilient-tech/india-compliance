@@ -12,7 +12,6 @@ from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybi
 
 
 def set_e_waybill_onload(doc, method=None):
-    # rebuilt after every logged action, so stale keys from the previous state go first
     for key in ("e_waybill_info", "e_waybill_applicability"):
         doc.get_onload().pop(key, None)
 

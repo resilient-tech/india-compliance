@@ -176,8 +176,6 @@ class DeliveryNoteApplicability(EWaybillApplicability):
 
 
 class SubcontractingApplicability(EWaybillApplicability):
-    """Every doctype behind the "e-Waybill for Subcontracting" switch."""
-
     SWITCH = "enable_e_waybill_for_sc"
 
 
