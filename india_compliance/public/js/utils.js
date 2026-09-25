@@ -71,8 +71,27 @@ Object.assign(india_compliance, {
         "Return Raw Material to Customer",
     ],
 
+    // purposes moving the company's own goods, so both sides may share a GSTIN
+    SAME_GSTIN_PURPOSES: {
+        "Stock Entry": ["Material Transfer", "Material Issue"],
+        "Asset Movement": ["Issue", "Receipt", "Transfer", "Transfer and Issue"],
+    },
+
+    // purposes that bring goods to the company without being a return
+    INWARD_PURPOSES: { "Asset Movement": ["Receipt"] },
+
     is_subcontracting_inward_entry(doc) {
         return this.SUBCONTRACTING_INWARD_PURPOSES.includes(doc.purpose);
+    },
+
+    is_inward_transaction(doc) {
+        if ((this.INWARD_PURPOSES[doc.doctype] || []).includes(doc.purpose)) return true;
+
+        return Boolean(doc.is_return);
+    },
+
+    is_same_gstin_allowed(doc) {
+        return !doc.is_return && (this.SAME_GSTIN_PURPOSES[doc.doctype] || []).includes(doc.purpose);
     },
 
     get_month_year_from_period(period) {

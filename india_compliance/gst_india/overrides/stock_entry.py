@@ -3,7 +3,7 @@ from india_compliance.gst_india.overrides.subcontracting_transaction import (
     SubcontractingController,
     set_address_display,
 )
-from india_compliance.gst_india.utils import is_outward_stock_entry
+from india_compliance.gst_india.utils import is_inward_transaction, is_outward_stock_entry
 from india_compliance.gst_india.utils.custom_transaction_controller import (
     set_gstin_fields_for_e_waybill,
 )
@@ -29,7 +29,7 @@ class StockEntryController(SubcontractingController):
         if is_outward_stock_entry(self.doc) and not self.doc.bill_from_address:
             return True
 
-        return bool(self.doc.is_return and not self.doc.bill_to_address)
+        return bool(is_inward_transaction(self.doc) and not self.doc.bill_to_address)
 
 
 def is_e_waybill_applicable(doc):

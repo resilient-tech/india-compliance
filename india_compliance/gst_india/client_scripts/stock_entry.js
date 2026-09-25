@@ -169,7 +169,7 @@ function get_items(doc) {
 function get_field_and_label(frm, field) {
     let field_label_dict = {};
 
-    if (frm.doc.purpose === "Material Transfer" && frm.doc.is_return) {
+    if (india_compliance.is_inward_transaction(frm.doc)) {
         field_label_dict = {
             party_field: ["bill_from_address", __("Bill From (same as Supplier Address)"), __("Bill From")],
             company_field: ["bill_to_address", __("Bill To")],

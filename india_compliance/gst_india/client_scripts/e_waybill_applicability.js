@@ -203,24 +203,20 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
         let is_ewb_applicable = true;
         let message_list = [];
-        const is_return = this.frm.doc.is_return;
+        const is_inward = india_compliance.is_inward_transaction(this.frm.doc);
 
-        if (is_return && !this.frm.doc.bill_to_gstin) {
+        if (is_inward && !this.frm.doc.bill_to_gstin) {
             is_ewb_applicable = false;
             message_list.push(__("Bill To GSTIN is not set. Ensure it's set in Bill To Address."));
         }
 
-        if (!is_return && !this.frm.doc.bill_from_gstin) {
+        if (!is_inward && !this.frm.doc.bill_from_gstin) {
             is_ewb_applicable = false;
             message_list.push(__("Bill From GSTIN is not set. Ensure it's set in Bill From Address."));
         }
 
         const same_gstin = this.frm.doc.bill_from_gstin === this.frm.doc.bill_to_gstin;
-        const applicable_for_same_gstin = !(
-            is_return || india_compliance.SUBCONTRACTING_PURPOSES.includes(this.frm.doc.purpose)
-        );
-
-        if (same_gstin && !applicable_for_same_gstin) {
+        if (same_gstin && !india_compliance.is_same_gstin_allowed(this.frm.doc)) {
             is_ewb_applicable = false;
             message_list.push(__("Bill From GSTIN and Bill To GSTIN are same."));
         }
@@ -267,12 +263,10 @@ class StockEntryEwaybill extends EwaybillApplicability {
 }
 
 class AssetMovementEwaybill extends EwaybillApplicability {
-    is_inward() {
-        return this.frm.doc.purpose === "Receipt";
-    }
-
     get_company_gstin() {
-        return this.is_inward() ? this.frm.doc.bill_to_gstin : this.frm.doc.bill_from_gstin;
+        return india_compliance.is_inward_transaction(this.frm.doc)
+            ? this.frm.doc.bill_to_gstin
+            : this.frm.doc.bill_from_gstin;
     }
 
     is_e_waybill_applicable(show_message = false) {
@@ -282,7 +276,7 @@ class AssetMovementEwaybill extends EwaybillApplicability {
         let is_ewb_applicable = true;
         let message_list = [];
 
-        const [gstin_label, address_label] = this.is_inward()
+        const [gstin_label, address_label] = india_compliance.is_inward_transaction(this.frm.doc)
             ? ["Bill To GSTIN", "Bill To Address"]
             : ["Bill From GSTIN", "Bill From Address"];
 
@@ -308,7 +302,7 @@ class AssetMovementEwaybill extends EwaybillApplicability {
         let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
 
         let message_list = [];
-        const [party_field, party_label] = this.is_inward()
+        const [party_field, party_label] = india_compliance.is_inward_transaction(this.frm.doc)
             ? ["bill_from_address", "Bill From"]
             : ["bill_to_address", "Bill To"];
 
