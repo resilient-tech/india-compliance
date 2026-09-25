@@ -1,5 +1,7 @@
 """What a document can do with its e-Waybill: generate it, auto-generate it, cancel it."""
 
+from datetime import timedelta
+
 import frappe
 from frappe import _
 from frappe.utils import add_days, get_datetime
@@ -37,7 +39,12 @@ def set_e_waybill_onload(doc, method=None):
     # applicability only matters until the e-Waybill is generated
     if doc.get("ewaybill"):
         if is_e_waybill_info_enabled() and (e_waybill_info := get_e_waybill_info(doc)):
-            e_waybill_info.cancellable = is_e_waybill_cancellable(doc, e_waybill_info)
+            e_waybill_info.update(
+                cancellable=is_e_waybill_cancellable(doc, e_waybill_info),
+                updatable=is_e_waybill_updatable(e_waybill_info),
+                extendable=is_e_waybill_extendable(e_waybill_info),
+                extendable_now=is_e_waybill_extendable_now(e_waybill_info),
+            )
             doc.set_onload("e_waybill_info", e_waybill_info)
 
         return
@@ -86,6 +93,24 @@ def is_e_waybill_auto_cancellable(doc, e_waybill_info=None):
     return bool(frappe.get_cached_doc("GST Settings").auto_cancel_e_waybill) and is_e_waybill_cancellable(
         doc, e_waybill_info
     )
+
+
+def is_e_waybill_updatable(e_waybill_info):
+    # Part A alone has no validity yet
+    valid_upto = e_waybill_info.get("valid_upto")
+    return not valid_upto or get_datetime(valid_upto) >= get_datetime()
+
+
+def is_e_waybill_extendable(e_waybill_info):
+    # extendable until 8 hours after expiry; before that window it can be scheduled
+    valid_upto = e_waybill_info.get("valid_upto")
+    return bool(valid_upto) and get_datetime() - get_datetime(valid_upto) <= timedelta(hours=8)
+
+
+def is_e_waybill_extendable_now(e_waybill_info):
+    # the portal extends only within 8 hours either side of expiry
+    valid_upto = e_waybill_info.get("valid_upto")
+    return bool(valid_upto) and abs(get_datetime() - get_datetime(valid_upto)) <= timedelta(hours=8)
 
 
 def get_e_waybill_info(doc):

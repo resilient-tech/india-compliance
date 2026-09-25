@@ -133,7 +133,7 @@ function setup_e_waybill_actions(doctype) {
                 return;
             }
 
-            if (frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) && is_e_waybill_valid(frm)) {
+            if (frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) && is_e_waybill_updatable(frm)) {
                 frm.add_custom_button(
                     __("Update Vehicle Info"),
                     () => show_update_vehicle_info_dialog(frm),
@@ -149,7 +149,7 @@ function setup_e_waybill_actions(doctype) {
 
             if (
                 frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) &&
-                !has_extend_validity_expired(frm)
+                is_e_waybill_extendable(frm)
             ) {
                 frm.add_custom_button(
                     __("Extend Validity"),
@@ -1000,11 +1000,10 @@ function show_update_transporter_dialog(frm) {
 }
 
 async function show_extend_validity_dialog(frm) {
-    const { valid_upto, extension_scheduled } = frm.doc.__onload?.e_waybill_info || {};
+    const { valid_upto, extension_scheduled, extendable_now } = frm.doc.__onload?.e_waybill_info || {};
     if (!valid_upto) return;
 
     const scheduled_time = get_hours(valid_upto, 1, "DD-MM-YYYY HH:mm A");
-    const can_extend_now = can_extend_e_waybill_now(valid_upto);
     const destination_address = await get_source_destination_address(frm, "destination_address");
     const is_in_movement = "eval: doc.consignment_status === 'In Movement'";
     const is_in_transit = "eval: doc.consignment_status === 'In Transit'";
@@ -1174,10 +1173,10 @@ async function show_extend_validity_dialog(frm) {
                 },
                 callback: () => frm.refresh(),
             });
-            if (can_extend_now) d.hide();
+            if (extendable_now) d.hide();
         },
     });
-    if (!can_extend_now) {
+    if (!extendable_now) {
         d.get_primary_btn().addClass("disabled");
         d.set_secondary_action(() => schedule_e_waybill_extension(frm, d, scheduled_time));
         d.set_secondary_action_label(__("Schedule"));
@@ -1224,13 +1223,12 @@ function prefill_data_from_e_waybill_log(frm, dialog) {
     });
 }
 
-function is_e_waybill_valid(frm) {
-    const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
-    return (
-        e_waybill_info &&
-        (!e_waybill_info.valid_upto ||
-            frappe.datetime.convert_to_user_tz(e_waybill_info.valid_upto, false).diff() > 0)
-    );
+function is_e_waybill_updatable(frm) {
+    return Boolean(frm.doc.__onload?.e_waybill_info?.updatable);
+}
+
+function is_e_waybill_extendable(frm) {
+    return Boolean(frm.doc.__onload?.e_waybill_info?.extendable);
 }
 
 function is_e_waybill_applicable(frm) {
@@ -1255,24 +1253,6 @@ function is_e_waybill_cancellable(frm) {
 
 function get_hours(date, hours, date_time_format = frappe.defaultDatetimeFormat) {
     return moment(date).add(hours, "hours").format(date_time_format);
-}
-
-function can_extend_e_waybill_now(valid_upto) {
-    const extend_after = get_hours(valid_upto, -8);
-    const extend_before = get_hours(valid_upto, 8);
-    const now = frappe.datetime.now_datetime();
-
-    if (extend_after < now && now < extend_before) return true;
-    return false;
-}
-
-function has_extend_validity_expired(frm) {
-    const valid_upto = frm.doc.__onload?.e_waybill_info?.valid_upto;
-    const extend_before = get_hours(valid_upto, 8);
-    const now = frappe.datetime.now_datetime();
-
-    if (now > extend_before) return true;
-    return false;
 }
 
 function can_cancel_e_waybill(frm) {

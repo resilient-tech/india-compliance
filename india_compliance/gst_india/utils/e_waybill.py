@@ -7,7 +7,6 @@ from frappe import _
 from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.utils import (
     add_days,
-    add_to_date,
     cint,
     escape_html,
     format_date,
@@ -63,12 +62,14 @@ from india_compliance.gst_india.utils import (
     run_after_response_or_enqueue,
     run_or_report_failure,
     send_updated_doc,
-    update_onload,
 )
 from india_compliance.gst_india.utils.e_waybill_actions import (
     is_e_waybill_auto_cancellable,
     is_e_waybill_cancellable,
+    is_e_waybill_extendable_now,
     is_e_waybill_info_enabled,
+    is_e_waybill_updatable,
+    set_e_waybill_onload,
 )
 from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
@@ -370,10 +371,20 @@ def _cancel_e_waybill(doc, values):
 
 
 def log_and_process_e_waybill_cancellation(doc, values, result):
+    e_waybill_number = doc.ewaybill
+
+    data = {"ewaybill": ""}
+
+    if doc.meta.has_field("e_waybill_status"):
+        data["e_waybill_status"] = result.get("e_waybill_status") or "Cancelled"
+
+    doc.db_set(data)
+    doc.save_version()
+
     log_and_process_e_waybill(
         doc,
         {
-            "name": doc.ewaybill,
+            "name": e_waybill_number,
             "is_cancelled": 1,
             "cancel_reason_code": CANCEL_REASON_CODES[values.reason],
             "cancel_remark": values.remark if values.remark else values.reason,
@@ -387,14 +398,6 @@ def log_and_process_e_waybill_cancellation(doc, values, result):
             ),
         },
     )
-
-    data = {"ewaybill": ""}
-
-    if doc.meta.has_field("e_waybill_status"):
-        data["e_waybill_status"] = result.get("e_waybill_status") or "Cancelled"
-
-    doc.db_set(data)
-    doc.save_version()
 
 
 # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
@@ -952,11 +955,12 @@ def get_valid_and_invalid_e_waybill_log(
 
 def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
     log = log_e_waybill(log_data, comment)
-    update_onload(doc, "e_waybill_info", log_data)
 
-    # the vehicle update logs only part of the info, so check the merged one
-    e_waybill_info = doc.get_onload().e_waybill_info
-    e_waybill_info["cancellable"] = not log.is_cancelled and is_e_waybill_cancellable(doc, e_waybill_info)
+    # rebuilt from the saved log, as the document goes back to the form
+    for key in ("e_waybill_info", "e_waybill_applicability"):
+        doc.get_onload().pop(key, None)
+
+    set_e_waybill_onload(doc)
 
     if log.is_cancelled or fetch:
         # the slow bits: after the response
@@ -1347,20 +1351,12 @@ class EWaybillData(GSTTransactionData):
 
     def check_e_waybill_validity(self):
         # this works because we do run_onload in load_doc above
-        valid_upto = self.doc.get_onload().get("e_waybill_info", {}).get("valid_upto")
-
-        if valid_upto and get_datetime(valid_upto) < get_datetime():
+        if not is_e_waybill_updatable(self.doc.get_onload().get("e_waybill_info", {})):
             frappe.throw(_("e-Waybill cannot be modified after its validity is over"))
 
     def validate_if_e_waybill_can_be_extend(self):
         # this works because we do run_onload in load_doc above
-        valid_upto = get_datetime(self.doc.get_onload().get("e_waybill_info", {}).get("valid_upto"))
-
-        now = get_datetime()
-        extend_after = add_to_date(valid_upto, hours=-8, as_datetime=True)
-        extend_before = add_to_date(valid_upto, hours=8, as_datetime=True)
-
-        if now < extend_after or now > extend_before:
+        if not is_e_waybill_extendable_now(self.doc.get_onload().get("e_waybill_info", {})):
             frappe.throw(
                 _(
                     "e-Waybill can be extended between 8 hours before expiry time and 8 hours after expiry time."

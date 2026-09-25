@@ -15,6 +15,7 @@ from india_compliance.gst_india.overrides.test_subcontracting_transaction import
 )
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
+    log_and_process_e_waybill_cancellation,
     log_and_process_e_waybill_generation,
     mark_e_waybill_as_generated,
 )
@@ -125,14 +126,14 @@ class TestEWaybillApplicability(IntegrationTestCase):
             EWaybillData(pi).validate_applicability,
         )
 
-    def mark_generated(self, doc, ewaybill, generated_on):
+    def mark_generated(self, doc, ewaybill, generated_on, valid_upto=None):
         mark_e_waybill_as_generated(
             doc.doctype,
             doc.name,
             values={
                 "ewaybill": ewaybill,
                 "e_waybill_date": str(generated_on),
-                "valid_upto": str(add_to_date(generated_on, days=1)),
+                "valid_upto": str(valid_upto or add_to_date(generated_on, days=1)),
             },
         )
         doc.reload()
@@ -176,6 +177,38 @@ class TestEWaybillApplicability(IntegrationTestCase):
         )
 
         self.assertTrue(pi.get_onload().e_waybill_info.get("cancellable"))
+
+    def test_generatable_right_after_cancellation(self):
+        pi = create_purchase_invoice(bill_no="EWB-APPL-9")
+        self.mark_generated(pi, "351002721245", now_datetime())
+
+        log_and_process_e_waybill_cancellation(
+            pi,
+            frappe._dict(reason="Data Entry Mistake"),
+            frappe._dict(cancelDate=str(now_datetime()), e_waybill_status="Manually Cancelled"),
+        )
+
+        self.assertIsNone(pi.get_onload().get("e_waybill_info"))
+        self.assertTrue(pi.get_onload().e_waybill_applicability.generatable)
+
+    def test_e_waybill_validity_window(self):
+        for i, (hours, updatable, extendable, extendable_now) in enumerate(
+            (
+                (10, True, True, False),
+                (-1, False, True, True),
+                (-9, False, False, False),
+            )
+        ):
+            pi = create_purchase_invoice(bill_no=f"EWB-APPL-1{i}")
+            generated_on = add_to_date(now_datetime(), days=-1)
+            self.mark_generated(pi, f"35100272125{i}", generated_on, add_to_date(now_datetime(), hours=hours))
+
+            e_waybill_info = pi.get_onload().e_waybill_info
+            self.assertEqual(
+                (e_waybill_info.updatable, e_waybill_info.extendable, e_waybill_info.extendable_now),
+                (updatable, extendable, extendable_now),
+                f"valid upto {hours} hours from now",
+            )
 
     def test_purchase_receipt(self):
         self.assertApplicability(
