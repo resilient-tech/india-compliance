@@ -223,7 +223,7 @@ class GovReturnExporter:
             raw = get_raw_return_data(gstin, self.return_type, period)
             if isinstance(raw, dict):
                 self.raw_by_period[period] = raw
-                merge_dicts(self.raw, raw, add_numbers=True)
+                merge_dicts(self.raw, raw)
 
     def build(self):
         """(file_name, bytes); None when no data so grouped runs skip, not fail."""

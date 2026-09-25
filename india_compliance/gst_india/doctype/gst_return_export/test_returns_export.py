@@ -3,7 +3,6 @@
 
 """Adapters (summary math, storage) and the tool's endpoints."""
 
-from functools import partial
 from typing import ClassVar
 from unittest.mock import patch
 
@@ -34,36 +33,33 @@ GSTIN = "01AABCE2207R1Z5"
 PERIOD_2B = "032020"
 
 
-merge_months = partial(merge_dicts, add_numbers=True)
-
-
 class TestMergeMonths(IntegrationTestCase):
     def test_lists_concatenate(self):
-        self.assertEqual(merge_months({"b2b": [1]}, {"b2b": [2, 3]}), {"b2b": [1, 2, 3]})
+        self.assertEqual(merge_dicts({"b2b": [1]}, {"b2b": [2, 3]}), {"b2b": [1, 2, 3]})
 
     def test_numbers_add(self):
-        self.assertEqual(merge_months({"igst": 5}, {"igst": 3}), {"igst": 8})
+        self.assertEqual(merge_dicts({"igst": 5}, {"igst": 3}), {"igst": 8})
 
     def test_dicts_recurse(self):
         self.assertEqual(
-            merge_months({"a": {"x": [1], "n": 2}}, {"a": {"x": [2], "n": 3, "y": 9}}),
+            merge_dicts({"a": {"x": [1], "n": 2}}, {"a": {"x": [2], "n": 3, "y": 9}}),
             {"a": {"x": [1, 2], "n": 5, "y": 9}},
         )
 
     def test_itcsumm_numbers_sum_deeply(self):
         self.assertEqual(
-            merge_months({"itcsumm": {"itcavl": {"igst": 10}}}, {"itcsumm": {"itcavl": {"igst": 5}}}),
+            merge_dicts({"itcsumm": {"itcavl": {"igst": 10}}}, {"itcsumm": {"itcavl": {"igst": 5}}}),
             {"itcsumm": {"itcavl": {"igst": 15}}},
         )
 
     def test_new_key_added_and_scalar_newer_wins(self):
-        self.assertEqual(merge_months({"a": "x"}, {"a": "y", "b": 1}), {"a": "y", "b": 1})
+        self.assertEqual(merge_dicts({"a": "x"}, {"a": "y", "b": 1}), {"a": "y", "b": 1})
 
     def test_empty_existing_returns_new(self):
-        self.assertEqual(merge_months({}, {"b2b": [1]}), {"b2b": [1]})
+        self.assertEqual(merge_dicts({}, {"b2b": [1]}), {"b2b": [1]})
 
     def test_null_does_not_clobber_accumulated_data(self):
-        self.assertEqual(merge_months({"b2b": [1, 2]}, {"b2b": None}), {"b2b": [1, 2]})
+        self.assertEqual(merge_dicts({"b2b": [1, 2]}, {"b2b": None}), {"b2b": [1, 2]})
 
 
 class TestSummaryHelpers(IntegrationTestCase):

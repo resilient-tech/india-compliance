@@ -1106,10 +1106,9 @@ def get_timespan_date_range(timespan: str, company: str | None = None) -> tuple 
     return
 
 
-def merge_dicts(d1: dict, d2: dict, add_numbers: bool = False) -> dict:
+def merge_dicts(d1: dict, d2: dict) -> dict:
     """
-    Fold d2 into d1: dicts recurse (d1 gets its own), lists join (shared), anything else d2 wins.
-    add_numbers=True: numbers add instead, a null never erases.
+    Fold d2 into d1: dicts recurse, lists join, numbers add, a null never erases, anything else d2 wins.
 
     Sample Input:
     -------------
@@ -1117,13 +1116,15 @@ def merge_dicts(d1: dict, d2: dict, add_numbers: bool = False) -> dict:
         'key1': 'value1',
         'key2': {'nested': 'value'},
         'key3': ['value1'],
-        'key4': 'value4'
+        'key4': 'value4',
+        'igst': 5
     }
     d2 = {
         'key1': 'value2',
         'key2': {'key': 'value3'},
         'key3': ['value2'],
-        'key5': 'value5'
+        'key5': 'value5',
+        'igst': 3
     }
 
     Sample Output:
@@ -1133,31 +1134,22 @@ def merge_dicts(d1: dict, d2: dict, add_numbers: bool = False) -> dict:
         'key2': {'nested': 'value', 'key': 'value3'},
         'key3': ['value1', 'value2'],
         'key4': 'value4',
-        'key5': 'value5'
-    }
-
-    Sample Output, add_numbers=True:
-    --------------------------------
-    {
-        'key1': 'value1 + value2',
-        'key2': {'nested': 'value', 'key': 'value3'},
-        'key3': ['value1', 'value2'],
-        'key4': 'value4',
-        'key5': 'value5'
+        'key5': 'value5',
+        'igst': 8
     }
     """
     for key in set(d1.keys()) | set(d2.keys()):
         if key in d2 and key in d1:
             if isinstance(d1[key], dict) and isinstance(d2[key], dict):
-                merge_dicts(d1[key], d2[key], add_numbers)
+                merge_dicts(d1[key], d2[key])
 
             elif isinstance(d1[key], list) and isinstance(d2[key], list):
                 d1[key] = d1[key] + d2[key]
 
-            elif add_numbers and isinstance(d1[key], int | float) and isinstance(d2[key], int | float):
+            elif isinstance(d1[key], int | float) and isinstance(d2[key], int | float):
                 d1[key] = d1[key] + d2[key]
 
-            elif add_numbers and d2[key] is None:
+            elif d2[key] is None:
                 continue
 
             else:
