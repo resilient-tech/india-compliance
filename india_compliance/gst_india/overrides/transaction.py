@@ -15,6 +15,7 @@ from frappe.model.utils import get_fetch_values
 from frappe.utils import cint, flt, format_date, get_link_to_form
 
 from india_compliance.gst_india.constants import (
+    CUSTOM_ADDRESS_FIELDS_DOCTYPES,
     GST_RCM_TAX_TYPES,
     GST_REFUND_TAX_TYPES,
     GST_TAX_TYPES,
@@ -39,13 +40,16 @@ from india_compliance.gst_india.utils import (
     get_gst_account_gst_tax_type_map,
     get_gst_accounts_by_type,
     get_hsn_settings,
+    get_items,
     get_place_of_supply,
     get_place_of_supply_options,
     has_changed,
     has_gst_taxes,
     is_import_transaction,
+    is_inward_transaction,
     is_oidar_gstin,
     is_overseas_doc,
+    is_same_gstin_allowed,
     join_list_with_custom_separators,
     validate_gst_category,
     validate_gstin,
@@ -318,8 +322,17 @@ def set_gst_tax_type(doc, method=None):
 
 
 class GSTAccounts:
-    def validate(self, doc, is_sales_transaction=False):
+    def __init__(self, doc):
         self.doc = doc
+
+    @property
+    def _company_address_field(self):
+        if self.doc.doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
+            return "bill_to_address" if is_inward_transaction(self.doc) else "bill_from_address"
+
+        return "company_address" if self.is_sales_transaction else "billing_address"
+
+    def validate(self, is_sales_transaction=False):
         self.is_sales_transaction = is_sales_transaction
 
         if not self.doc.taxes:
@@ -438,15 +451,8 @@ class GSTAccounts:
         - Intra-State supplies should not have IGST account
         - If Intra-State, ensure both CGST and SGST accounts are used
         """
-        if self.is_sales_transaction:
-            company_address_field = "company_address"
-        elif self.doc.doctype == "Stock Entry":
-            company_address_field = "bill_to_address" if self.doc.is_return else "bill_from_address"
-        else:
-            company_address_field = "billing_address"
-
         company_gst_category = frappe.db.get_value(
-            "Address", self.doc.get(company_address_field), "gst_category"
+            "Address", self.doc.get(self._company_address_field), "gst_category"
         )
 
         if company_gst_category == "SEZ":
@@ -524,7 +530,7 @@ class GSTAccounts:
             )
 
     def validate_missing_accounts_in_item_tax_template(self):
-        for row in self.doc.get("items") or []:
+        for row in get_items(self.doc):
             if not row.item_tax_template:
                 continue
 
@@ -658,8 +664,10 @@ def validate_place_of_supply(doc):
 
 
 def is_inter_state_supply(doc):
-    if doc.doctype == "Stock Entry":
-        party_gst_category = doc.bill_from_gst_category if doc.is_return else doc.bill_to_gst_category
+    if doc.doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
+        party_gst_category = (
+            doc.bill_from_gst_category if is_inward_transaction(doc) else doc.bill_to_gst_category
+        )
 
     else:
         party_gst_category = doc.gst_category
@@ -682,7 +690,7 @@ def get_source_state_code(doc):
     if doc.doctype in SALES_DOCTYPES or doc.doctype == "Payment Entry":
         return doc.company_gstin[:2]
 
-    if doc.doctype == "Stock Entry":
+    if doc.doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
         if doc.bill_from_gst_category == "Unregistered" and doc.bill_from_address:
             return frappe.db.get_value(
                 "Address",
@@ -921,7 +929,9 @@ def get_party_details_for_subcontracting(
 
     if doctype == "Stock Entry":
         party_address_field = (
-            "bill_from_address" if party_details.get("is_inward_stock_entry") else "bill_to_address"
+            "bill_from_address"
+            if is_inward_transaction(frappe._dict(party_details, doctype=doctype))
+            else "bill_to_address"
         )
     else:
         party_address_field = "supplier_address"
@@ -962,9 +972,7 @@ def get_gst_details(
     is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
     gst_details = frappe._dict()
 
-    allow_same_gstin = False
-    if party_details.get("is_outward_stock_entry"):
-        allow_same_gstin = True
+    allow_same_gstin = is_same_gstin_allowed(frappe._dict(party_details, doctype=doctype))
 
     address_fields = _get_address_fields(doctype, party_details)
     company_gstin_field = address_fields.get("company_gstin_field")
@@ -1079,8 +1087,8 @@ def _get_address_fields(doctype, party_details=None):
             gst_category_field="gst_category",
         )
 
-    elif doctype == "Stock Entry":
-        if party_details and party_details.get("is_inward_stock_entry"):
+    elif doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
+        if party_details and is_inward_transaction(frappe._dict(party_details, doctype=doctype)):
             address_fields.update(
                 company_gstin_field="bill_to_gstin",
                 party_gstin_field="bill_from_gstin",
@@ -1959,7 +1967,7 @@ def validate_transaction(doc, method=None):
 
     validate_gst_category(doc.gst_category, gstin)
 
-    GSTAccounts().validate(doc, is_sales_transaction)
+    GSTAccounts(doc).validate(is_sales_transaction)
     if doc.get("is_reverse_charge"):
         validate_reverse_charge_transaction(doc)
     else:
@@ -2103,7 +2111,7 @@ def before_update_after_submit(doc, method=None):
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
 
-    GSTAccounts().validate(doc, is_sales_transaction)
+    GSTAccounts(doc).validate(is_sales_transaction)
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
     update_item_gst_details(doc)
@@ -2177,7 +2185,7 @@ def sync_address_dependent_fields_after_submit(doc, method=None):
         validate_gstin_status(gstin, doc)
 
     validate_gst_category(doc.gst_category, gstin)
-    GSTAccounts().validate(doc, is_sales_transaction)
+    GSTAccounts(doc).validate(is_sales_transaction)
 
 
 def sync_gst_details_from_address(doc, changed_address_fields):

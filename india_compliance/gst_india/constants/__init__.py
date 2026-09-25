@@ -30,6 +30,12 @@ TAX_TYPES = (*GST_TAX_TYPES, *GST_RCM_TAX_TYPES, *GST_REFUND_TAX_TYPES)
 
 GST_PARTY_TYPES = ("Customer", "Supplier", "Company")
 
+# Stock Entry purposes where goods move between subcontracting parties
+SUBCONTRACTING_PURPOSES = ("Send to Subcontractor",)
+
+# Stock Entry purposes eligible for e-Waybill
+E_WAYBILL_STOCK_ENTRY_PURPOSES = ("Material Transfer", "Material Issue", *SUBCONTRACTING_PURPOSES)
+
 # Transporter fields that stay editable after submit until an e-Waybill is generated.
 TRANSPORTER_FIELDS = (
     "transporter",
@@ -1480,6 +1486,8 @@ SUBCONTRACTING_DOCTYPES = (
     "Subcontracting Receipt",
     "Stock Entry",
 )
+
+CUSTOM_ADDRESS_FIELDS_DOCTYPES = ("Stock Entry",)
 
 BUG_REPORT_URL = "https://github.com/resilient-tech/india-compliance/issues/new"
 
