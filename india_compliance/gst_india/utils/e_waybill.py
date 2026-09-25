@@ -1201,6 +1201,11 @@ class EWaybillData(GSTTransactionData):
         self.validate_settings()
         self.validate_doctype_for_e_waybill()
 
+    @property
+    def _is_outward_supply(self):
+        # buying documents bring goods in; a return sends them the other way
+        return (self.doc.doctype in BUYING_DOCTYPES) == is_inward_transaction(self.doc)
+
     def get_data(self, *, with_irn=False):
         self.validate_transaction()
 
@@ -1473,79 +1478,65 @@ class EWaybillData(GSTTransactionData):
         default_supply_types = {
             # Key: (doctype, is_return)
             ("Sales Invoice", 0): {
-                "supply_type": "O",
                 "sub_supply_type": 1,  # Supply
                 "document_type": "INV",
             },
             ("Sales Invoice", 1): {
-                "supply_type": "I",
                 "sub_supply_type": 7,  # Sales Return
                 "document_type": "CHL",
             },
             ("Delivery Note", 0): {
-                "supply_type": "O",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "sub_supply_desc": doc.get("_sub_supply_desc", ""),
                 "document_type": "CHL",
             },
             ("Delivery Note", 1): {
-                "supply_type": "I",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "sub_supply_desc": doc.get("_sub_supply_desc", ""),
                 "document_type": "CHL",
             },
             ("Purchase Invoice", 0): {
-                "supply_type": "I",
                 "sub_supply_type": 1,  # Supply
                 "document_type": "INV",
             },
             ("Purchase Invoice", 1): {
-                "supply_type": "O",
                 "sub_supply_type": 8,  # Others
                 "document_type": "OTH",
                 "sub_supply_desc": "Purchase Return",
             },
             ("Purchase Receipt", 0): {
-                "supply_type": "I",
                 "sub_supply_type": 1,  # Supply
                 "document_type": "INV",
             },
             ("Purchase Receipt", 1): {
-                "supply_type": "O",
                 "sub_supply_type": 8,  # Others
                 "document_type": "CHL",
                 "sub_supply_desc": "Purchase Return",
             },
             ("Stock Entry", 0): {
-                "supply_type": "O",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "sub_supply_desc": doc.get("_sub_supply_desc", ""),
                 "document_type": "CHL",
             },
             ("Stock Entry", 1): {
-                "supply_type": "I",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "document_type": "CHL",
             },
             ("Subcontracting Receipt", 0): {
-                "supply_type": "I",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "document_type": "CHL",
             },
             ("Subcontracting Receipt", 1): {
-                "supply_type": "O",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "document_type": "CHL",
             },
             ("Asset Movement", 0): {
-                "supply_type": "O",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "sub_supply_desc": doc.get("_sub_supply_desc", ""),
                 "document_type": "CHL",
             },
             # purpose == "Receipt"
             ("Asset Movement", 1): {
-                "supply_type": "I",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "sub_supply_desc": doc.get("_sub_supply_desc", ""),
                 "document_type": "CHL",
@@ -1553,7 +1544,8 @@ class EWaybillData(GSTTransactionData):
         }
 
         self.transaction_details.update(
-            default_supply_types.get((doc.doctype, int(is_inward_transaction(doc))), {})
+            supply_type="O" if self._is_outward_supply else "I",
+            **default_supply_types.get((doc.doctype, int(is_inward_transaction(doc))), {}),
         )
 
         if is_foreign_doc(self.doc):
@@ -1616,14 +1608,8 @@ class EWaybillData(GSTTransactionData):
 
         self.transaction_details.transaction_type = transaction_type
 
-        to_party = self.transaction_details.party_name
-        from_party = self.transaction_details.company_name
-
-        if self.doc.doctype in BUYING_DOCTYPES:
-            to_party, from_party = from_party, to_party
-
-        if is_inward_transaction(self.doc):
-            to_party, from_party = from_party, to_party
+        company, party = self.transaction_details.company_name, self.transaction_details.party_name
+        from_party, to_party = (company, party) if self._is_outward_supply else (party, company)
 
         self.bill_to.legal_name = to_party or self.bill_to.address_title
         self.bill_from.legal_name = from_party or self.bill_from.address_title
@@ -1679,7 +1665,7 @@ class EWaybillData(GSTTransactionData):
 
             # to ensure company_gstin is inline with company address gstin
             # outward: the company ships, so its GSTIN is Bill From; inward: it receives, so Bill To
-            if self.transaction_details.supply_type == "O":
+            if self._is_outward_supply:
                 sandbox_gstin = (REGISTERED_GSTIN, OTHER_GSTIN)
             else:
                 sandbox_gstin = (OTHER_GSTIN, REGISTERED_GSTIN)

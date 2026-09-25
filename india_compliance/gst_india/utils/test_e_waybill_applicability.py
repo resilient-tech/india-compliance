@@ -81,6 +81,15 @@ class TestEWaybillApplicability(IntegrationTestCase):
         # opening entries skip GST validation, so they never reach the e-Waybill status
         self.assertFalse(si.e_waybill_status)
 
+    def test_onload_survives_a_draft_without_company_gstin(self):
+        si = create_sales_invoice(rate=100000, do_not_submit=True)
+        si.db_set("company_gstin", None)
+
+        si = frappe.get_doc("Sales Invoice", si.name)
+        run_onload(si)
+
+        self.assertFalse(si.get_onload().e_waybill_applicability.required)
+
     def test_purchase_invoice(self):
         self.assertApplicability(
             create_purchase_invoice(bill_no="EWB-APPL-1"), applicable=True, generatable=True

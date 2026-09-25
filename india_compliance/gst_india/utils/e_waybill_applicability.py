@@ -63,6 +63,10 @@ class EWaybillApplicability:
         if consignment_value is None or self.doc.get("ewaybill") or not self.is_applicable():
             return False
 
+        # the threshold depends on the company's state
+        if not self.doc.get(self.fields.company_gstin_field):
+            return False
+
         threshold = _get_e_waybill_threshold(self.doc, self.settings)
         return threshold is not None and abs(consignment_value) >= threshold
 
