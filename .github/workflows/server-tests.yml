@@ -102,6 +102,8 @@ jobs:
 
     strategy:
       fail-fast: false
+      matrix:
+        container: [1, 2]
 
     name: Python Unit Tests
 
@@ -176,7 +178,10 @@ jobs:
           ERPNEXT_BRANCH: ${{ inputs.erpnext_branch }}
 
       - name: Run Tests
-        run: cd ~/frappe-bench/ && bench --site test_site run-parallel-tests --app ${{ env.APP_NAME }} --with-coverage
+        run: |
+          cd ~/frappe-bench/
+          bench --site test_site run-parallel-tests --app ${{ env.APP_NAME }} --with-coverage \
+            --total-builds ${{ strategy.job-total }} --build-number ${{ matrix.container }}
         env:
           TYPE: server
 
@@ -187,8 +192,18 @@ jobs:
       - name: Upload coverage data
         uses: actions/upload-artifact@v7
         with:
-          name: coverage
+          name: coverage-${{ matrix.container }}
           path: /home/runner/frappe-bench/sites/coverage.xml
+
+  tests-result:
+    name: Python Unit Tests
+    needs: tests
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test shard results
+        if: ${{ needs.tests.result == 'failure' || needs.tests.result == 'cancelled' }}
+        run: exit 1
 
   coverage:
     name: Coverage Wrap Up

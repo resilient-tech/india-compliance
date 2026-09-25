@@ -60,6 +60,8 @@ jobs:
 
     strategy:
       fail-fast: false
+      matrix:
+        container: [1, 2]
 
     name: Python Unit Tests (Postgres)
 
@@ -141,7 +143,10 @@ jobs:
           ERPNEXT_BRANCH: ${{ inputs.erpnext_branch }}
 
       - name: Run Tests
-        run: cd ~/frappe-bench/ && bench --site test_site run-parallel-tests --app ${{ env.APP_NAME }}
+        run: |
+          cd ~/frappe-bench/
+          bench --site test_site run-parallel-tests --app ${{ env.APP_NAME }} \
+            --total-builds ${{ strategy.job-total }} --build-number ${{ matrix.container }}
         env:
           DB: postgres
           TYPE: server
