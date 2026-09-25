@@ -14,7 +14,7 @@ from erpnext.stock.get_item_details import purchase_doctypes
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.database.utils import commit_after_response
-from frappe.desk.form.load import run_onload
+from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.query_builder.functions import Length
 from frappe.utils import (
     add_months,
@@ -43,6 +43,8 @@ from india_compliance.gst_india.constants import (
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
+    ISD_GST_CATEGORY,
+    OIDAR,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
@@ -176,6 +178,7 @@ def send_updated_doc(doc):
 
     doc.apply_fieldlevel_read_permissions()
     frappe.response.docs.append(doc)
+    get_docinfo(doc)
 
 
 def publish_doc_update(doc):
@@ -185,9 +188,10 @@ def publish_doc_update(doc):
             run_onload(doc)  # the form needs onload info too
 
         doc.apply_fieldlevel_read_permissions()
+        get_docinfo(doc)
         frappe.publish_realtime(
             "ic_doc_sync",
-            doc.as_dict(),
+            {"docs": doc.as_dict(), "docinfo": frappe.response["docinfo"]},
             user=frappe.session.user,
             after_commit=True,
         )
@@ -221,7 +225,7 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
     }
 
     if exclude_isd:
-        filters.update({"gst_category": ["!=", "Input Service Distributor"]})
+        filters.update({"gst_category": ["!=", ISD_GST_CATEGORY]})
 
     gstin_list = frappe.get_all(
         "Address",
@@ -230,9 +234,15 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
         distinct=True,
     )
 
-    default_gstin = frappe.db.get_value(party_type, party, "gstin")
-    if default_gstin and default_gstin not in gstin_list:
-        gstin_list.insert(0, default_gstin)
+    default_gstin, default_gst_category = frappe.db.get_value(party_type, party, ("gstin", "gst_category"))
+    if not default_gstin or default_gstin in gstin_list:
+        return gstin_list
+
+    # don't add default gstin to the list if it is ISD and exclude_isd is True
+    if exclude_isd and default_gst_category == ISD_GST_CATEGORY:
+        return gstin_list
+
+    gstin_list.insert(0, default_gstin)
 
     return gstin_list
 
@@ -264,14 +274,14 @@ def get_party_for_gstin(gstin: str, party_type: str = "Supplier"):
         return party[0][0]
 
 
-def validate_company_access(company, doctype="GST Inward Supply"):
+def validate_company_access(company, doctype="GST Inward Supply", perm="read"):
     """Throw unless the user may read doctype data for company."""
     if not company:
         return
 
     reference = frappe.new_doc(doctype)
     reference.company = company
-    if not frappe.has_permission(doctype, "read", doc=reference):
+    if not frappe.has_permission(doctype, perm, doc=reference):
         frappe.throw(
             _("You are not permitted to access data for Company {0}.").format(company),
             frappe.PermissionError,
@@ -420,6 +430,14 @@ def is_valid_pan(pan):
     return PAN_NUMBER.match(pan)
 
 
+def is_oidar_gstin(gstin):
+    return OIDAR.match(gstin)
+
+
+def get_pan_from_gstin(gstin):
+    return pan if is_valid_pan(pan := gstin[2:12]) else ""
+
+
 def validate_pincode(address):
     """
     Validate Pincode with following checks:
@@ -498,6 +516,9 @@ def guess_gst_category(gstin: str | None, country: str | None, gst_category: str
 
     if GSTIN_FORMATS["UIN Holders"].match(gstin):
         return "UIN Holders"
+
+    if is_oidar_gstin(gstin):
+        return "Overseas"
 
     if GSTIN_FORMATS["Overseas"].match(gstin):
         return "Overseas"
@@ -1216,6 +1237,7 @@ def handle_server_errors(settings, doc, document_type, error):
         error_message += " " + _("Please try again after some time.")
 
     doc.db_set({document_status_field: document_status})
+    doc.save_version()
 
     notify_user(error_message, title=error_message_title.get(type(error)), indicator="yellow", doc=doc)
 
@@ -1552,6 +1574,7 @@ def _rollback_and_set_status(doc, fieldname, status):
     # if response is pending, other viewers refetch on doc_update;
     # else the pushed doc (publish_doc_update) notifies them
     doc.db_set(fieldname, status, notify=is_response_pending())
+    doc.save_version()
     commit()
 
 
