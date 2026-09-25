@@ -10,7 +10,7 @@ frappe.ui.form.on(DOCTYPE, {
         });
     },
     refresh(frm) {
-        if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_from_dn) return;
+        if (!india_compliance.is_e_waybill_enabled_for(DOCTYPE)) return;
         show_sandbox_mode_indicator();
     },
 

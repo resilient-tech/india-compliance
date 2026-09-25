@@ -80,6 +80,22 @@ Object.assign(india_compliance, {
     // purposes that bring goods to the company without being a return
     INWARD_PURPOSES: { "Asset Movement": ["Receipt"] },
 
+    // GST Settings switch each doctype needs on top of enable_e_waybill
+    E_WAYBILL_SWITCHES: {
+        "Sales Invoice": "enable_e_waybill",
+        "Purchase Invoice": "enable_e_waybill_from_pi",
+        "Purchase Receipt": "enable_e_waybill_from_pr",
+        "Delivery Note": "enable_e_waybill_from_dn",
+        "Stock Entry": "enable_e_waybill_for_sc",
+        "Subcontracting Order": "enable_e_waybill_for_sc",
+        "Subcontracting Receipt": "enable_e_waybill_for_sc",
+        "Asset Movement": "enable_e_waybill_from_asset_movement",
+    },
+
+    is_e_waybill_enabled_for(doctype) {
+        return Boolean(gst_settings.enable_e_waybill && gst_settings[this.E_WAYBILL_SWITCHES[doctype]]);
+    },
+
     is_subcontracting_inward_entry(doc) {
         return this.SUBCONTRACTING_INWARD_PURPOSES.includes(doc.purpose);
     },
@@ -694,8 +710,7 @@ Object.assign(india_compliance, {
             !(
                 india_compliance.is_indian_registered_company(doc.company) &&
                 gst_settings.enable_api &&
-                gst_settings.enable_e_waybill &&
-                gst_settings.enable_e_waybill_for_sc
+                india_compliance.is_e_waybill_enabled_for(doc.doctype)
             )
         ) {
             return false;
@@ -720,8 +735,7 @@ Object.assign(india_compliance, {
         return !!(
             india_compliance.is_indian_registered_company(doc.company) &&
             gst_settings.enable_api &&
-            gst_settings.enable_e_waybill &&
-            gst_settings.enable_e_waybill_from_asset_movement
+            india_compliance.is_e_waybill_enabled_for(doc.doctype)
         );
     },
 

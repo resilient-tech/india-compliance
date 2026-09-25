@@ -60,7 +60,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     refresh() {
-        if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_for_sc) return;
+        if (!india_compliance.is_e_waybill_enabled_for(DOCTYPE)) return;
 
         show_sandbox_mode_indicator();
     },

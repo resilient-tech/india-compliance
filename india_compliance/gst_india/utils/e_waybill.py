@@ -1684,40 +1684,21 @@ class EWaybillData(GSTTransactionData):
             )
 
             # to ensure company_gstin is inline with company address gstin
-            sandbox_gstin = {
-                # (doctype, is_return): (bill_from, bill_to)
-                ("Sales Invoice", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
-                ("Sales Invoice", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
-                ("Purchase Invoice", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
-                ("Purchase Invoice", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
-                ("Purchase Receipt", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
-                ("Purchase Receipt", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
-                ("Delivery Note", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
-                ("Delivery Note", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
-                ("Stock Entry", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
-                ("Stock Entry", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
-                ("Subcontracting Receipt", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
-                ("Subcontracting Receipt", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
-                ("Asset Movement", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
-                ("Asset Movement", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
-            }
+            # outward: the company ships, so its GSTIN is Bill From; inward: it receives, so Bill To
+            if self.transaction_details.supply_type == "O":
+                sandbox_gstin = (REGISTERED_GSTIN, OTHER_GSTIN)
+            else:
+                sandbox_gstin = (OTHER_GSTIN, REGISTERED_GSTIN)
 
+            # the company moving its own goods carries its GSTIN on both sides
             if self.bill_from.gstin == self.bill_to.gstin:
-                sandbox_gstin.update(
-                    {
-                        ("Delivery Note", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
-                        ("Delivery Note", 1): (REGISTERED_GSTIN, REGISTERED_GSTIN),
-                        ("Stock Entry", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
-                        ("Asset Movement", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
-                        ("Asset Movement", 1): (REGISTERED_GSTIN, REGISTERED_GSTIN),
-                    }
-                )
+                sandbox_gstin = (REGISTERED_GSTIN, REGISTERED_GSTIN)
 
             def _get_sandbox_gstin(address, key):
                 if address.gstin == "URP":
                     return address.gstin
 
-                gstin = sandbox_gstin.get((self.doc.doctype, int(is_inward_transaction(self.doc))))[key]
+                gstin = sandbox_gstin[key]
 
                 # SEZ party (non-company side) needs a different GSTIN
                 if address.gst_category == "SEZ" and gstin == OTHER_GSTIN:

@@ -19,7 +19,7 @@ from india_compliance.gst_india.utils import (
 
 class EWaybillApplicability:
     # GST Settings switch needed on top of enable_e_waybill
-    SWITCH = None
+    SWITCH = "enable_e_waybill"
     SAME_GSTIN_ALLOWED = False
 
     def __init__(self, doc):
@@ -48,7 +48,7 @@ class EWaybillApplicability:
         return applicability
 
     def is_enabled(self):
-        return bool(self.settings.enable_e_waybill and (not self.SWITCH or self.settings.get(self.SWITCH)))
+        return bool(self.settings.enable_e_waybill and self.settings.get(self.SWITCH))
 
     def is_api_enabled(self):
         return bool(self.settings.enable_api and self.is_enabled())
