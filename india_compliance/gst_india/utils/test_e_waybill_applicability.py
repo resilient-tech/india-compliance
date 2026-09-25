@@ -19,10 +19,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     log_and_process_e_waybill_generation,
     mark_e_waybill_as_generated,
 )
-from india_compliance.gst_india.utils.e_waybill_actions import (
-    get_e_waybill_applicability_reasons,
-    is_e_waybill_auto_cancellable,
-)
+from india_compliance.gst_india.utils.e_waybill_actions import is_e_waybill_auto_cancellable
 from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice,
     create_sales_invoice,
@@ -59,9 +56,9 @@ class TestEWaybillApplicability(IntegrationTestCase):
                 "applicable": applicable,
                 "generatable": generatable,
                 "required": required,
+                "reasons": list(reasons),
             },
         )
-        self.assertEqual(get_e_waybill_applicability_reasons(doc.doctype, doc.name), list(reasons))
 
     def test_sales_invoice(self):
         self.assertApplicability(create_sales_invoice(), applicable=True, generatable=True)
@@ -129,7 +126,6 @@ class TestEWaybillApplicability(IntegrationTestCase):
         run_onload(pi)
 
         self.assertIsNone(pi.get_onload().get("e_waybill_applicability"))
-        self.assertEqual(get_e_waybill_applicability_reasons(pi.doctype, pi.name), [])
 
     @change_settings("GST Settings", {"enable_e_waybill_from_pi": 0})
     def test_generation_needs_the_doctype_switch(self):
@@ -276,13 +272,4 @@ class TestEWaybillApplicability(IntegrationTestCase):
             applicable=True,
             generatable=False,
             reasons=[f"{scr.meta.get_label('supplier_address')} is required to generate e-Waybill"],
-        )
-
-    def test_reasons_only_for_e_waybill_doctypes(self):
-        self.assertRaisesRegex(
-            frappe.ValidationError,
-            "e-Waybill is not supported for Sales Order",
-            get_e_waybill_applicability_reasons,
-            "Sales Order",
-            "any",
         )

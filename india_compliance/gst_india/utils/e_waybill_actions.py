@@ -3,10 +3,8 @@
 from datetime import timedelta
 
 import frappe
-from frappe import _
 from frappe.utils import add_days, get_datetime
 
-from india_compliance.gst_india.constants.e_waybill import PERMITTED_DOCTYPES
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
 
@@ -35,16 +33,6 @@ def set_e_waybill_onload(doc, method=None):
         return
 
     doc.set_onload("e_waybill_applicability", e_waybill_applicability.get())
-
-
-@frappe.whitelist()
-def get_e_waybill_applicability_reasons(doctype: str, docname: str):
-    if doctype not in PERMITTED_DOCTYPES:
-        frappe.throw(_("e-Waybill is not supported for {0}").format(_(doctype)))
-
-    doc = frappe.get_lazy_doc(doctype, docname, check_permission="read")
-
-    return get_e_waybill_applicability(doc).reasons
 
 
 def is_e_waybill_info_enabled():

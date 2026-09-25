@@ -1351,7 +1351,7 @@ function get_transit_type(dialog) {
     }
 }
 
-async function show_e_waybill_generatable_status(frm, is_ewb_generatable) {
+function show_e_waybill_generatable_status(frm, is_ewb_generatable) {
     let message;
 
     if (frm.doc.docstatus === 0 && is_ewb_generatable) {
@@ -1359,11 +1359,7 @@ async function show_e_waybill_generatable_status(frm, is_ewb_generatable) {
     } else if (frm.doc.e_waybill_status === "Not Applicable" && is_ewb_generatable) {
         message = [__("To generate e-Waybill, change e-Waybill Status to Pending.")];
     } else {
-        const { message: reasons } = await frappe.call({
-            method: "india_compliance.gst_india.utils.e_waybill_actions.get_e_waybill_applicability_reasons",
-            args: { doctype: frm.doctype, docname: frm.doc.name },
-        });
-        message = reasons;
+        message = frm.doc.__onload?.e_waybill_applicability?.reasons || [];
     }
 
     frappe.msgprint({

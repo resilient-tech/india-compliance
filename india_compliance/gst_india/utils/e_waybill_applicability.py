@@ -38,14 +38,8 @@ class EWaybillApplicability:
             applicable=self.is_applicable(),
             generatable=self.is_generatable(),
             required=self.is_required(),
+            reasons=self.applicability_reasons + self.generation_reasons,
         )
-
-    @property
-    def reasons(self):
-        if not self.is_enabled():
-            return []
-
-        return self.applicability_reasons + self.generation_reasons
 
     def is_enabled(self):
         return bool(self.settings.enable_e_waybill and self.settings.get(self.SWITCH))
