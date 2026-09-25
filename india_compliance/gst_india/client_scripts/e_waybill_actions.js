@@ -100,7 +100,7 @@ function setup_e_waybill_actions(doctype) {
                             "yellow",
                             () => show_generate_e_waybill_dialog(frm),
                         );
-                    else frm.dashboard.add_comment(pending_message, "yellow", true);
+                    else frm.dashboard.set_headline_alert(pending_message, "yellow");
                 }
 
                 if (

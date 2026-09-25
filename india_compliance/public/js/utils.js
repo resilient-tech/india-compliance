@@ -644,9 +644,8 @@ Object.assign(india_compliance, {
 
     show_headline_action(frm, message, action_label, color, on_click) {
         frm.dashboard.set_headline_alert(
-            `${message} <button class="btn btn-xs btn-default pull-right ic-headline-action">${action_label}</button>`,
+            `${message} <button class="btn btn-xs btn-default ml-2 ic-headline-action">${action_label}</button>`,
             color,
-            true,
         );
 
         frm.layout.message.find(".ic-headline-action").on("click", (e) => {
