@@ -15,6 +15,7 @@ from frappe.utils.data import format_date
 from frappe.www.printview import get_html_and_style
 from responses import matchers
 
+from india_compliance.exceptions import NotApplicableError
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.constants import (
     SERVICE_HSN_PREFIX,
@@ -969,16 +970,7 @@ class TestEWaybill(IntegrationTestCase):
         si = create_sales_invoice(**args, do_not_submit=True)
 
         self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(.*is required to generate e-Waybill)$"),
-            EWaybillData(si).validate_applicability,
-        )
-
-        si.customer_address = "_Test Registered Customer-Billing"
-        si.company_address = "Test Address - 1"
-
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
+            NotApplicableError,
             re.compile(r"^(e-Waybill cannot be generated because all items have.*)$"),
             EWaybillData(si).validate_applicability,
         )
@@ -987,6 +979,15 @@ class TestEWaybill(IntegrationTestCase):
             si,
             frappe._dict({"item_code": "_Test Trading Goods 1", "gst_hsn_code": "61149090"}),
         )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.MandatoryError,
+            re.compile(r"^(.*is required to generate e-Waybill)$"),
+            EWaybillData(si).validate_applicability,
+        )
+
+        si.customer_address = "_Test Registered Customer-Billing"
+        si.company_address = "Test Address - 1"
         si.update({"gst_transporter_id": "", "mode_of_transport": ""})
 
         self.assertRaisesRegex(
@@ -1279,7 +1280,7 @@ class TestEWaybill(IntegrationTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(Bill No is mandatory.*)$"),
-            EWaybillData(purchase_invoice).validate_bill_no_for_purchase,
+            EWaybillData(purchase_invoice).validate_applicability,
         )
 
         purchase_invoice.bill_no = "1234"

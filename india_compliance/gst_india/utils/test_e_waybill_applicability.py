@@ -5,12 +5,14 @@ from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order im
 from frappe.desk.form.load import run_onload
 from frappe.tests import IntegrationTestCase, change_settings
 
+from india_compliance.exceptions import NotApplicableError
 from india_compliance.gst_india.overrides.test_asset_movement import create_asset_movement, get_test_asset
 from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
     create_subcontracting_data,
     make_sco,
     make_stock_transfer_entry,
 )
+from india_compliance.gst_india.utils.e_waybill import EWaybillData
 from india_compliance.gst_india.utils.e_waybill_applicability import (
     get_e_waybill_applicability_reasons,
 )
@@ -56,7 +58,7 @@ class TestEWaybillApplicability(IntegrationTestCase):
             create_sales_invoice(item_code="_Test Service Item", gst_hsn_code="999900"),
             applicable=False,
             generatable=False,
-            reasons=["All items are service items (HSN code starts with 99)."],
+            reasons=["e-Waybill cannot be generated because all items have service HSN codes"],
         )
 
     def test_purchase_invoice(self):
@@ -65,12 +67,15 @@ class TestEWaybillApplicability(IntegrationTestCase):
         )
 
         pi = create_purchase_invoice(bill_no="EWB-APPL-2", do_not_submit=True)
-        pi.db_set("supplier_address", None)
+        pi.db_set({"supplier_address": None, "bill_no": None})
         self.assertApplicability(
             pi,
             applicable=True,
             generatable=False,
-            reasons=["Supplier Address is mandatory to generate e-Waybill."],
+            reasons=[
+                f"{pi.meta.get_label('supplier_address')} is required to generate e-Waybill",
+                "Bill No is mandatory to generate e-Waybill for Purchase Invoice",
+            ],
         )
 
     @change_settings("GST Settings", {"enable_e_waybill_from_pi": 0})
@@ -83,6 +88,16 @@ class TestEWaybillApplicability(IntegrationTestCase):
             {"api_enabled": False, "applicable": False, "generatable": False},
         )
         self.assertEqual(get_e_waybill_applicability_reasons(pi.doctype, pi.name), [])
+
+    @change_settings("GST Settings", {"enable_e_waybill_from_pi": 0})
+    def test_generation_needs_the_doctype_switch(self):
+        pi = create_purchase_invoice(bill_no="EWB-APPL-4")
+
+        self.assertRaisesRegex(
+            NotApplicableError,
+            "e-Waybill is not applicable for this Purchase Invoice",
+            EWaybillData(pi).validate_applicability,
+        )
 
     def test_purchase_receipt(self):
         self.assertApplicability(
@@ -103,7 +118,7 @@ class TestEWaybillApplicability(IntegrationTestCase):
             same_gstin,
             applicable=False,
             generatable=False,
-            reasons=["Bill From GSTIN and Bill To GSTIN are same."],
+            reasons=["e-Waybill cannot be generated because party GSTIN is same as company GSTIN"],
         )
 
     def test_asset_movement(self):
@@ -113,11 +128,11 @@ class TestEWaybillApplicability(IntegrationTestCase):
         receipt.db_set({"bill_to_gstin": None, "bill_from_address": None})
         self.assertApplicability(
             receipt,
-            applicable=False,
+            applicable=True,
             generatable=False,
             reasons=[
-                "Bill To GSTIN is not set. Ensure its set in Bill To Address.",
-                "Bill From address is mandatory to generate e-Waybill.",
+                f"{receipt.meta.get_label('bill_to_gstin')} is not set. Ensure it's set in the Company Address.",
+                f"{receipt.meta.get_label('bill_from_address')} is required to generate e-Waybill",
             ],
         )
 
@@ -133,7 +148,7 @@ class TestEWaybillApplicability(IntegrationTestCase):
             scr,
             applicable=True,
             generatable=False,
-            reasons=["Supplier address is mandatory for e-waybill generation."],
+            reasons=[f"{scr.meta.get_label('supplier_address')} is required to generate e-Waybill"],
         )
 
     def test_reasons_only_for_e_waybill_doctypes(self):

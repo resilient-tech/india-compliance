@@ -29,7 +29,6 @@ from india_compliance.gst_india.api_classes.nic.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     GSTIN_FORMAT,
-    SALES_DOCTYPES,
     SERVICE_HSN_PREFIX,
     STATE_NUMBERS,
     TAXABLE_GST_TREATMENTS,
@@ -60,7 +59,6 @@ from india_compliance.gst_india.utils import (
     is_foreign_doc,
     is_inward_transaction,
     is_response_pending,
-    is_same_gstin_allowed,
     is_ship_to_gstin_applicable,
     load_doc,
     notify_user,
@@ -1105,18 +1103,7 @@ def update_transaction(doc, values):
 
 
 def set_e_waybill_info(doc):
-    if not doc.get("ewaybill"):
-        return
-
-    settings = frappe.get_cached_doc("GST Settings")
-
-    if not is_api_enabled(settings):
-        return
-
-    if not (
-        E_WAYBILL_APPLICABILITY[doc.doctype](doc).is_enabled()
-        or (settings.enable_e_waybill and settings.auto_cancel_e_waybill)
-    ):
+    if not doc.get("ewaybill") or not E_WAYBILL_APPLICABILITY[doc.doctype](doc).is_info_enabled():
         return
 
     if e_waybill_info := get_e_waybill_info(doc):
@@ -1332,7 +1319,6 @@ class EWaybillData(GSTTransactionData):
             )
 
         self.validate_applicability()
-        self.validate_bill_no_for_purchase()
 
     def validate_settings(self):
         if not self.settings.enable_e_waybill:
@@ -1342,68 +1328,23 @@ class EWaybillData(GSTTransactionData):
             )
 
     def validate_applicability(self):
-        """
-        Validates:
-        - Required fields
-        - Atleast one item with HSN for goods is required
-        - Basic transporter details must be present
-        - Sales Invoice with same company and billing gstin
-        - Inward Stock Transfer with same company and supplier gstin
-        - Outward Material Transfer with different company and supplier gstin
-        """
+        applicability = E_WAYBILL_APPLICABILITY[self.doc.doctype](self.doc)
 
-        address = ADDRESS_FIELDS.get(self.doc.doctype)
-        for key in ("bill_from", "bill_to"):
-            if not self.doc.get(address[key]):
-                frappe.throw(
-                    _("{0} is required to generate e-Waybill").format(_(address[key])),
-                    exc=frappe.MandatoryError,
-                )
-
-        # Atleast one item with HSN code of goods is required
-        has_atleast_one_goods_item = any(
-            not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX) for item in self._items
-        )
-
-        if not has_atleast_one_goods_item:
+        if not applicability.is_enabled():
             frappe.throw(
-                _("e-Waybill cannot be generated because all items have service HSN codes"),
+                _("e-Waybill is not applicable for this {0}").format(_(self.doc.doctype)),
                 title=_("Invalid Data"),
                 exc=NotApplicableError,
             )
+
+        if reasons := applicability.get_applicability_reasons():
+            frappe.throw("<br>".join(reasons), title=_("Invalid Data"), exc=NotApplicableError)
+
+        if reasons := applicability.get_generation_reasons():
+            frappe.throw("<br>".join(reasons), title=_("Invalid Data"), exc=frappe.MandatoryError)
 
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
-
-        if not is_same_gstin_allowed(self.doc):
-            self.validate_same_gstin()
-
-    def validate_same_gstin(self):
-        if self.doc.doctype == "Delivery Note":
-            return
-
-        party_gstin_fieldname = (
-            "billing_address_gstin" if self.doc.doctype in SALES_DOCTYPES else "supplier_gstin"
-        )
-        if self.doc.company_gstin == self.doc.get(party_gstin_fieldname):
-            frappe.throw(
-                _("e-Waybill cannot be generated because party GSTIN is same as company GSTIN"),
-                title=_("Invalid Data"),
-                exc=NotApplicableError,
-            )
-
-    def validate_bill_no_for_purchase(self):
-        if (
-            self.doc.doctype == "Purchase Invoice"
-            and not self.doc.is_return
-            and not self.doc.bill_no
-            and self.doc.gst_category != "Unregistered"
-        ):
-            frappe.throw(
-                _("Bill No is mandatory to generate e-Waybill for Purchase Invoice"),
-                title=_("Invalid Data"),
-                exc=frappe.MandatoryError,
-            )
 
     def validate_doctype_for_e_waybill(self):
         if self.doc.doctype not in PERMITTED_DOCTYPES:
