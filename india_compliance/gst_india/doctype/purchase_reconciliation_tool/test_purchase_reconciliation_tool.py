@@ -1462,6 +1462,40 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertEqual(self.isd_row(rows, eligible).match_status, "Exact Match")
         self.assertEqual(self.isd_row(rows, ineligible).match_status, "Exact Match")
 
+    def test_linked_isd_recipient_invoice_on_another_company_gstin_is_shown(self):
+        doc = self.create_recipient_invoice("ISD-GSTIN-DIFF-001")
+        gst_is = create_gst_inward_supply(
+            classification="ISD",
+            doc_type="ISD Invoice",
+            bill_no="ISD-GSTIN-DIFF-001",
+            bill_date=self.POSTING_DATE,
+            supplier_gstin=self.isd_address.gstin,
+            supplier_name="_Test ISD Distribution Address",
+            place_of_supply="",
+            itc_availability="",
+            items=[{"taxable_value": 0, "cgst": 100, "sgst": 100}],
+            document_value=200,
+            return_period_2b="082023",
+            gen_date_2b=self.POSTING_DATE,
+        )
+
+        frappe.db.set_value("ISD Recipient Invoice", doc.name, "company_gstin", "27AAQCA8719H1Z6")
+        frappe.db.set_value(
+            "GST Inward Supply",
+            gst_is.name,
+            {
+                "match_status": "Mismatch",
+                "link_doctype": "ISD Recipient Invoice",
+                "link_name": doc.name,
+            },
+        )
+
+        _tool, rows = self.reconcile()
+        row = next(row for row in rows if row.inward_supply_name == gst_is.name)
+
+        self.assertEqual(row.purchase_invoice_name, doc.name)
+        self.assertEqual(row.purchase_doctype, "ISD Recipient Invoice")
+
     def test_isd_invoice_manual_link_and_unlink(self):
         """Manually linking an ISD Recipient Invoice writes the status back onto the document, and
         unlinking reverts it -- the ISD branches of link_documents / unlink_documents."""
