@@ -28,24 +28,6 @@ frappe.ui.form.on(DOCTYPE, {
         set_e_waybill_status_options(frm);
         gst_invoice_warning(frm);
     },
-
-    after_save(frm) {
-        if (
-            frm.doc.customer_address ||
-            frm.doc.is_return ||
-            frm.doc.is_debit_note ||
-            !is_e_waybill_required(frm)
-        )
-            return;
-
-        frappe.show_alert(
-            {
-                message: __("Billing Address is required to create e-Waybill"),
-                indicator: "yellow",
-            },
-            10,
-        );
-    },
 });
 
 async function gst_invoice_warning(frm) {

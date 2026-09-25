@@ -1234,20 +1234,12 @@ function is_e_waybill_extendable(frm) {
     return Boolean(frm.doc.__onload?.e_waybill_info?.extendable);
 }
 
-function is_e_waybill_applicable(frm) {
-    return Boolean(frm.doc.__onload?.e_waybill_applicability?.applicable);
-}
-
 function is_e_waybill_api_enabled(frm) {
     return Boolean(frm.doc.__onload?.e_waybill_applicability?.api_enabled);
 }
 
 function is_e_waybill_generatable(frm) {
     return Boolean(frm.doc.__onload?.e_waybill_applicability?.generatable);
-}
-
-function is_e_waybill_required(frm) {
-    return Boolean(frm.doc.__onload?.e_waybill_applicability?.required);
 }
 
 function is_e_waybill_cancellable(frm) {

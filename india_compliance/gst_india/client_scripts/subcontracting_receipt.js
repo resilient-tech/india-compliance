@@ -59,17 +59,6 @@ frappe.ui.form.on(DOCTYPE, {
         });
     },
 
-    after_save(frm) {
-        if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm))
-            frappe.show_alert(
-                {
-                    message: __("Supplier Address is required to create e-Waybill"),
-                    indicator: "yellow",
-                },
-                10,
-            );
-    },
-
     fetch_original_doc_ref(frm) {
         let existing_references = get_existing_references(frm);
 

@@ -17,21 +17,4 @@ frappe.ui.form.on(DOCTYPE, {
             };
         });
     },
-
-    after_save(frm) {
-        if (
-            frm.doc.supplier_address ||
-            !(frm.doc.gst_category == "Unregistered" || frm.doc.is_return) ||
-            !is_e_waybill_required(frm)
-        )
-            return;
-
-        frappe.show_alert(
-            {
-                message: __("Supplier Address is required to create e-Waybill"),
-                indicator: "yellow",
-            },
-            10,
-        );
-    },
 });

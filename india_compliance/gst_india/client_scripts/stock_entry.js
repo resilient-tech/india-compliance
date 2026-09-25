@@ -59,17 +59,6 @@ frappe.ui.form.on(DOCTYPE, {
         frm.get_field("bill_from_address_display").$wrapper.find(".ql-editor").css("white-space", "normal");
     },
 
-    after_save(frm) {
-        if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm))
-            frappe.show_alert(
-                {
-                    message: __("Party Address is required to create e-Waybill"),
-                    indicator: "yellow",
-                },
-                10,
-            );
-    },
-
     supplier_address(frm) {
         on_change_set_address(frm, "supplier_address", ...get_field_and_label(frm, "party_field"));
     },

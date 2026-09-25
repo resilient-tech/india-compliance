@@ -34,23 +34,6 @@ frappe.ui.form.on(DOCTYPE, {
         india_compliance.update_itc_claim_period(frm);
     },
 
-    after_save(frm) {
-        if (
-            frm.doc.supplier_address ||
-            !(frm.doc.gst_category == "Unregistered" || frm.doc.is_return) ||
-            !is_e_waybill_required(frm)
-        )
-            return;
-
-        frappe.show_alert(
-            {
-                message: __("Supplier Address is required to create e-Waybill"),
-                indicator: "yellow",
-            },
-            10,
-        );
-    },
-
     refresh(frm) {
         india_compliance.set_reconciliation_status(frm, "bill_no");
 
