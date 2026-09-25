@@ -1783,7 +1783,7 @@ def before_cancel(doc, method=None):
     if not doc.get("ewaybill") or not is_api_enabled():
         return
 
-    run_onload(doc)  # is_auto_cancellable reads e_waybill_info
+    run_onload(doc)  # is_e_waybill_auto_cancellable reads e_waybill_info
 
     if not is_e_waybill_auto_cancellable(doc):
         return
