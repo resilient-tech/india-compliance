@@ -13,7 +13,6 @@ from india_compliance.gst_india.utils import (
     get_items,
     is_api_enabled,
     is_same_gstin_allowed,
-    load_doc,
 )
 
 
@@ -168,7 +167,13 @@ E_WAYBILL_APPLICABILITY = {
 
 
 def set_e_waybill_applicability(doc, method=None):
-    applicability = E_WAYBILL_APPLICABILITY[doc.doctype](doc).get()
+    e_waybill_applicability = E_WAYBILL_APPLICABILITY[doc.doctype](doc)
+
+    # the client reads a missing key as all flags off
+    if not e_waybill_applicability.is_enabled():
+        return
+
+    applicability = e_waybill_applicability.get()
     applicability.pop("reasons")
 
     doc.set_onload("e_waybill_applicability", applicability)
@@ -179,4 +184,6 @@ def get_e_waybill_applicability_reasons(doctype: str, docname: str):
     if doctype not in PERMITTED_DOCTYPES:
         frappe.throw(_("e-Waybill is not supported for {0}").format(_(doctype)))
 
-    return E_WAYBILL_APPLICABILITY[doctype](load_doc(doctype, docname)).get().reasons
+    doc = frappe.get_lazy_doc(doctype, docname, check_permission="read")
+
+    return E_WAYBILL_APPLICABILITY[doctype](doc).get().reasons

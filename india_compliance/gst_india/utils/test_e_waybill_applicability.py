@@ -83,10 +83,7 @@ class TestEWaybillApplicability(IntegrationTestCase):
         pi = create_purchase_invoice(bill_no="EWB-APPL-3")
         run_onload(pi)
 
-        self.assertEqual(
-            pi.get_onload().e_waybill_applicability,
-            {"api_enabled": False, "applicable": False, "generatable": False},
-        )
+        self.assertIsNone(pi.get_onload().get("e_waybill_applicability"))
         self.assertEqual(get_e_waybill_applicability_reasons(pi.doctype, pi.name), [])
 
     @change_settings("GST Settings", {"enable_e_waybill_from_pi": 0})
