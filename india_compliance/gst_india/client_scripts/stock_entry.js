@@ -57,10 +57,6 @@ frappe.ui.form.on(DOCTYPE, {
     refresh(frm) {
         frm.get_field("bill_to_address_display").$wrapper.find(".ql-editor").css("white-space", "normal");
         frm.get_field("bill_from_address_display").$wrapper.find(".ql-editor").css("white-space", "normal");
-
-        if (!india_compliance.is_e_waybill_enabled_for(DOCTYPE)) return;
-
-        show_sandbox_mode_indicator();
     },
 
     after_save(frm) {

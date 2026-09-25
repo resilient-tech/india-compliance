@@ -1,5 +1,7 @@
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
+        if (gst_settings.enable_api && gst_settings.enable_e_invoice) show_sandbox_mode_indicator();
+
         if (frm.doc.__onload?.e_invoice_info?.is_generated_in_sandbox_mode)
             frm.get_field("irn").set_description("Generated in Sandbox Mode");
 

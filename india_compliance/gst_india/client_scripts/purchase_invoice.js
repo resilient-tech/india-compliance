@@ -53,7 +53,6 @@ frappe.ui.form.on(DOCTYPE, {
 
     refresh(frm) {
         india_compliance.set_reconciliation_status(frm, "bill_no");
-        if (india_compliance.is_e_waybill_enabled_for(DOCTYPE)) show_sandbox_mode_indicator();
 
         if (frm.doc.docstatus === 1 && frm.doc.is_boe_applicable && frm.doc.__onload?.has_pending_boe_qty) {
             frm.add_custom_button(

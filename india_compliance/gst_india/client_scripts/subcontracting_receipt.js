@@ -59,12 +59,6 @@ frappe.ui.form.on(DOCTYPE, {
         });
     },
 
-    refresh() {
-        if (!india_compliance.is_e_waybill_enabled_for(DOCTYPE)) return;
-
-        show_sandbox_mode_indicator();
-    },
-
     after_save(frm) {
         if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm))
             frappe.show_alert(

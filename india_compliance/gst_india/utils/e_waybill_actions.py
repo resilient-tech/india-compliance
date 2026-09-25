@@ -1,4 +1,4 @@
-"""What a document can do with its e-Waybill: generate it, auto-generate it, cancel it."""
+"""e-Waybill state for the form, and what can still be done with a generated e-Waybill."""
 
 from datetime import timedelta
 

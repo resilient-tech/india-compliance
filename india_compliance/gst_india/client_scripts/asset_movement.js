@@ -34,10 +34,6 @@ frappe.ui.form.on(DOCTYPE, {
         ["bill_from_address_display", "bill_to_address_display"].forEach((field) => {
             frm.get_field(field)?.$wrapper.find(".ql-editor").css("white-space", "normal");
         });
-
-        if (!india_compliance.is_e_waybill_applicable_for_asset_movement(frm.doc)) return;
-
-        show_sandbox_mode_indicator();
     },
 
     after_save(frm) {

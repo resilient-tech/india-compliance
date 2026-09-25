@@ -34,6 +34,9 @@ function setup_e_waybill_actions(doctype) {
             });
         },
         refresh(frm) {
+            if (gst_settings.enable_api && india_compliance.is_e_waybill_enabled_for(frm.doctype))
+                show_sandbox_mode_indicator();
+
             if (frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode)
                 frm.get_field("ewaybill").set_description("Generated in Sandbox Mode");
 

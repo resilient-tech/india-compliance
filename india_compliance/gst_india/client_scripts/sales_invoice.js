@@ -27,9 +27,6 @@ frappe.ui.form.on(DOCTYPE, {
     refresh(frm) {
         set_e_waybill_status_options(frm);
         gst_invoice_warning(frm);
-
-        if (!(gst_settings.enable_e_waybill || gst_settings.enable_e_invoice)) return;
-        show_sandbox_mode_indicator();
     },
 
     after_save(frm) {
