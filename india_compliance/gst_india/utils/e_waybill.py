@@ -1410,14 +1410,7 @@ class EWaybillData(GSTTransactionData):
             )
 
     def validate_if_ewaybill_can_be_cancelled(self):
-        cancel_upto = add_to_date(
-            # this works because we do run_onload in load_doc above
-            get_datetime(self.doc.get_onload().get("e_waybill_info", {}).get("created_on")),
-            days=1,
-            as_datetime=True,
-        )
-
-        if cancel_upto < get_datetime():
+        if not E_WAYBILL_APPLICABILITY[self.doc.doctype](self.doc).is_cancellable():
             frappe.throw(_("e-Waybill can be cancelled only within 24 Hours of its generation"))
 
     def get_all_item_details(self):
@@ -1853,12 +1846,9 @@ def can_auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
     """auto-cancel setting on + e-Waybill still within the 24h cancel window?"""
     gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
 
-    if not (doc.ewaybill and gst_settings.enable_e_waybill and gst_settings.auto_cancel_e_waybill):
-        return False
-
-    e_waybill_info = e_waybill_info or doc.get_onload().get("e_waybill_info", {})
-    generated_on = e_waybill_info.get("created_on")
-    return bool(generated_on) and add_days(generated_on, 1) >= get_datetime()
+    return bool(gst_settings.auto_cancel_e_waybill) and E_WAYBILL_APPLICABILITY[doc.doctype](
+        doc
+    ).is_cancellable(e_waybill_info)
 
 
 def auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):

@@ -2,6 +2,7 @@
 
 import frappe
 from frappe import _
+from frappe.utils import add_days, get_datetime
 
 from india_compliance.gst_india.constants import (
     E_WAYBILL_STOCK_ENTRY_PURPOSES,
@@ -31,6 +32,7 @@ class EWaybillApplicability:
             api_enabled=self.is_api_enabled(),
             applicable=False,
             generatable=False,
+            cancellable=self.is_cancellable(),
             reasons=[],
         )
 
@@ -53,13 +55,18 @@ class EWaybillApplicability:
         return bool(self.settings.enable_api and self.is_enabled())
 
     def is_info_enabled(self):
-        # an existing e-Waybill stays visible for auto-cancel even when this doctype's switch is off
-        return bool(
-            is_api_enabled(self.settings)
-            and (
-                self.is_enabled() or (self.settings.enable_e_waybill and self.settings.auto_cancel_e_waybill)
-            )
-        )
+        # the doctype switch governs new e-Waybills; an existing one stays manageable
+        return bool(self.settings.enable_e_waybill and is_api_enabled(self.settings))
+
+    def is_cancellable(self, e_waybill_info=None):
+        if not (self.doc.get("ewaybill") and self.is_info_enabled()):
+            return False
+
+        e_waybill_info = e_waybill_info or self.doc.get_onload().get("e_waybill_info") or {}
+        generated_on = e_waybill_info.get("created_on")
+
+        # the portal allows cancelling for 24 hours after generation
+        return bool(generated_on) and add_days(generated_on, 1) >= get_datetime()
 
     def get_applicability_reasons(self):
         reasons = []
@@ -170,7 +177,7 @@ def set_e_waybill_applicability(doc, method=None):
     e_waybill_applicability = E_WAYBILL_APPLICABILITY[doc.doctype](doc)
 
     # the client reads a missing key as all flags off
-    if not e_waybill_applicability.is_enabled():
+    if not (e_waybill_applicability.is_enabled() or doc.get("ewaybill")):
         return
 
     applicability = e_waybill_applicability.get()

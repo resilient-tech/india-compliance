@@ -51,7 +51,7 @@ function setup_e_waybill_actions(doctype) {
                 india_compliance.make_text_red("e-Waybill", "Mark as Cancelled");
             }
 
-            if (!is_e_waybill_api_enabled(frm) || frm.is_dirty()) return;
+            if (frm.is_dirty()) return;
 
             // portal cancel is open for 24h, doc cancelled or not
             if (frm.doc.docstatus === 2) {
@@ -69,22 +69,24 @@ function setup_e_waybill_actions(doctype) {
                 return;
             }
 
-            const is_ewb_generatable = is_e_waybill_generatable(frm);
-
-            if (
-                frm.doc.docstatus === 0 ||
-                !is_ewb_generatable ||
-                frm.doc.e_waybill_status === "Not Applicable"
-            ) {
-                frm.add_custom_button(
-                    __("Applicability Status"),
-                    () => show_e_waybill_generatable_status(frm, is_ewb_generatable),
-                    "e-Waybill",
-                );
-                return;
-            }
-
             if (!frm.doc.ewaybill) {
+                if (!is_e_waybill_api_enabled(frm)) return;
+
+                const is_ewb_generatable = is_e_waybill_generatable(frm);
+
+                if (
+                    frm.doc.docstatus === 0 ||
+                    !is_ewb_generatable ||
+                    frm.doc.e_waybill_status === "Not Applicable"
+                ) {
+                    frm.add_custom_button(
+                        __("Applicability Status"),
+                        () => show_e_waybill_generatable_status(frm, is_ewb_generatable),
+                        "e-Waybill",
+                    );
+                    return;
+                }
+
                 if (frm.doc.e_waybill_status === "Pending") {
                     frm.dashboard.add_comment(
                         __("e-Waybill is applicable for this invoice, but not yet generated or updated."),
@@ -692,7 +694,7 @@ function confirm_portal_cancellation(frm) {
 }
 
 function confirm_e_waybill_cancellation(frm) {
-    if (!is_e_waybill_api_enabled(frm) || !is_e_waybill_cancellable(frm))
+    if (!is_e_waybill_cancellable(frm))
         return india_compliance.warn(
             __("Cannot Cancel e-Waybill"),
             __(
@@ -1288,19 +1290,11 @@ function has_extend_validity_expired(frm) {
 }
 
 function is_e_waybill_cancellable(frm) {
-    const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
-    return (
-        e_waybill_info &&
-        frappe.datetime.convert_to_user_tz(e_waybill_info.created_on, false).add("days", 1).diff() > 0
-    );
+    return Boolean(frm.doc.__onload?.e_waybill_applicability?.cancellable);
 }
 
 function can_cancel_e_waybill(frm) {
-    return (
-        frm.doc.ewaybill &&
-        is_e_waybill_cancellable(frm) &&
-        frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
-    );
+    return is_e_waybill_cancellable(frm) && frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name);
 }
 
 async function update_gst_tranporter_id(dialog) {

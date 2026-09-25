@@ -4,6 +4,7 @@ from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order im
 )
 from frappe.desk.form.load import run_onload
 from frappe.tests import IntegrationTestCase, change_settings
+from frappe.utils import add_to_date, now_datetime
 
 from india_compliance.exceptions import NotApplicableError
 from india_compliance.gst_india.overrides.test_asset_movement import create_asset_movement, get_test_asset
@@ -12,7 +13,11 @@ from india_compliance.gst_india.overrides.test_subcontracting_transaction import
     make_sco,
     make_stock_transfer_entry,
 )
-from india_compliance.gst_india.utils.e_waybill import EWaybillData
+from india_compliance.gst_india.utils.e_waybill import (
+    EWaybillData,
+    can_auto_cancel_e_waybill,
+    mark_e_waybill_as_generated,
+)
 from india_compliance.gst_india.utils.e_waybill_applicability import (
     get_e_waybill_applicability_reasons,
 )
@@ -47,7 +52,7 @@ class TestEWaybillApplicability(IntegrationTestCase):
         run_onload(doc)
         self.assertEqual(
             doc.get_onload().e_waybill_applicability,
-            {"api_enabled": True, "applicable": applicable, "generatable": generatable},
+            {"api_enabled": True, "applicable": applicable, "generatable": generatable, "cancellable": False},
         )
         self.assertEqual(get_e_waybill_applicability_reasons(doc.doctype, doc.name), list(reasons))
 
@@ -95,6 +100,41 @@ class TestEWaybillApplicability(IntegrationTestCase):
             "e-Waybill is not applicable for this Purchase Invoice",
             EWaybillData(pi).validate_applicability,
         )
+
+    def mark_generated(self, doc, ewaybill, generated_on):
+        mark_e_waybill_as_generated(
+            doc.doctype,
+            doc.name,
+            values={
+                "ewaybill": ewaybill,
+                "e_waybill_date": str(generated_on),
+                "valid_upto": str(add_to_date(generated_on, days=1)),
+            },
+        )
+        doc.reload()
+        run_onload(doc)
+
+    @change_settings("GST Settings", {"enable_e_waybill_from_pi": 0})
+    def test_existing_e_waybill_stays_cancellable_with_the_switch_off(self):
+        pi = create_purchase_invoice(bill_no="EWB-APPL-5")
+        self.mark_generated(pi, "351002721241", now_datetime())
+
+        self.assertTrue(pi.get_onload().e_waybill_applicability.cancellable)
+
+    @change_settings("GST Settings", {"auto_cancel_e_waybill": 1})
+    def test_e_waybill_older_than_a_day_is_not_cancellable(self):
+        pi = create_purchase_invoice(bill_no="EWB-APPL-6")
+        self.mark_generated(pi, "351002721242", add_to_date(now_datetime(), days=-2))
+
+        self.assertFalse(pi.get_onload().e_waybill_applicability.cancellable)
+        self.assertFalse(can_auto_cancel_e_waybill(pi))
+
+    @change_settings("GST Settings", {"auto_cancel_e_waybill": 1, "enable_api": 0})
+    def test_auto_cancel_needs_the_api(self):
+        pi = create_purchase_invoice(bill_no="EWB-APPL-7")
+        self.mark_generated(pi, "351002721243", now_datetime())
+
+        self.assertFalse(can_auto_cancel_e_waybill(pi))
 
     def test_purchase_receipt(self):
         self.assertApplicability(
