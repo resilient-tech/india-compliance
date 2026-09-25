@@ -1110,19 +1110,23 @@ def get_timespan_date_range(timespan: str, company: str | None = None) -> tuple 
 
 def merge_dicts(d1: dict, d2: dict) -> dict:
     """
+    Fold d2 into d1: dicts recurse, lists join, numbers add, a null never erases, anything else d2 wins.
+
     Sample Input:
     -------------
     d1 = {
         'key1': 'value1',
         'key2': {'nested': 'value'},
         'key3': ['value1'],
-        'key4': 'value4'
+        'key4': 'value4',
+        'igst': 5
     }
     d2 = {
         'key1': 'value2',
         'key2': {'key': 'value3'},
         'key3': ['value2'],
-        'key5': 'value5'
+        'key5': 'value5',
+        'igst': 3
     }
 
     Sample Output:
@@ -1132,7 +1136,8 @@ def merge_dicts(d1: dict, d2: dict) -> dict:
         'key2': {'nested': 'value', 'key': 'value3'},
         'key3': ['value1', 'value2'],
         'key4': 'value4',
-        'key5': 'value5'
+        'key5': 'value5',
+        'igst': 8
     }
     """
     for key in set(d1.keys()) | set(d2.keys()):
@@ -1142,6 +1147,12 @@ def merge_dicts(d1: dict, d2: dict) -> dict:
 
             elif isinstance(d1[key], list) and isinstance(d2[key], list):
                 d1[key] = d1[key] + d2[key]
+
+            elif isinstance(d1[key], int | float) and isinstance(d2[key], int | float):
+                d1[key] = d1[key] + d2[key]
+
+            elif d2[key] is None:
+                continue
 
             else:
                 d1[key] = copy.deepcopy(d2[key])
@@ -1368,7 +1379,7 @@ def is_same_gstin_allowed(doc):
     return bool(is_outward_stock_entry(doc)) or doc.get("doctype") == "Asset Movement"
 
 
-def create_notification(message_content, document_type, document_name=None, request_id=None):
+def create_notification(message_content, document_type, document_name=None, request_id=None, link=None):
     # request_id shows failure response
     if request_id and (doc_name := frappe.db.get_value("Integration Request", {"request_id": request_id})):
         document_type = "Integration Request"
@@ -1383,6 +1394,7 @@ def create_notification(message_content, document_type, document_name=None, requ
             "document_name": document_name or document_type,
             "subject": message_content.get("subject"),
             "email_content": message_content.get("body"),
+            "link": link,
         }
     )
     notification.insert(ignore_permissions=True)

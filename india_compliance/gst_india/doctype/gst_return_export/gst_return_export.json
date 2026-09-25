@@ -1,0 +1,125 @@
+{
+ "actions": [],
+ "allow_copy": 1,
+ "creation": "2026-06-26 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "column_break_filters_0",
+  "company_gstin",
+  "column_break_filters_1",
+  "gst_return",
+  "column_break_filters_2",
+  "from_date",
+  "column_break_filters_3",
+  "to_date",
+  "summary_section",
+  "summary_html"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_filters_0",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company_gstin",
+   "fieldtype": "Autocomplete",
+   "label": "Company GSTIN",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_filters_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "GSTR-2B",
+   "fieldname": "gst_return",
+   "fieldtype": "Select",
+   "label": "GST Return",
+   "options": "GSTR-2A\nGSTR-2B",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_filters_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Month",
+   "options": "{\"minView\": \"months\", \"view\": \"months\", \"dateFormat\": \"mm-yyyy\", \"todayButton\": false}"
+  },
+  {
+   "fieldname": "column_break_filters_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Month",
+   "options": "{\"minView\": \"months\", \"view\": \"months\", \"dateFormat\": \"mm-yyyy\", \"todayButton\": false}"
+  },
+  {
+   "fieldname": "summary_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "summary_html",
+   "fieldtype": "HTML"
+  }
+ ],
+ "hide_toolbar": 1,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-06-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GST Return Export",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}
