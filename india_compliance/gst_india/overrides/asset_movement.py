@@ -9,6 +9,7 @@ from india_compliance.gst_india.utils.custom_transaction_controller import (
     CustomEwaybillController,
     set_gstin_fields_for_e_waybill,
 )
+from india_compliance.gst_india.utils.e_waybill import set_e_waybill_info
 
 ASSET_MOVEMENT_FIELD_MAP = {"amount": "taxable_value"}
 
@@ -27,11 +28,6 @@ class AssetMovementController(CustomEwaybillController):
     DOCTYPE = "Asset Movement"
     TAXES_FIELD_MAP = ASSET_MOVEMENT_FIELD_MAP
     VALIDATES_TRANSACTION_NAME = True
-
-    def is_e_waybill_applicable(self):
-        gst_settings = frappe.get_cached_doc("GST Settings")
-
-        return super().is_e_waybill_applicable() and bool(gst_settings.enable_e_waybill_from_asset_movement)
 
     @classmethod
     def get_dashboard_data(cls, data):
@@ -87,7 +83,7 @@ def onload(doc, method=None):
     # available after run_onload (load_doc) and not on a bare frappe.get_doc.
     set_gstin_fields_for_e_waybill(doc)
 
-    AssetMovementController(doc).set_e_waybill_info()
+    set_e_waybill_info(doc)
 
 
 def get_dashboard_data(data):

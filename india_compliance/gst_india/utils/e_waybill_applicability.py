@@ -24,15 +24,14 @@ class EWaybillApplicability:
         self.settings = frappe.get_cached_doc("GST Settings")
 
     def get(self):
-        is_enabled = self.is_enabled()
         applicability = frappe._dict(
-            api_enabled=bool(is_enabled and self.settings.enable_api),
+            api_enabled=self.is_api_enabled(),
             applicable=False,
             generatable=False,
             reasons=[],
         )
 
-        if not is_enabled:
+        if not self.is_enabled():
             return applicability
 
         applicability.reasons = self.get_applicability_reasons()
@@ -46,6 +45,9 @@ class EWaybillApplicability:
 
     def is_enabled(self):
         return bool(self.settings.enable_e_waybill and (not self.SWITCH or self.settings.get(self.SWITCH)))
+
+    def is_api_enabled(self):
+        return bool(self.settings.enable_api and self.is_enabled())
 
     def get_applicability_reasons(self):
         reasons = self.get_company_gstin_reasons()
@@ -120,6 +122,8 @@ class StockEntryApplicability(EWaybillApplicability):
     SWITCH = "enable_e_waybill_for_sc"
 
     def is_enabled(self):
+        # Inward purposes (Delivery, RM Return) carry only an e-Waybill; the
+        # principal reports them in ITC-04 / GSTR-1, not the company (job worker).
         return super().is_enabled() and self.doc.purpose in E_WAYBILL_STOCK_ENTRY_PURPOSES
 
     def get_company_gstin_reasons(self):
@@ -175,6 +179,10 @@ class AssetMovementApplicability(EWaybillApplicability):
         return [f"{label} address is mandatory to generate e-Waybill."]
 
 
+class SubcontractingOrderApplicability(EWaybillApplicability):
+    SWITCH = "enable_e_waybill_for_sc"
+
+
 class SubcontractingReceiptApplicability(EWaybillApplicability):
     SWITCH = "enable_e_waybill_for_sc"
 
@@ -192,6 +200,7 @@ E_WAYBILL_APPLICABILITY = {
     "Delivery Note": DeliveryNoteApplicability,
     "Stock Entry": StockEntryApplicability,
     "Asset Movement": AssetMovementApplicability,
+    "Subcontracting Order": SubcontractingOrderApplicability,
     "Subcontracting Receipt": SubcontractingReceiptApplicability,
 }
 

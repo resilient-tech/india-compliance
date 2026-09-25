@@ -71,6 +71,7 @@ from india_compliance.gst_india.utils import (
     send_updated_doc,
     update_onload,
 )
+from india_compliance.gst_india.utils.e_waybill_applicability import E_WAYBILL_APPLICABILITY
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 from india_compliance.utils.change_log_utils import create_change_log_comment
 
@@ -1101,6 +1102,25 @@ def update_transaction(doc, values):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
     if doc.doctype in ("Delivery Note", "Stock Entry", "Asset Movement"):
         doc._sub_supply_desc = values.sub_supply_desc
+
+
+def set_e_waybill_info(doc):
+    if not doc.get("ewaybill"):
+        return
+
+    settings = frappe.get_cached_doc("GST Settings")
+
+    if not is_api_enabled(settings):
+        return
+
+    if not (
+        E_WAYBILL_APPLICABILITY[doc.doctype](doc).is_enabled()
+        or (settings.enable_e_waybill and settings.auto_cancel_e_waybill)
+    ):
+        return
+
+    if e_waybill_info := get_e_waybill_info(doc):
+        doc.set_onload("e_waybill_info", e_waybill_info)
 
 
 def get_e_waybill_info(doc):

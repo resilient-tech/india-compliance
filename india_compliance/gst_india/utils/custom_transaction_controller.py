@@ -15,7 +15,6 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.utils import (
     get_place_of_supply,
-    is_api_enabled,
     is_inward_transaction,
     is_same_gstin_allowed,
     update_dashboard_with_gst_logs,
@@ -23,7 +22,7 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils import (
     validate_invoice_number as validate_transaction_name,
 )
-from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.e_waybill_applicability import E_WAYBILL_APPLICABILITY
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
     update_gst_details,
@@ -87,29 +86,8 @@ class CustomEwaybillController:
     def get_dashboard_data(cls, data):
         return update_dashboard_with_gst_logs(cls.DOCTYPE, data, "e-Waybill Log", "Integration Request")
 
-    def set_e_waybill_info(self):
-        if not self.doc.get("ewaybill"):
-            return
-
-        gst_settings = frappe.get_cached_doc("GST Settings")
-
-        if not (
-            self.is_e_waybill_applicable()
-            or (
-                is_api_enabled(gst_settings)
-                and gst_settings.enable_e_waybill
-                and gst_settings.auto_cancel_e_waybill
-            )
-        ):
-            return
-
-        if e_waybill_info := get_e_waybill_info(self.doc):
-            self.doc.set_onload("e_waybill_info", e_waybill_info)
-
     def is_e_waybill_applicable(self):
-        gst_settings = frappe.get_cached_doc("GST Settings")
-
-        return bool(gst_settings.enable_api and gst_settings.enable_e_waybill)
+        return E_WAYBILL_APPLICABILITY[self.doc.doctype](self.doc).is_api_enabled()
 
     def ignore_gst_validations(self):
         return bool(ignore_gst_validations(self.doc))

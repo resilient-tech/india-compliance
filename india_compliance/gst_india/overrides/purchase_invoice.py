@@ -18,13 +18,12 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.utils import (
     has_gst_taxes,
-    is_api_enabled,
     is_import_of_goods,
     is_import_of_services,
     update_dashboard_with_gst_logs,
     validate_invoice_number,
 )
-from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.e_waybill import set_e_waybill_info
 from india_compliance.gst_india.utils.itc_claim import (
     set_or_validate_itc_claim_period,
     validate_itc_claim_period_on_update_after_submit,
@@ -38,20 +37,7 @@ def onload(doc, method=None):
             any(item.pending_boe_qty > 0 for item in doc.items),
         )
 
-    if not doc.get("ewaybill"):
-        return
-
-    gst_settings = frappe.get_cached_doc("GST Settings")
-
-    if not is_api_enabled(gst_settings):
-        return
-
-    if (
-        gst_settings.enable_e_waybill
-        and (gst_settings.enable_e_waybill_from_pi or gst_settings.auto_cancel_e_waybill)
-        and (e_waybill_info := get_e_waybill_info(doc))
-    ):
-        doc.set_onload("e_waybill_info", e_waybill_info)
+    set_e_waybill_info(doc)
 
 
 def validate(doc, method=None):

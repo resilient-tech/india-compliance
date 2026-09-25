@@ -20,6 +20,7 @@ from india_compliance.gst_india.utils import (
     get_items,
 )
 from india_compliance.gst_india.utils.custom_transaction_controller import CustomEwaybillController
+from india_compliance.gst_india.utils.e_waybill import set_e_waybill_info
 
 
 # Functions to perform operations before and after mapping of transactions
@@ -219,7 +220,7 @@ def get_dashboard_data(data):
 
 
 def onload(doc, method=None):
-    SubcontractingReceiptController(doc).set_e_waybill_info()
+    set_e_waybill_info(doc)
 
 
 class SubcontractingController(CustomEwaybillController):
@@ -227,11 +228,6 @@ class SubcontractingController(CustomEwaybillController):
 
     Stock Entry subclasses this too, from `overrides/stock_entry.py`.
     """
-
-    def is_e_waybill_applicable(self):
-        return super().is_e_waybill_applicable() and bool(
-            frappe.get_cached_doc("GST Settings").enable_e_waybill_for_sc
-        )
 
 
 class SubcontractingOrderController(SubcontractingController):
