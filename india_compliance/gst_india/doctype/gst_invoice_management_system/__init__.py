@@ -187,7 +187,7 @@ class PurchaseInvoice:
         self.PI = frappe.qb.DocType("Purchase Invoice")
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
-    def get_all(self, filters, names=None, only_names=False):
+    def get_all(self, filters=None, names=None, only_names=False):
         dimension_fields = [*get_accounting_dimensions(), "cost_center", "project"]
         additional_fields = [*dimension_fields, "posting_date"]
 
@@ -253,7 +253,7 @@ class PurchaseInvoice:
 
         return query.where(self.get_filter_criterion(filters))
 
-    def get_filter_criterion(self, filters, names=None):
+    def get_filter_criterion(self, filters=None, names=None):
 
         conditions = []
         if filters.get("company_gstin"):

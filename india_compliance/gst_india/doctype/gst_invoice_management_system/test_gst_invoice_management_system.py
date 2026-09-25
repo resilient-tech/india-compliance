@@ -193,7 +193,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual(shown.cgst, -450)
         self.assertEqual(shown.sgst, -450)
 
-        booked = PurchaseInvoice().get_all(names=[return_invoice.name])[return_invoice.name]
+        booked = PurchaseInvoice().get_all(names=[return_invoice.name], only_names=True)[return_invoice.name]
         self.assertEqual(booked.taxable_value, -5000)
         self.assertEqual(booked.cgst, -450)
         self.assertEqual(booked.sgst, -450)
@@ -671,6 +671,10 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         purchases = PurchaseInvoice().get_all(filters=filters, names=[other_pinv.name])
         self.assertIn(pinv.name, purchases)
         self.assertIn(other_pinv.name, purchases)
+
+        self.assertEqual(
+            list(PurchaseInvoice().get_all(names=[other_pinv.name], only_names=True)), [other_pinv.name]
+        )
 
     def test_link_documents_with_none_purchase_invoice_name(self):
         """
