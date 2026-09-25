@@ -1,5 +1,7 @@
 """Whether a saved document can carry an e-Waybill, and the reasons it cannot."""
 
+from functools import cached_property
+
 import frappe
 from frappe import _
 
@@ -40,7 +42,7 @@ class EWaybillApplicability:
         )
 
         if self.is_enabled():
-            applicability.reasons = self.get_applicability_reasons() + self.get_generation_reasons()
+            applicability.reasons = self.applicability_reasons + self.generation_reasons
 
         return applicability
 
@@ -48,13 +50,22 @@ class EWaybillApplicability:
         return bool(self.settings.enable_e_waybill and self.settings.get(self.SWITCH))
 
     def is_api_enabled(self):
+        # the API switch only: without an API secret the client falls back to e-Waybill JSON
         return bool(self.settings.enable_api and self.is_enabled())
 
     def is_applicable(self):
-        return self.is_enabled() and not self.get_applicability_reasons()
+        return self.is_enabled() and not self.applicability_reasons
 
     def is_generatable(self):
-        return self.is_applicable() and not self.get_generation_reasons()
+        return self.is_applicable() and not self.generation_reasons
+
+    @cached_property
+    def applicability_reasons(self):
+        return self.get_applicability_reasons()
+
+    @cached_property
+    def generation_reasons(self):
+        return self.get_generation_reasons()
 
     def is_required(self):
         consignment_value = self.get_consignment_value()
@@ -65,7 +76,7 @@ class EWaybillApplicability:
         if not self.doc.get(self.fields.company_gstin_field):
             return False
 
-        threshold = _get_e_waybill_threshold(self.doc, self.settings)
+        threshold = get_e_waybill_threshold(self.doc, self.settings)
         return threshold is not None and abs(consignment_value) >= threshold
 
     def get_consignment_value(self):
@@ -200,7 +211,7 @@ def get_e_waybill_applicability(doc):
     return E_WAYBILL_APPLICABILITY[doc.doctype](doc)
 
 
-def _get_e_waybill_threshold(doc, gst_settings=None):
+def get_e_waybill_threshold(doc, gst_settings=None):
     if not gst_settings:
         gst_settings = frappe.get_cached_doc("GST Settings")
 

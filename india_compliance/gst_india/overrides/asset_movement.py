@@ -63,8 +63,8 @@ class AssetMovementController(CustomEwaybillController):
             row.item_tax_template = out.get("item_tax_template")
 
 
-def is_e_waybill_applicable(doc):
-    return AssetMovementController(doc).is_e_waybill_applicable()
+def is_e_waybill_api_enabled(doc):
+    return AssetMovementController(doc).is_e_waybill_api_enabled()
 
 
 def validate(doc, method=None):

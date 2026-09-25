@@ -243,8 +243,8 @@ def get_transaction_controller(doc):
     return SubcontractingOrderController(doc)
 
 
-def is_e_waybill_applicable(doc):
-    return get_transaction_controller(doc).is_e_waybill_applicable()
+def is_e_waybill_api_enabled(doc):
+    return get_transaction_controller(doc).is_e_waybill_api_enabled()
 
 
 def validate(doc, method=None):

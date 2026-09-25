@@ -57,7 +57,7 @@ class CustomEwaybillController:
     def get_dashboard_data(cls, data):
         return update_dashboard_with_gst_logs(cls.DOCTYPE, data, "e-Waybill Log", "Integration Request")
 
-    def is_e_waybill_applicable(self):
+    def is_e_waybill_api_enabled(self):
         return is_e_waybill_api_enabled(self.doc)
 
     def ignore_gst_validations(self):
@@ -73,7 +73,7 @@ class CustomEwaybillController:
             tax_controller.set_taxes_and_totals()
             return
 
-        if not self.is_e_waybill_applicable():
+        if not self.is_e_waybill_api_enabled():
             tax_controller.set_taxes_and_totals()
             return
 
@@ -92,7 +92,7 @@ class CustomEwaybillController:
         update_gst_details(self.doc)
 
     def before_save(self):
-        if not self.is_e_waybill_applicable():
+        if not self.is_e_waybill_api_enabled():
             self.doc.taxes_and_charges = ""
             self.doc.taxes = []
             return

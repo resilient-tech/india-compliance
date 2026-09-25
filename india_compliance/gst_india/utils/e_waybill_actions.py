@@ -11,20 +11,8 @@ from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
 
 
-def is_e_waybill_enabled(doc):
-    return get_e_waybill_applicability(doc).is_enabled()
-
-
 def is_e_waybill_api_enabled(doc):
     return get_e_waybill_applicability(doc).is_api_enabled()
-
-
-def is_e_waybill_applicable(doc):
-    return get_e_waybill_applicability(doc).is_applicable()
-
-
-def is_e_waybill_generatable(doc):
-    return get_e_waybill_applicability(doc).is_generatable()
 
 
 def is_e_waybill_required(doc):
@@ -40,7 +28,7 @@ def set_e_waybill_onload(doc, method=None):
     if doc.get("ewaybill"):
         if is_e_waybill_info_enabled() and (e_waybill_info := get_e_waybill_info(doc)):
             e_waybill_info.update(
-                cancellable=is_e_waybill_cancellable(doc, e_waybill_info),
+                cancellable=is_e_waybill_cancellable(e_waybill_info),
                 updatable=is_e_waybill_updatable(e_waybill_info),
                 extendable=is_e_waybill_extendable(e_waybill_info),
                 extendable_now=is_e_waybill_extendable_now(e_waybill_info),
@@ -78,21 +66,21 @@ def is_e_waybill_info_enabled(gst_settings=None):
     return bool(gst_settings.enable_e_waybill and is_api_enabled(gst_settings))
 
 
-def is_e_waybill_cancellable(doc, e_waybill_info=None):
+def is_e_waybill_auto_cancellable(doc, e_waybill_info=None):
     if not (doc.get("ewaybill") and is_e_waybill_info_enabled()):
         return False
 
     e_waybill_info = e_waybill_info or doc.get_onload().get("e_waybill_info") or {}
-    generated_on = e_waybill_info.get("created_on")
 
-    # the portal allows cancelling for 24 hours after generation
-    return bool(generated_on) and add_days(generated_on, 1) >= get_datetime()
-
-
-def is_e_waybill_auto_cancellable(doc, e_waybill_info=None):
     return bool(frappe.get_cached_doc("GST Settings").auto_cancel_e_waybill) and is_e_waybill_cancellable(
-        doc, e_waybill_info
+        e_waybill_info
     )
+
+
+def is_e_waybill_cancellable(e_waybill_info):
+    # the portal allows cancelling for 24 hours after generation
+    generated_on = e_waybill_info.get("created_on")
+    return bool(generated_on) and add_days(generated_on, 1) >= get_datetime()
 
 
 def is_e_waybill_updatable(e_waybill_info):

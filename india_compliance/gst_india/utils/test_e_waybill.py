@@ -54,7 +54,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     update_vehicle_info,
 )
 from india_compliance.gst_india.utils.e_waybill_actions import is_e_waybill_required
-from india_compliance.gst_india.utils.e_waybill_applicability import _get_e_waybill_threshold
+from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_threshold
 from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_FINISHED_ITEM_TG,
     _append_taxes,
@@ -2170,7 +2170,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
         )
 
         gst_settings = frappe.get_cached_doc("GST Settings")
-        threshold = _get_e_waybill_threshold(si, gst_settings)
+        threshold = get_e_waybill_threshold(si, gst_settings)
         self.assertEqual(threshold, gst_settings.e_waybill_threshold)
 
     @with_intrastate_config([])
@@ -2184,7 +2184,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
         )
 
         gst_settings = frappe.get_cached_doc("GST Settings")
-        threshold = _get_e_waybill_threshold(si, gst_settings)
+        threshold = get_e_waybill_threshold(si, gst_settings)
         self.assertEqual(threshold, gst_settings.e_waybill_threshold)
 
     @with_intrastate_config(
@@ -2205,7 +2205,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             do_not_submit=True,
         )
 
-        threshold = _get_e_waybill_threshold(si)
+        threshold = get_e_waybill_threshold(si)
         self.assertEqual(threshold, 100000)
 
     @with_intrastate_config(
@@ -2226,7 +2226,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             do_not_submit=True,
         )
 
-        threshold = _get_e_waybill_threshold(si)
+        threshold = get_e_waybill_threshold(si)
         self.assertIsNone(threshold)
 
     @with_intrastate_config(

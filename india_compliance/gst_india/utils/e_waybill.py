@@ -1393,7 +1393,7 @@ class EWaybillData(GSTTransactionData):
             )
 
     def validate_if_ewaybill_can_be_cancelled(self):
-        if not is_e_waybill_cancellable(self.doc):
+        if not is_e_waybill_cancellable(self.doc.get_onload().get("e_waybill_info", {})):
             frappe.throw(_("e-Waybill can be cancelled only within 24 Hours of its generation"))
 
     def get_all_item_details(self):
