@@ -642,14 +642,14 @@ Object.assign(india_compliance, {
         });
     },
 
-    show_cancel_headline(frm, message, on_click) {
+    show_headline_action(frm, message, action_label, color, on_click) {
         frm.dashboard.set_headline_alert(
-            `${message} <a class="ic-cancel-link" href="#">${__("Cancel")}</a>`,
-            "red",
+            `${message} <a class="ic-headline-action" href="#">${action_label}</a>`,
+            color,
             true,
         );
 
-        frm.layout.message.find(".ic-cancel-link").on("click", (e) => {
+        frm.layout.message.find(".ic-headline-action").on("click", (e) => {
             e.preventDefault();
             on_click();
         });

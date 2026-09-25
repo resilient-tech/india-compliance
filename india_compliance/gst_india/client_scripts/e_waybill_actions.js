@@ -60,9 +60,11 @@ function setup_e_waybill_actions(doctype) {
             if (frm.doc.docstatus === 2) {
                 // with an IRN the e-Waybill goes with it: cancel from the e-Invoice side
                 if (!frm.doc.irn && can_cancel_e_waybill(frm)) {
-                    india_compliance.show_cancel_headline(
+                    india_compliance.show_headline_action(
                         frm,
                         __("e-Waybill is still active and cancellable."),
+                        __("Cancel"),
+                        "red",
                         () => show_cancel_e_waybill_dialog(frm),
                     );
 
@@ -77,6 +79,22 @@ function setup_e_waybill_actions(doctype) {
 
                 const is_ewb_generatable = is_e_waybill_generatable(frm);
 
+                if (frm.doc.docstatus === 1 && frm.doc.e_waybill_status === "Pending") {
+                    const message = __(
+                        "e-Waybill is applicable for this invoice, but not yet generated or updated.",
+                    );
+
+                    if (is_ewb_generatable) frm.dashboard.add_comment(message, "yellow", true);
+                    else
+                        india_compliance.show_headline_action(
+                            frm,
+                            message,
+                            __("Applicability Status"),
+                            "yellow",
+                            () => show_e_waybill_generatable_status(frm, is_ewb_generatable),
+                        );
+                }
+
                 if (
                     frm.doc.docstatus === 0 ||
                     !is_ewb_generatable ||
@@ -88,14 +106,6 @@ function setup_e_waybill_actions(doctype) {
                         "e-Waybill",
                     );
                     return;
-                }
-
-                if (frm.doc.e_waybill_status === "Pending") {
-                    frm.dashboard.add_comment(
-                        __("e-Waybill is applicable for this invoice, but not yet generated or updated."),
-                        "yellow",
-                        true,
-                    );
                 }
 
                 if (frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)) {
