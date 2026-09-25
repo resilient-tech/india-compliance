@@ -8,7 +8,7 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
 from frappe import _
-from frappe.query_builder import Case
+from frappe.query_builder import Case, Criterion
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Max, Sum
 from frappe.utils import add_months, add_years, cint, format_date, getdate, rounded
@@ -370,31 +370,17 @@ class PurchaseInvoice:
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
-        query = self.get_query(additional_fields, names=names)
-        match_found = ("Reconciled", "Match Found")
-
         if only_names and not names:
             return
 
-        elif only_names:
-            query = query.where(self.PI.name.isin(names))
+        query = self.get_query(additional_fields, ignore_filters=True)
 
-        elif names:
-            query = query.where(
-                (
-                    (self.PI.posting_date[self.from_date : self.to_date])
-                    & (IfNull(self.PI.reconciliation_status, "").notin(match_found))
-                )
-                | (self.PI.name.isin(names))
-            )
+        if only_names:
+            return query.where(self.PI.name.isin(names)).run(as_dict=True)
 
-        else:
-            query = query.where(
-                (self.PI.posting_date[self.from_date : self.to_date])
-                & (IfNull(self.PI.reconciliation_status, "").notin(match_found))
-            )
+        criterion = self.get_filter_criterion(names, include_period=True)
 
-        return query.run(as_dict=True)
+        return query.where(criterion).run(as_dict=True)
 
     def get_unmatched(self, category, is_return=0):
         gst_category = (
@@ -423,7 +409,7 @@ class PurchaseInvoice:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_query(self, additional_fields=None, is_return=False, names=None):
+    def get_query(self, additional_fields=None, is_return=False, ignore_filters=False):
         fields = self.get_fields(additional_fields, is_return)
 
         query = (
@@ -442,24 +428,39 @@ class PurchaseInvoice:
             )
         )
 
+        if ignore_filters:
+            return query
+
+        return query.where(self.get_filter_criterion())
+
+    def get_filter_criterion(self, names=None, include_period=False):
+        conditions = []
+
         if self.company:
-            query = query.where(self.company == self.PI.company)
+            conditions.append(self.company == self.PI.company)
 
         if self.company_gstin == "All":
-            gstin_condition = self.PI.company_gstin.notnull()
+            conditions.append(self.PI.company_gstin.notnull())
         else:
-            gstin_condition = self.company_gstin == self.PI.company_gstin
-
-        # include names despite of gstin mismatch
-        if names:
-            gstin_condition = gstin_condition | self.PI.name.isin(names)
-
-        query = query.where(gstin_condition)
+            conditions.append(self.company_gstin == self.PI.company_gstin)
 
         if self.include_ignored == 0:
-            query = query.where(IfNull(self.PI.reconciliation_status, "") != "Ignored")
+            conditions.append(IfNull(self.PI.reconciliation_status, "") != "Ignored")
 
-        return query
+        if include_period:
+            match_found = ("Reconciled", "Match Found")
+            conditions.append(
+                (self.PI.posting_date[self.from_date : self.to_date])
+                & (IfNull(self.PI.reconciliation_status, "").notin(match_found))
+            )
+
+        criterion = Criterion.all(conditions)
+
+        # a linked invoice stays in despite every filter above
+        if names:
+            criterion = criterion | self.PI.name.isin(names)
+
+        return criterion
 
     def get_fields(self, additional_fields=None, is_return=False):
         tax_fields = [self.query_tax_amount(f"{tax_type}_amount").as_(tax_type) for tax_type in GST_TAX_TYPES]
@@ -527,31 +528,17 @@ class BillOfEntry:
         self.PI = frappe.qb.DocType("Purchase Invoice")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
-        query = self.get_query(additional_fields, names=names)
-        match_found = ("Reconciled", "Match Found")
-
         if only_names and not names:
             return
 
-        elif only_names:
-            query = query.where(self.BOE.name.isin(names))
+        query = self.get_query(additional_fields, ignore_filters=True)
 
-        elif names:
-            query = query.where(
-                (
-                    (self.BOE.posting_date[self.from_date : self.to_date])
-                    & (IfNull(self.BOE.reconciliation_status, "").notin(match_found))
-                )
-                | (self.BOE.name.isin(names))
-            )
+        if only_names:
+            return query.where(self.BOE.name.isin(names)).run(as_dict=True)
 
-        else:
-            query = query.where(
-                (self.BOE.posting_date[self.from_date : self.to_date])
-                & (IfNull(self.BOE.reconciliation_status, "").notin(match_found))
-            )
+        criterion = self.get_filter_criterion(names, include_period=True)
 
-        return query.run(as_dict=True)
+        return query.where(criterion).run(as_dict=True)
 
     def get_unmatched(self, category):
         gst_category = "SEZ" if category == "IMPGSEZ" else "Overseas"
@@ -570,7 +557,7 @@ class BillOfEntry:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_query(self, additional_fields=None, names=None):
+    def get_query(self, additional_fields=None, ignore_filters=False):
         fields = self.get_fields(additional_fields)
 
         query = (
@@ -587,24 +574,39 @@ class BillOfEntry:
             .select(*fields, ConstantColumn("Bill of Entry").as_("doctype"))
         )
 
+        if ignore_filters:
+            return query
+
+        return query.where(self.get_filter_criterion())
+
+    def get_filter_criterion(self, names=None, include_period=False):
+        conditions = []
+
         if self.company:
-            query = query.where(self.company == self.BOE.company)
+            conditions.append(self.company == self.BOE.company)
 
         if self.company_gstin == "All":
-            gstin_condition = self.BOE.company_gstin.notnull()
+            conditions.append(self.BOE.company_gstin.notnull())
         else:
-            gstin_condition = self.company_gstin == self.BOE.company_gstin
-
-        # include names despite of gstin mismatch
-        if names:
-            gstin_condition = gstin_condition | self.BOE.name.isin(names)
-
-        query = query.where(gstin_condition)
+            conditions.append(self.company_gstin == self.BOE.company_gstin)
 
         if self.include_ignored == 0:
-            query = query.where(IfNull(self.BOE.reconciliation_status, "") != "Ignored")
+            conditions.append(IfNull(self.BOE.reconciliation_status, "") != "Ignored")
 
-        return query
+        if include_period:
+            match_found = ("Reconciled", "Match Found")
+            conditions.append(
+                (self.BOE.posting_date[self.from_date : self.to_date])
+                & (IfNull(self.BOE.reconciliation_status, "").notin(match_found))
+            )
+
+        criterion = Criterion.all(conditions)
+
+        # a linked bill of entry stays in despite every filter above
+        if names:
+            criterion = criterion | self.BOE.name.isin(names)
+
+        return criterion
 
     def get_fields(self, additional_fields=None):
         tax_fields = [self.query_tax_amount(f"{tax_type}_amount").as_(tax_type) for tax_type in GST_TAX_TYPES]
