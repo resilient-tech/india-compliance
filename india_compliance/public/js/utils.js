@@ -53,26 +53,36 @@ Object.assign(india_compliance, {
     HSN_BIFURCATION_FROM: frappe.datetime.str_to_obj("2025-05-01"),
 
     // Stock Entry purposes for Subcontracting Inward (company is the job worker)
-    SUBCONTRACTING_INWARD_PURPOSES: ["Subcontracting Delivery", "Return Raw Material to Customer"],
+    SUBCONTRACTING_INWARD_PURPOSES: frappe.boot.subcontracting_inward_purposes,
 
     // Stock Entry purposes where goods move between subcontracting parties
-    SUBCONTRACTING_PURPOSES: [
-        "Send to Subcontractor",
-        "Subcontracting Delivery",
-        "Return Raw Material to Customer",
-    ],
+    SUBCONTRACTING_PURPOSES: frappe.boot.subcontracting_purposes,
 
     // Stock Entry purposes eligible for e-Waybill
-    E_WAYBILL_STOCK_ENTRY_PURPOSES: [
-        "Material Transfer",
-        "Material Issue",
-        "Send to Subcontractor",
-        "Subcontracting Delivery",
-        "Return Raw Material to Customer",
-    ],
+    E_WAYBILL_STOCK_ENTRY_PURPOSES: frappe.boot.e_waybill_stock_entry_purposes,
+
+    // purposes moving the company's own goods, so both sides may share a GSTIN
+    SAME_GSTIN_PURPOSES: frappe.boot.same_gstin_purposes,
+
+    // purposes that bring goods to the company without being a return
+    INWARD_PURPOSES: frappe.boot.inward_purposes,
+
+    is_e_waybill_enabled_for(doctype) {
+        return frappe.boot.e_waybill_enabled_doctypes.includes(doctype);
+    },
 
     is_subcontracting_inward_entry(doc) {
         return this.SUBCONTRACTING_INWARD_PURPOSES.includes(doc.purpose);
+    },
+
+    is_inward_transaction(doc) {
+        if ((this.INWARD_PURPOSES[doc.doctype] || []).includes(doc.purpose)) return true;
+
+        return Boolean(doc.is_return);
+    },
+
+    is_same_gstin_allowed(doc) {
+        return !doc.is_return && (this.SAME_GSTIN_PURPOSES[doc.doctype] || []).includes(doc.purpose);
     },
 
     get_month_year_from_period(period) {
@@ -632,14 +642,13 @@ Object.assign(india_compliance, {
         });
     },
 
-    show_cancel_headline(frm, message, on_click) {
+    show_headline_action(frm, message, action_label, color, on_click) {
         frm.dashboard.set_headline_alert(
-            `${message} <a class="ic-cancel-link" href="#">${__("Cancel")}</a>`,
-            "red",
-            true,
+            `${message} <button class="btn btn-xs btn-default ml-2 ic-headline-action">${action_label}</button>`,
+            color,
         );
 
-        frm.layout.message.find(".ic-cancel-link").on("click", (e) => {
+        frm.layout.message.find(".ic-headline-action").on("click", (e) => {
             e.preventDefault();
             on_click();
         });
@@ -675,8 +684,7 @@ Object.assign(india_compliance, {
             !(
                 india_compliance.is_indian_registered_company(doc.company) &&
                 gst_settings.enable_api &&
-                gst_settings.enable_e_waybill &&
-                gst_settings.enable_e_waybill_for_sc
+                india_compliance.is_e_waybill_enabled_for(doc.doctype)
             )
         ) {
             return false;
@@ -701,8 +709,7 @@ Object.assign(india_compliance, {
         return !!(
             india_compliance.is_indian_registered_company(doc.company) &&
             gst_settings.enable_api &&
-            gst_settings.enable_e_waybill &&
-            gst_settings.enable_e_waybill_from_asset_movement
+            india_compliance.is_e_waybill_enabled_for(doc.doctype)
         );
     },
 

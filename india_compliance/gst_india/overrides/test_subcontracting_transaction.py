@@ -18,13 +18,11 @@ from frappe.tests import IntegrationTestCase, UnitTestCase, change_settings
 from frappe.utils import add_to_date, flt, getdate, now_datetime
 
 from india_compliance.gst_india.overrides.stock_entry import (
-    is_e_waybill_applicable,
-)
-from india_compliance.gst_india.overrides.stock_entry import (
     onload as run_stock_entry_onload,
 )
 from india_compliance.gst_india.utils import get_items_fieldname
 from india_compliance.gst_india.utils.e_waybill import mark_e_waybill_as_generated
+from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
     set_item_wise_tax_rates,
@@ -887,18 +885,18 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
         for purpose in applicable_purposes:
             doc = frappe.new_doc("Stock Entry")
             doc.purpose = purpose
-            self.assertTrue(is_e_waybill_applicable(doc), purpose)
+            self.assertTrue(get_e_waybill_applicability(doc).is_api_enabled(), purpose)
 
         doc = frappe.new_doc("Stock Entry")
         doc.purpose = "Receive from Customer"
-        self.assertFalse(is_e_waybill_applicable(doc))
+        self.assertFalse(get_e_waybill_applicability(doc).is_api_enabled())
 
     @change_settings("GST Settings", {"enable_e_waybill_for_sc": 0})
     def test_e_waybill_not_applicable_when_sc_disabled(self):
         """Disabling e-Waybill for Subcontracting makes inward purposes non-applicable."""
         doc = frappe.new_doc("Stock Entry")
         doc.purpose = "Subcontracting Delivery"
-        self.assertFalse(is_e_waybill_applicable(doc))
+        self.assertFalse(get_e_waybill_applicability(doc).is_api_enabled())
 
     def test_subcontracting_delivery_multi_rate_receipts(self):
         """Delivery uses the weighted-average receipt rate across multiple receipts."""

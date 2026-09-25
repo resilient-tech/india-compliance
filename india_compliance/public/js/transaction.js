@@ -87,9 +87,7 @@ async function update_gst_details(frm, event) {
     const party = frm.doc[party_fieldname];
 
     const same_gstin_stock_entry =
-        frm.doc.doctype === "Stock Entry" &&
-        ["Material Transfer", "Material Issue"].includes(frm.doc.purpose) &&
-        !frm.doc.is_return;
+        frm.doc.doctype === "Stock Entry" && india_compliance.is_same_gstin_allowed(frm.doc);
 
     const is_asset_movement = frm.doc.doctype === "Asset Movement";
 
@@ -396,20 +394,15 @@ function _set_e_commerce_ecommerce_supply_type(frm) {
 }
 
 function fetch_party_details(doctype) {
-    let company_gstin_field = "company_gstin";
-
-    if (doctype === "Stock Entry") {
-        company_gstin_field = "bill_from_gstin";
-    }
-
     frappe.ui.form.on(doctype, {
         supplier(frm) {
-            if (
-                frm.doc.doctype === "Stock Entry" &&
-                frm.doc.purpose === "Material Transfer" &&
-                frm.doc.is_return
-            ) {
-                company_gstin_field = "bill_to_gstin";
+            // per form: the handler is shared by every form of this doctype
+            let company_gstin_field = "company_gstin";
+
+            if (frm.doc.doctype === "Stock Entry") {
+                company_gstin_field = india_compliance.is_inward_transaction(frm.doc)
+                    ? "bill_to_gstin"
+                    : "bill_from_gstin";
             }
 
             setTimeout(() => {

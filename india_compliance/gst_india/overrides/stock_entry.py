@@ -1,9 +1,8 @@
-from india_compliance.gst_india.constants import E_WAYBILL_STOCK_ENTRY_PURPOSES
 from india_compliance.gst_india.overrides.subcontracting_transaction import (
     SubcontractingController,
     set_address_display,
 )
-from india_compliance.gst_india.utils import is_outward_stock_entry
+from india_compliance.gst_india.utils import is_inward_transaction, is_outward_stock_entry
 from india_compliance.gst_india.utils.custom_transaction_controller import (
     set_gstin_fields_for_e_waybill,
 )
@@ -16,11 +15,6 @@ class StockEntryController(SubcontractingController):
     TAXES_FIELD_MAP = STOCK_ENTRY_FIELD_MAP
     VALIDATES_TRANSACTION_NAME = True
 
-    def is_e_waybill_applicable(self):
-        # Inward purposes (Delivery, RM Return) carry only an e-Waybill; the
-        # principal reports them in ITC-04 / GSTR-1, not the company (job worker).
-        return super().is_e_waybill_applicable() and self.doc.purpose in E_WAYBILL_STOCK_ENTRY_PURPOSES
-
     def ignore_gst_validations(self):
         if super().ignore_gst_validations():
             return True
@@ -29,11 +23,7 @@ class StockEntryController(SubcontractingController):
         if is_outward_stock_entry(self.doc) and not self.doc.bill_from_address:
             return True
 
-        return bool(self.doc.is_return and not self.doc.bill_to_address)
-
-
-def is_e_waybill_applicable(doc):
-    return StockEntryController(doc).is_e_waybill_applicable()
+        return bool(is_inward_transaction(self.doc) and not self.doc.bill_to_address)
 
 
 def validate(doc, method=None):
@@ -50,8 +40,6 @@ def onload(doc, method=None):
     # e-Waybill data generation reads these; they are only set here, so they are
     # available after run_onload (load_doc) and not on a bare frappe.get_doc.
     set_gstin_fields_for_e_waybill(doc)
-
-    StockEntryController(doc).set_e_waybill_info()
 
 
 def get_dashboard_data(data):

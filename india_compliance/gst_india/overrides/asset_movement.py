@@ -28,11 +28,6 @@ class AssetMovementController(CustomEwaybillController):
     TAXES_FIELD_MAP = ASSET_MOVEMENT_FIELD_MAP
     VALIDATES_TRANSACTION_NAME = True
 
-    def is_e_waybill_applicable(self):
-        gst_settings = frappe.get_cached_doc("GST Settings")
-
-        return super().is_e_waybill_applicable() and bool(gst_settings.enable_e_waybill_from_asset_movement)
-
     @classmethod
     def get_dashboard_data(cls, data):
         # Asset Movement has no standard dashboard, so `fieldname` is unset. frappe's
@@ -68,10 +63,6 @@ class AssetMovementController(CustomEwaybillController):
             row.item_tax_template = out.get("item_tax_template")
 
 
-def is_e_waybill_applicable(doc):
-    return AssetMovementController(doc).is_e_waybill_applicable()
-
-
 def validate(doc, method=None):
     AssetMovementController(doc).validate()
 
@@ -86,8 +77,6 @@ def onload(doc, method=None):
     # e-Waybill data generation reads these; they are only set here, so they are
     # available after run_onload (load_doc) and not on a bare frappe.get_doc.
     set_gstin_fields_for_e_waybill(doc)
-
-    AssetMovementController(doc).set_e_waybill_info()
 
 
 def get_dashboard_data(data):

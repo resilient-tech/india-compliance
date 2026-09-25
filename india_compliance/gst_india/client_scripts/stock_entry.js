@@ -57,21 +57,6 @@ frappe.ui.form.on(DOCTYPE, {
     refresh(frm) {
         frm.get_field("bill_to_address_display").$wrapper.find(".ql-editor").css("white-space", "normal");
         frm.get_field("bill_from_address_display").$wrapper.find(".ql-editor").css("white-space", "normal");
-
-        if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_for_sc) return;
-
-        show_sandbox_mode_indicator();
-    },
-
-    after_save(frm) {
-        if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm))
-            frappe.show_alert(
-                {
-                    message: __("Party Address is required to create e-Waybill"),
-                    indicator: "yellow",
-                },
-                10,
-            );
     },
 
     supplier_address(frm) {
@@ -169,7 +154,7 @@ function get_items(doc) {
 function get_field_and_label(frm, field) {
     let field_label_dict = {};
 
-    if (frm.doc.purpose === "Material Transfer" && frm.doc.is_return) {
+    if (india_compliance.is_inward_transaction(frm.doc)) {
         field_label_dict = {
             party_field: ["bill_from_address", __("Bill From (same as Supplier Address)"), __("Bill From")],
             company_field: ["bill_to_address", __("Bill To")],

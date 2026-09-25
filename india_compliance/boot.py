@@ -8,11 +8,17 @@ from india_compliance.audit_trail.utils import (
     is_audit_trail_enabled,
 )
 from india_compliance.gst_india.constants import (
+    E_WAYBILL_STOCK_ENTRY_PURPOSES,
     GST_PARTY_TYPES,
     GST_TAX_TYPES,
     IMPORT_GST_CATEGORIES,
     INDIAN_STATES,
+    INWARD_PURPOSES,
+    SAME_GSTIN_PURPOSES,
+    SUBCONTRACTING_INWARD_PURPOSES,
+    SUBCONTRACTING_PURPOSES,
 )
+from india_compliance.gst_india.utils.e_waybill_applicability import E_WAYBILL_APPLICABILITY
 
 
 def set_bootinfo(bootinfo):
@@ -21,6 +27,11 @@ def set_bootinfo(bootinfo):
     bootinfo["gst_party_types"] = GST_PARTY_TYPES
     bootinfo["gst_tax_types"] = GST_TAX_TYPES
     bootinfo["import_gst_categories"] = IMPORT_GST_CATEGORIES
+    bootinfo["subcontracting_inward_purposes"] = SUBCONTRACTING_INWARD_PURPOSES
+    bootinfo["subcontracting_purposes"] = SUBCONTRACTING_PURPOSES
+    bootinfo["e_waybill_stock_entry_purposes"] = E_WAYBILL_STOCK_ENTRY_PURPOSES
+    bootinfo["same_gstin_purposes"] = SAME_GSTIN_PURPOSES
+    bootinfo["inward_purposes"] = INWARD_PURPOSES
 
     gst_settings = frappe.get_cached_doc("GST Settings").as_dict()
     gst_settings.api_secret = "***" if gst_settings.api_secret else ""
@@ -33,6 +44,11 @@ def set_bootinfo(bootinfo):
         gst_settings.pop(key, None)
 
     bootinfo["gst_settings"] = gst_settings
+    bootinfo["e_waybill_enabled_doctypes"] = [
+        doctype
+        for doctype, applicability in E_WAYBILL_APPLICABILITY.items()
+        if gst_settings.enable_e_waybill and gst_settings.get(applicability.SWITCH)
+    ]
     bootinfo["india_state_options"] = list(INDIAN_STATES)
     bootinfo["gst_state_by_number"] = {number: state for state, number in INDIAN_STATES.items()}
     bootinfo["ic_api_enabled_from_conf"] = bool(frappe.conf.ic_api_secret)

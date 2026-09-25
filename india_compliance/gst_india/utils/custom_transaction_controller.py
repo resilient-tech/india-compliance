@@ -1,9 +1,9 @@
 import frappe
 from frappe import _, bold
 
-from india_compliance.gst_india.constants import CUSTOM_ADDRESS_FIELDS_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
     GSTAccounts,
+    _get_address_fields,
     ignore_gst_validations,
     set_gst_tax_type,
     validate_gst_category,
@@ -15,15 +15,13 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.utils import (
     get_place_of_supply,
-    is_api_enabled,
-    is_inward_transaction,
     is_same_gstin_allowed,
     update_dashboard_with_gst_logs,
 )
 from india_compliance.gst_india.utils import (
     validate_invoice_number as validate_transaction_name,
 )
-from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
     update_gst_details,
@@ -33,38 +31,8 @@ from india_compliance.gst_india.utils.taxes_controller import (
 SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
 
 
-def get_field_map(doc):
-    """Where the company and the party sit on this doctype.
-
-    Doctypes with bill_from / bill_to swap sides by direction; the rest bill the supplier
-    from a fixed set of fields.
-    """
-    if doc.doctype not in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
-        return frappe._dict(
-            company_gstin_field="company_gstin",
-            party_gstin_field="supplier_gstin",
-            company_address_field="billing_address",
-            gst_category_field="gst_category",
-        )
-
-    if is_inward_transaction(doc):
-        return frappe._dict(
-            company_gstin_field="bill_to_gstin",
-            party_gstin_field="bill_from_gstin",
-            company_address_field="bill_to_address",
-            gst_category_field="bill_from_gst_category",
-        )
-
-    return frappe._dict(
-        company_gstin_field="bill_from_gstin",
-        party_gstin_field="bill_to_gstin",
-        company_address_field="bill_from_address",
-        gst_category_field="bill_to_gst_category",
-    )
-
-
 def set_gstin_fields_for_e_waybill(doc):
-    field_map = get_field_map(doc)
+    field_map = _get_address_fields(doc.doctype, doc)
 
     doc.company_gstin = doc.get(field_map.company_gstin_field)
     doc.supplier_gstin = doc.get(field_map.party_gstin_field)
@@ -81,35 +49,11 @@ class CustomEwaybillController:
 
     @property
     def _field_map(self):
-        return get_field_map(self.doc)
+        return _get_address_fields(self.doc.doctype, self.doc)
 
     @classmethod
     def get_dashboard_data(cls, data):
         return update_dashboard_with_gst_logs(cls.DOCTYPE, data, "e-Waybill Log", "Integration Request")
-
-    def set_e_waybill_info(self):
-        if not self.doc.get("ewaybill"):
-            return
-
-        gst_settings = frappe.get_cached_doc("GST Settings")
-
-        if not (
-            self.is_e_waybill_applicable()
-            or (
-                is_api_enabled(gst_settings)
-                and gst_settings.enable_e_waybill
-                and gst_settings.auto_cancel_e_waybill
-            )
-        ):
-            return
-
-        if e_waybill_info := get_e_waybill_info(self.doc):
-            self.doc.set_onload("e_waybill_info", e_waybill_info)
-
-    def is_e_waybill_applicable(self):
-        gst_settings = frappe.get_cached_doc("GST Settings")
-
-        return bool(gst_settings.enable_api and gst_settings.enable_e_waybill)
 
     def ignore_gst_validations(self):
         return bool(ignore_gst_validations(self.doc))
@@ -124,7 +68,7 @@ class CustomEwaybillController:
             tax_controller.set_taxes_and_totals()
             return
 
-        if not self.is_e_waybill_applicable():
+        if not get_e_waybill_applicability(self.doc).is_api_enabled():
             tax_controller.set_taxes_and_totals()
             return
 
@@ -143,7 +87,7 @@ class CustomEwaybillController:
         update_gst_details(self.doc)
 
     def before_save(self):
-        if not self.is_e_waybill_applicable():
+        if not get_e_waybill_applicability(self.doc).is_api_enabled():
             self.doc.taxes_and_charges = ""
             self.doc.taxes = []
             return
@@ -219,7 +163,7 @@ class CustomEwaybillController:
 class CustomGSTAccounts(GSTAccounts):
     def __init__(self, doc, field_map=None):
         super().__init__(doc)
-        self._field_map = field_map or get_field_map(doc)
+        self._field_map = field_map or _get_address_fields(doc.doctype, doc)
 
     def validate(self, is_sales_transaction=False):
         self.is_sales_transaction = is_sales_transaction

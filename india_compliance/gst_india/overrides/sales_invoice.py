@@ -20,7 +20,6 @@ from india_compliance.gst_india.overrides.unreconcile_payment import (
     reverse_gst_adjusted_against_payment_entry,
 )
 from india_compliance.gst_india.utils import (
-    are_goods_supplied,
     get_validated_country_code,
     is_api_enabled,
     is_foreign_doc,
@@ -37,11 +36,10 @@ from india_compliance.gst_india.utils.e_invoice import (
     validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import (
-    _get_e_waybill_threshold,
-    can_auto_cancel_e_waybill,
     generate_e_waybill,
-    get_e_waybill_info,
 )
+from india_compliance.gst_india.utils.e_waybill_actions import is_e_waybill_auto_cancellable
+from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
 from india_compliance.gst_india.utils.transaction_data import (
     validate_unique_hsn_and_uom,
 )
@@ -49,7 +47,7 @@ from india_compliance.gst_india.utils.transaction_data import (
 
 def onload(doc, method=None):
     if not doc.get("ewaybill"):
-        if doc.gst_category == "Overseas" and is_e_waybill_applicable(doc):
+        if doc.gst_category == "Overseas" and get_e_waybill_applicability(doc).is_required():
             doc.set_onload("shipping_address_in_india", is_shipping_address_in_india(doc))
 
         if not doc.get("irn"):
@@ -59,9 +57,6 @@ def onload(doc, method=None):
 
     if not is_api_enabled(gst_settings):
         return
-
-    if gst_settings.enable_e_waybill and doc.ewaybill and (e_waybill_info := get_e_waybill_info(doc)):
-        doc.set_onload("e_waybill_info", e_waybill_info)
 
     if gst_settings.enable_e_invoice and doc.irn and (e_invoice_info := get_e_invoice_info(doc)):
         doc.set_onload("e_invoice_info", e_invoice_info)
@@ -132,7 +127,7 @@ def validate_fields_and_set_status_for_e_invoice(doc, gst_settings=None):
 def validate_port_address(doc):
     if (
         doc.gst_category != "Overseas"
-        or not is_e_waybill_applicable(doc)
+        or not get_e_waybill_applicability(doc).is_required()
         or doc.port_address
         or is_shipping_address_in_india(doc)
     ):
@@ -179,12 +174,7 @@ def on_submit(doc, method=None):
         )
         return
 
-    if (
-        gst_settings.auto_generate_e_waybill
-        and doc.e_waybill_status == "Pending"
-        and not doc.is_debit_note
-        and not doc.is_return
-    ):
+    if get_e_waybill_applicability(doc).is_auto_generatable():
         run_after_response_or_enqueue(
             generate_e_waybill, doc, _("e-Waybill generation failed"), doctype=doc.doctype, docname=doc.name
         )
@@ -238,33 +228,13 @@ def cancel_e_waybill_e_invoice(doc, method=None):
     if not is_api_enabled(gst_settings):
         return
 
-    if can_auto_cancel_e_invoice(doc, gst_settings) or can_auto_cancel_e_waybill(doc, gst_settings):
+    if can_auto_cancel_e_invoice(doc, gst_settings) or is_e_waybill_auto_cancellable(doc):
         run_after_response_or_enqueue(
             auto_cancel_e_invoice_e_waybill,
             doc,
             _("e-Invoice / e-Waybill cancellation failed"),
             docname=doc.name,
         )
-
-
-def is_e_waybill_applicable(doc, gst_settings=None):
-    if not gst_settings:
-        gst_settings = frappe.get_cached_doc("GST Settings")
-
-    if (
-        not gst_settings.enable_e_waybill
-        or doc.company_gstin == doc.billing_address_gstin
-        or doc.ewaybill
-        or not are_goods_supplied(doc)
-    ):
-        return False
-
-    threshold = _get_e_waybill_threshold(doc, gst_settings)
-
-    if threshold is None:
-        return False
-
-    return abs(doc.base_grand_total) >= threshold
 
 
 def on_update_after_submit(doc, method=None):
@@ -294,7 +264,7 @@ def set_e_waybill_status(doc, gst_settings=None):
 
     e_waybill_status = "Not Applicable"
 
-    if is_e_waybill_applicable(doc, gst_settings):
+    if get_e_waybill_applicability(doc).is_required():
         e_waybill_status = "Pending"
 
     if doc.ewaybill:

@@ -43,11 +43,13 @@ from india_compliance.gst_india.constants import (
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
+    INWARD_PURPOSES,
     ISD_GST_CATEGORY,
     OIDAR,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
+    SAME_GSTIN_PURPOSES,
     SERVICE_HSN_PREFIX,
     SHIP_TO_GSTIN_APPLICABLE_DATE,
     STATE_NUMBERS,
@@ -1028,7 +1030,7 @@ def get_place_of_supply_options(*, as_list=False):
 def are_goods_supplied(doc):
     return any(
         item
-        for item in doc.items
+        for item in get_items(doc)
         if item.gst_hsn_code and not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX) and item.qty != 0
     )
 
@@ -1339,12 +1341,7 @@ def get_items(doc):
 
 
 def is_outward_stock_entry(doc):
-    if (
-        doc.doctype == "Stock Entry"
-        and doc.purpose in ["Material Transfer", "Material Issue"]
-        and not doc.is_return
-    ):
-        return True
+    return doc.doctype == "Stock Entry" and is_same_gstin_allowed(doc)
 
 
 def is_inward_transaction(doc):
@@ -1353,8 +1350,8 @@ def is_inward_transaction(doc):
     Everywhere else this is `is_return`; Asset Movement has no such field and states the
     direction through `purpose` instead.
     """
-    if doc.get("doctype") == "Asset Movement":
-        return doc.get("purpose") == "Receipt"
+    if doc.get("purpose") in INWARD_PURPOSES.get(doc.get("doctype"), ()):
+        return True
 
     return bool(doc.get("is_return"))
 
@@ -1365,7 +1362,7 @@ def is_same_gstin_allowed(doc):
     The company is moving its own goods, so no supply takes place between distinct
     persons and NIC accepts the e-Waybill as Self -> Self ("For Own Use" and friends).
     """
-    return bool(is_outward_stock_entry(doc)) or doc.get("doctype") == "Asset Movement"
+    return not doc.get("is_return") and doc.get("purpose") in SAME_GSTIN_PURPOSES.get(doc.get("doctype"), ())
 
 
 def create_notification(message_content, document_type, document_name=None, request_id=None):
@@ -1568,7 +1565,7 @@ def _rollback_and_set_status(doc, fieldname, status):
     if not frappe.flags.in_test:
         frappe.db.rollback()
 
-    if doc.doctype != "Sales Invoice":
+    if not doc.meta.has_field(fieldname):
         return
 
     # if response is pending, other viewers refetch on doc_update;
