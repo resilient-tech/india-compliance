@@ -80,19 +80,27 @@ function setup_e_waybill_actions(doctype) {
                 const is_ewb_generatable = is_e_waybill_generatable(frm);
 
                 if (frm.doc.docstatus === 1 && frm.doc.e_waybill_status === "Pending") {
-                    const message = __(
+                    const pending_message = __(
                         "e-Waybill is applicable for this invoice, but not yet generated or updated.",
                     );
 
-                    if (is_ewb_generatable) frm.dashboard.add_comment(message, "yellow", true);
-                    else
+                    if (!is_ewb_generatable)
                         india_compliance.show_headline_action(
                             frm,
-                            message,
-                            __("Applicability Status"),
+                            __("e-Waybill is applicable for this invoice, but cannot be generated yet."),
+                            __("Check Applicability Status"),
                             "yellow",
                             () => show_e_waybill_generatable_status(frm, is_ewb_generatable),
                         );
+                    else if (frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name))
+                        india_compliance.show_headline_action(
+                            frm,
+                            pending_message,
+                            __("Generate e-Waybill"),
+                            "yellow",
+                            () => show_generate_e_waybill_dialog(frm),
+                        );
+                    else frm.dashboard.add_comment(pending_message, "yellow", true);
                 }
 
                 if (
