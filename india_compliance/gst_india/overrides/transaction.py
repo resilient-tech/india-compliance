@@ -16,7 +16,6 @@ from india_compliance.gst_india.constants import (
     GST_REFUND_TAX_TYPES,
     GST_TAX_TYPES,
     ISD_GST_CATEGORY,
-    LOCAL_ONLY_TRANSPORTER_FIELDS,
     SALES_DOCTYPES,
     SUBCONTRACTING_DOCTYPES,
     TAX_TYPES,
@@ -2025,7 +2024,7 @@ def validate_transporter_fields_after_submit(doc, method=None):
     if not changed_fields:
         return
 
-    if doc.get("ewaybill") and set(changed_fields) - set(LOCAL_ONLY_TRANSPORTER_FIELDS):
+    if doc.get("ewaybill"):
         frappe.throw(
             _(
                 "Cannot change transporter details after the e-Waybill has been"

@@ -1608,6 +1608,7 @@ E_WAYBILL_DN_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "mode_of_transport",
@@ -1620,6 +1621,7 @@ E_WAYBILL_DN_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "gst_vehicle_type",
@@ -1633,6 +1635,7 @@ E_WAYBILL_DN_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
 ]
 
@@ -1655,6 +1658,7 @@ E_WAYBILL_INV_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "driver",
@@ -1665,6 +1669,7 @@ E_WAYBILL_INV_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "lr_no",
@@ -1676,6 +1681,7 @@ E_WAYBILL_INV_FIELDS = [
         "translatable": 0,
         "length": 30,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "vehicle_no",
@@ -1687,6 +1693,7 @@ E_WAYBILL_INV_FIELDS = [
         "translatable": 0,
         "length": 15,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "transporter_col_break",
@@ -1705,6 +1712,7 @@ E_WAYBILL_INV_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "driver_name",
@@ -1717,6 +1725,7 @@ E_WAYBILL_INV_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "lr_date",
@@ -1727,6 +1736,7 @@ E_WAYBILL_INV_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     *E_WAYBILL_DN_FIELDS,
 ]
@@ -1741,6 +1751,7 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "driver",
@@ -1751,6 +1762,7 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "vehicle_no",
@@ -1762,6 +1774,7 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
         "translatable": 0,
         "length": 15,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "driver_name",
@@ -1774,6 +1787,7 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     *E_WAYBILL_DN_FIELDS,
 ]
@@ -1797,6 +1811,7 @@ E_WAYBILL_TRANSPORTER_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "lr_no",
@@ -1808,6 +1823,7 @@ E_WAYBILL_TRANSPORTER_FIELDS = [
         "translatable": 0,
         "length": 30,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "vehicle_no",
@@ -1819,6 +1835,7 @@ E_WAYBILL_TRANSPORTER_FIELDS = [
         "translatable": 0,
         "length": 15,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "transporter_col_break",
@@ -1837,6 +1854,7 @@ E_WAYBILL_TRANSPORTER_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "lr_date",
@@ -1847,6 +1865,7 @@ E_WAYBILL_TRANSPORTER_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     *E_WAYBILL_DN_FIELDS,
 ]
@@ -1861,6 +1880,7 @@ E_WAYBILL_SCR_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "gst_transporter_id",
@@ -1873,6 +1893,7 @@ E_WAYBILL_SCR_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "vehicle_no",
@@ -1884,6 +1905,7 @@ E_WAYBILL_SCR_FIELDS = [
         "translatable": 0,
         "length": 15,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "distance",
@@ -1907,6 +1929,7 @@ E_WAYBILL_SCR_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "gst_vehicle_type",
@@ -1920,6 +1943,7 @@ E_WAYBILL_SCR_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
+        "read_only_depends_on": "",
     },
 ]
 
