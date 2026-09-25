@@ -43,7 +43,9 @@ from india_compliance.gst_india.constants import (
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
+    INTERNAL_STOCK_TRANSFER_PURPOSES,
     ISD_GST_CATEGORY,
+    JOB_WORKER_INWARD_PURPOSES,
     OIDAR,
     PAN_NUMBER,
     PINCODE_FORMAT,
@@ -1338,13 +1340,10 @@ def get_items(doc):
     return doc.get(get_items_fieldname(doc.doctype)) or []
 
 
-def is_outward_stock_entry(doc):
-    if (
-        doc.doctype == "Stock Entry"
-        and doc.purpose in ["Material Transfer", "Material Issue"]
-        and not doc.is_return
-    ):
-        return True
+def is_internal_stock_transfer(doc):
+    return (
+        doc.doctype == "Stock Entry" and doc.purpose in INTERNAL_STOCK_TRANSFER_PURPOSES and not doc.is_return
+    )
 
 
 def is_inward_transaction(doc):
@@ -1356,6 +1355,9 @@ def is_inward_transaction(doc):
     if doc.get("doctype") == "Asset Movement":
         return doc.get("purpose") == "Receipt"
 
+    if doc.get("doctype") == "Stock Entry" and doc.get("purpose") in JOB_WORKER_INWARD_PURPOSES:
+        return True
+
     return bool(doc.get("is_return"))
 
 
@@ -1365,7 +1367,7 @@ def is_same_gstin_allowed(doc):
     The company is moving its own goods, so no supply takes place between distinct
     persons and NIC accepts the e-Waybill as Self -> Self ("For Own Use" and friends).
     """
-    return bool(is_outward_stock_entry(doc)) or doc.get("doctype") == "Asset Movement"
+    return is_internal_stock_transfer(doc) or doc.get("doctype") == "Asset Movement"
 
 
 def create_notification(message_content, document_type, document_name=None, request_id=None):

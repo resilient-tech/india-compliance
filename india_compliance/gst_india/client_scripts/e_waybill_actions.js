@@ -484,9 +484,23 @@ function get_generate_e_waybill_dialog(opts, frm) {
     return d;
 }
 
-const SUBCONTRACTING_INWARD_SUB_SUPPLY_DESC = {
+const JOB_WORKER_OUTWARD_SUB_SUPPLY_DESC = {
     "Subcontracting Delivery": "Job Work Delivery",
     "Return Raw Material to Customer": "Return Raw Material",
+};
+
+// NIC has no inward Job Work type, so these go as Others with a description
+const JOB_WORKER_INWARD_SUB_SUPPLY_DESC = {
+    "Receive from Customer": "Job Work",
+    "Subcontracting Return": "Return of Finished Goods",
+};
+
+// sub supply types NIC accepts on a Delivery Challan, keyed by direction and same GSTIN
+const DELIVERY_CHALLAN_SUB_SUPPLY_BUCKETS = {
+    "Outward:false": ["Job Work", "SKD/CKD", "Others"],
+    "Outward:true": ["For Own Use", "Exhibition or Fairs", "Line Sales", "Recipient Not Known", "Others"],
+    "Inward:false": ["Job Work Returns", "Sales Return", "SKD/CKD", "Others"],
+    "Inward:true": ["For Own Use", "Exhibition or Fairs", "Others"],
 };
 
 function get_sub_suppy_type_options(frm, is_foreign_transaction) {
@@ -494,59 +508,27 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
 
     if (frm.doctype === "Delivery Note") {
         const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
-
-        if (frm.doc.is_return) {
-            supply_type = "Inward";
-            document_type = "Delivery Challan";
-            if (same_gstin) {
-                sub_supply_type = ["For Own Use", "Exhibition or Fairs", "Others"];
-            } else {
-                sub_supply_type = ["Job Work Returns", "SKD/CKD", "Others"];
-            }
-        } else {
-            supply_type = "Outward";
-            document_type = "Delivery Challan";
-            if (same_gstin) {
-                sub_supply_type = [
-                    "For Own Use",
-                    "Exhibition or Fairs",
-                    "Line Sales",
-                    "Recipient Not Known",
-                    "Others",
-                ];
-            } else {
-                sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
-            }
-        }
+        supply_type = frm.doc.is_return ? "Inward" : "Outward";
+        document_type = "Delivery Challan";
+        sub_supply_type = DELIVERY_CHALLAN_SUB_SUPPLY_BUCKETS[`${supply_type}:${same_gstin}`];
     } else if (frm.doctype === "Stock Entry") {
         document_type = "Delivery Challan";
 
         if (frm.doc.purpose === "Send to Subcontractor") {
             supply_type = "Outward";
             sub_supply_type = ["Job Work"];
-        } else if (india_compliance.is_subcontracting_inward_entry(frm.doc)) {
+        } else if (india_compliance.is_job_worker_outward_entry(frm.doc)) {
             supply_type = "Outward";
             sub_supply_type = ["Others"];
-            sub_supply_desc = SUBCONTRACTING_INWARD_SUB_SUPPLY_DESC[frm.doc.purpose];
-        } else if (["Material Transfer", "Material Issue"].includes(frm.doc.purpose)) {
+            sub_supply_desc = JOB_WORKER_OUTWARD_SUB_SUPPLY_DESC[frm.doc.purpose];
+        } else if (india_compliance.is_job_worker_inward_entry(frm.doc)) {
+            supply_type = "Inward";
+            sub_supply_type = ["Others"];
+            sub_supply_desc = JOB_WORKER_INWARD_SUB_SUPPLY_DESC[frm.doc.purpose];
+        } else if (india_compliance.INTERNAL_STOCK_TRANSFER_PURPOSES.includes(frm.doc.purpose)) {
+            supply_type = frm.doc.is_return ? "Inward" : "Outward";
             const same_gstin = frm.doc.bill_from_gstin === frm.doc.bill_to_gstin;
-
-            if (frm.doc.is_return) {
-                supply_type = "Inward";
-                sub_supply_type = ["Job Work Returns"];
-            } else if (same_gstin) {
-                supply_type = "Outward";
-                sub_supply_type = [
-                    "For Own Use",
-                    "Exhibition or Fairs",
-                    "Line Sales",
-                    "Recipient Not Known",
-                    "Others",
-                ];
-            } else {
-                supply_type = "Outward";
-                sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
-            }
+            sub_supply_type = DELIVERY_CHALLAN_SUB_SUPPLY_BUCKETS[`${supply_type}:${same_gstin}`];
         }
     } else if (frm.doctype === "Asset Movement") {
         // NIC allows "For Own Use" only when both sides share the same GSTIN

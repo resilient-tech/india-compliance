@@ -30,14 +30,27 @@ TAX_TYPES = (*GST_TAX_TYPES, *GST_RCM_TAX_TYPES, *GST_REFUND_TAX_TYPES)
 
 GST_PARTY_TYPES = ("Customer", "Supplier", "Company")
 
-# Stock Entry purposes for Subcontracting Inward (company is the job worker)
-SUBCONTRACTING_INWARD_PURPOSES = ("Subcontracting Delivery", "Return Raw Material to Customer")
+# Subcontracting Order: the company sends its goods to a job worker
+SUBCONTRACTING_AS_PRINCIPAL = ("Send to Subcontractor",)
 
-# Stock Entry purposes where goods move between subcontracting parties
-SUBCONTRACTING_PURPOSES = ("Send to Subcontractor", *SUBCONTRACTING_INWARD_PURPOSES)
+# Subcontracting Inward Order: the company is the customer's job worker
+JOB_WORKER_OUTWARD_PURPOSES = ("Subcontracting Delivery", "Return Raw Material to Customer")
+JOB_WORKER_INWARD_PURPOSES = ("Receive from Customer", "Subcontracting Return")
+SUBCONTRACTING_AS_JOB_WORKER = (*JOB_WORKER_OUTWARD_PURPOSES, *JOB_WORKER_INWARD_PURPOSES)
+
+# own goods moving, so both sides may share a GSTIN
+INTERNAL_STOCK_TRANSFER_PURPOSES = (
+    "Material Transfer",
+    "Material Transfer for Manufacture",
+    "Material Issue",
+)
 
 # Stock Entry purposes eligible for e-Waybill
-E_WAYBILL_STOCK_ENTRY_PURPOSES = ("Material Transfer", "Material Issue", *SUBCONTRACTING_PURPOSES)
+E_WAYBILL_STOCK_ENTRY_PURPOSES = (
+    *SUBCONTRACTING_AS_PRINCIPAL,
+    *SUBCONTRACTING_AS_JOB_WORKER,
+    *INTERNAL_STOCK_TRANSFER_PURPOSES,
+)
 
 # Transporter fields that stay editable after submit until an e-Waybill is generated.
 TRANSPORTER_FIELDS = (
