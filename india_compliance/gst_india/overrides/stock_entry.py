@@ -17,8 +17,7 @@ class StockEntryController(SubcontractingController):
     VALIDATES_TRANSACTION_NAME = True
 
     def is_e_waybill_applicable(self):
-        # Purposes not in the eligible set (e.g. Manufacture, Repack — same-premises,
-        # no movement of goods between locations) carry no e-Waybill.
+        # job-worker legs carry only an e-Waybill; the principal reports them in ITC-04 / GSTR-1
         return super().is_e_waybill_applicable() and self.doc.purpose in E_WAYBILL_STOCK_ENTRY_PURPOSES
 
     def ignore_gst_validations(self):

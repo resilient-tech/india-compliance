@@ -23,11 +23,7 @@ from india_compliance.gst_india.overrides.stock_entry import (
 from india_compliance.gst_india.overrides.stock_entry import (
     onload as run_stock_entry_onload,
 )
-from india_compliance.gst_india.utils import (
-    get_items_fieldname,
-    is_internal_stock_transfer,
-    is_job_worker_inward_entry,
-)
+from india_compliance.gst_india.utils import get_items_fieldname, is_same_gstin_allowed
 from india_compliance.gst_india.utils.e_waybill import mark_e_waybill_as_generated
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -880,8 +876,7 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
             self.assertFalse(item.get("additional_taxable_value"))
 
     def test_e_waybill_applicable_for_stock_entry_purposes(self):
-        """e-Waybill is applicable for outward transfers, subcontracting legs and inward
-        receipts, but not for same-premises operations."""
+        """A Stock Entry moving goods gets no e-Waybill, or one moving none gets one."""
         applicable_purposes = (
             "Material Transfer",
             "Material Transfer for Manufacture",
@@ -903,6 +898,10 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
             doc.purpose = purpose
             self.assertFalse(is_e_waybill_applicable(doc), purpose)
 
+        doc = frappe.new_doc("Stock Entry")
+        doc.purpose = "Material Transfer for Manufacture"
+        self.assertTrue(is_same_gstin_allowed(doc))
+
     @change_settings("GST Settings", {"enable_e_waybill_for_sc": 0})
     def test_e_waybill_not_applicable_when_sc_disabled(self):
         """Disabling e-Waybill for Subcontracting makes inward purposes non-applicable."""
@@ -910,37 +909,23 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
         doc.purpose = "Subcontracting Delivery"
         self.assertFalse(is_e_waybill_applicable(doc))
 
-    def test_material_transfer_for_manufacture_is_outward(self):
-        """MTfM is an outward own-account transfer, treated like Material Transfer."""
-        doc = frappe.new_doc("Stock Entry")
-        doc.purpose = "Material Transfer for Manufacture"
-
-        self.assertTrue(is_internal_stock_transfer(doc))
-        self.assertFalse(is_job_worker_inward_entry(doc))
-        self.assertTrue(is_e_waybill_applicable(doc))
-
-    def test_receive_from_customer_inward_orientation(self):
-        """Inward receipt: bill_from = customer (consignor), bill_to = company (consignee)."""
+    def test_job_worker_inward_legs(self):
+        """Inward legs lose the customer -> company direction or the returned goods' value."""
         scio = create_subcontracting_inward_order()
+        customer_address = get_default_address("Customer", scio.customer)
+        company_address = get_default_address("Company", scio.company)
+
+        # receive
         receipt = receive_customer_materials(scio)
-
-        self.assertEqual(receipt.purpose, "Receive from Customer")
-        self.assertTrue(is_job_worker_inward_entry(receipt))
-        self.assertFalse(is_internal_stock_transfer(receipt))
-
-        self.assertEqual(receipt.bill_from_address, get_default_address("Customer", scio.customer))
-        self.assertEqual(receipt.bill_to_address, get_default_address("Company", scio.company))
-        # Company (recipient) self-generates -> its GSTIN is the required side.
+        self.assertEqual(receipt.bill_from_address, customer_address)
+        self.assertEqual(receipt.bill_to_address, company_address)
         self.assertTrue(receipt.bill_to_gstin)
-        self.assertTrue(is_e_waybill_applicable(receipt))
 
-    def test_subcontracting_return_inward_orientation(self):
-        """Subcontracting Return (FG back from customer) is oriented inward."""
-        scio = create_subcontracting_inward_order()
-        receive_customer_materials(scio)
+        # deliver
         manufacture_for_subcontracting_inward(scio)
         make_subcontracting_inward_delivery(scio=scio)
 
+        # return
         scio.reload()
         sc_return = frappe.new_doc("Stock Entry").update(scio.make_subcontracting_return())
         # ERPNext leaves the target warehouse for the returned finished goods to the user
@@ -948,49 +933,20 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
             item.t_warehouse = "Finished Goods - _TIRC"
         sc_return.save()
 
-        self.assertEqual(sc_return.purpose, "Subcontracting Return")
-        self.assertTrue(is_job_worker_inward_entry(sc_return))
+        self.assertEqual(sc_return.bill_from_address, customer_address)
+        self.assertEqual(sc_return.bill_to_address, company_address)
 
-        self.assertEqual(sc_return.bill_from_address, get_default_address("Customer", scio.customer))
-        self.assertEqual(sc_return.bill_to_address, get_default_address("Company", scio.company))
-        self.assertTrue(is_e_waybill_applicable(sc_return))
+        precision = sc_return.precision("additional_taxable_value", "items")
+        finished_goods = [item for item in sc_return.items if item.get("scio_detail")]
+        self.assertTrue(finished_goods)
 
-    def test_subcontracting_return_taxable_value(self):
-        """Returned FG carry the same customer-material value as the delivery (Rule 138)."""
-        scio = create_subcontracting_inward_order()
-        receive_customer_materials(scio)
-        manufacture_for_subcontracting_inward(scio)
-        make_subcontracting_inward_delivery(scio=scio)
-
-        scio.reload()
-        sc_return = frappe.new_doc("Stock Entry").update(scio.make_subcontracting_return())
-        # ERPNext leaves the target warehouse for the returned finished goods to the user
-        for item in sc_return.items:
-            item.t_warehouse = "Finished Goods - _TIRC"
-        sc_return.save()
-
-        priced_rows = 0
-        for item in sc_return.items:
-            if not item.get("scio_detail"):
-                continue
-
-            precision = sc_return.precision("additional_taxable_value", "items")
-            expected_additional = flt(self._expected_delivery_value(item), precision)
-
-            self.assertEqual(flt(item.additional_taxable_value), expected_additional)
-            self.assertEqual(
-                flt(item.taxable_value),
-                flt(item.amount) + flt(item.additional_taxable_value),
-            )
-            # Customer FG are zero-valued in the company's books (design invariant), so
-            # the consignment value comes entirely from additional_taxable_value and is
-            # not double-counted on top of an own-cost amount.
+        for item in finished_goods:
+            expected_value = flt(self._expected_delivery_value(item), precision)
+            self.assertEqual(flt(item.additional_taxable_value), expected_value)
+            # customer's goods sit at zero in our books, so the value is all additional
             self.assertEqual(flt(item.amount), 0)
-            self.assertEqual(flt(item.taxable_value), expected_additional)
+            self.assertEqual(flt(item.taxable_value), expected_value)
             self.assertGreater(item.taxable_value, 0)
-            priced_rows += 1
-
-        self.assertTrue(priced_rows, "No finished-good rows were priced")
 
     def test_subcontracting_delivery_multi_rate_receipts(self):
         """Delivery uses the weighted-average receipt rate across multiple receipts."""

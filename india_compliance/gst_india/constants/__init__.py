@@ -30,19 +30,15 @@ TAX_TYPES = (*GST_TAX_TYPES, *GST_RCM_TAX_TYPES, *GST_REFUND_TAX_TYPES)
 
 GST_PARTY_TYPES = ("Customer", "Supplier", "Company")
 
-# Company is the PRINCIPAL: it outsources manufacturing and sends its goods to a
-# subcontractor (Subcontracting Order).
+# Subcontracting Order: the company sends its goods to a job worker
 SUBCONTRACTING_AS_PRINCIPAL = ("Send to Subcontractor",)
 
-# Company is the JOB WORKER: it does the work for a customer (Subcontracting Inward
-# Order).
-#   - OUTWARD: job worker sends goods out to the customer
+# Subcontracting Inward Order: the company is the customer's job worker
 JOB_WORKER_OUTWARD_PURPOSES = ("Subcontracting Delivery", "Return Raw Material to Customer")
-#   - INWARD:  job worker receives goods in from the customer
 JOB_WORKER_INWARD_PURPOSES = ("Receive from Customer", "Subcontracting Return")
 SUBCONTRACTING_AS_JOB_WORKER = (*JOB_WORKER_OUTWARD_PURPOSES, *JOB_WORKER_INWARD_PURPOSES)
 
-# Own-account outward movements; same-GSTIN moves are allowed here.
+# own goods moving, so both sides may share a GSTIN
 INTERNAL_STOCK_TRANSFER_PURPOSES = (
     "Material Transfer",
     "Material Transfer for Manufacture",

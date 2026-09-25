@@ -18,7 +18,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_items,
-    is_job_worker_inward_entry,
+    is_inward_transaction,
 )
 from india_compliance.gst_india.utils.custom_transaction_controller import CustomEwaybillController
 
@@ -97,17 +97,11 @@ def update_address_fields(doc, source_doc):
 
 
 def set_address_for_subcontracting_inward(doc, source_doc):
-    """Set bill_from/bill_to addresses for Subcontracting Inward Order Stock Entries.
-
-    Outbound legs (Subcontracting Delivery, Return Raw Material to Customer): the company
-    ships to the customer -> bill_from = company, bill_to = customer.
-    Inbound legs (Receive from Customer, Subcontracting Return): the customer ships to the
-    company -> bill_from = customer, bill_to = company.
-    """
+    """Set company and customer addresses on Subcontracting Inward Stock Entries."""
     company_address = get_default_address("Company", source_doc.company)
     customer_address = get_default_address("Customer", source_doc.customer)
 
-    if is_job_worker_inward_entry(doc):
+    if is_inward_transaction(doc):
         bill_from_address, bill_to_address = customer_address, company_address
     else:
         bill_from_address, bill_to_address = company_address, customer_address
@@ -439,11 +433,8 @@ def remove_duplicates(doc):
 
 def set_subcontracting_inward_taxable_value(doc):
     """Add the value of customer-provided materials to the e-Waybill taxable value
-    of Subcontracting Inward Stock Entries.
-
-    Subcontracting Return reverses a Subcontracting Delivery (customer sends the
-    finished goods back), so the returned goods carry the same per-unit value.
-    """
+    of Subcontracting Inward Stock Entries."""
+    # returned finished goods go back at their delivered value
     if doc.purpose in ("Subcontracting Delivery", "Subcontracting Return"):
         _set_finished_goods_additional_value(doc)
     elif doc.purpose == "Return Raw Material to Customer":

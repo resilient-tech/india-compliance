@@ -1346,23 +1346,19 @@ def is_internal_stock_transfer(doc):
     )
 
 
-def is_job_worker_inward_entry(doc):
-    """True when the company (as job worker) receives goods from the customer and
-    self-generates the e-Waybill."""
-    return doc.doctype == "Stock Entry" and doc.purpose in JOB_WORKER_INWARD_PURPOSES
-
-
 def is_inward_transaction(doc):
     """True when the goods flow towards the company, ie Bill To is the company's side.
 
     Everywhere else this is `is_return`; Asset Movement has no such field and states the
-    direction through `purpose` instead, as do the Stock Entries in which the company,
-    as job worker, receives goods from its customer.
+    direction through `purpose` instead.
     """
     if doc.get("doctype") == "Asset Movement":
         return doc.get("purpose") == "Receipt"
 
-    return bool(doc.get("is_return")) or is_job_worker_inward_entry(doc)
+    if doc.get("doctype") == "Stock Entry" and doc.get("purpose") in JOB_WORKER_INWARD_PURPOSES:
+        return True
+
+    return bool(doc.get("is_return"))
 
 
 def is_same_gstin_allowed(doc):

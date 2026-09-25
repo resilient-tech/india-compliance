@@ -489,20 +489,18 @@ const JOB_WORKER_OUTWARD_SUB_SUPPLY_DESC = {
     "Return Raw Material to Customer": "Return Raw Material",
 };
 
-// NIC has no specific inward sub-supply type for job work receipts, so
-// "Others" + description is used, same as JOB_WORKER_OUTWARD_SUB_SUPPLY_DESC.
+// NIC has no inward Job Work type, so these go as Others with a description
 const JOB_WORKER_INWARD_SUB_SUPPLY_DESC = {
     "Receive from Customer": "Job Work",
     "Subcontracting Return": "Return of Finished Goods",
 };
 
-// Delivery-Challan-valid sub-supply types per the NIC "Supply Type - Document Type"
-// mapping, bucketed by direction x GSTIN match. Key: "<supply_type>:<same_gstin>".
+// sub supply types NIC accepts on a Delivery Challan, keyed by direction and same GSTIN
 const DELIVERY_CHALLAN_SUB_SUPPLY_BUCKETS = {
-    "Outward:false": ["Job Work", "SKD/CKD", "Others"], // different GSTIN, Self -> Other/URP
-    "Outward:true": ["For Own Use", "Exhibition or Fairs", "Line Sales", "Recipient Not Known", "Others"], // same GSTIN, Self -> Self
-    "Inward:false": ["Job Work Returns", "Sales Return", "SKD/CKD", "Others"], // different GSTIN, Other/URP -> Self
-    "Inward:true": ["For Own Use", "Exhibition or Fairs", "Others"], // same GSTIN, Self -> Self
+    "Outward:false": ["Job Work", "SKD/CKD", "Others"],
+    "Outward:true": ["For Own Use", "Exhibition or Fairs", "Line Sales", "Recipient Not Known", "Others"],
+    "Inward:false": ["Job Work Returns", "Sales Return", "SKD/CKD", "Others"],
+    "Inward:true": ["For Own Use", "Exhibition or Fairs", "Others"],
 };
 
 function get_sub_suppy_type_options(frm, is_foreign_transaction) {
