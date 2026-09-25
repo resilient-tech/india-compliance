@@ -36,8 +36,17 @@ SUBCONTRACTING_INWARD_PURPOSES = ("Subcontracting Delivery", "Return Raw Materia
 # Stock Entry purposes where goods move between subcontracting parties
 SUBCONTRACTING_PURPOSES = ("Send to Subcontractor", *SUBCONTRACTING_INWARD_PURPOSES)
 
+# purposes moving the company's own goods, so both sides may share a GSTIN
+SAME_GSTIN_PURPOSES = {
+    "Stock Entry": ("Material Transfer", "Material Issue"),
+    "Asset Movement": ("Issue", "Receipt", "Transfer", "Transfer and Issue"),
+}
+
+# purposes that bring goods to the company without being a return
+INWARD_PURPOSES = {"Asset Movement": ("Receipt",)}
+
 # Stock Entry purposes eligible for e-Waybill
-E_WAYBILL_STOCK_ENTRY_PURPOSES = ("Material Transfer", "Material Issue", *SUBCONTRACTING_PURPOSES)
+E_WAYBILL_STOCK_ENTRY_PURPOSES = (*SAME_GSTIN_PURPOSES["Stock Entry"], *SUBCONTRACTING_PURPOSES)
 
 # Transporter fields that stay editable after submit until an e-Waybill is generated.
 TRANSPORTER_FIELDS = (
