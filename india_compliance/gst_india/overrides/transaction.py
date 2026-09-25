@@ -946,6 +946,7 @@ def _get_address_fields(doctype, party_details=None):
         {
             "company_gstin_field": "",
             "party_gstin_field": "",
+            "company_address_field": "",
             "party_address_field": "",
             "gst_category_field": "",
         }
@@ -954,15 +955,23 @@ def _get_address_fields(doctype, party_details=None):
         address_fields.update(
             company_gstin_field="company_gstin",
             party_gstin_field="billing_address_gstin",
+            company_address_field="company_address",
             party_address_field="customer_address",
             gst_category_field="gst_category",
         )
 
     elif doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
-        if party_details and is_inward_transaction(frappe._dict(party_details, doctype=doctype)):
+        direction = frappe._dict(
+            doctype=doctype,
+            purpose=party_details and party_details.get("purpose"),
+            is_return=party_details and party_details.get("is_return"),
+        )
+
+        if is_inward_transaction(direction):
             address_fields.update(
                 company_gstin_field="bill_to_gstin",
                 party_gstin_field="bill_from_gstin",
+                company_address_field="bill_to_address",
                 party_address_field="bill_from_address",
                 gst_category_field="bill_from_gst_category",
             )
@@ -970,6 +979,7 @@ def _get_address_fields(doctype, party_details=None):
             address_fields.update(
                 company_gstin_field="bill_from_gstin",
                 party_gstin_field="bill_to_gstin",
+                company_address_field="bill_from_address",
                 party_address_field="bill_to_address",
                 gst_category_field="bill_to_gst_category",
             )
@@ -978,6 +988,7 @@ def _get_address_fields(doctype, party_details=None):
         address_fields.update(
             company_gstin_field="company_gstin",
             party_gstin_field="supplier_gstin",
+            company_address_field="billing_address",
             party_address_field="supplier_address",
             gst_category_field="gst_category",
         )

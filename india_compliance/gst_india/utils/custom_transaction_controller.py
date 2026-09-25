@@ -1,9 +1,9 @@
 import frappe
 from frappe import _, bold
 
-from india_compliance.gst_india.constants import CUSTOM_ADDRESS_FIELDS_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
     GSTAccounts,
+    _get_address_fields,
     ignore_gst_validations,
     set_gst_tax_type,
     validate_gst_category,
@@ -15,7 +15,6 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.utils import (
     get_place_of_supply,
-    is_inward_transaction,
     is_same_gstin_allowed,
     update_dashboard_with_gst_logs,
 )
@@ -32,38 +31,8 @@ from india_compliance.gst_india.utils.taxes_controller import (
 SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
 
 
-def get_field_map(doc):
-    """Where the company and the party sit on this doctype.
-
-    Doctypes with bill_from / bill_to swap sides by direction; the rest bill the supplier
-    from a fixed set of fields.
-    """
-    if doc.doctype not in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
-        return frappe._dict(
-            company_gstin_field="company_gstin",
-            party_gstin_field="supplier_gstin",
-            company_address_field="billing_address",
-            gst_category_field="gst_category",
-        )
-
-    if is_inward_transaction(doc):
-        return frappe._dict(
-            company_gstin_field="bill_to_gstin",
-            party_gstin_field="bill_from_gstin",
-            company_address_field="bill_to_address",
-            gst_category_field="bill_from_gst_category",
-        )
-
-    return frappe._dict(
-        company_gstin_field="bill_from_gstin",
-        party_gstin_field="bill_to_gstin",
-        company_address_field="bill_from_address",
-        gst_category_field="bill_to_gst_category",
-    )
-
-
 def set_gstin_fields_for_e_waybill(doc):
-    field_map = get_field_map(doc)
+    field_map = _get_address_fields(doc.doctype, doc)
 
     doc.company_gstin = doc.get(field_map.company_gstin_field)
     doc.supplier_gstin = doc.get(field_map.party_gstin_field)
@@ -80,7 +49,7 @@ class CustomEwaybillController:
 
     @property
     def _field_map(self):
-        return get_field_map(self.doc)
+        return _get_address_fields(self.doc.doctype, self.doc)
 
     @classmethod
     def get_dashboard_data(cls, data):
@@ -197,7 +166,7 @@ class CustomEwaybillController:
 class CustomGSTAccounts(GSTAccounts):
     def __init__(self, doc, field_map=None):
         super().__init__(doc)
-        self._field_map = field_map or get_field_map(doc)
+        self._field_map = field_map or _get_address_fields(doc.doctype, doc)
 
     def validate(self, is_sales_transaction=False):
         self.is_sales_transaction = is_sales_transaction

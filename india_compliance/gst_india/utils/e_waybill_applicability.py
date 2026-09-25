@@ -25,9 +25,7 @@ class EWaybillApplicability:
     def __init__(self, doc):
         self.doc = doc
         self.settings = frappe.get_cached_doc("GST Settings")
-        self.fields = _get_address_fields(
-            doc.doctype, {"purpose": doc.get("purpose"), "is_return": doc.get("is_return")}
-        )
+        self.fields = _get_address_fields(doc.doctype, doc)
 
     def get(self):
         applicability = frappe._dict(
