@@ -236,7 +236,7 @@
    "fetch_from": "item_code.gst_hsn_code",
    "fetch_if_empty": 1,
    "fieldname": "gst_hsn_code",
-   "fieldtype": "Data",
+   "fieldtype": "Autocomplete",
    "label": "HSN/SAC",
    "print_hide": 1
   },

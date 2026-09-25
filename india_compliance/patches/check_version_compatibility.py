@@ -12,7 +12,12 @@ VERSIONS_TO_COMPARE = [
     {
         "app_name": "Frappe",
         "current_version": version.parse(frappe.__version__),
-        "required_versions": {"version-14": "14.57.0", "version-15": "15.50.0"},
+        "required_versions": {
+            "version-14": "14.57.0",
+            # Frappe #43160 (fetch_from on Autocomplete fields)
+            "version-15": "15.121.1",
+            "version-16": "16.33.0",
+        },
     },
     {
         "app_name": "ERPNext",

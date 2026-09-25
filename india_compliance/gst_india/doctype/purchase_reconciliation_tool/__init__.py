@@ -7,21 +7,25 @@ import frappe
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
+from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Max, Sum
-from frappe.utils import add_months, cint, format_date, getdate, rounded
+from frappe.utils import add_months, add_years, cint, format_date, getdate, rounded
+from pypika.terms import LiteralValue
 from rapidfuzz import fuzz, process
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, TAXABLE_GST_TREATMENTS
 from india_compliance.gst_india.utils import get_gstin_list, get_party_for_gstin, get_periods_between_dates
 from india_compliance.gst_india.utils.gstr_2 import (
     IMPORT_CATEGORY,
+    ISD_CATEGORY,
     NON_RECONCILE_CATEGORY,
     ReturnType,
 )
 from india_compliance.gst_india.utils.itc_claim import (
     SUPPORTED_DOCTYPES,
+    get_gst_fy_start,
     set_itc_claim_period_on_match,
 )
 
@@ -31,6 +35,7 @@ class Fields(Enum):
     SUPPLIER_GSTIN = "supplier_gstin"
     COMPANY_GSTIN = "company_gstin"
     BILL_NO = "bill_no"
+    BILL_DATE = "bill_date"
     PLACE_OF_SUPPLY = "place_of_supply"
     REVERSE_CHARGE = "is_reverse_charge"
     TAXABLE_VALUE = "taxable_value"
@@ -44,7 +49,6 @@ class Fields(Enum):
 class Rule(Enum):
     EXACT_MATCH = "Exact Match"
     FUZZY_MATCH = "Fuzzy Match"
-    MISMATCH = "Mismatch"
     ROUNDING_DIFFERENCE = "Rounding Difference"  # <= 1 hardcoded
 
 
@@ -52,29 +56,46 @@ class MatchStatus(Enum):
     EXACT_MATCH = "Exact Match"
     SUGGESTED_MATCH = "Suggested Match"
     MISMATCH = "Mismatch"
-    RESIDUAL_MATCH = "Residual Match"
     MANUAL_MATCH = "Manual Match"
-    MISSING_IN_PI = "Missing in PI"
-    MISSING_IN_2A_2B = "Missing in 2A/2B"
+    ONLY_IN_2A_2B = "Only in 2A/2B"
+    ONLY_IN_BOOKS = "Only in Books"
 
 
 # Summary of rules:
+# E = exact, F = fuzzy, N = not compared, number = difference allowed
+
 # GSTIN_RULES = [
-#     {"Exact Match": ["E", "E", "E", "E", "E", 0, 0, 0, 0, 0]},
-#     {"Suggested Match": ["E", "E", "F", "E", "E", 0, 0, 0, 0, 0]},
-#     {"Suggested Match": ["E", "E", "E", "E", "E", 1, 1, 1, 1, 2]},
-#     {"Suggested Match": ["E", "E", "F", "E", "E", 1, 1, 1, 1, 2]},
-#     {"Mismatch": ["E", "E", "E", "N", "N", "N", "N", "N", "N", "N"]},
-#     {"Mismatch": ["E", "E", "F", "N", "N", "N", "N", "N", "N", "N"]},
-#     {"Residual Match": ["E", "E", "N", "E", "E", 1, 1, 1, 1, 2]},
+#     {"Exact Match":     ["E", "E", "E", "E", "E", "E", 0, 0, 0, 0, 0]},
+#     {"Suggested Match": ["E", "E", "E", "F", "E", "E", 0, 0, 0, 0, 0]},
+#     {"Suggested Match": ["E", "E", "E", "E", "E", "E", 1, 1, 1, 1, 1]},
+#     {"Suggested Match": ["E", "E", "E", "F", "E", "E", 1, 1, 1, 1, 1]},
+#     {"Mismatch":        ["E", "E", "N", "E", "N", "N", "N", "N", "N", "N", "N"]},
+#     {"Mismatch":        ["E", "E", "N", "F", "N", "N", "N", "N", "N", "N", "N"]},
+#     {"Mismatch":        ["E", "E", "E", "N", "E", "E", 1, 1, 1, 1, 1]},
 # ]
 
+# PAN level runs on what is left, keyed by pan, so supplier gstin always differs.
+# It compares total gst in place of the cgst / sgst / igst split.
+
 # PAN_RULES = [
-#     {"Mismatch": ["E", "N", "E", "E", "E", 1, 1, 1, 1, 2]},
-#     {"Mismatch": ["E", "N", "F", "E", "E", 1, 1, 1, 1, 2]},
-#     {"Mismatch": ["E", "N", "F", "N", "N", "N", "N", "N", "N", "N"]},
-#     {"Residual Match": ["E", "N", "N", "E", "E", 1, 1, 1, 1, 2]},
+#     {"Mismatch":       ["E", "N", "E", "E", "E", "E", 1, 1, 1]},
+#     {"Mismatch":       ["E", "N", "E", "F", "E", "E", 1, 1, 1]},
+#     {"Mismatch":       ["E", "N", "N", "F", "N", "N", "N", "N", "N"]},
+#     {"Mismatch":       ["E", "N", "E", "N", "E", "E", 1, 1, 1]},
 # ]
+
+# categories covering more than one document type: (inward supply doc_type, purchase is_return)
+CDNR_DOC_TYPES = (("Debit Note", 0), ("Credit Note", 1))
+ISD_DOC_TYPES = (("ISD Invoice", 0), ("ISD Credit Note", 1))
+
+DOC_TYPES_BY_CATEGORY = {
+    "CDNR": CDNR_DOC_TYPES,
+    **dict.fromkeys(ISD_CATEGORY, ISD_DOC_TYPES),
+}
+
+# 2A/2B reports note values as positive. Credit notes reduce ITC, so they are signed
+# negative to match the books, where they are booked as return invoices.
+CREDIT_NOTE_DOC_TYPES = ("Credit Note", "ISD Credit Note")
 
 GSTIN_RULES = (
     {
@@ -174,7 +195,7 @@ GSTIN_RULES = (
         },
     },
     {
-        "match_status": MatchStatus.RESIDUAL_MATCH,
+        "match_status": MatchStatus.MISMATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             Fields.SUPPLIER_GSTIN: Rule.EXACT_MATCH,
@@ -226,7 +247,7 @@ PAN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             # Fields.SUPPLIER_GSTIN: Rule.MISMATCH,
-            Fields.COMPANY_GSTIN: Rule.MISMATCH,
+            # Fields.COMPANY_GSTIN: Rule.MISMATCH,
             Fields.BILL_NO: Rule.FUZZY_MATCH,
             # Fields.PLACE_OF_SUPPLY: Rule.MISMATCH,
             # Fields.IS_REVERSE_CHARGE: Rule.MISMATCH,
@@ -238,7 +259,7 @@ PAN_RULES = (
         },
     },
     {
-        "match_status": MatchStatus.RESIDUAL_MATCH,
+        "match_status": MatchStatus.MISMATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             # Fields.SUPPLIER_GSTIN: Rule.MISMATCH,
@@ -270,14 +291,17 @@ class InwardSupply:
 
         return query.run(as_dict=True)
 
-    def get_unmatched(self, category, amended_category):
+    def get_unmatched(self, category, amended_category, doc_type=None):
         categories = [category, amended_category or None]
         query = self.with_period_filter()
-        data = (
-            query.where(IfNull(self.GSTR2.match_status, "") == "")
-            .where(self.GSTR2.classification.isin(categories))
-            .run(as_dict=True)
+        query = query.where(IfNull(self.GSTR2.match_status, "") == "").where(
+            self.GSTR2.classification.isin(categories)
         )
+
+        if doc_type:
+            query = query.where(self.GSTR2.doc_type == doc_type)
+
+        data = query.run(as_dict=True)
 
         for doc in data:
             doc.fy = BaseUtil.get_fy(doc.bill_date)
@@ -348,7 +372,13 @@ class InwardSupply:
 
     def get_tax_fields(self):
         fields = (*GST_TAX_TYPES[:-1], "taxable_value")
-        return [self.GSTR2[field] for field in fields]
+        return [
+            Case()
+            .when(self.GSTR2.doc_type.isin(CREDIT_NOTE_DOC_TYPES), -self.GSTR2[field])
+            .else_(self.GSTR2[field])
+            .as_(field)
+            for field in fields
+        ]
 
 
 class PurchaseInvoice:
@@ -385,7 +415,7 @@ class PurchaseInvoice:
 
         return query.run(as_dict=True)
 
-    def get_unmatched(self, category):
+    def get_unmatched(self, category, is_return=0):
         gst_category = (
             (
                 "Registered Regular",
@@ -396,16 +426,11 @@ class PurchaseInvoice:
             if category in ("B2B", "CDNR", "ISD", "ECOM")
             else ("SEZ", "Overseas", "UIN Holders")
         )
-        is_return = 1 if category == "CDNR" else 0
 
         query = (
             self.get_query(is_return=is_return)
+            .where(IfNull(self.PI.reconciliation_status, "").notin(("Reconciled", "Match Found")))
             .where(self.PI.posting_date[self.from_date : self.to_date])
-            .where(
-                self.PI.name.notin(
-                    PurchaseInvoice.query_matched_purchase_invoice(self.from_date, self.to_date)
-                )
-            )
             .where(self.PI.gst_category.isin(gst_category))
             .where(self.PI.is_return == is_return)
         )
@@ -415,7 +440,7 @@ class PurchaseInvoice:
         for doc in data:
             doc.fy = BaseUtil.get_fy(doc.bill_date or doc.posting_date)
 
-        return BaseUtil.get_dict_for_key("supplier_gstin", data)
+        return data
 
     def get_query(self, additional_fields=None, is_return=False):
         fields = self.get_fields(additional_fields, is_return)
@@ -460,7 +485,7 @@ class PurchaseInvoice:
             "place_of_supply",
             "is_reverse_charge",
             "itc_classification",
-            Abs(Sum(self.PI_ITEM.taxable_value)).as_("taxable_value"),
+            Sum(self.PI_ITEM.taxable_value).as_("taxable_value"),
             *tax_fields,
         ]
 
@@ -485,7 +510,7 @@ class PurchaseInvoice:
         return fields
 
     def query_tax_amount(self, field):
-        return Abs(Sum(getattr(self.PI_ITEM, field)))
+        return Sum(getattr(self.PI_ITEM, field))
 
     @staticmethod
     def query_matched_purchase_invoice(from_date=None, to_date=None):
@@ -547,8 +572,8 @@ class BillOfEntry:
         query = (
             self.get_query()
             .where(self.PI.gst_category == gst_category)
+            .where(IfNull(self.BOE.reconciliation_status, "").notin(("Reconciled", "Match Found")))
             .where(self.BOE.posting_date[self.from_date : self.to_date])
-            .where(self.BOE.name.notin(BillOfEntry.query_matched_bill_of_entry(self.from_date, self.to_date)))
         )
 
         data = query.run(as_dict=True)
@@ -556,7 +581,7 @@ class BillOfEntry:
         for doc in data:
             doc.fy = BaseUtil.get_fy(doc.bill_date or doc.posting_date)
 
-        return BaseUtil.get_dict_for_key("supplier_gstin", data)
+        return data
 
     def get_query(self, additional_fields=None):
         fields = self.get_fields(additional_fields)
@@ -598,6 +623,7 @@ class BillOfEntry:
             self.BOE.bill_of_entry_date.as_("bill_date"),
             self.BOE.posting_date,
             self.BOE.company_gstin,
+            Max(self.PI.supplier).as_("supplier"),
             Max(self.PI.supplier_name).as_("supplier_name"),
             Max(self.PI.is_reverse_charge).as_("is_reverse_charge"),
             *tax_fields,
@@ -644,6 +670,139 @@ class BillOfEntry:
         return query
 
 
+class ISDInvoice:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+        self.ISD = frappe.qb.DocType("ISD Recipient Invoice")
+        self.ISD_ITEM = frappe.qb.DocType("ISD Source Item")
+
+    def get_all(self, additional_fields=None, names=None, only_names=False):
+        query = self.get_query(additional_fields)
+        match_found = ("Reconciled", "Match Found")
+
+        if only_names and not names:
+            return
+
+        elif only_names:
+            query = query.where(self.ISD.name.isin(names))
+
+        elif names:
+            query = query.where(
+                (
+                    (self.ISD.posting_date[self.from_date : self.to_date])
+                    & (IfNull(self.ISD.reconciliation_status, "").notin(match_found))
+                )
+                | (self.ISD.name.isin(names))
+            )
+
+        else:
+            query = query.where(
+                (self.ISD.posting_date[self.from_date : self.to_date])
+                & (IfNull(self.ISD.reconciliation_status, "").notin(match_found))
+            )
+
+        return query.run(as_dict=True)
+
+    def get_unmatched(self, is_return=0):
+        query = (
+            self.get_query()
+            .where(self.ISD.posting_date[self.from_date : self.to_date])
+            .where(self.ISD.is_credit_note == cint(is_return))
+            .where(self.ISD.name.notin(ISDInvoice.query_match_isd_invoices(self.from_date, self.to_date)))
+        )
+
+        data = query.run(as_dict=True)
+
+        for doc in data:
+            doc.fy = BaseUtil.get_fy(doc.bill_date or doc.posting_date)
+
+        return data
+
+    def get_query(self, additional_fields=None):
+        fields = self.get_fields(additional_fields)
+
+        query = (
+            frappe.qb.from_(self.ISD)
+            .left_join(self.ISD_ITEM)
+            .on(
+                (self.ISD_ITEM.parent == self.ISD.name)
+                & (self.ISD_ITEM.parenttype == "ISD Recipient Invoice")
+            )
+            .where(self.ISD.docstatus == 1)
+            .where(IfNull(self.ISD.reconciliation_status, "") != "Not Applicable")
+            .groupby(self.ISD.name)
+            .select(*fields, ConstantColumn("ISD Recipient Invoice").as_("doctype"))
+        )
+
+        if self.company:
+            query = query.where(self.company == self.ISD.company)
+
+        if self.company_gstin == "All":
+            query = query.where(self.ISD.company_gstin.notnull())
+        else:
+            query = query.where(self.company_gstin == self.ISD.company_gstin)
+
+        if self.include_ignored == 0:
+            query = query.where(IfNull(self.ISD.reconciliation_status, "") != "Ignored")
+        return query
+
+    def get_fields(self, additional_fields=None):
+        tax_fields = [
+            self.query_tax_amount(f"distributed_{tax_type}").as_(tax_type) for tax_type in GST_TAX_TYPES
+        ]
+
+        # gstr2a does not provide place of supply for ISD Invoices
+        fields = [
+            self.ISD.name,
+            Case()
+            .when(
+                IfNull(self.ISD.isd_distribution_invoice_reference, "") != "",
+                self.ISD.isd_distribution_invoice_reference,
+            )
+            .else_(self.ISD.external_isd_invoice_number)
+            .as_("bill_no"),
+            self.ISD.party_gstin.as_("supplier_gstin"),
+            self.ISD.company_gstin,
+            self.ISD.posting_date.as_("bill_date"),
+            self.ISD.posting_date,
+            LiteralValue("NULL").as_("place_of_supply"),
+            LiteralValue(0).as_("taxable_value"),
+            LiteralValue(0).as_("is_reverse_charge"),
+            *tax_fields,
+        ]
+
+        # Add only ISD Recipient Invoice fields
+        if additional_fields:
+            isd_fields = frappe.db.get_table_columns("ISD Recipient Invoice")
+            for field in additional_fields:
+                if field in isd_fields:
+                    fields.append(getattr(self.ISD, field))
+
+        return fields
+
+    def query_tax_amount(self, field):
+        return Sum(getattr(self.ISD_ITEM, field))
+
+    @staticmethod
+    def query_match_isd_invoices(from_date=None, to_date=None):
+        GSTR2 = frappe.qb.DocType("GST Inward Supply")
+        ISD = frappe.qb.DocType("ISD Recipient Invoice")
+
+        query = (
+            frappe.qb.from_(GSTR2)
+            .select("link_name")
+            .where(GSTR2.link_doctype == "ISD Recipient Invoice")
+            .join(ISD)
+            .on(ISD.name == GSTR2.link_name)
+        )
+
+        if from_date and to_date:
+            query = query.where(ISD.posting_date[from_date:to_date])
+
+        return query
+
+
 class BaseReconciliation:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -652,51 +811,50 @@ class BaseReconciliation:
         return InwardSupply(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.inward_supply_from_date,
-            to_date=self.inward_supply_to_date,
+            from_date=self.from_date,
+            to_date=self.to_date,
             gst_return=self.gst_return,
             include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
 
-    def get_unmatched_inward_supply(self, category, amended_category):
+    def get_unmatched_inward_supply(self, category, amended_category, doc_type=None):
         return InwardSupply(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.inward_supply_from_date,
-            to_date=self.inward_supply_to_date,
+            from_date=self.from_date,
+            to_date=self.to_date,
             gst_return=self.gst_return,
             include_ignored=self.include_ignored,
-        ).get_unmatched(category, amended_category)
+        ).get_unmatched(category, amended_category, doc_type)
 
     def query_inward_supply(self, additional_fields=None):
-        query = InwardSupply(
+        return InwardSupply(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.inward_supply_from_date,
-            to_date=self.inward_supply_to_date,
-            gst_return=self.gst_return,
             include_ignored=self.include_ignored,
-        )
-
-        return query.with_period_filter(additional_fields)
+        ).get_query(additional_fields)
 
     def get_all_purchase_invoice(self, additional_fields=None, names=None, only_names=False):
         return PurchaseInvoice(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.purchase_from_date,
-            to_date=self.purchase_to_date,
+            from_date=self.from_date,
+            to_date=self.to_date,
             include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
 
-    def get_unmatched_purchase(self, category):
+    @property
+    def purchase_from_date(self):
+        return get_gst_fy_start(add_years(getdate(self.from_date), -1))
+
+    def get_unmatched_purchase(self, category, is_return=0):
         return PurchaseInvoice(
             company=self.company,
             company_gstin=self.company_gstin,
             from_date=self.purchase_from_date,
-            to_date=self.purchase_to_date,
+            to_date=self.to_date,
             include_ignored=self.include_ignored,
-        ).get_unmatched(category)
+        ).get_unmatched(category, is_return)
 
     def query_purchase_invoice(self, additional_fields=None):
         return PurchaseInvoice(
@@ -709,8 +867,8 @@ class BaseReconciliation:
         return BillOfEntry(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.purchase_from_date,
-            to_date=self.purchase_to_date,
+            from_date=self.from_date,
+            to_date=self.to_date,
             include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
 
@@ -719,7 +877,7 @@ class BaseReconciliation:
             company=self.company,
             company_gstin=self.company_gstin,
             from_date=self.purchase_from_date,
-            to_date=self.purchase_to_date,
+            to_date=self.to_date,
             include_ignored=self.include_ignored,
         ).get_unmatched(category)
 
@@ -730,14 +888,45 @@ class BaseReconciliation:
             include_ignored=self.include_ignored,
         ).get_query(additional_fields)
 
-    def get_unmatched_purchase_or_bill_of_entry(self, category):
-        """
-        Returns dict of unmatched purchase and bill of entry data.
-        """
-        if category in IMPORT_CATEGORY:
-            return self.get_unmatched_bill_of_entry(category)
+    def get_all_isd_invoice(self, additional_fields=None, names=None, only_names=False):
+        return ISDInvoice(
+            company=self.company,
+            company_gstin=self.company_gstin,
+            from_date=self.purchase_from_date,
+            to_date=self.to_date,
+            include_ignored=self.include_ignored,
+        ).get_all(additional_fields, names, only_names)
 
-        return self.get_unmatched_purchase(category)
+    def get_unmatched_isd_invoice(self, is_return=0):
+        return ISDInvoice(
+            company=self.company,
+            company_gstin=self.company_gstin,
+            from_date=self.purchase_from_date,
+            to_date=self.to_date,
+            include_ignored=self.include_ignored,
+        ).get_unmatched(is_return)
+
+    def query_isd_invoice(self, additional_fields=None):
+        return ISDInvoice(
+            company=self.company,
+            company_gstin=self.company_gstin,
+            include_ignored=self.include_ignored,
+        ).get_query(additional_fields)
+
+    def get_unmatched_purchase_or_bill_of_entry(self, category, is_return=0):
+        """
+        Returns dict of unmatched purchase, bill of entry or ISD Recipient Invoice data.
+        """
+        if category in ISD_CATEGORY:
+            data = self.get_unmatched_isd_invoice(is_return) + self.get_unmatched_purchase(
+                category, is_return
+            )
+        elif category in IMPORT_CATEGORY:
+            data = self.get_unmatched_bill_of_entry(category)
+        else:
+            data = self.get_unmatched_purchase(category, is_return)
+
+        return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
 
 class Reconciler(BaseReconciliation):
@@ -747,19 +936,22 @@ class Reconciler(BaseReconciliation):
         """
         self.category = category
 
-        # GSTIN Level matching
-        purchases = self.get_unmatched_purchase_or_bill_of_entry(category)
-        inward_supplies = self.get_unmatched_inward_supply(category, amended_category)
-        self.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies)
+        for doc_type, is_return in DOC_TYPES_BY_CATEGORY.get(category, ((None, 0),)):
+            # GSTIN Level matching
+            purchases = self.get_unmatched_purchase_or_bill_of_entry(category, is_return)
+            inward_supplies = self.get_unmatched_inward_supply(category, amended_category, doc_type)
+            self.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies)
 
-        # In case of IMPG GST in not available in 2A. So skip PAN level matching.
-        if category == "IMPG":
-            return
+            # GST is not reported in 2A for IMPG, and for ISD both sides are same-PAN by
+            # definition, so PAN matching would only cross-link one ISD registration's credit
+            # onto another's
+            if category in ("IMPG", *ISD_CATEGORY):
+                continue
 
-        # PAN Level matching
-        purchases = self.get_pan_level_data(purchases)
-        inward_supplies = self.get_pan_level_data(inward_supplies)
-        self.reconcile_for_rules(PAN_RULES, purchases, inward_supplies)
+            # PAN Level matching
+            purchases = self.get_pan_level_data(purchases)
+            inward_supplies = self.get_pan_level_data(inward_supplies)
+            self.reconcile_for_rules(PAN_RULES, purchases, inward_supplies)
 
     def reconcile_for_rules(self, rules, purchases, inward_supplies):
         if not (purchases and inward_supplies):
@@ -789,8 +981,9 @@ class Reconciler(BaseReconciliation):
 
             for purchase_invoice_name, purchase in purchases[supplier_gstin].copy().items():
                 for inward_supply_name, inward_supply in inward_supplies[supplier_gstin].copy().items():
+                    # no bill no in this rule, so lean on the dates instead
                     if (
-                        match_status == MatchStatus.RESIDUAL_MATCH.value
+                        Fields.BILL_NO not in rules
                         and self.category != "CDNR"
                         and abs((purchase.bill_date - inward_supply.bill_date).days) > 10
                     ):
@@ -798,12 +991,6 @@ class Reconciler(BaseReconciliation):
 
                     if not self.is_doc_matching(purchase, inward_supply, rules):
                         continue
-
-                    if match_status == MatchStatus.RESIDUAL_MATCH.value:
-                        if inward_supply.supplier_gstin == purchase.supplier_gstin:
-                            match_status = MatchStatus.SUGGESTED_MATCH.value
-                        else:
-                            match_status = MatchStatus.MISMATCH.value
 
                     self.update_matching_doc(
                         match_status,
@@ -851,11 +1038,14 @@ class Reconciler(BaseReconciliation):
         """
 
         if rule == Rule.EXACT_MATCH:
-            return purchase[field] == inward_supply[field]
+            # normalize None == ""
+            return (purchase.get(field) or "") == (inward_supply.get(field) or "")
         elif rule == Rule.FUZZY_MATCH:
             return self.fuzzy_match(purchase, inward_supply)
         elif rule == Rule.ROUNDING_DIFFERENCE:
             return self.get_amount_difference(purchase, inward_supply, field) <= 1
+
+        frappe.throw(_("Invalid rule {0} for field {1}").format(rule, field))
 
     def fuzzy_match(self, purchase, inward_supply):
         """
@@ -1031,6 +1221,7 @@ class ReconciledData(BaseReconciliation):
             "supplier_name",
             "company_gstin",
             "classification",
+            "doc_type",
             "match_status",
             "action",
             "link_doctype",
@@ -1043,6 +1234,7 @@ class ReconciledData(BaseReconciliation):
             "irn_source",
             "irn_number",
             "irn_gen_date",
+            "return_period_2b",
         ]
 
         return super().get_all_inward_supply(inward_supply_fields, names, only_names) or []
@@ -1055,14 +1247,17 @@ class ReconciledData(BaseReconciliation):
             "is_return",
             "gst_category",
             "reconciliation_status",
+            "itc_claim_period",
             *self.dimension_fields,
         ]
 
         boe_names = purchase_names
+        isd_names = purchase_names
 
         if not only_names:
             purchase_names = set()
             boe_names = set()
+            isd_names = set()
             for doc in inward_supplies:
                 if doc.link_doctype == "Purchase Invoice":
                     purchase_names.add(doc.link_name)
@@ -1070,14 +1265,20 @@ class ReconciledData(BaseReconciliation):
                 elif doc.link_doctype == "Bill of Entry":
                     boe_names.add(doc.link_name)
 
+                elif doc.link_doctype == "ISD Recipient Invoice":
+                    isd_names.add(doc.link_name)
+
         purchases = super().get_all_purchase_invoice(purchase_fields, purchase_names, only_names) or []
 
         bill_of_entries = super().get_all_bill_of_entry(purchase_fields, boe_names, only_names) or []
 
-        if not purchases and not bill_of_entries:
+        isd_invoices = super().get_all_isd_invoice(purchase_fields, isd_names, only_names) or []
+
+        if not purchases and not bill_of_entries and not isd_invoices:
             return {}
 
         purchases.extend(bill_of_entries)
+        purchases.extend(isd_invoices)
 
         return {doc.name: doc for doc in purchases}
 
@@ -1104,6 +1305,7 @@ class ReconciledData(BaseReconciliation):
 
         """
         default_dict = {
+            "supplier": "",
             "supplier_name": "",
             "supplier_gstin": "",
             "purchase_company_gstin": "",
@@ -1124,6 +1326,8 @@ class ReconciledData(BaseReconciliation):
             "gstr_3b_filled": "",
             "itc_availability": "",
             "reason_itc_unavailability": "",
+            "return_period_2b": "",
+            "itc_claim_period": "",
             "irn_source": "",
             "irn_number": "",
             "irn_gen_date": "",
@@ -1153,7 +1357,6 @@ class ReconciledData(BaseReconciliation):
             data[dimension] = purchase.get(dimension) or ""
 
         for field in (
-            "supplier_name",
             "supplier_gstin",
             "bill_no",
             "bill_date",
@@ -1161,11 +1364,15 @@ class ReconciledData(BaseReconciliation):
         ):
             data[field] = purchase.get(field) or inward_supply.get(field)
 
+        party = purchase or self.guess_supplier(data.supplier_gstin)
+        supplier_name = party.get("supplier_name") or inward_supply.get("supplier_name")
+
         gstin_info = self.gstin_map.get(data.supplier_gstin, frappe._dict())
         data.update(
             {
-                "supplier_name": data.supplier_name or self.guess_supplier_name(data.supplier_gstin),
-                "supplier_gstin": data.supplier_gstin or data.supplier_name,
+                "supplier": party.get("supplier") or "",
+                "supplier_name": supplier_name or "Unknown",
+                "supplier_gstin": data.supplier_gstin or supplier_name or "",
                 "purchase_company_gstin": purchase.get("company_gstin") or "",
                 "inward_supply_company_gstin": inward_supply.get("company_gstin") or "",
                 "purchase_doctype": purchase.get("doctype"),
@@ -1179,6 +1386,8 @@ class ReconciledData(BaseReconciliation):
                 "gstr_3b_filled": inward_supply.get("gstr_3b_filled"),
                 "itc_availability": inward_supply.get("itc_availability"),
                 "reason_itc_unavailability": inward_supply.get("reason_itc_unavailability"),
+                "return_period_2b": inward_supply.get("return_period_2b"),
+                "itc_claim_period": purchase.get("itc_claim_period"),
                 "irn_source": inward_supply.get("irn_source"),
                 "irn_number": inward_supply.get("irn_number"),
                 "irn_gen_date": format_date(inward_supply.get("irn_gen_date")),
@@ -1187,13 +1396,13 @@ class ReconciledData(BaseReconciliation):
             }
         )
 
-        # missing in purchase invoice
+        # supplier reported it, not in books
         if not purchase:
-            data.match_status = MatchStatus.MISSING_IN_PI.value
+            data.match_status = MatchStatus.ONLY_IN_2A_2B.value
 
-        # missing in inward supply
+        # booked, supplier has not reported it
         elif not inward_supply:
-            data.match_status = MatchStatus.MISSING_IN_2A_2B.value
+            data.match_status = MatchStatus.ONLY_IN_BOOKS.value
             data.action = "Ignore" if purchase.get("reconciliation_status") == "Ignored" else "No Action"
 
     def get_gstin_status_map(self, reconciliation_data):
@@ -1225,28 +1434,30 @@ class ReconciledData(BaseReconciliation):
         )
 
     def update_differences(self, data, purchase, inward_supply):
-        differences = []
-        if self.is_exact_or_suggested_match(data):
-            if self.has_rounding_difference(data):
-                differences.append("Rounding Difference")
-
-        elif not self.is_mismatch_or_manual_match(data):
+        if not (self.is_exact_or_suggested_match(data) or self.is_mismatch_or_manual_match(data)):
             return
 
-        for field in Fields:
-            if field == Fields.BILL_NO:
-                continue
+        differences = []
 
+        if not self.is_mismatch_or_manual_match(data) and self.has_rounding_difference(data):
+            differences.append("Rounding Difference")
+
+        for field in Fields:
             if purchase.get(field.value) != inward_supply.get(field.value):
                 differences.append(field.name)
 
         data.differences = ", ".join(differences)
 
-    def guess_supplier_name(self, gstin):
-        if party := self.gstin_party_map.get(gstin):
-            return party
+    def guess_supplier(self, gstin):
+        """Supplier behind a GSTIN, for invoices that are not booked in the system."""
+        if gstin not in self.gstin_party_map:
+            supplier = get_party_for_gstin(gstin)
+            self.gstin_party_map[gstin] = frappe._dict(
+                supplier=supplier,
+                supplier_name=supplier and frappe.db.get_value("Supplier", supplier, "supplier_name"),
+            )
 
-        return self.gstin_party_map.setdefault(gstin, get_party_for_gstin(gstin) or "Unknown")
+        return self.gstin_party_map[gstin]
 
     @staticmethod
     def guess_classification(doc):
@@ -1266,6 +1477,9 @@ class ReconciledData(BaseReconciliation):
 
         if not classification and doc.get("doctype") == "Bill of Entry":
             classification = "IMPG"
+
+        if not classification and doc.get("doctype") == "ISD Recipient Invoice":
+            classification = "ISD"
 
         if doc.itc_classification == "Input Service Distributor":
             classification = "ISD"

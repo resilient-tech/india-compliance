@@ -93,19 +93,12 @@ class GovDataMapper:
     # common utils
 
     def update_totals(self, invoice, items):
-        """
-        Update item totals to the invoice row
-        """
-        total_data = self.TOTAL_DEFAULTS.copy()
-
-        for item in items:
+        """Item amounts into the invoice totals. Adds up across calls."""
+        for item in items or []:
             for field, value in item.items():
-                total_field = f"total_{field}"
-
-                if total_field not in total_data:
-                    continue
-
-                invoice[total_field] = invoice.setdefault(total_field, 0) + value
+                total = f"total_{field}"
+                if total in self.TOTAL_DEFAULTS:
+                    invoice[total] = invoice.get(total, 0) + value
 
     def set_total_defaults(self):
         self.TOTAL_DEFAULTS = {f"total_{key}": 0 for key in self.DEFAULT_ITEM_AMOUNTS.keys()}

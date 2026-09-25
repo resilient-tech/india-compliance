@@ -22,9 +22,13 @@ from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
     BillOfEntry,
+    ISDInvoice,
     PurchaseInvoice,
     ReconciledData,
     Reconciler,
+)
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
+    copy_details as _copy_details,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     get_formatted_options,
@@ -44,7 +48,7 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     validate_gstin_permission,
 )
-from india_compliance.gst_india.utils.exporter import ExcelExporter
+from india_compliance.gst_india.utils.exporter import COLOR_PALLATE, ExcelExporter
 from india_compliance.gst_india.utils.gstin_info import (
     get_fy,
     get_latest_3b_filed_period,
@@ -52,6 +56,7 @@ from india_compliance.gst_india.utils.gstin_info import (
 )
 from india_compliance.gst_india.utils.gstr_2 import (
     IMPORT_CATEGORY,
+    ISD_CATEGORY,
     ReturnType,
     download_gstr_2a,
     download_gstr_2b,
@@ -83,19 +88,14 @@ class PurchaseReconciliationTool(Document):
             "company",
             "company_gstin",
             "gst_return",
-            "purchase_from_date",
-            "purchase_to_date",
-            "inward_supply_from_date",
-            "inward_supply_to_date",
+            "from_date",
+            "to_date",
             "include_ignored",
         )
         return {field: self.get(field) for field in fields}
 
     def onload(self):
-        date_range = [
-            self.inward_supply_from_date,
-            self.inward_supply_to_date,
-        ]
+        date_range = [self.from_date, self.to_date]
 
         self.set_onload(
             "has_missing_2b_documents",
@@ -279,10 +279,23 @@ class PurchaseReconciliationTool(Document):
         return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()
-    def unlink_documents(self, data: str | list):
+    def unlink_documents(self, data: str | list, exclude_from_reconciliation: bool = False):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        purchases, inward_supplies = _unlink_documents(data)
+        purchases, inward_supplies = _unlink_documents(data, exclude_from_reconciliation)
+
+        return self.ReconciledData.get(purchases, inward_supplies)
+
+    @frappe.whitelist()
+    def copy_details(self, data: str | list, fields: str | list | None = None):
+        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
+        copied = _copy_details(data, fields, tool=self.doctype)
+
+        if not copied:
+            return
+
+        purchases, inward_supplies = copied
 
         return self.ReconciledData.get(purchases, inward_supplies)
 
@@ -296,12 +309,16 @@ class PurchaseReconciliationTool(Document):
         inward_supplies = []
         purchases = []
         boe = []
+        isd = []
 
         for doc in data:
-            if action == "Ignore" and "Missing" not in doc.get("match_status"):
+            # a doc with both sides is matched, a doc with one side is not
+            is_linked = doc.get("inward_supply_name") and doc.get("purchase_invoice_name")
+
+            if action == "Ignore" and is_linked:
                 continue
 
-            elif "Accept" in action and "Missing" in doc.get("match_status"):
+            elif "Accept" in action and not is_linked:
                 continue
 
             if inward_supply_name := doc.get("inward_supply_name"):
@@ -314,11 +331,15 @@ class PurchaseReconciliationTool(Document):
             elif purchase_doctype == "Bill of Entry":
                 boe.append(doc.get("purchase_invoice_name"))
 
+            elif purchase_doctype == "ISD Recipient Invoice":
+                isd.append(doc.get("purchase_invoice_name"))
+
         if inward_supplies:
             frappe.db.set_value("GST Inward Supply", {"name": ("in", inward_supplies)}, "action", action)
 
         set_reconciliation_status("Purchase Invoice", purchases, status)
         set_reconciliation_status("Bill of Entry", boe, status)
+        set_reconciliation_status("ISD Recipient Invoice", isd, status)
 
     @frappe.whitelist()
     def get_link_options(self, doctype: str, filters: dict | frappe._dict):
@@ -327,21 +348,32 @@ class PurchaseReconciliationTool(Document):
         if isinstance(filters, dict):
             filters = frappe._dict(filters)
 
+        # no dates picked, so fall back to the window the unmatched lookup uses
+        filters.from_date = filters.get("from_date") or self.ReconciledData.purchase_from_date
+        filters.to_date = filters.get("to_date") or self.to_date
+
+        options = []
         if doctype == "Purchase Invoice":
-            return self.get_purchase_invoice_options(filters)
+            options = self.get_purchase_invoice_options(filters)
 
         elif doctype == "GST Inward Supply":
-            return self.get_inward_supply_options(filters)
+            options = self.get_inward_supply_options(filters)
 
         elif doctype == "Bill of Entry":
-            return self.get_bill_of_entry_options(filters)
+            options = self.get_bill_of_entry_options(filters)
+
+        elif doctype == "ISD Recipient Invoice":
+            options = self.get_isd_recipient_invoice_options(filters)
+
+        # filters go back so the dialog can show the window actually applied
+        return {"options": options, "filters": filters}
 
     def get_purchase_invoice_options(self, filters):
         PI = frappe.qb.DocType("Purchase Invoice")
         query = (
             self.ReconciledData.query_purchase_invoice(["gst_category", "is_return"])
             .where(PI.supplier_gstin.like(f"%{filters.supplier_gstin}%"))
-            .where(PI.bill_date[filters.bill_from_date : filters.bill_to_date])
+            .where(PI.posting_date[filters.from_date : filters.to_date])
         )
 
         if not filters.show_matched:
@@ -354,13 +386,15 @@ class PurchaseReconciliationTool(Document):
         query = (
             self.ReconciledData.query_inward_supply(["classification"])
             .where(IfNull(GSTR2.supplier_gstin, "").like(f"%{filters.supplier_gstin}%"))
-            .where(GSTR2.bill_date[filters.bill_from_date : filters.bill_to_date])
+            .where(GSTR2.bill_date[filters.from_date : filters.to_date])
         )
 
         if filters.get("purchase_doctype") == "Purchase Invoice":
             query = query.where(GSTR2.classification.notin(IMPORT_CATEGORY))
         elif filters.get("purchase_doctype") == "Bill of Entry":
             query = query.where(GSTR2.classification.isin(IMPORT_CATEGORY))
+        elif filters.get("purchase_doctype") == "ISD Recipient Invoice":
+            query = query.where(GSTR2.classification.isin(ISD_CATEGORY))
 
         if not filters.show_matched:
             query = query.where(IfNull(GSTR2.link_name, "") == "")
@@ -370,11 +404,24 @@ class PurchaseReconciliationTool(Document):
     def get_bill_of_entry_options(self, filters):
         BOE = frappe.qb.DocType("Bill of Entry")
         query = self.ReconciledData.query_bill_of_entry().where(
-            BOE.bill_of_entry_date[filters.bill_from_date : filters.bill_to_date]
+            BOE.posting_date[filters.from_date : filters.to_date]
         )
 
         if not filters.show_matched:
             query = query.where(BOE.name.notin(BillOfEntry.query_matched_bill_of_entry()))
+
+        return get_formatted_options(query.run(as_dict=True))
+
+    def get_isd_recipient_invoice_options(self, filters):
+        ISD = frappe.qb.DocType("ISD Recipient Invoice")
+        query = (
+            self.ReconciledData.query_isd_invoice()
+            .where(IfNull(ISD.party_gstin, "").like(f"%{filters.supplier_gstin}%"))
+            .where(ISD.posting_date[filters.from_date : filters.to_date])
+        )
+
+        if not filters.show_matched:
+            query = query.where(ISD.name.notin(ISDInvoice.query_match_isd_invoices()))
 
         return get_formatted_options(query.run(as_dict=True))
 
@@ -408,6 +455,7 @@ def download_gstr(
             return download_gstr_2b(company_gstin, periods)
 
     except Exception as e:
+        frappe.log_error(title="2A/2B Download Failed")
         frappe.publish_realtime(
             "gstr_2a_2b_download_message",
             {
@@ -658,10 +706,8 @@ class AutoReconcile:
                 "company": company,
                 "company_gstin": "All",
                 "gst_return": "Both GSTR 2A & 2B",
-                "purchase_from_date": frappe.utils.add_years(self.today, -1),
-                "purchase_to_date": self.today,
-                "inward_supply_from_date": self.inward_supply_from_date,
-                "inward_supply_to_date": self.today,
+                "from_date": self.inward_supply_from_date,
+                "to_date": self.today,
             }
         )
 
@@ -700,18 +746,7 @@ def auto_reconcile():
 
 
 class BuildExcel:
-    COLOR_PALLATE = frappe._dict(
-        {
-            "dark_gray": "d9d9d9",
-            "light_gray": "f2f2f2",
-            "dark_pink": "e6b9b8",
-            "light_pink": "f2dcdb",
-            "sky_blue": "c6d9f1",
-            "light_blue": "dce6f2",
-            "green": "d7e4bd",
-            "light_green": "ebf1de",
-        }
-    )
+    COLOR_PALLATE = COLOR_PALLATE
 
     @parse_params
     def __init__(self, doc, data, is_supplier_specific=False, email=False):
@@ -780,7 +815,7 @@ class BuildExcel:
         """Add filters to the sheet"""
 
         label = "2B" if self.doc.gst_return == "GSTR 2B" else "2A/2B"
-        self.period = f"{self.doc.inward_supply_from_date} to {self.doc.inward_supply_to_date}"
+        self.period = f"{self.doc.from_date} to {self.doc.to_date}"
 
         self.filters = frappe._dict(
             {
@@ -835,7 +870,7 @@ class BuildExcel:
                 if field not in row:
                     row[field] = None
 
-                # pur data in row (for invoice_summary) is polluted for Missing in PI
+                # pur data in row (for invoice_summary) is polluted for Only in 2A/2B
                 if field in purchase_fields and not row.get("name"):
                     row[field] = None
 
@@ -1362,6 +1397,18 @@ class BuildExcel:
                     "bg_color": self.COLOR_PALLATE.dark_pink,
                     "width": 25,
                 },
+            },
+            {
+                "label": "GSTR-2B Period",
+                "fieldname": "return_period_2b",
+                "data_format": {"horizontal": "center"},
+                "header_format": {"width": 15},
+            },
+            {
+                "label": "ITC Claim Period (Books)",
+                "fieldname": "itc_claim_period",
+                "data_format": {"horizontal": "center"},
+                "header_format": {"width": 15},
             },
             {
                 "label": "ITC Availability",

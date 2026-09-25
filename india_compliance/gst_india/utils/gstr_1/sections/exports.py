@@ -1,0 +1,102 @@
+"""Exports — invoices shipped out of India, grouped by whether tax was paid (table 6A).
+
+Portal:    [{exp_typ: "WPAY", inv: [{inum: "81542", val: 995048.36, itms: [{txval: 10000}]}]}]
+Canonical: {"Export With Payment of Tax": {"81542": {document_type: "WPAY",
+                                                     document_number: "81542",
+                                                     items: [{taxable_value: 10000}]}}}
+
+Unlike other categories the stored document type is the portal's own code, not a label -- the
+readable name is the subcategory the row is filed under.
+"""
+
+from india_compliance.gst_returns.fields.gstr1 import DocField as doc
+from india_compliance.gst_returns.fields.gstr1 import ItemField as item
+from india_compliance.gst_returns.fields.gstr1 import RawField as raw
+from india_compliance.gst_returns.fields.gstr1 import SubCategory
+
+from . import _shared as s
+
+KEYS = {
+    raw.FLAG: doc.FLAG,
+    raw.DOC_NUMBER: doc.DOC_NUMBER,
+    raw.DOC_DATE: doc.DOC_DATE,
+    raw.DOC_VALUE: doc.DOC_VALUE,
+    raw.SHIPPING_PORT_CODE: doc.SHIPPING_PORT_CODE,
+    raw.SHIPPING_BILL_NUMBER: doc.SHIPPING_BILL_NUMBER,
+    raw.SHIPPING_BILL_DATE: doc.SHIPPING_BILL_DATE,
+    raw.ITEMS: doc.ITEMS,
+    raw.TAXABLE_VALUE: item.TAXABLE_VALUE,
+    raw.TAX_RATE: item.TAX_RATE,
+    raw.IGST: item.IGST,
+    raw.CESS: item.CESS,
+}
+
+WITH_TAX = "WPAY"
+WITHOUT_TAX = "WOPAY"
+
+# exp_typ -> the subcategory the invoice is filed under
+SUBCATEGORY_OF = {
+    WITH_TAX: SubCategory.EXPWP.value,
+    WITHOUT_TAX: SubCategory.EXPWOP.value,
+}
+
+# every subcategory exports report under
+SUBCATEGORIES = tuple(SUBCATEGORY_OF.values())
+
+ITEM_DEFAULTS = dict.fromkeys(s.ITEM_TOTALS_IGST, 0)
+
+MONEY = (raw.DOC_VALUE,)
+ITEM_MONEY = (raw.TAXABLE_VALUE, raw.IGST, raw.CESS)
+
+
+def to_canonical(gov_data):
+    output = {}
+
+    # bucket per export type is created up front, so a type with no invoices still shows up
+    for group in gov_data:
+        export_type = group.get(raw.EXPORT_TYPE)
+        invoices = output.setdefault(
+            SUBCATEGORY_OF.get(export_type, export_type), {}
+        )  # WPAY -> Export With Payment of Tax
+
+        header = {
+            doc.DOC_TYPE: export_type,
+            doc.ERROR_CD: group.get(raw.ERROR_CD),
+            doc.ERROR_MSG: group.get(raw.ERROR_MSG),
+        }
+
+        for invoice in group.get(raw.INVOICES) or []:
+            row = s.drop_flag(s.with_defaults(s.pick(invoice, KEYS), header))
+
+            s.convert(row, doc.DOC_DATE, s.date_from_gov)  # 12-02-2016 -> 2016-02-12
+            s.convert(row, doc.SHIPPING_BILL_DATE, s.date_from_gov)
+            s.convert(row, doc.ITEMS, lambda items: s.flat_items_from_gov(items, KEYS, ITEM_DEFAULTS))
+            s.add_item_totals(row, row.get(doc.ITEMS), s.ITEM_TOTALS_IGST)
+
+            invoices[row[doc.DOC_NUMBER]] = row
+
+    return output
+
+
+def from_books(grouped_rows):
+    """Books rows -> one row per invoice, for the subcategories this category reports."""
+    return s.invoice_rows_from_books(grouped_rows, SUBCATEGORIES)
+
+
+def to_gov(rows, company_gstin=""):
+    def write(row):
+        out = s.round_money(s.pick_back(row, KEYS), MONEY)
+
+        s.convert(out, raw.DOC_DATE, s.date_to_gov)  # 2016-02-12 -> 12-02-2016
+        s.convert(out, raw.SHIPPING_BILL_DATE, s.date_to_gov)
+        s.convert(out, raw.ITEMS, lambda items: s.flat_items_to_gov(items, KEYS, ITEM_MONEY))
+
+        return out
+
+    return s.groups_from_rows(
+        rows,
+        group_key=lambda row: row[doc.DOC_TYPE],
+        group_header=lambda row: {raw.EXPORT_TYPE: row[doc.DOC_TYPE]},
+        rows_field=raw.INVOICES,
+        write_row=write,
+    )

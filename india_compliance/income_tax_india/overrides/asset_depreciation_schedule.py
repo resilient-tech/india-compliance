@@ -126,7 +126,7 @@ def cancel_depreciation_entries(asset_doc, date):
 
     for row in asset_doc.get("finance_books"):
         if not row.finance_book:
-            return
+            continue
 
         if not fb_for_income_tax_map[row.finance_book]:
             continue

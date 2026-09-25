@@ -1,0 +1,9 @@
+// Shared desk styles. One file per component in public/js/components,
+// plus the page shell the GST return tools have in common.
+// Tools load the built css with frappe.require("india_compliance.bundle.css").
+
+@use "return_tool";
+@use "components/data_table";
+@use "components/detail_view";
+@use "components/empty_state";
+@use "components/filter_group";

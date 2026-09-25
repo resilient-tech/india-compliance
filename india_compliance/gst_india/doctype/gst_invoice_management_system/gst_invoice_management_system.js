@@ -21,7 +21,7 @@ const ACTION_MAP = {
 
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
-        await frappe.require("ims.bundle.js");
+        await frappe.require(["ims.bundle.js", "india_compliance.bundle.css"]);
 
         frm.reconciliation_tabs = new IMS(
             frm,
@@ -79,9 +79,15 @@ frappe.ui.form.on(DOCTYPE, {
 });
 
 class IMS extends reconciliation.reconciliation_tabs {
+    summary_matchers = {
+        match_summary_tab: (item, row) => item.match_status == row.match_status,
+        action_summary_tab: (item, row) => category_map[item.category] == row.doc_type,
+    };
+
     render_data(data) {
         this.process_data(data);
         super.render_data(data);
+        this.set_actions_summary();
     }
 
     refresh(data) {
@@ -151,7 +157,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                     "Suggested Match",
                     "Mismatch",
                     "Manual Match",
-                    "Missing in PI",
+                    "Only in 2A/2B",
                     "Suggested Mark as Pending",
                 ],
             },
@@ -242,7 +248,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 label: "Match Status",
                 fieldname: "match_status",
                 width: 200,
-                _value: (...args) => `<a href="#" class='match-status'>${args[0]}</a>`,
+                _value: (...args) => this.get_match_status_link(args[0]),
             },
             {
                 label: "Count <br>2A/2B Docs",
@@ -307,7 +313,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             new_row.taxable_value_difference += row.taxable_value_difference || 0;
         });
 
-        return Object.values(data);
+        return this.sort_by_match_status(Object.values(data));
     }
 
     get_invoice_columns() {
@@ -336,7 +342,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 fieldname: "match_status",
                 align: "center",
                 width: 120,
-                _value: (...args) => `<a href="#" class='match-status'>${args[0]}</a>`,
+                _value: (...args) => this.get_match_status_link(args[0]),
             },
             {
                 label: "Action",
@@ -356,11 +362,11 @@ class IMS extends reconciliation.reconciliation_tabs {
             },
             {
                 label: "Linked Voucher",
-                fieldname: "linked_doc",
+                fieldname: "purchase_invoice_name",
                 align: "center",
                 width: 150,
                 fieldtype: "Dynamic Link",
-                options: "linked_voucher_type",
+                options: "purchase_doctype",
             },
             {
                 label: "Posting Date",
@@ -397,6 +403,7 @@ class IMS extends reconciliation.reconciliation_tabs {
 
         const data = [];
         this.mapped_invoice_data = {};
+        this.sort_by_supplier_gstin(this.filtered_data);
 
         this.filtered_data.forEach((row) => {
             this.mapped_invoice_data[row.inward_supply_name] = row;
@@ -407,13 +414,13 @@ class IMS extends reconciliation.reconciliation_tabs {
                 classification: row._inward_supply.classification,
                 ims_action: row.ims_action || "",
                 match_status: row.match_status,
-                linked_doc: row.purchase_invoice_name,
+                purchase_invoice_name: row.purchase_invoice_name,
                 tax_difference: row.tax_difference,
                 taxable_value_difference: row.taxable_value_difference,
                 inward_supply_name: row.inward_supply_name,
                 pending_upload: row.pending_upload,
                 is_supplier_return_filed: row.is_supplier_return_filed,
-                linked_voucher_type: row._purchase_invoice.doctype,
+                purchase_doctype: row._purchase_invoice.doctype,
                 posting_date: row.posting_date,
             });
         });
@@ -476,7 +483,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             summary_data[category][action] += 1;
         });
 
-        return Object.values(summary_data);
+        return this.sort_by_order(Object.values(summary_data), "category", Object.values(category_map));
     }
 
     async set_actions_summary() {
@@ -520,7 +527,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             .join("");
 
         const action_performed_html = `
-            <div class="action-performed-summary mt-3 mb-3 w-100 d-flex justify-content-around align-items-center" style="border-bottom: 1px solid var(--border-color);">
+            <div class="action-performed-summary mt-3 mb-3 d-flex justify-content-around align-items-center">
                 ${action_performed_cards}
             </div>
        `;
@@ -632,6 +639,11 @@ class IMSAction {
             this.frm.add_custom_button(
                 __("Unlink"),
                 () => reconciliation.unlink_documents(this.frm),
+                __("Actions"),
+            );
+            this.frm.add_custom_button(
+                __("Copy Data"),
+                () => reconciliation.copy_details(this.frm),
                 __("Actions"),
             );
             this.frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
@@ -832,13 +844,16 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         // setup actions
         let actions = ["No Action", "Reject"].filter((action) => ACTION_MAP[action] != this.row.ims_action);
 
-        if (this.row.match_status !== "Missing in PI" && this.row.ims_action != "Accepted")
+        if (this.row.match_status !== "Only in 2A/2B" && this.row.ims_action != "Accepted")
             actions.push("Accept");
 
         if (this.row.is_pending_action_allowed && this.row.ims_action != "Pending") actions.push("Pending");
 
-        if (this.row.match_status == "Missing in PI") actions.push("Create", "Link");
-        else actions.push("Unlink");
+        if (this.row.match_status == "Only in 2A/2B") actions.push("Create", "Link");
+        else {
+            actions.push("Unlink");
+            actions.push("Copy");
+        }
 
         return actions;
     }
@@ -861,6 +876,9 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
                 this.frm.doc.company_gstin,
                 DOCTYPE,
             );
+        } else if (action == "Copy") {
+            if (!this.copy_fields.length) return;
+            return reconciliation.copy_details(this.frm, [this.row], this.copy_fields);
         } else {
             apply_action(this.frm, ACTION_MAP[action], [this.row.inward_supply_name]);
         }
@@ -872,11 +890,12 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         if (action == "Reject") return "btn-danger not-grey";
         if (action == "Pending") return "btn-warning not-grey";
         if (action == "Create") return "btn-primary not-grey";
-        if (action == "Link") return "btn-primary not-grey btn-link disabled";
+        if (action == "Link") return "btn-primary not-grey link-document-btn disabled";
+        if (action == "Copy") return "btn-warning not-grey copy-btn disabled";
     }
 
     _set_missing_doctype() {
-        if (this.row.match_status == "Missing in PI") this.missing_doctype = "Purchase Invoice";
+        if (this.row.match_status == "Only in 2A/2B") this.missing_doctype = "Purchase Invoice";
         else return;
 
         this.doctype_options = ["Purchase Invoice"];
@@ -893,24 +912,21 @@ function render_empty_state(frm) {
 }
 
 function apply_bulk_action(frm, action) {
-    const active_tab = frm.get_active_tab()?.df.fieldname;
-    if (!active_tab) return;
+    const tab = frm.reconciliation_tabs.tabs[frm.get_active_tab()?.df.fieldname];
+    const affected_rows = reconciliation.get_affected_rows(frm);
 
-    const tab = frm.reconciliation_tabs.tabs[active_tab];
-
-    // from current tab
-    const selected_rows = tab.datatable.get_checked_items();
-    if (!selected_rows.length) {
+    if (!affected_rows.length) {
         frappe.show_alert({ message: __("Please select invoices"), indicator: "red" });
         return;
     }
 
-    // summary => invoice
-    const affected_rows = get_affected_rows(active_tab, selected_rows, frm.reconciliation_tabs.filtered_data);
+    apply_action(
+        frm,
+        action,
+        affected_rows.map((row) => row.inward_supply_name),
+    );
 
-    apply_action(frm, action, affected_rows);
-
-    if (tab) tab.datatable.clear_checked_items();
+    tab?.datatable.clear_checked_items();
 }
 
 async function apply_action(frm, action, invoice_names) {
@@ -1006,7 +1022,7 @@ function is_pending_allowed(row, action) {
 
 function is_accept_allowed(row, action) {
     // "Accept" not allowed where Purchase is not linked
-    if (action === "Accepted" && row.match_status === "Missing in PI") return false;
+    if (action === "Accepted" && row.match_status === "Only in 2A/2B") return false;
     return true;
 }
 
@@ -1177,23 +1193,6 @@ function get_icon(value, column, data) {
     return `<button class="btn eye" data-name="${data.inward_supply_name}">
                 ${frappe.utils.icon("eye", "md")}
             </button>`;
-}
-
-function get_affected_rows(tab, selection, data) {
-    let invoices = [];
-    if (tab == "invoice_tab") invoices = selection;
-
-    if (tab == "match_summary_tab")
-        invoices = data.filter(
-            (inv) => selection.filter((row) => row.match_status == inv.match_status).length,
-        );
-
-    if (tab == "action_summary_tab")
-        invoices = data.filter(
-            (inv) => selection.filter((row) => category_map[row.category] == inv.doc_type).length,
-        );
-
-    return invoices.map((row) => row.inward_supply_name);
 }
 
 function show_download_invoices_message(frm) {

@@ -81,11 +81,11 @@ function show_ic_api_promo(frm) {
     <a href="${frappe.utils.generate_route({
         type: "Page",
         name: "india-compliance-account",
-    })}" class="alert-link">
+    })}">
         Get started with the India Compliance API!
     </a>`;
 
-    india_compliance.show_dismissable_alert(frm.layout.wrapper, alert_message, "primary", () => {
+    india_compliance.show_doc_alert(frm, alert_message, "blue", () => {
         frappe.xcall("india_compliance.gst_india.doctype.gst_settings.gst_settings.disable_api_promo");
     });
 }

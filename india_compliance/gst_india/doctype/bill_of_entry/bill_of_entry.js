@@ -4,6 +4,7 @@
 frappe.ui.form.on("Bill of Entry", {
     setup(frm) {
         india_compliance.setup_itc_claim_period_query(frm);
+        india_compliance.set_hsn_code_autocomplete(frm);
     },
 
     onload(frm) {
@@ -11,9 +12,12 @@ frappe.ui.form.on("Bill of Entry", {
         frm.bill_of_entry_controller = new BillOfEntryController(frm);
     },
 
+    posting_date(frm) {
+        india_compliance.update_itc_claim_period(frm);
+    },
+
     refresh(frm) {
         india_compliance.set_reconciliation_status(frm, "bill_of_entry_no");
-        india_compliance.set_itc_claim_period_status(frm);
 
         if (frm.doc.docstatus === 0) return;
 

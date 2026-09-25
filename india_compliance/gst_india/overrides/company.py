@@ -7,19 +7,86 @@ from frappe.utils import flt
 
 from india_compliance.gst_india.utils import get_data_file_path
 
+SINGLE_DOCTYPES_WITH_COMPANY_FIELD = (
+    "GST Invoice Management System",
+    "GSTR-1",
+    "Purchase Reconciliation Tool",
+)
 
-def delete_gst_settings_for_company(doc, method=None):
+GST_SETTINGS_CHILD_TABLES_WITH_COMPANY = (
+    "gst_accounts",
+    "credentials",
+    "e_invoice_applicable_companies",
+)
+
+
+def on_trash(doc, method=None):
     if doc.country != "India":
         return
 
+    clear_company_from_single_doctypes(doc.name)
+    remove_gst_settings_for_company(doc.name)
+
+
+def clear_company_from_single_doctypes(company):
+    """Clear the deleted company from Single DocTypes, since these aren't cleared on delete."""
+    singles = frappe.qb.DocType("Singles")
+
+    doctypes = (
+        frappe.qb.from_(singles)
+        .select(singles["doctype"])
+        .where(
+            singles["doctype"].isin(SINGLE_DOCTYPES_WITH_COMPANY_FIELD)
+            & (singles.field == "company")
+            & (singles.value == company)
+        )
+    ).run(pluck=True)
+
+    if not doctypes:
+        return
+
+    (
+        frappe.qb.update(singles)
+        .set(singles.value, "")
+        .where(singles["doctype"].isin(doctypes) & singles.field.isin(("company", "company_gstin")))
+    ).run()
+
+    for doctype in doctypes:
+        frappe.clear_document_cache(doctype, doctype)
+
+
+def remove_gst_settings_for_company(company):
     gst_settings = frappe.get_doc("GST Settings")
 
-    gst_settings.gst_accounts = [
-        row for row in gst_settings.get("gst_accounts", []) if row.company != doc.name
-    ]
+    e_invoice_companies_count = len(gst_settings.e_invoice_applicable_companies)
+
+    for fieldname in GST_SETTINGS_CHILD_TABLES_WITH_COMPANY:
+        gst_settings.set(
+            fieldname, [row for row in gst_settings.get(fieldname, []) if row.company != company]
+        )
+
+    if len(gst_settings.e_invoice_applicable_companies) != e_invoice_companies_count:
+        disable_e_invoice_if_not_applicable(gst_settings, company)
 
     gst_settings.flags.ignore_mandatory = True
     gst_settings.save()
+
+
+def disable_e_invoice_if_not_applicable(gst_settings, company):
+    if not (
+        gst_settings.enable_api
+        and gst_settings.enable_e_invoice
+        and not gst_settings.e_invoice_applicable_companies
+        and gst_settings.apply_e_invoice_only_for_selected_companies
+    ):
+        return
+
+    gst_settings.enable_e_invoice = 0
+    frappe.msgprint(
+        _("e-Invoice disabled: {0} was the only applicable company").format(frappe.bold(company)),
+        alert=True,
+        indicator="orange",
+    )
 
 
 def make_company_fixtures(doc, method=None):
@@ -36,6 +103,7 @@ def create_company_fixtures(company, gst_rate=None):
 
     make_default_customs_accounts(company)
     make_default_gst_expense_accounts(company)
+    make_default_isd_provisional_account(company)
 
 
 def make_default_customs_accounts(company):
@@ -63,13 +131,81 @@ def make_default_gst_expense_accounts(company):
     )
 
 
+def make_default_isd_provisional_account(company):
+    create_default_company_account(
+        company,
+        account_name="ISD Distribution Provisional",
+        parent="Tax Assets",
+        default_fieldname="default_isd_provisional_account",
+    )
+
+
 @frappe.whitelist()
 def make_default_tax_templates(company: str, gst_rate: float | None = None):
     frappe.has_permission("Company", ptype="write", doc=company, throw=True)
 
     default_taxes = get_tax_defaults(gst_rate)
+    default_taxes = reuse_existing_tax_defaults(company, default_taxes)
     from_detailed_data(company, default_taxes)
     update_gst_settings(company)
+
+
+def reuse_existing_tax_defaults(company, default_taxes):
+    default_taxes["tax_categories"], category_replacements = replace_default_tax_categories(
+        default_taxes["tax_categories"]
+    )
+
+    tax_templates = default_taxes["chart_of_accounts"]["*"]
+    for template_type, doctype in (
+        ("sales_tax_templates", "Sales Taxes and Charges Template"),
+        ("purchase_tax_templates", "Purchase Taxes and Charges Template"),
+    ):
+        tax_templates[template_type] = get_missing_tax_templates(
+            company, doctype, tax_templates[template_type], category_replacements
+        )
+
+    return default_taxes
+
+
+def replace_default_tax_categories(tax_categories):
+    existing_defaults = {
+        (category.is_inter_state, category.is_reverse_charge): category.name
+        for category in frappe.get_all(
+            "Tax Category",
+            filters={"is_india_compliance_default": 1, "disabled": 0},
+            fields=["name", "is_inter_state", "is_reverse_charge"],
+        )
+    }
+
+    new_categories = []
+    category_replacements = {}
+    for category in tax_categories:
+        key = (category.get("is_inter_state", 0), category.get("is_reverse_charge", 0))
+
+        if category.get("is_india_compliance_default") and key in existing_defaults:
+            category_replacements[category["title"]] = existing_defaults[key]
+        else:
+            new_categories.append(category)
+
+    return new_categories, category_replacements
+
+
+def get_missing_tax_templates(company, doctype, templates, category_replacements):
+    existing_categories = set(
+        frappe.get_all(
+            doctype,
+            filters={"company": company, "disabled": 0, "tax_category": ["is", "set"]},
+            pluck="tax_category",
+        )
+    )
+
+    new_templates = []
+    for template in templates:
+        tax_category = category_replacements.get(template["tax_category"], template["tax_category"])
+        if tax_category not in existing_categories:
+            new_templates.append({**template, "tax_category": tax_category})
+
+    return new_templates
 
 
 def get_tax_defaults(gst_rate=None):

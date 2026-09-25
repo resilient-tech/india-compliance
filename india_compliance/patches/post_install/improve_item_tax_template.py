@@ -351,7 +351,7 @@ def _update_gst_details(company, doctype, is_sales_doctype, docs):
             if not complied_docs:
                 continue
 
-            gst_details = ItemGSTDetails().get(complied_docs.values(), doctype, company)
+            gst_details = ItemGSTDetails.get(complied_docs.values(), doctype, company)
 
             if not gst_details:
                 continue

@@ -22,15 +22,15 @@ from india_compliance.gst_india.utils import MONTHS
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import (
     JSON_CATEGORY_EXCEL_CATEGORY_MAPPING,
-    GovExcelSheetName,
-    GovJsonKey,
+    JsonKey,
+    SheetName,
 )
 from india_compliance.gst_india.utils.tests import create_sales_invoice
 
-# Every GovJsonKey value that maps to a sheet in JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.
+# Every JsonKey value that maps to a sheet in JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.
 # sec_sum is excluded (no sheet mapping). Used for exhaustive template checks.
 GOV_EXCEL_SECTIONS = frozenset(
-    key.value for key in GovJsonKey if key.value in JSON_CATEGORY_EXCEL_CATEGORY_MAPPING
+    key.value for key in JsonKey if key.value in JSON_CATEGORY_EXCEL_CATEGORY_MAPPING
 )
 
 
@@ -184,11 +184,11 @@ class TestGSTR1Export(IntegrationTestCase):
         self.assertEqual(_get_selected_sections("b2b", is_hsn_bifurcated=False), ["b2b"])
 
     def test_hsn_pre_bifurcation_returns_single_hsn_key(self):
-        self.assertEqual(_get_selected_sections(GovJsonKey.HSN.value, is_hsn_bifurcated=False), ["hsn"])
+        self.assertEqual(_get_selected_sections(JsonKey.HSN.value, is_hsn_bifurcated=False), ["hsn"])
 
     def test_hsn_post_bifurcation_returns_split_keys(self):
         self.assertEqual(
-            _get_selected_sections(GovJsonKey.HSN.value, is_hsn_bifurcated=True),
+            _get_selected_sections(JsonKey.HSN.value, is_hsn_bifurcated=True),
             ["hsn_b2b", "hsn_b2c"],
         )
 
@@ -198,25 +198,25 @@ class TestGSTR1Export(IntegrationTestCase):
     def test_non_hsn_section_returns_single_sheet(self):
         self.assertEqual(
             _get_excel_sheet_names(_get_selected_sections("b2b", is_hsn_bifurcated=False)),
-            [GovExcelSheetName.B2B.value],
+            [SheetName.B2B.value],
         )
 
     def test_hsn_pre_bifurcation_returns_single_sheet(self):
         self.assertEqual(
-            _get_excel_sheet_names(_get_selected_sections(GovJsonKey.HSN.value, is_hsn_bifurcated=False)),
-            [GovExcelSheetName.HSN.value],
+            _get_excel_sheet_names(_get_selected_sections(JsonKey.HSN.value, is_hsn_bifurcated=False)),
+            [SheetName.HSN.value],
         )
 
     def test_hsn_post_bifurcation_returns_both_split_sheets(self):
         self.assertEqual(
-            _get_excel_sheet_names(_get_selected_sections(GovJsonKey.HSN.value, is_hsn_bifurcated=True)),
-            [GovExcelSheetName.HSN_B2B.value, GovExcelSheetName.HSN_B2C.value],
+            _get_excel_sheet_names(_get_selected_sections(JsonKey.HSN.value, is_hsn_bifurcated=True)),
+            [SheetName.HSN_B2B.value, SheetName.HSN_B2C.value],
         )
 
     def test_supeco_resolves_to_eco_sheet(self):
         self.assertEqual(
-            _get_excel_sheet_names(_get_selected_sections(GovJsonKey.SUPECOM.value, is_hsn_bifurcated=False)),
-            [GovExcelSheetName.SUPECOM.value],
+            _get_excel_sheet_names(_get_selected_sections(JsonKey.SUPECOM.value, is_hsn_bifurcated=False)),
+            [SheetName.SUPECOM.value],
         )
 
     def test_unknown_section_returns_empty_list(self):
@@ -258,32 +258,32 @@ class TestGSTR1Export(IntegrationTestCase):
 
     def test_v20_b2b_keeps_only_b2b_and_master(self):
         result = self._filter_sheets("V2.0", "b2b")
-        self.assertEqual(result, {GovExcelSheetName.MASTER.value, GovExcelSheetName.B2B.value})
+        self.assertEqual(result, {SheetName.MASTER.value, SheetName.B2B.value})
 
     def test_v20_hsn_keeps_single_hsn_sheet(self):
         result = self._filter_sheets("V2.0", "hsn")
-        self.assertEqual(result, {GovExcelSheetName.MASTER.value, GovExcelSheetName.HSN.value})
+        self.assertEqual(result, {SheetName.MASTER.value, SheetName.HSN.value})
 
     def test_v21_hsn_keeps_both_bifurcated_sheets(self):
         result = self._filter_sheets("V2.1", "hsn")
         self.assertEqual(
             result,
             {
-                GovExcelSheetName.MASTER.value,
-                GovExcelSheetName.HSN_B2B.value,
-                GovExcelSheetName.HSN_B2C.value,
+                SheetName.MASTER.value,
+                SheetName.HSN_B2B.value,
+                SheetName.HSN_B2C.value,
             },
         )
 
     def test_v21_supeco_keeps_eco_sheet(self):
         result = self._filter_sheets("V2.1", "supeco")
-        self.assertEqual(result, {GovExcelSheetName.MASTER.value, GovExcelSheetName.SUPECOM.value})
+        self.assertEqual(result, {SheetName.MASTER.value, SheetName.SUPECOM.value})
 
     def test_multi_section_keeps_all_selected_sheets(self):
         result = self._filter_sheets("V2.1", ["b2b", "cdnr"])
         self.assertEqual(
             result,
-            {GovExcelSheetName.MASTER.value, GovExcelSheetName.B2B.value, GovExcelSheetName.CDNR.value},
+            {SheetName.MASTER.value, SheetName.B2B.value, SheetName.CDNR.value},
         )
 
     def test_multi_section_with_hsn_bifurcation(self):
@@ -291,10 +291,10 @@ class TestGSTR1Export(IntegrationTestCase):
         self.assertEqual(
             result,
             {
-                GovExcelSheetName.MASTER.value,
-                GovExcelSheetName.B2B.value,
-                GovExcelSheetName.HSN_B2B.value,
-                GovExcelSheetName.HSN_B2C.value,
+                SheetName.MASTER.value,
+                SheetName.B2B.value,
+                SheetName.HSN_B2B.value,
+                SheetName.HSN_B2C.value,
             },
         )
 
@@ -304,7 +304,7 @@ class TestGSTR1Export(IntegrationTestCase):
                 with self.subTest(template=template_version, section=section):
                     result = self._filter_sheets(template_version, section)
                     self.assertIn(
-                        GovExcelSheetName.MASTER.value,
+                        SheetName.MASTER.value,
                         result,
                     )
                     self.assertGreater(len(result), 1)

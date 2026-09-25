@@ -9,7 +9,11 @@ from frappe import _
 from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
+from india_compliance.gst_india.utils import get_company_gstin_number
+from india_compliance.gst_india.utils.gstr_1 import (
+    SubCategory,
+    truncate_hsn_description,
+)
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 
@@ -30,6 +34,10 @@ def validate_filters(filters):
 
     if from_date and to_date and getdate(to_date) < getdate(from_date):
         frappe.throw(_("To Date cannot be less than From Date"))
+
+    filters["company_gstin"] = get_company_gstin_number(
+        filters["company"], gstin=filters.get("company_gstin")
+    )
 
 
 def get_columns(filters):
@@ -163,13 +171,11 @@ def process_hsn_data(invoices):
 
 @frappe.whitelist()
 def get_json(filters: str, report_name: str, data: str):
-    from india_compliance.gst_india.utils import (
-        get_company_gstin_number,
-    )
+    frappe.has_permission("Sales Invoice", throw=True)
 
     filters = json.loads(filters)
     report_data = json.loads(data)
-    gstin = filters.get("company_gstin") or get_company_gstin_number(filters["company"])
+    gstin = get_company_gstin_number(filters["company"], gstin=filters.get("company_gstin"))
 
     if not filters.get("from_date") or not filters.get("to_date"):
         frappe.throw(_("Please enter From Date and To Date to generate JSON"))
@@ -217,7 +223,7 @@ def get_hsn_wise_json_data(report_data, filters):
         }
 
         if hsn_description := hsn.get("description"):
-            row["desc"] = hsn_description[:30]
+            row["desc"] = truncate_hsn_description(hsn_description)
 
         row["iamt"] += hsn.get("total_igst_amount")
         row["camt"] += hsn.get("total_cgst_amount")
@@ -229,7 +235,7 @@ def get_hsn_wise_json_data(report_data, filters):
             hsn_data.append(row)
             continue
 
-        if hsn["document_type"] == GSTR1_SubCategory.HSN_B2B.value:
+        if hsn["document_type"] == SubCategory.HSN_B2B.value:
             hsn_b2b.append(row)
         else:
             hsn_b2c.append(row)

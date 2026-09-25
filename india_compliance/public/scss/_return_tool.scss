@@ -1,0 +1,68 @@
+// page shell shared by the GST return tools (GSTR-1, IMS, Purchase Reconciliation Tool)
+
+// a divider that reaches both edges like the page head line: cancel the
+// section padding, then put it back so the content does not move.
+@mixin full-bleed-divider {
+    border-bottom: 1px solid var(--border-color);
+    margin-left: calc(-1 * var(--padding-md));
+    margin-right: calc(-1 * var(--padding-md));
+    padding-left: var(--padding-md);
+    padding-right: var(--padding-md);
+}
+
+.gst-return-tool {
+    .section-body {
+        max-width: 100% !important;
+    }
+
+    .title-area .indicator-pill {
+        display: none;
+    }
+
+    .dropdown-divider {
+        height: 0;
+        margin: 5px 0;
+        border-top: 1px solid var(--border-color);
+        padding: 0;
+    }
+
+    // the count strips above the tabs: net GST liability, actions performed
+    .gst-ledger-difference,
+    .action-performed-summary {
+        @include full-bleed-divider;
+    }
+}
+
+// the tabbed area spans its whole section, so only the section padding is
+// left for the divider below to cancel
+.form-column:has(.gst-return-tabs) {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+// the tabbed data area, and the toolbar frappe draws beside the tab titles
+.gst-return-tabs {
+    .section-body {
+        margin-top: 0;
+    }
+
+    .form-tabs-list {
+        @include full-bleed-divider;
+
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: inherit;
+        padding-right: calc(var(--padding-lg) + var(--padding-md));
+    }
+
+    .custom-button-group {
+        display: flex;
+    }
+
+    .inner-group-button,
+    .view-group {
+        margin-bottom: 8px;
+        margin-left: 8px;
+    }
+}

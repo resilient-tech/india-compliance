@@ -13,6 +13,7 @@ frappe.query_reports["GSTR-3B Details"] = {
             options: "Company",
             reqd: 1,
             default: frappe.defaults.get_user_default("Company"),
+            on_change: (report) => india_compliance.set_gstin_filter_options(report),
         },
         {
             fieldname: "company_gstin",
@@ -21,7 +22,7 @@ frappe.query_reports["GSTR-3B Details"] = {
             reqd: 1,
             get_query: function () {
                 const company = frappe.query_report.get_filter_value("company");
-                return india_compliance.get_gstin_query(company);
+                return india_compliance.get_gstin_query(company, "Company", true);
             },
         },
         {
@@ -89,6 +90,10 @@ frappe.query_reports["GSTR-3B Details"] = {
             get_data: () => get_subcategory_options(),
         },
     ],
+
+    onload(report) {
+        india_compliance.set_gstin_filter_options(report, false, false);
+    },
 
     // Override datatable hook for column total calculation
     get_datatable_options(datatable_options) {

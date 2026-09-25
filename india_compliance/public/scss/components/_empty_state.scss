@@ -1,0 +1,14 @@
+// the "no data" / "generate to view" blocks in the return tools
+
+.ic-empty-state {
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+
+    > img {
+        margin-bottom: var(--margin-md);
+        max-height: 100px;
+    }
+}

@@ -118,7 +118,7 @@ EMAIL_TEMPLATE_DATA = {
     "subject": "2A/2B Reconciliation for {{ supplier_name }}-{{ supplier_gstin }}",
     "response": (
         "Hello,<br><br>We have made a purchase reconciliation"
-        " for the period {{ inward_supply_from_date }} to {{ inward_supply_to_date }}"
+        " for the period {{ from_date }} to {{ to_date }}"
         " for purchases made by {{ company }} from you.<br><br>You are requested to kindly"
         " make necessary corrections to the GST Portal on your end if required."
         " The attached sheet is for your reference."
@@ -242,6 +242,9 @@ def set_default_gst_settings():
         "enable_gstr_1_api": 1,
         "compare_unfiled_data": 1,
         "freeze_transactions": 1,
+        # ISD
+        "distribute_expense_with_isd_credit": 1,
+        "auto_create_isd_recipient_invoice": 1,
     }
 
     if frappe.conf.developer_mode:

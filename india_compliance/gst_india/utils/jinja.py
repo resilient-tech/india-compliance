@@ -18,7 +18,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_TYPES,
 )
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
-from india_compliance.gst_india.utils import as_ist
+from india_compliance.gst_india.utils import as_ist, get_items
 
 E_INVOICE_ITEM_FIELDS = {
     "SlNo": "Sr.",
@@ -196,10 +196,14 @@ class GSTBreakup:
 
         self.needs_hsn_wise_breakup = self.is_hsn_wise_breakup_needed()
 
+    @property
+    def _items(self):
+        return get_items(self.doc)
+
     def get(self):
         self.gst_breakup_data = {}
 
-        for item in self.doc.items:
+        for item in self._items:
             gst_breakup_row = self.get_default_item_tax_row(item)
             gst_breakup_row["Taxable Amount"] += flt(item.taxable_value, self.precision)
 
@@ -218,12 +222,12 @@ class GSTBreakup:
         return list(self.gst_breakup_data.values())
 
     def has_non_zero_cess(self):
-        if not self.doc.items:
+        if not self._items:
             return False
 
         return any(
             any(getattr(item, f"{scrub(tax_type)}_amount", 0) != 0 for tax_type in self.CESS_HEADERS)
-            for item in self.doc.items
+            for item in self._items
         )
 
     def get_default_item_tax_row(self, item):

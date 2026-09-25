@@ -1,3 +1,4 @@
+import json
 import random
 import string
 
@@ -12,9 +13,6 @@ from frappe.utils import today
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 from india_compliance.income_tax_india.constants import NEW_TDS_SECTIONS, get_tds_section_value
 from india_compliance.income_tax_india.overrides.company import TDS_ACCOUNT_NAME, create_tds_account
-from india_compliance.income_tax_india.overrides.tax_withholding_category import (
-    search_tds_sections,
-)
 
 COMPANY = "_Test Indian Registered Company"
 ABBR = "_TIRC"
@@ -172,10 +170,11 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         self.assertEqual(twe_rows[0].tax_id, pan)
         self.assertEqual(twe_rows[0].lower_deduction_certificate, ldc_doc.name)
 
-    def test_search_tds_sections_matches_description_case_insensitively(self):
-        results = search_tds_sections("Tax Withholding Category", "salary - GOVT", "name", 0, 20, {})
+    def test_tds_section_options_are_available_in_field_meta(self):
+        field = frappe.get_meta("Tax Withholding Category").get_field("tds_section")
+        results = json.loads(field.options)
 
-        self.assertTrue(results)
+        self.assertEqual(len(results), len(NEW_TDS_SECTIONS))
         section_1001 = get_tds_section_value(next(e for e in NEW_TDS_SECTIONS if e["section_code"] == "1001"))
         self.assertIn(
             {

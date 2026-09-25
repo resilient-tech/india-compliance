@@ -19,11 +19,11 @@ from india_compliance.gst_india.utils.gstr_1 import (
     QUARTERLY_KEYS,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
-    GovJsonKey,
-    GSTR1_Category,
-    GSTR1_SubCategory,
+    Category,
+    JsonKey,
+    SubCategory,
 )
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
+from india_compliance.gst_india.utils.gstr_1 import DocField as doc
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
     download_gstr1_json_data,
 )
@@ -132,7 +132,7 @@ class SummarizeGSTR1:
         """
         subcategory_summary = {}
 
-        for subcategory in GSTR1_SubCategory:
+        for subcategory in SubCategory:
             subcategory = subcategory.value
             if subcategory not in data:
                 continue
@@ -147,20 +147,20 @@ class SummarizeGSTR1:
                     continue
 
                 for key in self.AMOUNT_FIELDS:
-                    summary_row[key] += row.get(key, 0)
+                    summary_row[key] += row.get(key) or 0
 
                 if doc_num := row.get("document_number"):
                     summary_row["unique_records"].add(doc_num)
 
-                elif subcategory == GSTR1_SubCategory.DOC_ISSUE.value:
+                elif subcategory == SubCategory.DOC_ISSUE.value:
                     self.count_doc_issue_summary(summary_row, row)
 
                 elif subcategory in (
-                    GSTR1_SubCategory.HSN_B2B.value,
-                    GSTR1_SubCategory.HSN_B2C.value,
-                    GSTR1_SubCategory.HSN.value,  # Backwards compatibility
-                    GSTR1_SubCategory.SUPECOM_52.value,
-                    GSTR1_SubCategory.SUPECOM_9_5.value,
+                    SubCategory.HSN_B2B.value,
+                    SubCategory.HSN_B2C.value,
+                    SubCategory.HSN.value,  # Backwards compatibility
+                    SubCategory.SUPECOM_52.value,
+                    SubCategory.SUPECOM_9_5.value,
                 ):
                     self.add_unique_count(summary_row)
 
@@ -199,7 +199,7 @@ class SummarizeGSTR1:
                     ):
                         continue
 
-                    summary_row[field] += row.get(field, 0)
+                    summary_row[field] += row.get(field) or 0
 
         return subcategory_summary
 
@@ -231,7 +231,7 @@ class SummarizeGSTR1:
 
     @staticmethod
     def count_doc_issue_summary(summary_row, data_row):
-        if data_row.get(inv_f.DOC_TYPE) in (
+        if data_row.get(doc.DOC_TYPE) in (
             "Excluded from Report (Invalid Invoice Number)",
             "Excluded from Report (Same GSTIN Billing)",
             "Excluded from Report (Is Opening Entry)",
@@ -239,9 +239,9 @@ class SummarizeGSTR1:
             return
 
         summary_row["no_of_records"] += (
-            data_row.get(inv_f.TOTAL_COUNT, 0)
-            - data_row.get(inv_f.CANCELLED_COUNT, 0)
-            - data_row.get(inv_f.DRAFT_COUNT, 0)
+            (data_row.get(doc.TOTAL_COUNT) or 0)
+            - (data_row.get(doc.CANCELLED_COUNT) or 0)
+            - (data_row.get(doc.DRAFT_COUNT) or 0)
         )
 
     @staticmethod
@@ -250,14 +250,14 @@ class SummarizeGSTR1:
 
 
 class ReconcileGSTR1:
-    IGNORED_FIELDS: ClassVar[set] = {inv_f.TAX_RATE, inv_f.DOC_VALUE}
+    IGNORED_FIELDS: ClassVar[set] = {doc.TAX_RATE, doc.DOC_VALUE}
     UNREQUIRED_KEYS: ClassVar[set] = {
-        inv_f.TRANSACTION_TYPE,
-        inv_f.DOC_NUMBER,
-        inv_f.DOC_DATE,
-        inv_f.CUST_GSTIN,
-        inv_f.CUST_NAME,
-        inv_f.REVERSE_CHARGE,
+        doc.TRANSACTION_TYPE,
+        doc.DOC_NUMBER,
+        doc.DOC_DATE,
+        doc.CUST_GSTIN,
+        doc.CUST_NAME,
+        doc.REVERSE_CHARGE,
     }
 
     def get_reconcile_gstr1_data(self, gov_data, books_data):
@@ -283,7 +283,7 @@ class ReconcileGSTR1:
         else:
             update_books_match = True
 
-        for subcategory in GSTR1_SubCategory:
+        for subcategory in SubCategory:
             subcategory = subcategory.value
             books_subdata = books_data.get(subcategory) or {}
             gov_subdata = gov_data.get(subcategory) or {}
@@ -404,10 +404,19 @@ class ReconcileGSTR1:
         if not books_row:
             reconcile_row["match_status"] = "Missing in Books"
 
+        books_values = ReconcileGSTR1.comparable_books_values(books_row)
+
+        amount_keys = {
+            key
+            for row in (reconcile_row, books_values, gov_row)
+            for key, value in row.items()
+            if isinstance(value, int | float)
+        }
+
         # Compute Differences
-        for key, value in reconcile_row.items():
-            if isinstance(value, int | float) and key not in AggregateInvoices.IGNORED_FIELDS:
-                reconcile_row[key] = flt((books_row.get(key) or 0) - (gov_row.get(key) or 0), 2)
+        for key in [*reconcile_row, *sorted(amount_keys - set(reconcile_row))]:
+            if key in amount_keys and key not in AggregateInvoices.IGNORED_FIELDS:
+                reconcile_row[key] = flt((books_values.get(key) or 0) - (gov_row.get(key) or 0), 2)
                 has_different_value = reconcile_row[key] != 0
 
             elif key in ("customer_gstin", "place_of_supply"):
@@ -436,6 +445,18 @@ class ReconcileGSTR1:
             return [reconcile_row]
 
         return reconcile_row
+
+    @staticmethod
+    def comparable_books_values(books_row: dict):
+        """We file a draft as cancelled, so compare it that way. Draft count is ours alone."""
+        if doc.DRAFT_COUNT not in books_row:
+            return books_row
+
+        values = books_row.copy()
+        draft = values.pop(doc.DRAFT_COUNT)
+        values[doc.CANCELLED_COUNT] = (values.get(doc.CANCELLED_COUNT) or 0) + (draft or 0)
+
+        return values
 
     @staticmethod
     def get_empty_row(row: dict, unrequired_keys=None):
@@ -469,7 +490,7 @@ class ReconcileGSTR1:
 
 
 class AggregateInvoices:
-    IGNORED_FIELDS: ClassVar[set] = {inv_f.TAX_RATE, inv_f.DOC_VALUE}
+    IGNORED_FIELDS: ClassVar[set] = {doc.TAX_RATE, doc.DOC_VALUE}
 
     @staticmethod
     def get_aggregate_data(data: dict):
@@ -478,10 +499,10 @@ class AggregateInvoices:
         and updates the data
         """
         sub_categories_requiring_aggregation = [
-            GSTR1_SubCategory.B2CS,
-            GSTR1_SubCategory.NIL_EXEMPT,
-            GSTR1_SubCategory.AT,
-            GSTR1_SubCategory.TXP,
+            SubCategory.B2CS,
+            SubCategory.NIL_EXEMPT,
+            SubCategory.AT,
+            SubCategory.TXP,
         ]
 
         aggregate_data = {}
@@ -845,7 +866,7 @@ class FileGSTR1:
 
         verify_request_in_progress(self, force)
 
-        keys = {category.value for category in GovJsonKey}
+        keys = {category.value for category in JsonKey}
         if all(key not in json_data for key in keys):
             frappe.msgprint(_("No data to upload"), indicator="red")
             return
@@ -1076,12 +1097,10 @@ def get_differing_categories(mapped_summary, gov_summary):
 
     # TODO: Check this for all categories
     CATEGORY_KEYS = {
-        (GSTR1_Category.NIL_EXEMPT.value): {
-            "total_exempted_amount",
-            "total_nil_rated_amount",
-            "total_non_gst_amount",
+        (Category.NIL_EXEMPT.value): {
+            "total_taxable_value",
         },
-        (GSTR1_Category.DOC_ISSUE.value): {
+        (Category.DOC_ISSUE.value): {
             "no_of_records",
         },
     }
@@ -1110,7 +1129,7 @@ def get_differing_categories(mapped_summary, gov_summary):
         keys_to_compare = CATEGORY_KEYS.get(category, KEYS_TO_COMPARE)
 
         for key in keys_to_compare:
-            if gov_entry.get(key, 0) != row.get(key):
+            if (gov_entry.get(key) or 0) != (row.get(key) or 0):
                 differing_categories.add(category)
                 break
 
@@ -1126,7 +1145,7 @@ def get_differing_categories(mapped_summary, gov_summary):
         keys_to_compare = CATEGORY_KEYS.get(row["description"], KEYS_TO_COMPARE)
 
         for key in keys_to_compare:
-            if row.get(key, 0) != 0:
+            if (row.get(key) or 0) != 0:
                 differing_categories.add(row["description"])
                 break
 
