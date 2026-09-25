@@ -53,10 +53,8 @@ from india_compliance.gst_india.utils.e_waybill import (
     update_transporter,
     update_vehicle_info,
 )
-from india_compliance.gst_india.utils.e_waybill_applicability import (
-    _get_e_waybill_threshold,
-    is_e_waybill_required,
-)
+from india_compliance.gst_india.utils.e_waybill_actions import is_e_waybill_required
+from india_compliance.gst_india.utils.e_waybill_applicability import _get_e_waybill_threshold
 from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_FINISHED_ITEM_TG,
     _append_taxes,

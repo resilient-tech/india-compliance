@@ -7,7 +7,7 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.utils import update_dashboard_with_gst_logs
 from india_compliance.gst_india.utils.e_waybill import set_e_waybill_info
-from india_compliance.gst_india.utils.e_waybill_applicability import (
+from india_compliance.gst_india.utils.e_waybill_actions import (
     is_e_waybill_required,
 )
 

@@ -1250,7 +1250,7 @@ function is_e_waybill_required(frm) {
 }
 
 function is_e_waybill_cancellable(frm) {
-    return Boolean(frm.doc.__onload?.e_waybill_applicability?.cancellable);
+    return Boolean(frm.doc.__onload?.e_waybill_info?.cancellable);
 }
 
 function get_hours(date, hours, date_time_format = frappe.defaultDatetimeFormat) {
@@ -1367,7 +1367,7 @@ async function show_e_waybill_generatable_status(frm, is_ewb_generatable) {
         message = [__("To generate e-Waybill, change e-Waybill Status to Pending.")];
     } else {
         const { message: reasons } = await frappe.call({
-            method: "india_compliance.gst_india.utils.e_waybill_applicability.get_e_waybill_applicability_reasons",
+            method: "india_compliance.gst_india.utils.e_waybill_actions.get_e_waybill_applicability_reasons",
             args: { doctype: frm.doctype, docname: frm.doc.name },
         });
         message = reasons;

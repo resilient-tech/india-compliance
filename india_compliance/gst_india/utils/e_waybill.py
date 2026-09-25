@@ -65,12 +65,12 @@ from india_compliance.gst_india.utils import (
     send_updated_doc,
     update_onload,
 )
-from india_compliance.gst_india.utils.e_waybill_applicability import (
-    get_e_waybill_applicability,
+from india_compliance.gst_india.utils.e_waybill_actions import (
     is_e_waybill_auto_cancellable,
     is_e_waybill_cancellable,
     is_e_waybill_info_enabled,
 )
+from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 from india_compliance.utils.change_log_utils import create_change_log_comment
 
@@ -955,6 +955,10 @@ def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
     log = log_e_waybill(log_data, comment)
     update_onload(doc, "e_waybill_info", log_data)
 
+    # the vehicle update logs only part of the info, so check the merged one
+    e_waybill_info = doc.get_onload().e_waybill_info
+    e_waybill_info["cancellable"] = not log.is_cancelled and is_e_waybill_cancellable(doc, e_waybill_info)
+
     if log.is_cancelled or fetch:
         # the slow bits: after the response
         run_after_response_or_enqueue(
@@ -1104,10 +1108,11 @@ def update_transaction(doc, values):
 
 
 def set_e_waybill_info(doc):
-    if not doc.get("ewaybill") or not is_e_waybill_info_enabled(doc):
+    if not doc.get("ewaybill") or not is_e_waybill_info_enabled():
         return
 
     if e_waybill_info := get_e_waybill_info(doc):
+        e_waybill_info.cancellable = is_e_waybill_cancellable(doc, e_waybill_info)
         doc.set_onload("e_waybill_info", e_waybill_info)
 
 

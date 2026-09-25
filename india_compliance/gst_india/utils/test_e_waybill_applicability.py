@@ -15,9 +15,10 @@ from india_compliance.gst_india.overrides.test_subcontracting_transaction import
 )
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
+    log_and_process_e_waybill_generation,
     mark_e_waybill_as_generated,
 )
-from india_compliance.gst_india.utils.e_waybill_applicability import (
+from india_compliance.gst_india.utils.e_waybill_actions import (
     get_e_waybill_applicability_reasons,
     is_e_waybill_auto_cancellable,
 )
@@ -57,7 +58,6 @@ class TestEWaybillApplicability(IntegrationTestCase):
                 "applicable": applicable,
                 "generatable": generatable,
                 "required": required,
-                "cancellable": False,
             },
         )
         self.assertEqual(get_e_waybill_applicability_reasons(doc.doctype, doc.name), list(reasons))
@@ -143,14 +143,15 @@ class TestEWaybillApplicability(IntegrationTestCase):
         pi = create_purchase_invoice(bill_no="EWB-APPL-5")
         self.mark_generated(pi, "351002721241", now_datetime())
 
-        self.assertTrue(pi.get_onload().e_waybill_applicability.cancellable)
+        self.assertTrue(pi.get_onload().e_waybill_info.cancellable)
+        self.assertIsNone(pi.get_onload().get("e_waybill_applicability"))
 
     @change_settings("GST Settings", {"auto_cancel_e_waybill": 1})
     def test_e_waybill_older_than_a_day_is_not_cancellable(self):
         pi = create_purchase_invoice(bill_no="EWB-APPL-6")
         self.mark_generated(pi, "351002721242", add_to_date(now_datetime(), days=-2))
 
-        self.assertFalse(pi.get_onload().e_waybill_applicability.cancellable)
+        self.assertFalse(pi.get_onload().e_waybill_info.cancellable)
         self.assertFalse(is_e_waybill_auto_cancellable(pi))
 
     @change_settings("GST Settings", {"auto_cancel_e_waybill": 1, "enable_api": 0})
@@ -159,6 +160,22 @@ class TestEWaybillApplicability(IntegrationTestCase):
         self.mark_generated(pi, "351002721243", now_datetime())
 
         self.assertFalse(is_e_waybill_auto_cancellable(pi))
+
+    def test_cancellable_right_after_generation(self):
+        pi = create_purchase_invoice(bill_no="EWB-APPL-8")
+        run_onload(pi)
+
+        log_and_process_e_waybill_generation(
+            pi,
+            {
+                "ewayBillNo": "351002721244",
+                "ewayBillDate": str(now_datetime()),
+                "validUpto": str(add_to_date(now_datetime(), days=1)),
+                "e_waybill_status": "Manually Generated",
+            },
+        )
+
+        self.assertTrue(pi.get_onload().e_waybill_info.get("cancellable"))
 
     def test_purchase_receipt(self):
         self.assertApplicability(

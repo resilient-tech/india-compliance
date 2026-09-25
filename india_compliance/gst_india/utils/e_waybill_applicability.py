@@ -2,13 +2,12 @@
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, get_datetime
 
 from india_compliance.gst_india.constants import (
     E_WAYBILL_STOCK_ENTRY_PURPOSES,
     STATE_NUMBERS,
 )
-from india_compliance.gst_india.constants.e_waybill import ADDRESS_FIELDS, PERMITTED_DOCTYPES
+from india_compliance.gst_india.constants.e_waybill import ADDRESS_FIELDS
 from india_compliance.gst_india.overrides.transaction import (
     _get_address_fields,
     get_source_state_code,
@@ -37,7 +36,6 @@ class EWaybillApplicability:
             applicable=self.is_applicable(),
             generatable=self.is_generatable(),
             required=self.is_required(),
-            cancellable=self.is_cancellable(),
             reasons=[],
         )
 
@@ -76,23 +74,6 @@ class EWaybillApplicability:
 
     def is_auto_generatable(self):
         return False
-
-    def is_info_enabled(self):
-        # the doctype switch governs new e-Waybills; an existing one stays manageable
-        return bool(self.settings.enable_e_waybill and is_api_enabled(self.settings))
-
-    def is_cancellable(self, e_waybill_info=None):
-        if not (self.doc.get("ewaybill") and self.is_info_enabled()):
-            return False
-
-        e_waybill_info = e_waybill_info or self.doc.get_onload().get("e_waybill_info") or {}
-        generated_on = e_waybill_info.get("created_on")
-
-        # the portal allows cancelling for 24 hours after generation
-        return bool(generated_on) and add_days(generated_on, 1) >= get_datetime()
-
-    def is_auto_cancellable(self, e_waybill_info=None):
-        return bool(self.settings.auto_cancel_e_waybill) and self.is_cancellable(e_waybill_info)
 
     def get_applicability_reasons(self):
         reasons = []
@@ -217,65 +198,6 @@ E_WAYBILL_APPLICABILITY = {
 
 def get_e_waybill_applicability(doc):
     return E_WAYBILL_APPLICABILITY[doc.doctype](doc)
-
-
-def is_e_waybill_enabled(doc):
-    return get_e_waybill_applicability(doc).is_enabled()
-
-
-def is_e_waybill_api_enabled(doc):
-    return get_e_waybill_applicability(doc).is_api_enabled()
-
-
-def is_e_waybill_applicable(doc):
-    return get_e_waybill_applicability(doc).is_applicable()
-
-
-def is_e_waybill_generatable(doc):
-    return get_e_waybill_applicability(doc).is_generatable()
-
-
-def is_e_waybill_required(doc):
-    return get_e_waybill_applicability(doc).is_required()
-
-
-def is_e_waybill_auto_generatable(doc):
-    return get_e_waybill_applicability(doc).is_auto_generatable()
-
-
-def is_e_waybill_info_enabled(doc):
-    return get_e_waybill_applicability(doc).is_info_enabled()
-
-
-def is_e_waybill_cancellable(doc, e_waybill_info=None):
-    return get_e_waybill_applicability(doc).is_cancellable(e_waybill_info)
-
-
-def is_e_waybill_auto_cancellable(doc, e_waybill_info=None):
-    return get_e_waybill_applicability(doc).is_auto_cancellable(e_waybill_info)
-
-
-def set_e_waybill_applicability(doc, method=None):
-    e_waybill_applicability = get_e_waybill_applicability(doc)
-
-    # the client reads a missing key as all flags off
-    if not (e_waybill_applicability.is_enabled() or doc.get("ewaybill")):
-        return
-
-    applicability = e_waybill_applicability.get()
-    applicability.pop("reasons")
-
-    doc.set_onload("e_waybill_applicability", applicability)
-
-
-@frappe.whitelist()
-def get_e_waybill_applicability_reasons(doctype: str, docname: str):
-    if doctype not in PERMITTED_DOCTYPES:
-        frappe.throw(_("e-Waybill is not supported for {0}").format(_(doctype)))
-
-    doc = frappe.get_lazy_doc(doctype, docname, check_permission="read")
-
-    return get_e_waybill_applicability(doc).get().reasons
 
 
 def _get_e_waybill_threshold(doc, gst_settings=None):

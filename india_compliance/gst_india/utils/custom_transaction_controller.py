@@ -21,7 +21,7 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils import (
     validate_invoice_number as validate_transaction_name,
 )
-from india_compliance.gst_india.utils.e_waybill_applicability import (
+from india_compliance.gst_india.utils.e_waybill_actions import (
     is_e_waybill_api_enabled,
 )
 from india_compliance.gst_india.utils.taxes_controller import (

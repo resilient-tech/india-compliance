@@ -39,7 +39,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     generate_e_waybill,
     set_e_waybill_info,
 )
-from india_compliance.gst_india.utils.e_waybill_applicability import (
+from india_compliance.gst_india.utils.e_waybill_actions import (
     is_e_waybill_auto_cancellable,
     is_e_waybill_auto_generatable,
     is_e_waybill_required,
