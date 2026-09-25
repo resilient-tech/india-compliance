@@ -1,13 +1,3 @@
-const E_WAYBILL_CLASS = {
-    "Sales Invoice": SalesInvoiceEwaybill,
-    "Purchase Invoice": PurchaseInvoiceEwaybill,
-    "Delivery Note": DeliveryNoteEwaybill,
-    "Purchase Receipt": PurchaseReceiptEwaybill,
-    "Stock Entry": StockEntryEwaybill,
-    "Subcontracting Receipt": SubcontractingReceiptEwaybill,
-    "Asset Movement": AssetMovementEwaybill,
-};
-
 function setup_e_waybill_actions(doctype) {
     setup_gst_update_notifications(doctype);
     setup_cancel_confirmation(doctype);
@@ -79,19 +69,13 @@ function setup_e_waybill_actions(doctype) {
                 return;
             }
 
-            const is_ewb_generatable = is_e_waybill_generatable(frm, true);
+            const is_ewb_generatable = is_e_waybill_generatable(frm);
 
             if (
                 frm.doc.docstatus === 0 ||
                 !is_ewb_generatable ||
                 frm.doc.e_waybill_status === "Not Applicable"
             ) {
-                if (frm.doc.e_waybill_status === "Not Applicable" && is_ewb_generatable) {
-                    frm._ewb_message_list = [
-                        __("To generate e-Waybill, change e-Waybill Status to Pending."),
-                    ];
-                }
-
                 frm.add_custom_button(
                     __("Applicability Status"),
                     () => show_e_waybill_generatable_status(frm, is_ewb_generatable),
@@ -1269,23 +1253,16 @@ async function get_e_waybill_threshold(frm) {
     return message;
 }
 
-function is_e_waybill_applicable(frm, show_message) {
-    /**
-     * Defines supported conditions where e-Waybill is applicable
-     * and it's generation is supported.
-     */
-    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_applicable(show_message);
+function is_e_waybill_applicable(frm) {
+    return Boolean(frm.doc.__onload?.e_waybill_applicability?.applicable);
 }
 
 function is_e_waybill_api_enabled(frm) {
-    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_api_enabled();
+    return Boolean(frm.doc.__onload?.e_waybill_applicability?.api_enabled);
 }
 
-function is_e_waybill_generatable(frm, show_message) {
-    /**
-     * Checks if all information required to generate e-Waybill is available.
-     */
-    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable(show_message);
+function is_e_waybill_generatable(frm) {
+    return Boolean(frm.doc.__onload?.e_waybill_applicability?.generatable);
 }
 
 function get_hours(date, hours, date_time_format = frappe.defaultDatetimeFormat) {
@@ -1405,14 +1382,24 @@ function get_transit_type(dialog) {
     }
 }
 
-function show_e_waybill_generatable_status(frm, is_ewb_generatable) {
+async function show_e_waybill_generatable_status(frm, is_ewb_generatable) {
+    let message;
+
     if (frm.doc.docstatus === 0 && is_ewb_generatable) {
-        frm._ewb_message_list = [__("Please submit the doc to generate e-Waybill.")];
+        message = [__("Please submit the doc to generate e-Waybill.")];
+    } else if (frm.doc.e_waybill_status === "Not Applicable" && is_ewb_generatable) {
+        message = [__("To generate e-Waybill, change e-Waybill Status to Pending.")];
+    } else {
+        const { message: reasons } = await frappe.call({
+            method: "india_compliance.gst_india.utils.e_waybill_applicability.get_e_waybill_applicability_reasons",
+            args: { doctype: frm.doctype, docname: frm.doc.name },
+        });
+        message = reasons;
     }
 
     frappe.msgprint({
         title: is_ewb_generatable ? __("e-Waybill can be generated") : __("e-Waybill cannot be generated"),
-        message: frm._ewb_message_list,
+        message,
         as_list: true,
         indicator: is_ewb_generatable ? "green" : "red",
     });
