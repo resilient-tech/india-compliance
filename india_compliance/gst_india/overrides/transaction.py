@@ -2028,8 +2028,8 @@ def validate_transporter_fields_after_submit(doc, method=None):
         frappe.throw(
             _(
                 "Cannot change transporter details after the e-Waybill has been"
-                " generated. Cancel the e-Waybill first, or use the Update Transporter"
-                " / Update Vehicle Info actions instead."
+                " generated without updating the portal. Update them from the form,"
+                " or use the Update Transporter / Update Vehicle Info actions."
             ),
             title=_("Cannot Update After Submit"),
         )
