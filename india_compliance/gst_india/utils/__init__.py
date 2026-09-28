@@ -114,7 +114,7 @@ def portal_is_busy():
 
     False once the response is out or in a worker, so a queued action never queues itself again.
     """
-    return is_response_pending() and (is_portal_slow() or inflight_in_web() >= max_inflight_in_web())
+    return is_response_pending() and (is_portal_slow() or has_slow_inflight_call())
 
 
 def enqueue_portal_action(action: Callable, reference_doc, failure_message: str, **kwargs):
@@ -1233,11 +1233,11 @@ def validate_invoice_number(doc, throw=True):
 # portal health, shared by every worker
 #   down     -> refuse requests, auto-retry picks the doc up
 #   slow     -> desk submits go to the queue
-#   inflight -> web workers in a call now; past the cap, submits go to the queue
+#   inflight -> web workers in a call now; one past SLOW_RESPONSE_SECONDS, submits go to the queue
 # down is per portal because it refuses work; slow only reroutes, so one flag covers all.
 # down and slow are bench-wide (same portal for every site), inflight is per site.
 SERVER_DOWN_CACHE_KEY = "gst_server_down"
-SERVER_DOWN_CACHE_TIMEOUT = 120
+SERVER_DOWN_CACHE_TIMEOUT = 60
 PORTAL_SLOW_CACHE_KEY = "gst_portal_slow"
 
 # long, because rerouting costs the user nothing but a short wait, and a short
@@ -1329,21 +1329,17 @@ def track_inflight(enabled=True):
             frappe.cache.zrem(get_inflight_key(), member)
 
 
-def inflight_in_web():
-    """Web workers in a portal call right now. 0 if redis is down, so the fast path survives."""
+def has_slow_inflight_call():
+    """A web call still waiting past SLOW_RESPONSE_SECONDS. False if redis is down, so the fast path survives."""
     key = get_inflight_key()
+    now = time.time()
 
     with suppress(redis.exceptions.RedisError):
         # a killed worker leaves its entry behind
-        frappe.cache.zremrangebyscore(key, 0, time.time() - INFLIGHT_STALE_SECONDS)
-        return frappe.cache.zcard(key)
+        frappe.cache.zremrangebyscore(key, 0, now - INFLIGHT_STALE_SECONDS)
+        return bool(frappe.cache.zcount(key, 0, now - SLOW_RESPONSE_SECONDS))
 
-    return 0
-
-
-def max_inflight_in_web():
-    # ponytail: flat cap; tune with gst_max_inflight_in_web in site config
-    return cint(frappe.conf.get("gst_max_inflight_in_web")) or 3
+    return False
 
 
 def gst_queue():

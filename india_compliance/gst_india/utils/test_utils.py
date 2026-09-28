@@ -147,11 +147,8 @@ class TestPortalBusy(IntegrationTestCase):
         clear_portal_slow()
         super().tearDown()
 
-    def busy(self, inflight=0):
-        with (
-            patch("india_compliance.gst_india.utils.inflight_in_web", return_value=inflight),
-            patch("india_compliance.gst_india.utils.max_inflight_in_web", return_value=3),
-        ):
+    def busy(self, slow_inflight=False):
+        with patch("india_compliance.gst_india.utils.has_slow_inflight_call", return_value=slow_inflight):
             return portal_is_busy()
 
     def test_healthy_portal_is_not_busy(self):
@@ -164,26 +161,25 @@ class TestPortalBusy(IntegrationTestCase):
         with in_web_request():
             self.assertTrue(self.busy())
 
-    def test_full_web_pool_is_busy(self):
+    def test_slow_inflight_call_is_busy(self):
         with in_web_request():
-            self.assertTrue(self.busy(inflight=3))
-            self.assertFalse(self.busy(inflight=2))
+            self.assertTrue(self.busy(slow_inflight=True))
 
     def test_worker_is_never_busy(self):
         # a queued action must not queue itself again
         mark_portal_slow()
-        self.assertFalse(self.busy(inflight=99))
+        self.assertFalse(self.busy(slow_inflight=True))
 
     def test_not_busy_once_the_response_is_out(self):
         # the worker is already committed, queueing now would only add a hop
         mark_portal_slow()
 
         with in_web_request(), patch.dict(frappe.flags, {"in_after_response": True}):
-            self.assertFalse(self.busy(inflight=99))
+            self.assertFalse(self.busy(slow_inflight=True))
 
 
 class TestPortalRouting(IntegrationTestCase):
-    """web worker only while the portal is healthy and the pool has room"""
+    """web worker only while the portal is healthy"""
 
     def setUp(self):
         super().setUp()
@@ -194,15 +190,14 @@ class TestPortalRouting(IntegrationTestCase):
         clear_portal_slow()
         super().tearDown()
 
-    def route(self, is_ajax=True, inflight=0):
+    def route(self, is_ajax=True, slow_inflight=False):
         action = MagicMock()
         doc = frappe._dict(doctype="Sales Invoice", name="SINV-TEST")
 
         with (
             in_web_request(),
             patch.object(frappe.local, "is_ajax", is_ajax, create=True),
-            patch("india_compliance.gst_india.utils.inflight_in_web", return_value=inflight),
-            patch("india_compliance.gst_india.utils.max_inflight_in_web", return_value=3),
+            patch("india_compliance.gst_india.utils.has_slow_inflight_call", return_value=slow_inflight),
             patch("frappe.enqueue") as enqueue,
         ):
             run_after_response_or_enqueue(action, doc, "failed", docname=doc.name)
@@ -235,16 +230,10 @@ class TestPortalRouting(IntegrationTestCase):
         self.run_after_response()
         action.assert_not_called()
 
-    def test_desk_busy_web_pool_goes_to_queue(self):
-        _, enqueue = self.route(inflight=3)
+    def test_desk_slow_inflight_call_goes_to_queue(self):
+        _, enqueue = self.route(slow_inflight=True)
 
         enqueue.assert_called_once()
-
-    def test_desk_web_pool_with_room_stays_in_web(self):
-        _, enqueue = self.route(inflight=2)
-
-        enqueue.assert_not_called()
-        self.run_after_response()
 
     def test_outside_desk_goes_to_queue(self):
         _, enqueue = self.route(is_ajax=False)

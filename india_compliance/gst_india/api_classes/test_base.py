@@ -10,11 +10,12 @@ from india_compliance.exceptions import GatewayTimeoutError, GSPLimitExceededErr
 from india_compliance.gst_india.api_classes.base import BASE_URL, BaseAPI
 from india_compliance.gst_india.utils import (
     INFLIGHT_STALE_SECONDS,
+    SLOW_RESPONSE_SECONDS,
     clear_portal_slow,
     clear_server_down,
     get_inflight_key,
     get_server_down_key,
-    inflight_in_web,
+    has_slow_inflight_call,
     is_portal_slow,
     is_server_down,
     mark_server_down,
@@ -87,9 +88,12 @@ class TestRequestTimeout(IntegrationTestCase):
 
         return patch.object(frappe.local, "request", request, create=True)
 
+    def count_inflight(self):
+        return frappe.cache.zcard(get_inflight_key())
+
     def portal_recording_inflight(self, seen):
         def portal(*args, **kwargs):
-            seen.append(inflight_in_web())
+            seen.append(self.count_inflight())
             raise requests.exceptions.Timeout("timed out")
 
         return portal
@@ -305,7 +309,7 @@ class TestRequestTimeout(IntegrationTestCase):
 
         self.assertEqual(seen, [1])
         # released even though the call failed
-        self.assertEqual(inflight_in_web(), 0)
+        self.assertEqual(self.count_inflight(), 0)
 
     def test_inflight_not_counted_in_a_background_worker(self):
         seen = []
@@ -324,9 +328,18 @@ class TestRequestTimeout(IntegrationTestCase):
 
         self.assertEqual(seen, [0])
 
+    def test_slow_inflight_call_is_seen_before_it_returns(self):
+        now = time.time()
+        frappe.cache.zadd(get_inflight_key(), {"fast-1": now, "fast-2": now, "fast-3": now})
+        self.assertFalse(has_slow_inflight_call())
+
+        frappe.cache.zadd(get_inflight_key(), {"slow": now - SLOW_RESPONSE_SECONDS - 1})
+        self.assertTrue(has_slow_inflight_call())
+
     def test_stale_inflight_entries_are_not_counted(self):
         # killed worker left its entry behind
         frappe.cache.zadd(get_inflight_key(), {"dead-worker": time.time() - INFLIGHT_STALE_SECONDS - 1})
         frappe.cache.zadd(get_inflight_key(), {"live-worker": time.time()})
 
-        self.assertEqual(inflight_in_web(), 1)
+        self.assertFalse(has_slow_inflight_call())
+        self.assertEqual(self.count_inflight(), 1)
