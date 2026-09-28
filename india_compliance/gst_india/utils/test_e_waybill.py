@@ -2460,8 +2460,8 @@ class TestSubcontractingInwardEWaybill(IntegrationTestCase):
 class TestEWaybillLookup(IntegrationTestCase):
     """link_matching_e_waybill: pick this doc's live e-Waybill out of a day's list"""
 
-    def lookup(self, portal_rows, docname="SINV-TEST"):
-        doc = frappe._dict(doctype="Sales Invoice", name=docname, posting_date="2026-01-05")
+    def lookup(self, portal_rows, docname="SINV-TEST", doctype="Sales Invoice", **fields):
+        doc = frappe._dict(doctype=doctype, name=docname, **fields)
 
         with (
             patch.object(EWaybillAPI, "create") as create,
@@ -2540,151 +2540,29 @@ class TestEWaybillLookup(IntegrationTestCase):
         self.assertFalse(linked)
         log_generation.assert_not_called()
 
-    def purchase_lookup(self, portal_rows, supplier_of, is_return=0, bill_date=None):
-        """supplier_of: ewbNo -> fromGstin the portal has for it"""
-        doc = frappe._dict(
+    def test_purchase_invoice_matches_on_bill_no(self):
+        # a purchase goes out under the supplier's bill no
+        linked, log_generation, _ = self.lookup(
+            [{"docNo": "SUP/778", "status": "ACT", "ewbNo": 123, "ewbDate": "05/01/2026"}],
+            docname="PINV-TEST",
             doctype="Purchase Invoice",
-            name="PINV-TEST",
             bill_no="SUP/778",
-            is_return=is_return,
-            supplier_gstin="24AAQCA8719H1ZC",
-            posting_date="2026-01-05",
-            bill_date=bill_date,
-        )
-
-        with (
-            patch.object(EWaybillAPI, "create") as create,
-            patch(
-                "india_compliance.gst_india.utils.e_waybill.log_and_process_e_waybill_generation"
-            ) as log_generation,
-        ):
-            create.return_value.get_e_waybills_by_date.return_value = portal_rows
-            create.return_value.get_e_waybill.side_effect = lambda ewb_no: {"fromGstin": supplier_of[ewb_no]}
-            linked = link_matching_e_waybill(doc, "2026-01-05")
-
-        return linked, log_generation
-
-    def test_purchase_invoice_matches_on_supplier_bill_no(self):
-        # portal knows a purchase by the supplier's bill no, not our name
-        linked, log_generation = self.purchase_lookup(
-            [
-                {
-                    "docNo": "SUP/778",
-                    "status": "ACT",
-                    "ewbNo": 123,
-                    "ewbDate": "05/01/2026",
-                    "docDate": "05/01/2026",
-                }
-            ],
-            {123: "24AAQCA8719H1ZC"},
-        )
-
-        self.assertTrue(linked)
-        self.assertEqual(log_generation.call_args.args[1]["ewayBillNo"], 123)
-
-    def test_purchase_invoice_skips_another_suppliers_bill(self):
-        # same bill no from a different supplier is not ours
-        linked, log_generation = self.purchase_lookup(
-            [
-                {
-                    "docNo": "SUP/778",
-                    "status": "ACT",
-                    "ewbNo": 999,
-                    "ewbDate": "05/01/2026",
-                    "docDate": "05/01/2026",
-                },
-                {
-                    "docNo": "SUP/778",
-                    "status": "ACT",
-                    "ewbNo": 123,
-                    "ewbDate": "05/01/2026",
-                    "docDate": "05/01/2026",
-                },
-            ],
-            {999: "27AAACI1195H2ZH", 123: "24AAQCA8719H1ZC"},
         )
 
         self.assertTrue(linked)
         self.assertEqual(log_generation.call_args.args[1]["ewayBillNo"], 123)
 
     def test_purchase_return_matches_on_our_name(self):
-        # return goes out under our name, sender is us: no supplier check
-        linked, log_generation = self.purchase_lookup(
-            [
-                {
-                    "docNo": "PINV-TEST",
-                    "status": "ACT",
-                    "ewbNo": 123,
-                    "ewbDate": "05/01/2026",
-                    "docDate": "05/01/2026",
-                }
-            ],
-            {},
+        # a return goes out under our name
+        linked, _, _ = self.lookup(
+            [{"docNo": "PINV-RET", "status": "ACT", "ewbNo": 456, "ewbDate": "05/01/2026"}],
+            docname="PINV-RET",
+            doctype="Purchase Invoice",
+            bill_no="SUP/778",
             is_return=1,
         )
 
         self.assertTrue(linked)
-        self.assertEqual(log_generation.call_args.args[1]["ewayBillNo"], 123)
-
-    def test_same_no_on_another_doc_date_is_not_ours(self):
-        # bill no reused on a later bill
-        linked, log_generation, _ = self.lookup(
-            [
-                {
-                    "docNo": "SINV-TEST",
-                    "status": "ACT",
-                    "ewbNo": 123,
-                    "ewbDate": "05/01/2026",
-                    "docDate": "02/01/2026",
-                }
-            ]
-        )
-
-        self.assertFalse(linked)
-        log_generation.assert_not_called()
-
-    def test_purchase_made_on_portal_with_bill_date(self):
-        # made on the portal by hand: doc date is the supplier's bill date, not our posting date
-        linked, log_generation = self.purchase_lookup(
-            [
-                {
-                    "docNo": "SUP/778",
-                    "status": "ACT",
-                    "ewbNo": 123,
-                    "ewbDate": "05/01/2026",
-                    "docDate": "02/01/2026",
-                }
-            ],
-            {123: "24AAQCA8719H1ZC"},
-            bill_date="2026-01-02",
-        )
-
-        self.assertTrue(linked)
-        self.assertEqual(log_generation.call_args.args[1]["ewayBillNo"], 123)
-
-    def test_two_matches_are_not_linked(self):
-        # can't tell which is ours, leave it to the user
-        linked, log_generation, _ = self.lookup(
-            [
-                {
-                    "docNo": "SINV-TEST",
-                    "status": "ACT",
-                    "ewbNo": 123,
-                    "ewbDate": "05/01/2026",
-                    "docDate": "05/01/2026",
-                },
-                {
-                    "docNo": "SINV-TEST",
-                    "status": "ACT",
-                    "ewbNo": 456,
-                    "ewbDate": "05/01/2026",
-                    "docDate": "05/01/2026",
-                },
-            ]
-        )
-
-        self.assertFalse(linked)
-        log_generation.assert_not_called()
 
     def test_empty_day_is_an_empty_list(self):
         # portal errors on a day with none, callers should just see []

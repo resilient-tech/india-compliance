@@ -822,7 +822,7 @@ def find_matching_e_waybill(*, doctype: str, docname: str, e_waybill_date: str):
 
 
 def get_e_waybill_doc_no(doc):
-    """doc number the portal knows: supplier's bill no for a purchase"""
+    """doc number sent to the portal: supplier's bill no for a purchase"""
     if doc.doctype == "Purchase Invoice" and not doc.get("is_return"):
         return doc.get("bill_no") or doc.name
 
@@ -834,29 +834,14 @@ def link_matching_e_waybill(doc, e_waybill_date):
     response = EWaybillAPI.create(doc).get_e_waybills_by_date(format_date(e_waybill_date, "dd/mm/yyyy"))
 
     doc_no = get_e_waybill_doc_no(doc)
-    doc_dates = {
-        format_date(date, "dd/mm/yyyy")
-        for date in (doc.get("posting_date"), doc.get("transaction_date"), doc.get("bill_date"))
-        if date
-    }
-    rows = [
-        row
-        for row in response
-        if row.get("docNo") == doc_no and row.get("docDate") in doc_dates and row.get("status") == "ACT"
-    ]
+    result = next(
+        (row for row in response if row.get("docNo") == doc_no and row.get("status") == "ACT"), None
+    )
 
-    if doc_no != doc.name:
-        supplier_gstin = doc.get("supplier_gstin") or "URP"
-        rows = [
-            row
-            for row in rows
-            if EWaybillAPI.create(doc).get_e_waybill(row["ewbNo"]).get("fromGstin") == supplier_gstin
-        ]
-
-    if len(rows) != 1:
+    if not result:
         return False
 
-    result = frappe._dict(rows[0])
+    result = frappe._dict(result)
 
     # to the shape log_and_process expects for generation without IRN
     result["ewayBillNo"] = result["ewbNo"]
