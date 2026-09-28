@@ -1,5 +1,7 @@
+import base64
 import copy
 import datetime
+import json
 import random
 import re
 from unittest.mock import MagicMock, patch
@@ -16,7 +18,7 @@ from frappe.www.printview import get_html_and_style
 from responses import matchers
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
-from india_compliance.gst_india.api_classes.nic.e_waybill import EWaybillAPI
+from india_compliance.gst_india.api_classes.nic.e_waybill import EWaybillAPI, StandardEWaybillAPI
 from india_compliance.gst_india.constants import (
     SERVICE_HSN_PREFIX,
     SHIP_TO_GSTIN_APPLICABLE_DATE,
@@ -2510,18 +2512,62 @@ class TestEWaybillLookup(IntegrationTestCase):
         self.assertFalse(linked)
         log_generation.assert_not_called()
 
-    def test_purchase_invoice_matches_on_supplier_bill_no(self):
-        # portal knows a purchase by the supplier's bill no, not our name
-        doc = frappe._dict(doctype="Purchase Invoice", name="PINV-TEST", bill_no="SUP/778", is_return=0)
+    def purchase_lookup(self, portal_rows, supplier_of):
+        """supplier_of: ewbNo -> fromGstin the portal has for it"""
+        doc = frappe._dict(
+            doctype="Purchase Invoice",
+            name="PINV-TEST",
+            bill_no="SUP/778",
+            is_return=0,
+            supplier_gstin="24AAQCA8719H1ZC",
+        )
 
         with (
             patch.object(EWaybillAPI, "create") as create,
-            patch("india_compliance.gst_india.utils.e_waybill.log_and_process_e_waybill_generation"),
+            patch(
+                "india_compliance.gst_india.utils.e_waybill.log_and_process_e_waybill_generation"
+            ) as log_generation,
         ):
-            create.return_value.get_e_waybills_by_date.return_value = [
-                {"docNo": "SUP/778", "status": "ACT", "ewbNo": 123, "ewbDate": "05/01/2026"}
+            create.return_value.get_e_waybills_by_date.return_value = portal_rows
+            create.return_value.get_e_waybill.side_effect = lambda ewb_no: {"fromGstin": supplier_of[ewb_no]}
+            linked = link_matching_e_waybill(doc, "2026-01-05")
+
+        return linked, log_generation
+
+    def test_purchase_invoice_matches_on_supplier_bill_no(self):
+        # portal knows a purchase by the supplier's bill no, not our name
+        linked, log_generation = self.purchase_lookup(
+            [{"docNo": "SUP/778", "status": "ACT", "ewbNo": 123, "ewbDate": "05/01/2026"}],
+            {123: "24AAQCA8719H1ZC"},
+        )
+
+        self.assertTrue(linked)
+        self.assertEqual(log_generation.call_args.args[1]["ewayBillNo"], 123)
+
+    def test_purchase_invoice_skips_another_suppliers_bill(self):
+        # same bill no from a different supplier is not ours
+        linked, log_generation = self.purchase_lookup(
+            [
+                {"docNo": "SUP/778", "status": "ACT", "ewbNo": 999, "ewbDate": "05/01/2026"},
+                {"docNo": "SUP/778", "status": "ACT", "ewbNo": 123, "ewbDate": "05/01/2026"},
+            ],
+            {999: "27AAACI1195H2ZH", 123: "24AAQCA8719H1ZC"},
+        )
+
+        self.assertTrue(linked)
+        self.assertEqual(log_generation.call_args.args[1]["ewayBillNo"], 123)
+
+    def test_two_matches_are_not_linked(self):
+        # can't tell which is ours, leave it to the user
+        linked, log_generation, _ = self.lookup(
+            [
+                {"docNo": "SINV-TEST", "status": "ACT", "ewbNo": 123, "ewbDate": "05/01/2026"},
+                {"docNo": "SINV-TEST", "status": "ACT", "ewbNo": 456, "ewbDate": "05/01/2026"},
             ]
-            self.assertTrue(link_matching_e_waybill(doc, "2026-01-05"))
+        )
+
+        self.assertFalse(linked)
+        log_generation.assert_not_called()
 
     def test_empty_day_is_an_empty_list(self):
         # portal errors on a day with none, callers should just see []
@@ -2542,6 +2588,21 @@ class TestEWaybillLookup(IntegrationTestCase):
         self.assertFalse(frappe.get_message_log())
 
         with patch.object(api, "get", side_effect=portal_says("Invalid date format")):
+            self.assertRaises(frappe.ValidationError, api.get_e_waybills_by_date, "05/01/2026")
+
+    def test_empty_day_on_standard_api(self):
+        # standard api sends code 418 instead of the message
+        with patch.object(StandardEWaybillAPI, "__init__", return_value=None):
+            api = StandardEWaybillAPI()
+
+        def portal_says(code):
+            error = base64.b64encode(json.dumps({"errorCodes": code}).encode()).decode()
+            return lambda *args, **kwargs: api.process_response(frappe._dict(status=0, error=error))
+
+        with patch.object(api, "get", side_effect=portal_says("418")):
+            self.assertEqual(api.get_e_waybills_by_date("05/01/2026"), [])
+
+        with patch.object(api, "get", side_effect=portal_says("105")):
             self.assertRaises(frappe.ValidationError, api.get_e_waybills_by_date, "05/01/2026")
 
 

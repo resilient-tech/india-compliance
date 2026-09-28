@@ -1273,8 +1273,12 @@ def is_server_down(api_name):
     if frappe.get_cached_value("GST Settings", "GST Settings", "sandbox_mode") and not frappe.flags.in_test:
         return False
 
-    # expires=True: don't cache in the process, a bulk job must see it change
-    return bool(frappe.cache.get_value(get_server_down_key(api_name), expires=True, shared=True))
+    # always read redis, a bulk job must see it change
+    return bool(
+        frappe.cache.get_value(
+            get_server_down_key(api_name), expires=True, shared=True, use_local_cache=False
+        )
+    )
 
 
 def mark_server_down(api_name):
@@ -1288,7 +1292,9 @@ def clear_server_down(*api_names):
 
 
 def is_portal_slow():
-    return bool(frappe.cache.get_value(PORTAL_SLOW_CACHE_KEY, expires=True, shared=True))
+    return bool(
+        frappe.cache.get_value(PORTAL_SLOW_CACHE_KEY, expires=True, shared=True, use_local_cache=False)
+    )
 
 
 def mark_portal_slow():

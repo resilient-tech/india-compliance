@@ -105,9 +105,9 @@ class EWaybillAPI(BaseAPI):
         return self.get(action, params={"ewbNo": ewaybill_number})
 
     def get_e_waybills_by_date(self, date):
-        self.IGNORED_ERROR_CODES = {**self.IGNORED_ERROR_CODES, "no_record": "No record found"}
+        self.IGNORED_ERROR_CODES = {**self.IGNORED_ERROR_CODES, "418": "No record found"}
         response = self.get("GetEwayBillsByDate", params={"date": date})
-        return [] if getattr(response, "error_code", None) == "no_record" else response
+        return [] if getattr(response, "error_code", None) == "418" else response
 
     def generate_e_waybill(self, data):
         result = self.post("GENEWAYBILL", json=data)

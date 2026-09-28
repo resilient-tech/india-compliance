@@ -1,4 +1,3 @@
-import pickle
 import time
 from unittest.mock import patch
 
@@ -18,6 +17,7 @@ from india_compliance.gst_india.utils import (
     inflight_in_web,
     is_portal_slow,
     is_server_down,
+    mark_server_down,
 )
 
 TEST_URL = f"{BASE_URL}/test/ping"
@@ -244,12 +244,12 @@ class TestRequestTimeout(IntegrationTestCase):
 
     def test_is_server_down_is_not_memoized(self):
         """bulk job must see the flag expire mid-run"""
-        key = frappe.cache.make_key(get_server_down_key(FailFastAPI.API_NAME), shared=True)
-
-        # change it behind the process cache's back, like another worker would
-        frappe.cache.set(key, pickle.dumps(True), ex=120)
+        # also fills this process's local cache
+        mark_server_down(FailFastAPI.API_NAME)
         self.assertTrue(is_server_down(FailFastAPI.API_NAME))
 
+        # gone from redis only, like another worker cleared it
+        key = frappe.cache.make_key(get_server_down_key(FailFastAPI.API_NAME), shared=True)
         frappe.cache.unlink(key)
         self.assertFalse(is_server_down(FailFastAPI.API_NAME))
 

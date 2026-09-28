@@ -833,15 +833,21 @@ def link_matching_e_waybill(doc, e_waybill_date):
     """Link this doc's active e-Waybill for the date, if the portal has one. True when linked."""
     response = EWaybillAPI.create(doc).get_e_waybills_by_date(format_date(e_waybill_date, "dd/mm/yyyy"))
 
-    result = {
-        k: v
-        for e_waybill in response
-        for k, v in e_waybill.items()
-        if e_waybill.get("docNo") == get_e_waybill_doc_no(doc) and e_waybill.get("status") == "ACT"
-    }
+    doc_no = get_e_waybill_doc_no(doc)
+    rows = [row for row in response if row.get("docNo") == doc_no and row.get("status") == "ACT"]
 
-    if not result:
+    if doc.doctype == "Purchase Invoice":
+        supplier_gstin = doc.get("supplier_gstin") or "URP"
+        rows = [
+            row
+            for row in rows
+            if EWaybillAPI.create(doc).get_e_waybill(row["ewbNo"]).get("fromGstin") == supplier_gstin
+        ]
+
+    if len(rows) != 1:
         return False
+
+    result = frappe._dict(rows[0])
 
     # to the shape log_and_process expects for generation without IRN
     result["ewayBillNo"] = result["ewbNo"]
