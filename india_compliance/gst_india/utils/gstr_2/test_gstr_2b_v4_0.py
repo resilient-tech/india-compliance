@@ -7,7 +7,11 @@ from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import get_raw_return_data
 from india_compliance.gst_india.utils import get_data_file_path, get_party_for_gstin, merge_dicts
+<<<<<<< HEAD
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, download_gstr_2b, save_gstr_2b
+=======
+from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr, save_gstr_2b
+>>>>>>> f7476e5 (feat: gstr 2a/2b export tool (#4861))
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
 from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
@@ -596,6 +600,18 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         )
 
 
+class TestEmptyPeriodProgress(IntegrationTestCase):
+    def test_month_with_nothing_to_save_still_reports_done(self):
+        """No save event means the sync progress never closes on screen."""
+        with patch("frappe.publish_realtime") as publish:
+            save_gstr("01AABCE2207R1Z5", ReturnType.GSTR2B, "032020", {"b2b": []})
+
+        publish.assert_called_once()
+        event, message = publish.call_args.args[:2]
+        self.assertEqual(event, "update_2a_2b_transactions_progress")
+        self.assertEqual(message, {"current_progress": 100, "return_period": "032020"})
+
+
 class TestGetUniqueKey(IntegrationTestCase):
     def test_null_gstin_matches_empty_gstin(self):
         # DB row with NULL supplier_gstin -> None, vs incoming with field absent
@@ -610,13 +626,13 @@ class TestGetUniqueKey(IntegrationTestCase):
 
 
 class TestMultiFileRawMerge(IntegrationTestCase):
-    def test_docs_concat_summary_not_doubled(self):
+    def test_docs_concat_summary_comes_with_the_first_file(self):
         combined = {}
         file1 = {"itcsumm": {"itcavl": 100}, "docdata": {"b2b": [{"inum": "1"}]}}
-        file2 = {"itcsumm": {"itcavl": 150}, "docdata": {"b2b": [{"inum": "2"}], "cdnr": [{"nt": "9"}]}}
+        file2 = {"docdata": {"b2b": [{"inum": "2"}], "cdnr": [{"nt": "9"}]}}
         merge_dicts(combined, file1)
         merge_dicts(combined, file2)
 
         self.assertEqual(combined["docdata"]["b2b"], [{"inum": "1"}, {"inum": "2"}])
         self.assertEqual(combined["docdata"]["cdnr"], [{"nt": "9"}])
-        self.assertEqual(combined["itcsumm"]["itcavl"], 150)
+        self.assertEqual(combined["itcsumm"]["itcavl"], 100)
