@@ -455,9 +455,6 @@ class PurchaseInvoice:
     def get_filter_criterion(self, names=None, include_period=False):
         conditions = []
 
-        if self.company:
-            conditions.append(self.company == self.PI.company)
-
         if self.company_gstin == "All":
             conditions.append(self.PI.company_gstin.notnull())
         else:
@@ -478,6 +475,9 @@ class PurchaseInvoice:
         # a linked invoice stays in despite every filter above
         if names:
             criterion = criterion | self.PI.name.isin(names)
+
+        if self.company:
+            criterion = criterion & (self.company == self.PI.company)
 
         return criterion
 
@@ -601,9 +601,6 @@ class BillOfEntry:
     def get_filter_criterion(self, names=None, include_period=False):
         conditions = []
 
-        if self.company:
-            conditions.append(self.company == self.BOE.company)
-
         if self.company_gstin == "All":
             conditions.append(self.BOE.company_gstin.notnull())
         else:
@@ -624,6 +621,9 @@ class BillOfEntry:
         # a linked bill of entry stays in despite every filter above
         if names:
             criterion = criterion | self.BOE.name.isin(names)
+
+        if self.company:
+            criterion = criterion & (self.company == self.BOE.company)
 
         return criterion
 
@@ -743,9 +743,6 @@ class ISDInvoice:
     def get_filter_criterion(self, names=None, include_period=False):
         conditions = []
 
-        if self.company:
-            conditions.append(self.company == self.ISD.company)
-
         if self.company_gstin == "All":
             conditions.append(self.ISD.company_gstin.notnull())
         else:
@@ -765,6 +762,9 @@ class ISDInvoice:
 
         if names:
             criterion = criterion | self.ISD.name.isin(names)
+
+        if self.company:
+            criterion = criterion & (self.company == self.ISD.company)
 
         return criterion
 

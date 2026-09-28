@@ -254,19 +254,20 @@ class PurchaseInvoice:
         return query.where(self.get_filter_criterion(filters))
 
     def get_filter_criterion(self, filters=None, names=None):
+        filters = filters or frappe._dict()
 
         conditions = []
         if filters.get("company_gstin"):
-            conditions = [self.PI.company_gstin == filters.company_gstin]
-
-        if filters.get("company"):
-            conditions.append(self.PI.company == filters.company)
+            conditions.append(self.PI.company_gstin == filters.get("company_gstin"))
 
         criterion = Criterion.all(conditions)
 
         # a linked invoice stays in despite every filter above
         if names:
             criterion = criterion | self.PI.name.isin(names)
+
+        if filters.get("company"):
+            criterion = criterion & (self.PI.company == filters.get("company"))
 
         return criterion
 
