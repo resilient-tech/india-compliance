@@ -248,10 +248,10 @@ class PurchaseInvoice:
             .groupby(self.PI.name)
         )
 
-        if not filters:
-            return query
+        if filters:
+            query = query.where(self.get_filter_criterion(filters))
 
-        return query.where(self.get_filter_criterion(filters))
+        return query
 
     def get_filter_criterion(self, filters=None, names=None):
         filters = filters or frappe._dict()
