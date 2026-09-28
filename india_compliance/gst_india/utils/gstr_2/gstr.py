@@ -66,15 +66,15 @@ class GSTR:
         self.setup()
 
     def setup(self):
-        self.existing_transaction = self.get_existing_transaction()
         self.download_details = self.get_download_details()
 
     def create_transactions(self, suppliers, rejected_data):
         self.rejected_data = rejected_data or []
+        self.existing_transaction = self.get_existing_transaction()
 
         if not suppliers:
             self.handle_missing_transactions()
-            return
+            return 0
 
         transactions = self.get_all_transactions(suppliers)
         self.update_gstins()
@@ -99,6 +99,7 @@ class GSTR:
                 self.existing_transaction.pop(transaction.get("unique_key"))
 
         self.handle_missing_transactions()
+        return total_transactions
 
     def get_all_transactions(self, suppliers):
         get_details, docs_key, has_items = self.SECTIONS[self.category]
