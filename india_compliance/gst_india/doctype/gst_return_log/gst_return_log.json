@@ -39,7 +39,8 @@
   "column_break_ndup",
   "reconcile_summary",
   "pending_request_info_section",
-  "actions"
+  "actions",
+  "section_summary"
  ],
  "fields": [
   {
@@ -235,6 +236,15 @@
    "fieldname": "is_nil",
    "fieldtype": "Check",
    "label": "Is Nil Return",
+   "read_only": 1
+  },
+  {
+   "description": "Cached totals for the Return Export tool",
+   "fieldname": "section_summary",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Section Summary",
+   "no_copy": 1,
    "read_only": 1
   }
  ],
