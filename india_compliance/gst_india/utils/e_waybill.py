@@ -194,6 +194,7 @@ def _generate_e_waybill(doc, throw=True):
         )
 
         api = EWaybillAPI if not with_irn else EInvoiceAPI
+        data = EWaybillData(doc).get_data(with_irn=with_irn)
 
         if is_server_down(api.API_NAME):
             throw_server_down()
@@ -206,8 +207,6 @@ def _generate_e_waybill(doc, throw=True):
                 doctype=doc.doctype,
                 docname=doc.name,
             )
-
-        data = EWaybillData(doc).get_data(with_irn=with_irn)
 
         api = api.create(doc)
 
@@ -242,13 +241,13 @@ def _generate_e_waybill(doc, throw=True):
             result = EWaybillAPI.create(doc).generate_e_waybill(data)
 
         # 604: already on the portal, most likely an attempt that timed out after generating.
-        # try the doc dates and today, a delayed retry may run on a later day.
+        # doc date first, then today, a retry may run a day later.
         if result.error_code == "604":
-            dates = {
+            dates = dict.fromkeys(
                 getdate(date)
                 for date in (doc.get("posting_date"), doc.get("transaction_date"), getdate())
                 if date
-            }
+            )
 
             if not any(link_matching_e_waybill(doc, date) for date in dates):
                 # deferred, so it survives the rollback below and can be reconciled
@@ -277,9 +276,6 @@ def _generate_e_waybill(doc, throw=True):
             frappe.throw(_("e-Waybill generation failed"))
 
     except GSPServerError as e:
-        if frappe.request:
-            frappe.clear_last_message()
-
         handle_server_errors(settings, doc, "e-Waybill", e)
         return
 
@@ -817,6 +813,14 @@ def find_matching_e_waybill(*, doctype: str, docname: str, e_waybill_date: str):
     return send_updated_doc(doc)
 
 
+def get_e_waybill_doc_no(doc):
+    """doc number the portal knows: supplier's bill no for a purchase"""
+    if doc.doctype == "Purchase Invoice" and not doc.get("is_return"):
+        return doc.get("bill_no") or doc.name
+
+    return doc.name
+
+
 def link_matching_e_waybill(doc, e_waybill_date):
     """Link this doc's active e-Waybill for the date, if the portal has one. True when linked."""
     response = EWaybillAPI.create(doc).get_e_waybills_by_date(format_date(e_waybill_date, "dd/mm/yyyy"))
@@ -825,7 +829,7 @@ def link_matching_e_waybill(doc, e_waybill_date):
         k: v
         for e_waybill in response
         for k, v in e_waybill.items()
-        if e_waybill.get("docNo") == doc.name and e_waybill.get("status") == "ACT"
+        if e_waybill.get("docNo") == get_e_waybill_doc_no(doc) and e_waybill.get("status") == "ACT"
     }
 
     if not result:
@@ -1651,8 +1655,7 @@ class EWaybillData(GSTTransactionData):
         ):
             self.transaction_details.update(document_type="BIL")
 
-        if self.doc.doctype == "Purchase Invoice" and not self.doc.is_return:
-            self.transaction_details.name = self.doc.bill_no or self.doc.name
+        self.transaction_details.name = get_e_waybill_doc_no(self.doc)
 
     def set_party_address_details(self):
         self.set_address_gstin_map()

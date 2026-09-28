@@ -1249,6 +1249,9 @@ def get_server_down_key(api_name):
 
 
 def is_server_down(api_name):
+    if frappe.get_cached_value("GST Settings", "GST Settings", "sandbox_mode") and not frappe.flags.in_test:
+        return False
+
     # expires=True: don't cache in the process, a bulk job must see it change
     return bool(frappe.cache.get_value(get_server_down_key(api_name), expires=True, shared=True))
 
@@ -1322,6 +1325,9 @@ def gst_queue():
 
 
 def handle_server_errors(settings, doc, document_type, error):
+    if frappe.message_log and frappe.message_log[-1].get("raise_exception"):
+        frappe.clear_last_message()
+
     # only Sales Invoice has the status field the retry job scans
     is_sales_invoice = doc.doctype == "Sales Invoice"
 

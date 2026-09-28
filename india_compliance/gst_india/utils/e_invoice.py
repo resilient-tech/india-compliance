@@ -137,6 +137,8 @@ def generate_e_invoice(docname: str, throw: bool = True):
                 ).format(settings.e_invoice_reporting_time_limit_days),
             )
 
+        data = EInvoiceData(doc).get_data()
+
         # after the real checks, so an outage doesn't mask a genuine error
         if is_server_down("e-Invoice"):
             throw_server_down()
@@ -150,7 +152,6 @@ def generate_e_invoice(docname: str, throw: bool = True):
                 throw=False,
             )
 
-        data = EInvoiceData(doc).get_data()
         api = EInvoiceAPI.create(doc)
         result = api.generate_irn(data)
 
@@ -192,9 +193,6 @@ def generate_e_invoice(docname: str, throw: bool = True):
             frappe.throw(_("e-Invoice generation failed"))
 
     except GSPServerError as e:
-        if frappe.request:
-            frappe.clear_last_message()
-
         handle_server_errors(settings, doc, "e-Invoice", e)
         return
 

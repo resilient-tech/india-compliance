@@ -95,6 +95,7 @@ class EWaybillAPI(BaseAPI):
         for error_code, error_message in self.IGNORED_ERROR_CODES.items():
             if error_message in message:
                 response_json.error_code = error_code
+                response_json.error_message = message
                 return True
 
         return False
@@ -104,7 +105,9 @@ class EWaybillAPI(BaseAPI):
         return self.get(action, params={"ewbNo": ewaybill_number})
 
     def get_e_waybills_by_date(self, date):
-        return self.get("GetEwayBillsByDate", params={"date": date})
+        self.IGNORED_ERROR_CODES = {**self.IGNORED_ERROR_CODES, "no_record": "No record found"}
+        response = self.get("GetEwayBillsByDate", params={"date": date})
+        return [] if getattr(response, "error_code", None) == "no_record" else response
 
     def generate_e_waybill(self, data):
         result = self.post("GENEWAYBILL", json=data)

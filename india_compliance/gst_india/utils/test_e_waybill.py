@@ -2506,6 +2506,40 @@ class TestEWaybillLookup(IntegrationTestCase):
         self.assertFalse(linked)
         log_generation.assert_not_called()
 
+    def test_purchase_invoice_matches_on_supplier_bill_no(self):
+        # portal knows a purchase by the supplier's bill no, not our name
+        doc = frappe._dict(doctype="Purchase Invoice", name="PINV-TEST", bill_no="SUP/778", is_return=0)
+
+        with (
+            patch.object(EWaybillAPI, "create") as create,
+            patch("india_compliance.gst_india.utils.e_waybill.log_and_process_e_waybill_generation"),
+        ):
+            create.return_value.get_e_waybills_by_date.return_value = [
+                {"docNo": "SUP/778", "status": "ACT", "ewbNo": 123, "ewbDate": "05/01/2026"}
+            ]
+            self.assertTrue(link_matching_e_waybill(doc, "2026-01-05"))
+
+    def test_empty_day_is_an_empty_list(self):
+        # portal errors on a day with none, callers should just see []
+        with patch.object(EWaybillAPI, "__init__", return_value=None):
+            api = EWaybillAPI()
+
+        def portal_says(message):
+            return lambda *args, **kwargs: api.process_response(frappe._dict(success=False, message=message))
+
+        rows = [{"docNo": "SINV-TEST", "status": "ACT"}]
+        with patch.object(api, "get", return_value=rows):
+            self.assertEqual(api.get_e_waybills_by_date("05/01/2026"), rows)
+
+        frappe.clear_messages()
+        with patch.object(api, "get", side_effect=portal_says("No record found")):
+            self.assertEqual(api.get_e_waybills_by_date("05/01/2026"), [])
+
+        self.assertFalse(frappe.get_message_log())
+
+        with patch.object(api, "get", side_effect=portal_says("Invalid date format")):
+            self.assertRaises(frappe.ValidationError, api.get_e_waybills_by_date, "05/01/2026")
+
 
 class TestEWaybill604Recovery(IntegrationTestCase):
     """604 means the portal already made it, most likely a generate that timed out"""

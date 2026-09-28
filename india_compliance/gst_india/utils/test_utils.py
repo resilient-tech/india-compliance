@@ -252,16 +252,17 @@ class TestServerErrorFeedback(IntegrationTestCase):
 
     def handle(self, doctype, enable_retry=1):
         """returns (doc, message shown to the user)"""
-        settings = frappe.get_cached_doc("GST Settings")
-        settings.enable_retry_einv_ewb_generation = enable_retry
         doc = MagicMock()
         doc.doctype = doctype
 
-        with (
-            patch.object(settings, "db_set"),
-            patch("india_compliance.gst_india.utils.notify_user") as notify,
-        ):
-            handle_server_errors(settings, doc, "e-Waybill", GSPServerError())
+        with change_settings("GST Settings", {"enable_retry_einv_ewb_generation": enable_retry}):
+            settings = frappe.get_cached_doc("GST Settings")
+
+            with (
+                patch.object(settings, "db_set"),
+                patch("india_compliance.gst_india.utils.notify_user") as notify,
+            ):
+                handle_server_errors(settings, doc, "e-Waybill", GSPServerError())
 
         notify.assert_called_once()
         return doc, notify.call_args.args[0]
