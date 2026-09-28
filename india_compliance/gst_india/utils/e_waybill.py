@@ -834,9 +834,18 @@ def link_matching_e_waybill(doc, e_waybill_date):
     response = EWaybillAPI.create(doc).get_e_waybills_by_date(format_date(e_waybill_date, "dd/mm/yyyy"))
 
     doc_no = get_e_waybill_doc_no(doc)
-    rows = [row for row in response if row.get("docNo") == doc_no and row.get("status") == "ACT"]
+    doc_dates = {
+        format_date(date, "dd/mm/yyyy")
+        for date in (doc.get("posting_date"), doc.get("transaction_date"), doc.get("bill_date"))
+        if date
+    }
+    rows = [
+        row
+        for row in response
+        if row.get("docNo") == doc_no and row.get("docDate") in doc_dates and row.get("status") == "ACT"
+    ]
 
-    if doc.doctype == "Purchase Invoice":
+    if doc_no != doc.name:
         supplier_gstin = doc.get("supplier_gstin") or "URP"
         rows = [
             row
