@@ -255,7 +255,10 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.onload",
         ],
         "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
-        "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
+        "before_validate": [
+            "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
+            "india_compliance.gst_india.utils.fbil_exchange_rate.set_fbil_conversion_rate",
+        ],
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
         "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
         "before_update_after_submit": [
@@ -518,6 +521,11 @@ scheduler_events = {
         "0 1 * * *": ["india_compliance.gst_india.utils.e_waybill.extend_scheduled_e_waybills"],
         "0 3 * * *": [
             "india_compliance.gst_india.doctype.gst_return_export.gst_return_export.delete_export_files",
+        ],
+        # FBIL reference rates are published ~13:30 IST on business days.
+        # Cron runs in the site's timezone, so 16:00 is after publication for Indian sites.
+        "0 16 * * 1-5": [
+            "india_compliance.gst_india.utils.fbil_exchange_rate.sync_fbil_currency_exchange",
         ],
     }
 }
