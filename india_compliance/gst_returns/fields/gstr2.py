@@ -90,6 +90,8 @@ class ItemField:
 class RawField2a:
     # supplier
     SUPPLIER_GSTIN = "ctin"
+    SUPPLIER_NAME = "trdnm"
+    GSTR_1_FILING_STATUS = "cfs"
     GSTR_3B_FILED = "cfs3b"
     GSTR_1_FILING_DATE = "fldtr1"
     CANCEL_DATE = "dtcancel"
@@ -127,6 +129,8 @@ class RawField2a:
     ISD_DOC_DATE = "docdt"
     ITC_ELIGIBILITY = "itc_elg"
     ISD_CESS = "cess"  # ISD alone reads cess from "cess", not "csamt"
+    ORIGINAL_INVOICE_NUMBER = "oinvnum"  # the invoice behind an ISD document
+    ORIGINAL_INVOICE_DATE = "oinvdt"
 
     # imports
     BOE_NUMBER = "benum"
@@ -135,6 +139,7 @@ class RawField2a:
     PORT_CODE = "portcd"
     SEZ_GSTIN = "sgstin"
     SEZ_TRADE_NAME = "tdname"
+    ICEGATE_REF_DATE = "refdt"
 
     # TDS / TCS
     DEDUCTOR_GSTIN = "gstin_deductor"
@@ -158,6 +163,14 @@ class RawField2a:
 
 
 class RawField2b:
+    GENERATION_DATE = "gendt"
+
+    # top-level payload blocks
+    DOC_DATA = "docdata"
+    DOC_REJECTED = "docRejdata"
+    ITC_SUMMARY = "itcsumm"
+    ITC_REVERSAL = "itcrev"
+
     # supplier
     SUPPLIER_GSTIN = "ctin"
     SUPPLIER_NAME = "trdnm"
@@ -199,12 +212,24 @@ class RawField2b:
     ORIGINAL_ISD_DOC_NUMBER = "odocnum"
     ORIGINAL_ISD_DOC_DATE = "odocdt"
     ORIGINAL_ISD_DOC_TYPE = "odoctyp"
+    ORIGINAL_INVOICE_NUMBER = "oinvnum"  # the invoice behind an ISD document
+    ORIGINAL_INVOICE_DATE = "oinvdt"
 
     # imports
     BOE_NUMBER = "boenum"
     BOE_DATE = "boedt"
     IS_AMENDED = "isamd"
     PORT_CODE = "portcode"
+    ICEGATE_REF_DATE = "refdt"
+    AMEND_TYPE = "amendType"
+
+    # taxpayer's ITC reduction, echoed back by the portal
+    ITC_REDUCTION_REQUIRED = "itcRedReq"
+    DECLARED_IGST = "declIgst"
+    DECLARED_CGST = "declCgst"
+    DECLARED_SGST = "declSgst"
+    DECLARED_CESS = "declCess"
+    REMARKS = "remarks"
 
     # items and amounts
     ITEMS = "items"
