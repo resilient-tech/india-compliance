@@ -693,7 +693,7 @@ class ISDInvoice:
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
         if only_names and not names:
-            return []
+            return
 
         query = self.get_query(additional_fields, ignore_filters=True)
 
