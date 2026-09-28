@@ -448,14 +448,18 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     _set_missing_doctype() {}
 
     setup_actions() {
-        const actions = this._get_custom_actions();
+        this.custom_actions = this._get_custom_actions();
 
-        actions.forEach((action) => {
+        this.custom_actions.forEach((action) => {
             this.dialog.add_custom_action(
                 action,
-                () => {
-                    this._apply_custom_action(action);
-                    this.dialog.hide();
+                async () => {
+                    await this._apply_custom_action(action);
+                    if (action != "Copy") return this.dialog.hide();
+
+                    await this.get_invoice_details();
+                    this.process_data();
+                    this.render_html();
                 },
                 `mr-2 ${this._get_button_css(action)}`,
             );
@@ -463,6 +467,10 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
 
         this.dialog.$wrapper.find(".btn.btn-secondary.not-grey").removeClass("btn-secondary");
         this.dialog.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
+
+        const $copy_btn = this.dialog.$wrapper.find(".modal-footer .copy-btn");
+        if ($copy_btn.length)
+            frappe.ui.tooltip($copy_btn, { text: __("Copy the values reported in 2A/2B to your books") });
     }
 
     _get_custom_actions() {
@@ -476,7 +484,13 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     }
 
     toggle_link_btn(disabled) {
-        const btn = this.dialog.$wrapper.find(".modal-footer .link-document-btn");
+        const btn = this.dialog.$wrapper.find(".modal-footer .link-document-btn").prop("disabled", disabled);
+        if (disabled) btn.addClass("disabled");
+        else btn.removeClass("disabled");
+    }
+
+    toggle_copy_btn(disabled) {
+        const btn = this.dialog.$wrapper.find(".modal-footer .copy-btn").prop("disabled", disabled);
         if (disabled) btn.addClass("disabled");
         else btn.removeClass("disabled");
     }
@@ -539,23 +553,68 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
             }),
         );
         this._mark_differences(detail_table.$wrapper);
+        this._offer_copy(detail_table.$wrapper);
     }
 
     _mark_differences(wrapper) {
         if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
 
-        // template marks the rows worth comparing
         wrapper.find("[data-compare]").each((_index, row) => {
             const field = $(row).data("compare");
-            const purchase = this.data._purchase_invoice[field];
-            const inward_supply = this.data._inward_supply[field];
+            const booked = this.data._purchase_invoice[field];
+            const reported = this.data._inward_supply[field];
 
             const same =
-                typeof purchase === "number" || typeof inward_supply === "number"
-                    ? flt(purchase, 2) === flt(inward_supply, 2)
-                    : purchase == inward_supply;
+                typeof booked === "number" || typeof reported === "number"
+                    ? flt(booked, 2) === flt(reported, 2)
+                    : booked == reported;
 
             if (!same) $(row).attr("title", __("Books and 2A/2B do not match")).addClass("not-matched");
         });
+    }
+
+    _offer_copy(wrapper) {
+        this.copy_selection = new Set();
+        if (!this.custom_actions.includes("Copy")) return;
+        if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
+
+        wrapper.find("tr.not-matched [data-copy-field]").each((_index, input) => {
+            const reported = this.data._inward_supply[input.dataset.copyField];
+            if (reported) $(input).closest("tr").addClass("can-copy");
+        });
+
+        wrapper
+            .find("[data-copy-field], [data-copy-all]")
+            .attr("title", __("Copy the values reported in 2A/2B to your books"));
+
+        const copyable_rows = wrapper.find("tbody tr.can-copy").length;
+        wrapper.find("thead tr").toggleClass("can-copy", !!copyable_rows);
+        this.dialog.$wrapper.find(".modal-footer .copy-btn").toggleClass("hide", !copyable_rows);
+
+        wrapper
+            .off(".copy")
+            .on("change.copy", "[data-copy-field]", (e) => {
+                const $row = $(e.target).closest("tr");
+                $row.find("[data-booked]").toggleClass("strike text-muted", e.target.checked);
+                $row.find("[data-reported]").toggleClass("d-none", !e.target.checked);
+
+                if (e.target.checked) this.copy_selection.add(e.target.dataset.copyField);
+                else this.copy_selection.delete(e.target.dataset.copyField);
+
+                wrapper.find("[data-copy-all]").prop("checked", this.copy_selection.size === copyable_rows);
+                this.toggle_copy_btn(!this.copy_selection.size);
+            })
+            .on("change.copy", "[data-copy-all]", (e) =>
+                wrapper
+                    .find("tbody tr.can-copy [data-copy-field]")
+                    .prop("checked", e.target.checked)
+                    .trigger("change"),
+            );
+
+        this.toggle_copy_btn(true);
+    }
+
+    get copy_fields() {
+        return Object.keys(reconciliation.COPYABLE_FIELDS).filter((field) => this.copy_selection?.has(field));
     }
 };

@@ -350,6 +350,7 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
             "einvoice_status": result.get("einvoice_status") or "Generated",
         }
     )
+    doc.save_version()
 
     invoice_data = None
     if result.SignedInvoice:
@@ -374,6 +375,7 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
     )
 
     if result.EwbNo:
+        doc.load_doc_before_save()
         log_and_process_e_waybill_generation(doc, result, with_irn=True)
 
     return notify_user(
@@ -396,6 +398,7 @@ def _cancel_e_invoice(doc, values):
         _cancel_e_waybill(doc, values)
 
         commit()  # e-Waybill gone from portal for good: a later IRN failure can't undo it
+        doc.load_doc_before_save()
 
     data = {
         "Irn": doc.irn,
@@ -430,6 +433,7 @@ def log_and_process_e_invoice_cancellation(doc, values, result, message):
             "irn": "",
         }
     )
+    doc.save_version()
 
     return notify_user(message, indicator="green", alert=True, doc=doc)
 

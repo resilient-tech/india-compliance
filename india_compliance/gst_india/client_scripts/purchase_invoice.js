@@ -1,5 +1,4 @@
 const DOCTYPE = "Purchase Invoice";
-const IMPORT_GST_CATEGORIES = ["Overseas", "SEZ"];
 
 setup_e_waybill_actions(DOCTYPE);
 
@@ -31,6 +30,10 @@ frappe.ui.form.on(DOCTYPE, {
         toggle_reverse_charge(frm);
     },
 
+    posting_date(frm) {
+        india_compliance.update_itc_claim_period(frm);
+    },
+
     async after_save(frm) {
         if (
             frm.doc.supplier_address ||
@@ -51,7 +54,6 @@ frappe.ui.form.on(DOCTYPE, {
 
     refresh(frm) {
         india_compliance.set_reconciliation_status(frm, "bill_no");
-        india_compliance.set_itc_claim_period_status(frm);
         if (gst_settings.enable_e_waybill && gst_settings.enable_e_waybill_from_pi)
             show_sandbox_mode_indicator();
 
@@ -63,6 +65,21 @@ frappe.ui.form.on(DOCTYPE, {
                         method: "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.make_bill_of_entry",
                         frm: frm,
                     });
+                },
+                __("Create"),
+            );
+        }
+
+        if (
+            frm.doc.docstatus === 1 &&
+            frm.doc.is_isd_applicable &&
+            frm.doc.isd_credit_distributed_percent < 100 &&
+            frappe.model.can_create("ISD Distribution Invoice")
+        ) {
+            frm.add_custom_button(
+                __("ISD Distribution Invoices"),
+                () => {
+                    india_compliance.show_isd_invoice_distribution_dialog(frm.doc);
                 },
                 __("Create"),
             );
@@ -137,5 +154,5 @@ function has_goods_items(frm) {
 }
 
 function is_import_gst_category(gst_category) {
-    return IMPORT_GST_CATEGORIES.includes(gst_category);
+    return frappe.boot.import_gst_categories.includes(gst_category);
 }

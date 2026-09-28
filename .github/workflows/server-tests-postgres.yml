@@ -16,7 +16,7 @@ on:
       - "**.css"
       - "**.js"
       - "**.md"
-      - "**.html"
+      - "india_compliance/public/**/*.html"
       - "**.csv"
   workflow_dispatch:
     inputs:

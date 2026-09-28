@@ -42,10 +42,19 @@ def create_inward_supply(transaction):
         "supplier_gstin": transaction.supplier_gstin,
     }
 
+    # doc classification
+    if transaction.get("doc_type"):
+        filters["doc_type"] = transaction.doc_type
+
     # flat records (TDS/TCS) have no bill no/date; key them by period so a later
     # period doesn't overwrite an earlier one
     if not transaction.bill_no:
         filters["sup_return_period"] = transaction.sup_return_period
+
+    # ISD can report eligible and ineligible ITC under one invoice number
+    # they should be recorded as seperate inward supplies for Purchase Reconciliation to work correctly
+    if transaction.classification in ("ISD", "ISDA"):
+        filters["itc_availability"] = transaction.get("itc_availability") or ("is", "not set")
 
     if name := frappe.get_value("GST Inward Supply", filters):
         gst_inward_supply = frappe.get_doc("GST Inward Supply", name)

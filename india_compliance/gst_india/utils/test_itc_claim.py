@@ -11,11 +11,9 @@ from india_compliance.gst_india.utils import get_periods_between_dates
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     _calculate_itc_claim_period,
-    _get_next_unfiled_period,
     _get_section_16_4_deadline,
     _is_gstr3b_filed,
     _max_period,
-    _next_period,
     _validate_period_format,
     apply_period_filter,
     compare_periods,
@@ -118,18 +116,6 @@ class TestITCClaim(IntegrationTestCase):
             with self.assertRaises(frappe.exceptions.ValidationError):
                 period_to_date(invalid)
 
-    def test_next_period(self):
-        self.assertEqual(_next_period("012024"), "022024")
-        self.assertEqual(_next_period("112024"), "122024")
-        # year boundary
-        self.assertEqual(_next_period("122023"), "012024")
-
-        # 12 steps = 1 year
-        period = "042023"
-        for _ in range(12):
-            period = _next_period(period)
-        self.assertEqual(period, "042024")
-
     def test_max_period(self):
         self.assertEqual(_max_period("022024", "012024"), "022024")
         self.assertEqual(_max_period("012024", "022024"), "022024")
@@ -180,38 +166,6 @@ class TestITCClaim(IntegrationTestCase):
         self.assertEqual(_get_section_16_4_deadline("2025-03-31"), "112025")
         # March 2024 → November 2024
         self.assertEqual(_get_section_16_4_deadline("2024-03-15"), "112024")
-
-    # =================================================================
-    # Next Unfiled Period
-    # =================================================================
-
-    def test_get_next_unfiled_period_first_unfiled(self):
-        result = _get_next_unfiled_period("24AAQCA8719H1ZC", "042024", "2024-04-01", filed=set())
-        self.assertEqual(result, "042024")
-
-    def test_get_next_unfiled_period_skips_filed(self):
-        result = _get_next_unfiled_period(
-            "24AAQCA8719H1ZC", "042024", "2024-04-01", filed={"042024", "052024"}
-        )
-        self.assertEqual(result, "062024")
-
-    def test_get_next_unfiled_period_all_filed(self):
-        filed = set()
-        current = "042024"
-        while compare_periods(current, "112025") <= 0:
-            filed.add(current)
-            current = _next_period(current)
-
-        result = _get_next_unfiled_period("24AAQCA8719H1ZC", "042024", "2024-04-01", filed)
-        self.assertIsNone(result)
-
-    def test_get_next_unfiled_period_past_deadline(self):
-        result = _get_next_unfiled_period("24AAQCA8719H1ZC", "122025", "2024-04-01", filed=set())
-        self.assertIsNone(result)
-
-    def test_get_next_unfiled_period_at_deadline(self):
-        result = _get_next_unfiled_period("24AAQCA8719H1ZC", "112025", "2024-04-01", filed=set())
-        self.assertEqual(result, "112025")
 
     # =================================================================
     # GSTR-3B Filing Status (Document Workflow)
@@ -294,9 +248,9 @@ class TestITCClaim(IntegrationTestCase):
         )
 
         self.assertGreater(len(periods), 0)
-        self.assertEqual(periods[0], ITC_CLAIM_PERIOD_DEFERRED)
+        self.assertEqual(periods[0].get("value"), ITC_CLAIM_PERIOD_DEFERRED)
 
-        # Filed period should be excluded
+        # Filed period should be offered, but only after every unfiled one
         month_or_quarter = today.strftime("%B")
         year = today.year
 
@@ -313,7 +267,12 @@ class TestITCClaim(IntegrationTestCase):
         )
 
         current_period = f"{today.month:02}{today.year}"
-        self.assertNotIn(current_period, periods)
+        values = [period.get("value") for period in periods]
+        filed_periods = [period["value"] for period in periods if period["label"] != period["value"]]
+
+        self.assertIn(current_period, values)
+        self.assertEqual(filed_periods, [current_period])
+        self.assertEqual(values[1:], sorted(values[1:], key=period_sort_key, reverse=True))
 
         # cleanup
         update_gstr3b_filing_status(
@@ -408,7 +367,7 @@ class TestITCClaim(IntegrationTestCase):
         self.assertEqual(result, "032024")
 
     def test_calc_unregistered_rcm(self):
-        """Unregistered RCM follows same logic as regular invoices (next unfiled period)."""
+        """Unregistered RCM follows same logic as regular invoices (posting period)."""
         doc = self._make_doc(
             gst_category="Unregistered",
             is_reverse_charge=1,
@@ -418,7 +377,7 @@ class TestITCClaim(IntegrationTestCase):
         self.assertEqual(result, "012024")
 
         result = _calculate_itc_claim_period(doc, filed={"012024"})
-        self.assertEqual(result, "022024")
+        self.assertEqual(result, "012024")
 
     def test_calc_no_inward_supply(self):
         """No inward supply → uses posting period as start."""
@@ -426,11 +385,11 @@ class TestITCClaim(IntegrationTestCase):
         result = _calculate_itc_claim_period(doc, filed=set())
         self.assertEqual(result, "012024")
 
-    def test_calc_skips_filed_periods(self):
-        """Filed periods are skipped to find next unfiled."""
+    def test_calc_default_is_posting_period_even_if_filed(self):
+        """The default is always the posting period; filing status does not move it."""
         doc = self._make_doc(posting_date=getdate("2024-01-15"))
         result = _calculate_itc_claim_period(doc, filed={"012024", "022024"})
-        self.assertEqual(result, "032024")
+        self.assertEqual(result, "012024")
 
     def test_calc_ims_rejected_does_not_override_filed(self):
         """Filed check takes priority — even IMS Rejected cannot change a filed period."""

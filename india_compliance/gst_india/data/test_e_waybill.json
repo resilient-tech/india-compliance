@@ -516,9 +516,9 @@
     "is_return_dn_with_same_gstin": {
         "kwargs": {
             "qty": 1000,
-            "customer_address": "_Test Indian Registered Company-Billing",
+            "customer_address": "_Test Same GSTIN Customer-Billing",
             "company_address": "_Test Indian Registered Company-Billing",
-            "shipping_address_name": "_Test Indian Registered Company-Billing"
+            "shipping_address_name": "_Test Same GSTIN Customer-Billing"
         },
         "values": {
             "distance": 100,
@@ -741,8 +741,8 @@
         "kwargs": {
             "qty": 1000,
             "company_address": "_Test Indian Registered Company-Billing",
-            "customer_address": "_Test Indian Registered Company-Billing",
-            "shipping_address_name": "_Test Indian Registered Company-Billing"
+            "customer_address": "_Test Same GSTIN Customer-Billing",
+            "shipping_address_name": "_Test Same GSTIN Customer-Billing"
         },
         "values": {
             "distance": 100,
