@@ -143,7 +143,7 @@ def enqueue_bulk_e_waybill_generation(doctype: str, docnames: str):
     return rq_job.id
 
 
-def generate_e_waybills(doctype, docnames):
+def generate_e_waybills(doctype, docnames, force=False):
     """
     Bulk generate e-Waybill for the given documents.
     """
@@ -151,7 +151,7 @@ def generate_e_waybills(doctype, docnames):
 
     for docname in docnames:
         run_or_report_failure(
-            lambda: _generate_e_waybill(load_doc(doctype, docname, "submit")),
+            lambda: _generate_e_waybill(load_doc(doctype, docname, "submit"), force=force),
             doctype,
             docname,
             _("e-Waybill generation failed"),
@@ -160,7 +160,7 @@ def generate_e_waybills(doctype, docnames):
 
 # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 @frappe.whitelist()
-def generate_e_waybill(*, doctype: str, docname: str, values: str | dict | None = None):
+def generate_e_waybill(*, doctype: str, docname: str, values: str | dict | None = None, force: bool = False):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "submit")
     if values:
@@ -168,10 +168,10 @@ def generate_e_waybill(*, doctype: str, docname: str, values: str | dict | None 
         commit()  # save details even if generation fails
         doc.load_doc_before_save()
 
-    _generate_e_waybill(doc, throw=True if values else False)
+    _generate_e_waybill(doc, throw=True if values else False, force=force)
 
 
-def _generate_e_waybill(doc, throw=True):
+def _generate_e_waybill(doc, throw=True, force=False):
     settings = frappe.get_cached_doc("GST Settings")
 
     try:
@@ -182,6 +182,13 @@ def _generate_e_waybill(doc, throw=True):
                 ),
                 exc=AlreadyGeneratedError,
             )
+
+        if (
+            not force
+            and settings.enable_retry_einv_ewb_generation
+            and settings.is_retry_einv_ewb_generation_pending
+        ):
+            raise GSPServerError
 
         # Via e-Invoice API if not Return or Debit Note
         # Via e-Waybill API if has Non-Taxable items
@@ -207,6 +214,7 @@ def _generate_e_waybill(doc, throw=True):
                 _("e-Waybill generation failed"),
                 doctype=doc.doctype,
                 docname=doc.name,
+                force=force,
             )
 
         api = api.create(doc)

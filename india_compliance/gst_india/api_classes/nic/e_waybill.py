@@ -30,6 +30,8 @@ class EWaybillAPI(BaseAPI):
         "604": "E-way bill(s) are already generated for the same document number, you cannot generate again on same document number",
         # Transporter details not found
         "328": "Could not retrieve transporter details from gstin",
+        # e-Waybills by date: none that day
+        "418": "No record found",
     }
 
     # Response Keys
@@ -105,7 +107,6 @@ class EWaybillAPI(BaseAPI):
         return self.get(action, params={"ewbNo": ewaybill_number})
 
     def get_e_waybills_by_date(self, date):
-        self.IGNORED_ERROR_CODES = {**self.IGNORED_ERROR_CODES, "418": "No record found"}
         response = self.get("GetEwayBillsByDate", params={"date": date})
         return [] if getattr(response, "error_code", None) == "418" else response
 

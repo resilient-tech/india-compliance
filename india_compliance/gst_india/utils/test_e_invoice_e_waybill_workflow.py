@@ -142,7 +142,7 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
     Tests for e-Invoice generation workflow and error handling.
     """
 
-    def _post_e_invoice(self, docname, throw=True):
+    def _post_e_invoice(self, docname, throw=True, force=False):
         """Make a real HTTP POST to the generate_e_invoice API endpoint.
 
         Commits pending DB changes before the POST so the WSGI thread
@@ -154,7 +154,7 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         with suppress_stdout():
             response = self.post(
                 self.method(E_INVOICE_API),
-                {"docname": docname, "throw": throw, "sid": sid},
+                {"docname": docname, "throw": throw, "force": force, "sid": sid},
             )
         frappe.db.rollback()  # Fresh transaction to see WSGI-committed changes
         return response
@@ -352,18 +352,19 @@ class TestEWaybillWorkflow(WorkflowTestBase):
     Mirrors the e-Invoice tests for `_generate_e_waybill` / `generate_e_waybill`.
 
     Key differences from e-Invoice:
-    - `generate_e_waybill(*, doctype, docname, values=None)` is keyword-only.
+    - `generate_e_waybill(*, doctype, docname, values=None, force=False)` is
+      keyword-only.
     - `throw` is determined by `values`: True when values provided (UI Manual),
       False when no values (auto-generation).
     - Status field is `e_waybill_status` (only set for Sales Invoice).
     - Already-generated check uses `doc.ewaybill` instead of `doc.irn`.
     """
 
-    def _post_e_waybill(self, doctype, docname, values=None):
+    def _post_e_waybill(self, doctype, docname, values=None, force=False):
         """Make a real HTTP POST to the generate_e_waybill API endpoint."""
         sid = self.sid
         frappe.db.commit()  # nosemgrep
-        data = {"doctype": doctype, "docname": docname, "sid": sid}
+        data = {"doctype": doctype, "docname": docname, "force": force, "sid": sid}
         if values is not None:
             data["values"] = frappe.as_json(values)
         with suppress_stdout():

@@ -96,7 +96,7 @@ def enqueue_bulk_e_invoice_generation(docnames: str):
     return rq_job.id
 
 
-def generate_e_invoices(docnames):
+def generate_e_invoices(docnames, force=False):
     """
     Bulk generate e-Invoices for the given Sales Invoices.
     Permission checks are done in the `generate_e_invoice` function.
@@ -111,11 +111,12 @@ def generate_e_invoices(docnames):
             docname,
             _("e-Invoice generation failed"),
             docname=docname,
+            force=force,
         )
 
 
 @frappe.whitelist()
-def generate_e_invoice(docname: str, throw: bool = True):
+def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc("Sales Invoice", docname, "submit")
 
@@ -127,6 +128,13 @@ def generate_e_invoice(docname: str, throw: bool = True):
                 _("e-Invoice has already been generated for Sales Invoice {0}").format(frappe.bold(doc.name)),
                 exc=AlreadyGeneratedError,
             )
+
+        if (
+            not force
+            and settings.enable_retry_einv_ewb_generation
+            and settings.is_retry_einv_ewb_generation_pending
+        ):
+            raise GSPServerError
 
         if settings.e_invoice_reporting_time_limit_days and getdate() > add_to_date(
             doc.posting_date, days=settings.e_invoice_reporting_time_limit_days
@@ -150,6 +158,7 @@ def generate_e_invoice(docname: str, throw: bool = True):
                 _("e-Invoice generation failed"),
                 docname=docname,
                 throw=False,
+                force=force,
             )
 
         api = EInvoiceAPI.create(doc)

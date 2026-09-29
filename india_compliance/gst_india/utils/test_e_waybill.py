@@ -1155,7 +1155,7 @@ class TestEWaybill(IntegrationTestCase):
     @responses.activate
     def test_schedule_e_waybill_for_extension(self):
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
-        self._generate_e_waybill(si.name)
+        self._generate_e_waybill(si.name, force=True)
         doc = load_doc("Sales Invoice", si.name, "submit")
 
         valid_upto = frappe.db.get_value("e-Waybill Log", doc.ewaybill, "valid_upto")
@@ -1894,7 +1894,7 @@ class TestEWaybill(IntegrationTestCase):
         self.assertEqual(e_waybill_data.get("actToStateCode"), 24)
 
     # helper functions
-    def _generate_e_waybill(self, docname=None, doctype="Sales Invoice", test_data=None):
+    def _generate_e_waybill(self, docname=None, doctype="Sales Invoice", test_data=None, force=False):
         """
         Mocks response for generate_e_waybill and get_e_waybill.
         Calls generate_e_waybill function.
@@ -1931,7 +1931,7 @@ class TestEWaybill(IntegrationTestCase):
 
         values = frappe._dict(test_data.get("values")) if test_data.get("values") else None
 
-        generate_e_waybill(doctype=doctype, docname=docname, values=values)
+        generate_e_waybill(doctype=doctype, docname=docname, values=values, force=force)
 
     def _mock_e_waybill_response(self, data, match_list, method="POST", api=None, replace=False):
         """
@@ -2665,3 +2665,42 @@ class TestEWaybill604Recovery(IntegrationTestCase):
         self.assertIsNone(run.raised)
         # still logged, so an orphan at the portal is never silent
         run.log_error.assert_called_once()
+
+
+class TestEWaybillRetryPending(IntegrationTestCase):
+    """auto-retry pending: auto generation waits for it, a manual generate still tries"""
+
+    MODULE = "india_compliance.gst_india.utils.e_waybill"
+
+    def generate(self, force):
+        doc = frappe._dict(doctype="Sales Invoice", name="SINV-TEST", ewaybill="", is_return=0)
+        portal = MagicMock()
+        portal.generate_e_waybill.return_value = frappe._dict(ewayBillNo=123, validUpto="05/01/2026")
+
+        with (
+            change_settings(
+                "GST Settings",
+                {"enable_retry_einv_ewb_generation": 1, "is_retry_einv_ewb_generation_pending": 1},
+            ),
+            patch(f"{self.MODULE}.get_items", return_value=[]),
+            patch(f"{self.MODULE}.EWaybillData"),
+            patch.object(EWaybillAPI, "create", return_value=portal),
+            patch(f"{self.MODULE}.handle_server_errors") as server_errors,
+            patch(f"{self.MODULE}.log_and_process_e_waybill_generation"),
+            patch(f"{self.MODULE}.notify_user"),
+        ):
+            _generate_e_waybill(doc, throw=True, force=force)
+
+        return portal, server_errors
+
+    def test_auto_generation_fails_fast(self):
+        portal, server_errors = self.generate(force=False)
+
+        portal.generate_e_waybill.assert_not_called()
+        server_errors.assert_called_once()
+
+    def test_manual_generate_still_tries(self):
+        portal, server_errors = self.generate(force=True)
+
+        portal.generate_e_waybill.assert_called_once()
+        server_errors.assert_not_called()
