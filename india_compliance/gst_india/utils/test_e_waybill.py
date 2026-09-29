@@ -60,10 +60,13 @@ from india_compliance.gst_india.utils.tests import (
     append_item,
     create_purchase_invoice,
     create_sales_invoice,
+    create_subcontracting_inward_order,
     create_transaction,
     make_subcontracting_inward_delivery,
     make_subcontracting_inward_rm_return,
     make_subcontracting_stock_entry,
+    manufacture_for_subcontracting_inward,
+    receive_customer_materials,
 )
 
 DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
@@ -2300,12 +2303,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
 
 
 class TestSubcontractingInwardEWaybill(IntegrationTestCase):
-    """e-Waybill data for Subcontracting Delivery and Return Raw Material to Customer.
-
-    Both are outward movements (company to customer) on a Delivery Challan with
-    sub supply type "Others" plus a description, and the taxable value includes
-    the customer-provided material value.
-    """
+    """e-Waybill data for the Subcontracting Inward (job worker) legs."""
 
     @classmethod
     def setUpClass(cls):
@@ -2391,4 +2389,46 @@ class TestSubcontractingInwardEWaybill(IntegrationTestCase):
         self.assertEqual(
             ewb_taxable,
             sum(flt(item.taxable_value) for item in rm_return.items),
+        )
+
+    def _assert_inward_from_customer(self, data, sub_supply_desc, stock_entry):
+        self.assertEqual(data["supplyType"], "I")
+        self.assertEqual(data["subSupplyType"], SUB_SUPPLY_TYPES["Others"])
+        self.assertEqual(data["subSupplyDesc"], sub_supply_desc)
+        self.assertEqual(data["docType"], "CHL")
+        # NIC needs the generating company on the "to" side of an inward e-Waybill
+        self.assertEqual(data["toGstin"], data["userGstin"])
+        self.assertNotEqual(data["fromGstin"], data["toGstin"])
+        customer_name = frappe.db.get_value(
+            "Subcontracting Inward Order", stock_entry.subcontracting_inward_order, "customer_name"
+        )
+        self.assertEqual(data["fromTrdName"], customer_name)
+        self.assertEqual(data["toTrdName"], stock_entry.company)
+
+        taxable_value = sum(flt(item["taxableAmount"]) for item in data["itemList"])
+        self.assertGreater(taxable_value, 0)
+        self.assertEqual(taxable_value, sum(flt(item.taxable_value) for item in stock_entry.items))
+
+    def test_e_waybill_data_for_inward_legs(self):
+        """Inward legs lose the customer -> company direction or the goods' value on the e-Waybill."""
+        scio = create_subcontracting_inward_order()
+
+        # receive
+        receipt = receive_customer_materials(scio)
+        self._set_transport_details(receipt, "Job Work")
+        self._assert_inward_from_customer(EWaybillData(receipt).get_data(), "Job Work", receipt)
+
+        # return
+        manufacture_for_subcontracting_inward(scio)
+        make_subcontracting_inward_delivery(scio=scio)
+
+        scio.reload()
+        sc_return = frappe.new_doc("Stock Entry").update(scio.make_subcontracting_return())
+        # ERPNext leaves the target warehouse for the returned finished goods to the user
+        for item in sc_return.items:
+            item.t_warehouse = "Finished Goods - _TIRC"
+        sc_return.save()
+        self._set_transport_details(sc_return, "Return of Finished Goods")
+        self._assert_inward_from_customer(
+            EWaybillData(sc_return).get_data(), "Return of Finished Goods", sc_return
         )

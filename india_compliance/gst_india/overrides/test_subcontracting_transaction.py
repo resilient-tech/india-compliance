@@ -23,7 +23,7 @@ from india_compliance.gst_india.overrides.stock_entry import (
 from india_compliance.gst_india.overrides.stock_entry import (
     onload as run_stock_entry_onload,
 )
-from india_compliance.gst_india.utils import get_items_fieldname
+from india_compliance.gst_india.utils import get_items_fieldname, is_same_gstin_allowed
 from india_compliance.gst_india.utils.e_waybill import mark_e_waybill_as_generated
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -875,23 +875,32 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
         for item in se.items:
             self.assertFalse(item.get("additional_taxable_value"))
 
-    def test_e_waybill_applicable_for_inward_purposes(self):
-        """e-Waybill is applicable for the inward purposes, not for Receive from Customer."""
+    def test_e_waybill_applicable_for_stock_entry_purposes(self):
+        """A Stock Entry moving goods gets no e-Waybill, or one moving none gets one."""
         applicable_purposes = (
             "Material Transfer",
+            "Material Transfer for Manufacture",
             "Material Issue",
             "Send to Subcontractor",
             "Subcontracting Delivery",
             "Return Raw Material to Customer",
+            "Receive from Customer",
+            "Subcontracting Return",
         )
         for purpose in applicable_purposes:
             doc = frappe.new_doc("Stock Entry")
             doc.purpose = purpose
             self.assertTrue(is_e_waybill_applicable(doc), purpose)
 
+        # Same-premises operations do not move goods between locations.
+        for purpose in ("Manufacture", "Repack", "Material Consumption for Manufacture", "Disassemble"):
+            doc = frappe.new_doc("Stock Entry")
+            doc.purpose = purpose
+            self.assertFalse(is_e_waybill_applicable(doc), purpose)
+
         doc = frappe.new_doc("Stock Entry")
-        doc.purpose = "Receive from Customer"
-        self.assertFalse(is_e_waybill_applicable(doc))
+        doc.purpose = "Material Transfer for Manufacture"
+        self.assertTrue(is_same_gstin_allowed(doc))
 
     @change_settings("GST Settings", {"enable_e_waybill_for_sc": 0})
     def test_e_waybill_not_applicable_when_sc_disabled(self):
@@ -899,6 +908,45 @@ class TestSubcontractingInwardOrder(IntegrationTestCase):
         doc = frappe.new_doc("Stock Entry")
         doc.purpose = "Subcontracting Delivery"
         self.assertFalse(is_e_waybill_applicable(doc))
+
+    def test_job_worker_inward_legs(self):
+        """Inward legs lose the customer -> company direction or the returned goods' value."""
+        scio = create_subcontracting_inward_order()
+        customer_address = get_default_address("Customer", scio.customer)
+        company_address = get_default_address("Company", scio.company)
+
+        # receive
+        receipt = receive_customer_materials(scio)
+        self.assertEqual(receipt.bill_from_address, customer_address)
+        self.assertEqual(receipt.bill_to_address, company_address)
+        self.assertTrue(receipt.bill_to_gstin)
+
+        # deliver
+        manufacture_for_subcontracting_inward(scio)
+        make_subcontracting_inward_delivery(scio=scio)
+
+        # return
+        scio.reload()
+        sc_return = frappe.new_doc("Stock Entry").update(scio.make_subcontracting_return())
+        # ERPNext leaves the target warehouse for the returned finished goods to the user
+        for item in sc_return.items:
+            item.t_warehouse = "Finished Goods - _TIRC"
+        sc_return.save()
+
+        self.assertEqual(sc_return.bill_from_address, customer_address)
+        self.assertEqual(sc_return.bill_to_address, company_address)
+
+        precision = sc_return.precision("additional_taxable_value", "items")
+        finished_goods = [item for item in sc_return.items if item.get("scio_detail")]
+        self.assertTrue(finished_goods)
+
+        for item in finished_goods:
+            expected_value = flt(self._expected_delivery_value(item), precision)
+            self.assertEqual(flt(item.additional_taxable_value), expected_value)
+            # customer's goods sit at zero in our books, so the value is all additional
+            self.assertEqual(flt(item.amount), 0)
+            self.assertEqual(flt(item.taxable_value), expected_value)
+            self.assertGreater(item.taxable_value, 0)
 
     def test_subcontracting_delivery_multi_rate_receipts(self):
         """Delivery uses the weighted-average receipt rate across multiple receipts."""

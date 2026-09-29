@@ -18,6 +18,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_items,
+    is_inward_transaction,
 )
 from india_compliance.gst_india.utils.custom_transaction_controller import CustomEwaybillController
 
@@ -96,12 +97,20 @@ def update_address_fields(doc, source_doc):
 
 
 def set_address_for_subcontracting_inward(doc, source_doc):
-    """Set company (bill_from) -> customer (bill_to) addresses for Subcontracting Inward Stock Entries."""
+    """Set company and customer addresses on Subcontracting Inward Stock Entries."""
+    company_address = get_default_address("Company", source_doc.company)
+    customer_address = get_default_address("Customer", source_doc.customer)
+
+    if is_inward_transaction(doc):
+        bill_from_address, bill_to_address = customer_address, company_address
+    else:
+        bill_from_address, bill_to_address = company_address, customer_address
+
     if not doc.bill_from_address:
-        doc.bill_from_address = get_default_address("Company", source_doc.company)
+        doc.bill_from_address = bill_from_address
 
     if not doc.bill_to_address:
-        doc.bill_to_address = get_default_address("Customer", source_doc.customer)
+        doc.bill_to_address = bill_to_address
 
     set_address_display(doc)
 
@@ -425,14 +434,15 @@ def remove_duplicates(doc):
 def set_subcontracting_inward_taxable_value(doc):
     """Add the value of customer-provided materials to the e-Waybill taxable value
     of Subcontracting Inward Stock Entries."""
-    if doc.purpose == "Subcontracting Delivery":
-        _set_subcontracting_delivery_additional_value(doc)
+    # returned finished goods go back at their delivered value
+    if doc.purpose in ("Subcontracting Delivery", "Subcontracting Return"):
+        _set_finished_goods_additional_value(doc)
     elif doc.purpose == "Return Raw Material to Customer":
         _set_return_raw_material_additional_value(doc)
 
 
-def _set_subcontracting_delivery_additional_value(doc):
-    """Add the value of consumed customer materials to the delivered finished goods.
+def _set_finished_goods_additional_value(doc):
+    """Add the value of consumed customer materials to the delivered / returned finished goods.
 
     additional = SUM(order_rate * consumed_qty) / produced_qty * delivered transfer_qty.
     Quantities are all in stock UOM (consumed_qty, produced_qty, transfer_qty), so

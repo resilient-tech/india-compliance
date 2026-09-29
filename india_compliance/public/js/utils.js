@@ -52,27 +52,56 @@ Object.assign(india_compliance, {
 
     HSN_BIFURCATION_FROM: frappe.datetime.str_to_obj("2025-05-01"),
 
-    // Stock Entry purposes for Subcontracting Inward (company is the job worker)
-    SUBCONTRACTING_INWARD_PURPOSES: ["Subcontracting Delivery", "Return Raw Material to Customer"],
+    // Subcontracting Inward Order: the company is the customer's job worker
+    JOB_WORKER_OUTWARD_PURPOSES: ["Subcontracting Delivery", "Return Raw Material to Customer"],
+    JOB_WORKER_INWARD_PURPOSES: ["Receive from Customer", "Subcontracting Return"],
+    SUBCONTRACTING_AS_JOB_WORKER: [
+        "Subcontracting Delivery",
+        "Return Raw Material to Customer",
+        "Receive from Customer",
+        "Subcontracting Return",
+    ],
 
     // Stock Entry purposes where goods move between subcontracting parties
     SUBCONTRACTING_PURPOSES: [
         "Send to Subcontractor",
         "Subcontracting Delivery",
         "Return Raw Material to Customer",
+        "Receive from Customer",
+        "Subcontracting Return",
+    ],
+
+    // own goods moving, so both sides may share a GSTIN
+    INTERNAL_STOCK_TRANSFER_PURPOSES: [
+        "Material Transfer",
+        "Material Transfer for Manufacture",
+        "Material Issue",
     ],
 
     // Stock Entry purposes eligible for e-Waybill
     E_WAYBILL_STOCK_ENTRY_PURPOSES: [
         "Material Transfer",
+        "Material Transfer for Manufacture",
         "Material Issue",
         "Send to Subcontractor",
         "Subcontracting Delivery",
         "Return Raw Material to Customer",
+        "Receive from Customer",
+        "Subcontracting Return",
     ],
 
-    is_subcontracting_inward_entry(doc) {
-        return this.SUBCONTRACTING_INWARD_PURPOSES.includes(doc.purpose);
+    is_job_worker_outward_entry(doc) {
+        return this.JOB_WORKER_OUTWARD_PURPOSES.includes(doc.purpose);
+    },
+
+    is_job_worker_inward_entry(doc) {
+        return this.JOB_WORKER_INWARD_PURPOSES.includes(doc.purpose);
+    },
+
+    company_is_bill_to(doc) {
+        return (
+            doc.doctype === "Stock Entry" && (Boolean(doc.is_return) || this.is_job_worker_inward_entry(doc))
+        );
     },
 
     get_month_year_from_period(period) {
