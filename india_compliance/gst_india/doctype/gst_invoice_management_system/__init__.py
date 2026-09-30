@@ -267,10 +267,10 @@ class PurchaseInvoice:
 
         # a linked invoice stays in despite every filter above
         if names:
-            criterion = criterion | self.PI.name.isin(names)
+            criterion |= self.PI.name.isin(names)
 
-        if filters.get("company"):
-            criterion = criterion & (self.PI.company == filters.get("company"))
+        if company := filters.get("company"):
+            criterion &= self.PI.company == company
 
         return criterion
 

@@ -474,10 +474,10 @@ class PurchaseInvoice:
 
         # a linked invoice stays in despite every filter above
         if names:
-            criterion = criterion | self.PI.name.isin(names)
+            criterion |= self.PI.name.isin(names)
 
         if self.company:
-            criterion = criterion & (self.company == self.PI.company)
+            criterion &= self.company == self.PI.company
 
         return criterion
 
@@ -618,12 +618,11 @@ class BillOfEntry:
 
         criterion = Criterion.all(conditions)
 
-        # a linked bill of entry stays in despite every filter above
         if names:
-            criterion = criterion | self.BOE.name.isin(names)
+            criterion |= self.BOE.name.isin(names)
 
         if self.company:
-            criterion = criterion & (self.company == self.BOE.company)
+            criterion &= self.company == self.BOE.company
 
         return criterion
 
@@ -761,10 +760,10 @@ class ISDInvoice:
         criterion = Criterion.all(conditions)
 
         if names:
-            criterion = criterion | self.ISD.name.isin(names)
+            criterion |= self.ISD.name.isin(names)
 
         if self.company:
-            criterion = criterion & (self.company == self.ISD.company)
+            criterion &= self.company == self.ISD.company
 
         return criterion
 
