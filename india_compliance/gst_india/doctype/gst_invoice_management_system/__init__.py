@@ -188,6 +188,9 @@ class PurchaseInvoice:
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
     def get_all(self, filters=None, names=None, only_names=False):
+        # filters, generate output based on filters
+        # names, add those docs to generated output
+        # only_names, ignore filters and return only the docs in names
         dimension_fields = [*get_accounting_dimensions(), "cost_center", "project"]
         additional_fields = [*dimension_fields, "posting_date"]
 
