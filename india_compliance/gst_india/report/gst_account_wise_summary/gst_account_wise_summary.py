@@ -9,9 +9,6 @@ from frappe.query_builder import Case
 from frappe.query_builder.functions import IfNull, Sum
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, TAX_TYPES
-from india_compliance.income_tax_india.overrides.tax_withholding_category import (
-    get_tax_withholding_accounts,
-)
 
 
 def execute(filters: dict | None = None):
@@ -30,7 +27,6 @@ def execute(filters: dict | None = None):
 class AccountWiseSummary:
     def __init__(self, filters):
         self.filters = filters
-        self.tds_accounts = get_tax_withholding_accounts(filters.company)
 
     @staticmethod
     def get_columns():
@@ -118,7 +114,7 @@ class AccountWiseSummary:
                 is_after_gst = True
                 continue
 
-            elif tax.account_head in self.tds_accounts or not tax.base_tax_amount_after_discount_amount:
+            elif tax.is_tax_withholding_account or not tax.base_tax_amount_after_discount_amount:
                 continue
 
             if not is_after_gst:
@@ -240,6 +236,7 @@ class AccountWiseSummary:
                 taxes_doc.parent,
                 taxes_doc.account_head,
                 taxes_doc.charge_type,
+                taxes_doc.is_tax_withholding_account,
             )
             .orderby(taxes_doc.idx)
         )
