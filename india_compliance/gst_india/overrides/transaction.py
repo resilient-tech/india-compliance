@@ -52,10 +52,14 @@ from india_compliance.gst_india.utils import (
     validate_gst_category,
     validate_gstin,
 )
+<<<<<<< HEAD
 from india_compliance.gst_india.utils.gstr_1 import SUPECOM
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     get_tax_withholding_accounts,
 )
+=======
+from india_compliance.gst_returns.fields.gstr1 import SubCategory
+>>>>>>> 326fe3d (fix: use tds row check instead of account)
 
 DOCTYPES_WITH_GST_DETAIL = {
     "Supplier Quotation",
@@ -168,10 +172,9 @@ def validate_item_wise_tax_detail(doc):
 
 
 def get_tds_amount(doc):
-    tds_accounts = get_tax_withholding_accounts(doc.company)
     tds_amount = 0
     for row in doc.taxes:
-        if row.account_head not in tds_accounts:
+        if not row.get("is_tax_withholding_account"):
             continue
 
         multiplier = -1 if row.get("add_deduct_tax") == "Deduct" else 1

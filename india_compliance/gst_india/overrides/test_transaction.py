@@ -55,6 +55,13 @@ from india_compliance.gst_india.utils.tests import (
     create_sales_invoice,
     create_transaction,
 )
+from india_compliance.income_tax_india.overrides.company import (
+    TDS_ACCOUNT_NAME,
+    create_tds_account,
+)
+from india_compliance.income_tax_india.overrides.test_tax_withholding_category import (
+    create_tax_withholding_category,
+)
 
 
 @parameterized_class(
@@ -1843,6 +1850,36 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertFalse(_is_multicurrency_doc({"conversion_rate": 0}))
         self.assertFalse(_is_multicurrency_doc({}))
         self.assertFalse(_is_multicurrency_doc('{"conversion_rate": 1}'))
+
+    def test_taxable_value_excludes_tcs_without_gst_rows(self):
+        """
+        Zero-rated Sales Invoice with no GST rows and TCS via Tax Withholding Category.
+        TCS row is identified by `is_tax_withholding_account` and must not be
+        apportioned into the item's taxable value.
+        """
+        company = "_Test Indian Registered Company"
+        category = "_Test TCS Category"
+
+        create_tds_account(company)
+        create_tax_withholding_category(category, f"{TDS_ACCOUNT_NAME} - _TIRC")
+
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            item_code="_Test Nil Rated Item",
+            apply_tds=1,
+            do_not_save=True,
+        )
+        doc.items[0].tax_withholding_category = category
+        doc.save()
+
+        self.assertFalse([row for row in doc.taxes if row.gst_tax_type])
+
+        tcs_rows = [row for row in doc.taxes if row.is_tax_withholding_account]
+        self.assertTrue(tcs_rows)
+        self.assertTrue(tcs_rows[0].base_tax_amount_after_discount_amount)
+
+        item = doc.items[0]
+        self.assertEqual(item.taxable_value, item.base_net_amount)
 
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
