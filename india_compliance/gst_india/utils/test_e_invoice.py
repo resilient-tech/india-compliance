@@ -15,6 +15,7 @@ from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.constants import SHIP_TO_GSTIN_APPLICABLE_DATE
 from india_compliance.gst_india.overrides.test_transaction import (
+    create_cess_accounts,
     create_refund_transaction,
 )
 from india_compliance.gst_india.utils import load_doc
@@ -29,6 +30,7 @@ from india_compliance.gst_india.utils.e_invoice import (
 )
 from india_compliance.gst_india.utils.e_waybill import EWaybillData
 from india_compliance.gst_india.utils.tests import (
+    _append_taxes,
     append_item,
     create_sales_invoice,
 )
@@ -194,6 +196,7 @@ class TestEInvoice(FrappeTestCase):
 
     def test_progressive_item_tax_amount(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill
+        create_cess_accounts()
 
         si = create_sales_invoice(
             **test_data.get("kwargs"),
@@ -207,6 +210,8 @@ class TestEInvoice(FrappeTestCase):
             si,
             frappe._dict(rate=7.6, item_tax_template="GST 12% - _TIRC", uom="Nos"),
         )
+        _append_taxes(si, "Cess", rate=3)
+        _append_taxes(si, "Cess Non Advol", charge_type="On Item Quantity", rate=0.2)
         si.save()
         si.submit()
 
@@ -233,11 +238,11 @@ class TestEInvoice(FrappeTestCase):
                     "IgstAmt": 0,
                     "CgstAmt": 0.46,
                     "SgstAmt": 0.46,
-                    "CesRt": 0,
-                    "CesAmt": 0,
-                    "CesNonAdvlAmt": 0,
+                    "CesRt": 3.0,
+                    "CesAmt": 0.23,
+                    "CesNonAdvlAmt": 0.2,
                     "OthChrg": 0,
-                    "TotItemVal": 8.52,
+                    "TotItemVal": 8.95,
                     "BchDtls": {"Nm": None, "ExpDt": None},
                 },
                 {
@@ -257,11 +262,11 @@ class TestEInvoice(FrappeTestCase):
                     "IgstAmt": 0,
                     "CgstAmt": 0.45,
                     "SgstAmt": 0.45,
-                    "CesRt": 0,
-                    "CesAmt": 0,
-                    "CesNonAdvlAmt": 0,
+                    "CesRt": 3.0,
+                    "CesAmt": 0.23,
+                    "CesNonAdvlAmt": 0.2,
                     "OthChrg": 0,
-                    "TotItemVal": 8.5,
+                    "TotItemVal": 8.93,
                     "BchDtls": {"Nm": None, "ExpDt": None},
                 },
             ],
@@ -277,6 +282,7 @@ class TestEInvoice(FrappeTestCase):
             EInvoiceData(si).get_data().get("ValDtls").get("CgstVal"),
             total_item_wise_cgst,
         )
+        self.assertEqual(0.86, EInvoiceData(si).get_data().get("ValDtls").get("CesVal"))
 
     @change_settings("Selling Settings", {"allow_multiple_items": 1})
     def test_validate_transaction(self):
@@ -670,7 +676,7 @@ class TestEInvoice(FrappeTestCase):
         append_item(
             si,
             frappe._dict(
-                rate=10,
+                rate=10.04,
                 item_tax_template="GST 12% - _TIRC",
                 uom="Nos",
                 gst_hsn_code="61149090",
@@ -696,15 +702,15 @@ class TestEInvoice(FrappeTestCase):
         self.assertEqual(0, nil_item["OthChrg"])
         self.assertEqual(100, nil_item["TotItemVal"])
 
-        self.assertEqual(10, taxable_item["AssAmt"])
-        self.assertEqual(10, taxable_item["TotAmt"])
-        self.assertEqual(10, taxable_item["UnitPrice"])
+        self.assertEqual(10.04, taxable_item["AssAmt"])
+        self.assertEqual(10.04, taxable_item["TotAmt"])
+        self.assertEqual(10.04, taxable_item["UnitPrice"])
         self.assertEqual(12.0, taxable_item["GstRt"])
         self.assertEqual(0.6, taxable_item["CgstAmt"])
         self.assertEqual(0.6, taxable_item["SgstAmt"])
-        self.assertEqual(11.2, taxable_item["TotItemVal"])
+        self.assertEqual(11.24, taxable_item["TotItemVal"])
 
-        self.assertEqual(110, request_data["ValDtls"]["AssVal"])
+        self.assertEqual(110.04, request_data["ValDtls"]["AssVal"])
         self.assertEqual(0, request_data["ValDtls"]["OthChrg"])
         self.assertEqual(111, request_data["ValDtls"]["TotInvVal"])
 
