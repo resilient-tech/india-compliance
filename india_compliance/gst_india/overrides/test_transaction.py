@@ -742,21 +742,25 @@ class TestTransaction(FrappeTestCase):
         if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
             return
 
-        doc = create_transaction(**self.transaction_details, is_in_state=True, do_not_save=True)
+        for item_code in ("_Test Trading Goods 1", "_Test Nil Rated Item"):
+            with self.subTest(item_code=item_code):
+                doc = create_transaction(
+                    **self.transaction_details, item_code=item_code, is_in_state=True, do_not_save=True
+                )
 
-        # Adding charges
-        doc.append(
-            "taxes",
-            {
-                "charge_type": "Actual",
-                "account_head": "Freight and Forwarding Charges - _TIRC",
-                "description": "Freight",
-                "tax_amount": 20,
-                "cost_center": "Main - _TIRC",
-            },
-        )
-        doc.insert()
-        self.assertDocumentEqual({"taxable_value": 100}, doc.items[0])
+                # Adding charges
+                doc.append(
+                    "taxes",
+                    {
+                        "charge_type": "Actual",
+                        "account_head": "Freight and Forwarding Charges - _TIRC",
+                        "description": "Freight",
+                        "tax_amount": 20,
+                        "cost_center": "Main - _TIRC",
+                    },
+                )
+                doc.insert()
+                self.assertDocumentEqual({"taxable_value": 100}, doc.items[0])
 
     def test_credit_note_without_quantity(self):
         if self.doctype != "Sales Invoice":
@@ -790,6 +794,46 @@ class TestTransaction(FrappeTestCase):
         # Ensure correct taxable_value and gst details
         for item in doc.items:
             self.assertDocumentEqual({"taxable_value": 10, "cgst_amount": 0.9, "sgst_amount": 0.9}, item)
+
+    def test_taxable_value_with_charges_before_and_after_tax(self):
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
+            return
+
+        for item_code, gst_amount in (("_Test Nil Rated Item", 0), ("_Test Trading Goods 1", 10.8)):
+            with self.subTest(item_code=item_code):
+                doc = create_transaction(**self.transaction_details, item_code=item_code, do_not_save=True)
+
+                doc.append(
+                    "taxes",
+                    {
+                        "charge_type": "Actual",
+                        "account_head": "Freight and Forwarding Charges - _TIRC",
+                        "description": "Freight",
+                        "tax_amount": 20,
+                        "cost_center": "Main - _TIRC",
+                    },
+                )
+
+                _append_taxes(doc, ("CGST", "SGST"), charge_type="On Previous Row Total", row_id=1)
+
+                # not a Tax Withholding Account: only its position below GST keeps it out
+                doc.append(
+                    "taxes",
+                    {
+                        "charge_type": "On Previous Row Total",
+                        "row_id": 3,
+                        "account_head": create_tax_accounts("TCS Payable").name,
+                        "description": "TCS",
+                        "rate": 1,
+                        "cost_center": "Main - _TIRC",
+                    },
+                )
+                doc.insert()
+
+                self.assertDocumentEqual(
+                    {"taxable_value": 120, "cgst_amount": gst_amount, "sgst_amount": gst_amount},
+                    doc.items[0],
+                )
 
     def test_validate_place_of_supply(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)

@@ -100,6 +100,13 @@ def update_taxable_values(doc):
                 None,  # ignore accounts after GST accounts
             )
 
+        elif gst_rows := [row for row in doc.taxes if row.gst_tax_type in TAX_TYPES]:
+            # nil-rated / exempt: zero GST rows still mark where the charges end
+            reference_row_index = next(
+                (cint(row.row_id) - 1 for row in gst_rows if row.charge_type == "On Previous Row Total"),
+                None,
+            )
+
         else:
             # If no GST account is used
             reference_row_index = -1
@@ -1894,6 +1901,8 @@ def _update_place_of_supply_and_taxes(doc):
         return
 
     doc.update(gst_details)
+    # ERPNext computed taxes before they were replaced here
+    doc.calculate_taxes_and_totals()
 
     frappe.msgprint(_("Place of Supply and Taxes have been updated due to change in Party Address."))
 
