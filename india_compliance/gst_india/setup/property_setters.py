@@ -45,6 +45,12 @@ def get_property_setters(*, include_defaults=False):
             "value": "gstin, country, state",
         },
         {
+            "doctype": "Item",
+            "fieldname": "is_sales_item",
+            "property": "allow_in_quick_entry",
+            "value": "1",
+        },
+        {
             "doctype": "Accounts Settings",
             "fieldname": "determine_address_tax_category_from",
             "property": "read_only",
