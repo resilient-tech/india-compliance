@@ -890,6 +890,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         if (action == "Pending") return "btn-warning not-grey";
         if (action == "Create") return "btn-primary not-grey";
         if (action == "Link") return "btn-primary not-grey link-document-btn disabled";
+        if (action == "Unlink") return "btn-danger not-grey";
         if (action == "Copy") return "btn-warning not-grey copy-btn disabled";
     }
 
