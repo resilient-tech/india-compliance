@@ -1276,6 +1276,41 @@ def get_periods_between_dates(
     return periods
 
 
+def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
+    """Add a GST Logs section to a doctype's dashboard.
+
+    Shared by every doctype that can carry an e-Waybill / e-Invoice.
+    """
+    if not is_api_enabled():
+        return data
+
+    data.setdefault("non_standard_fieldnames", {}).update(
+        {
+            "e-Waybill Log": "reference_name",
+            "Integration Request": "reference_docname",
+            "GST Inward Supply": "link_name",
+            "e-Invoice Log": "reference_name",
+        }
+    )
+
+    data.setdefault("dynamic_links", {}).update(
+        reference_docname=[doctype, "reference_doctype"],
+        reference_name=[doctype, "reference_doctype"],
+    )
+
+    transactions = data.setdefault("transactions", [])
+
+    # GST Logs section looks best at the 3rd position
+    # If there are less than 2 transactions, insert will be equivalent to append
+    transactions.insert(2, {"label": _("GST Logs"), "items": log_doctypes})
+
+    return data
+
+
+def get_items(doc):
+    return doc.get("items") or []
+
+
 def is_outward_stock_entry(doc):
     if (
         doc.doctype == "Stock Entry"
@@ -1283,6 +1318,20 @@ def is_outward_stock_entry(doc):
         and not doc.is_return
     ):
         return True
+
+
+def is_inward_transaction(doc):
+    """True when the goods flow towards the company, ie Bill To is the company's side."""
+    return bool(doc.get("is_return"))
+
+
+def is_same_gstin_allowed(doc):
+    """Whether both sides of the transaction may carry the same GSTIN.
+
+    The company is moving its own goods, so no supply takes place between distinct
+    persons and NIC accepts the e-Waybill as Self -> Self ("For Own Use" and friends).
+    """
+    return bool(is_outward_stock_entry(doc))
 
 
 def create_notification(message_content, document_type, document_name=None, request_id=None):
