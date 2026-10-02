@@ -45,17 +45,22 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
 from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
 from india_compliance.gst_india.utils import (
     are_goods_supplied,
+    clear_server_down,
     commit,
+    enqueue_portal_action,
     handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
     is_overseas_doc,
+    is_server_down,
     is_ship_to_gstin_applicable,
     load_doc,
     notify_user,
     parse_datetime,
+    portal_is_busy,
     rollback_and_set_einvoice_status,
     run_or_report_failure,
+    throw_server_down,
     update_onload,
 )
 from india_compliance.gst_india.utils.e_waybill import (
@@ -141,6 +146,21 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
             )
 
         data = EInvoiceData(doc).get_data()
+
+        # after the real checks, so an outage doesn't mask a genuine error
+        if is_server_down("e-Invoice"):
+            throw_server_down()
+
+        if portal_is_busy():
+            return enqueue_portal_action(
+                generate_e_invoice,
+                doc,
+                _("e-Invoice generation failed"),
+                docname=docname,
+                throw=False,
+                force=force,
+            )
+
         api = EInvoiceAPI.create(doc)
         result = api.generate_irn(data)
 
@@ -555,6 +575,9 @@ def retry_e_invoice_e_waybill_generation():
         return
 
     settings.db_set("is_retry_einv_ewb_generation_pending", 0, update_modified=False)
+
+    # this run is the probe, let requests through
+    clear_server_down("e-Invoice", "e-Waybill")
 
     generate_pending_e_invoices()
 
