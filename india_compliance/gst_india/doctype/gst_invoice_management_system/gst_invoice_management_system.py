@@ -108,7 +108,11 @@ class GSTInvoiceManagementSystem(Document):
         if not purchase:
             purchase = [doc.link_name for doc in inward_supplies]
 
-        purchases = PurchaseInvoice().get_all(names=purchase, filters=filters)
+        purchases = (
+            PurchaseInvoice().get_all(names=purchase, filters=frappe._dict(company=filters.company))
+            if purchase
+            else {}
+        )
 
         invoice_data = []
         for doc in inward_supplies:
@@ -208,7 +212,11 @@ class GSTInvoiceManagementSystem(Document):
             if inward_supply_names
             else []
         )
-        purchases = PurchaseInvoice().get_all(names=purchase_names) if purchase_names else {}
+        purchases = (
+            PurchaseInvoice().get_all(names=purchase_names, filters=frappe._dict(company=self.company))
+            if purchase_names
+            else {}
+        )
 
         reconciliation_data = [
             frappe._dict(
