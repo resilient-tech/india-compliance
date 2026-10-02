@@ -121,7 +121,7 @@ ALLOW_ON_SUBMIT_PROPERTY = {
 EWAYBILL_READ_ONLY_PROPERTY = {
     "property": "read_only_depends_on",
     "property_type": "Code",
-    "value": "eval: doc.ewaybill",
+    "value": "",
 }
 
 FETCH_IF_EMPTY_PROPERTY = {
