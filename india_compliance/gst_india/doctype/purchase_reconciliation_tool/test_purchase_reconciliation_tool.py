@@ -1181,7 +1181,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         doc = self.create_recipient_invoice("ISD-REC-001")
         source_row = doc.source_items[0]
 
-        _, rows = self.reconcile()
+        tool, rows = self.reconcile()
         row = self.isd_row(rows, doc)
 
         self.assertEqual(row.purchase_doctype, "ISD Recipient Invoice")
@@ -1194,6 +1194,10 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
         # nothing to reconcile against, so the difference is the credit received
         self.assertEqual(row.tax_difference, -(source_row.distributed_cgst + source_row.distributed_sgst))
+
+        tool.update({"from_date": "2023-09-01", "to_date": "2023-09-30"})
+        rows = tool.reconcile_and_generate_data()
+        self.assertNotIn(doc.name, {row.purchase_invoice_name for row in rows})
 
     def test_isd_invoice_matched_against_2b_isd_row(self):
         doc = self.create_recipient_invoice("ISD-REC-002")
