@@ -399,7 +399,7 @@ class PurchaseInvoice:
 
         match_found = ("Reconciled", "Match Found")
         criterion = (
-            self.get_company_gstin_criterion()
+            BaseUtil.get_company_gstin_criterion(self.PI, self.company_gstin)
             & (self.PI.posting_date[self.from_date : self.to_date])
             & (IfNull(self.PI.reconciliation_status, "").notin(match_found))
         )
@@ -464,13 +464,7 @@ class PurchaseInvoice:
         if ignore_company_gstin:
             return query
 
-        return query.where(self.get_company_gstin_criterion())
-
-    def get_company_gstin_criterion(self):
-        if self.company_gstin == "All":
-            return self.PI.company_gstin.notnull()
-
-        return self.company_gstin == self.PI.company_gstin
+        return query.where(BaseUtil.get_company_gstin_criterion(self.PI, self.company_gstin))
 
     def get_fields(self, additional_fields=None, is_return=False):
         tax_fields = [self.query_tax_amount(f"{tax_type}_amount").as_(tax_type) for tax_type in GST_TAX_TYPES]
@@ -548,7 +542,7 @@ class BillOfEntry:
 
         match_found = ("Reconciled", "Match Found")
         criterion = (
-            self.get_company_gstin_criterion()
+            BaseUtil.get_company_gstin_criterion(self.BOE, self.company_gstin)
             & (self.BOE.posting_date[self.from_date : self.to_date])
             & (IfNull(self.BOE.reconciliation_status, "").notin(match_found))
         )
@@ -601,13 +595,7 @@ class BillOfEntry:
         if ignore_company_gstin:
             return query
 
-        return query.where(self.get_company_gstin_criterion())
-
-    def get_company_gstin_criterion(self):
-        if self.company_gstin == "All":
-            return self.BOE.company_gstin.notnull()
-
-        return self.company_gstin == self.BOE.company_gstin
+        return query.where(BaseUtil.get_company_gstin_criterion(self.BOE, self.company_gstin))
 
     def get_fields(self, additional_fields=None):
         tax_fields = [self.query_tax_amount(f"{tax_type}_amount").as_(tax_type) for tax_type in GST_TAX_TYPES]
@@ -684,7 +672,7 @@ class ISDInvoice:
 
         match_found = ("Reconciled", "Match Found")
         criterion = (
-            self.get_company_gstin_criterion()
+            BaseUtil.get_company_gstin_criterion(self.ISD, self.company_gstin)
             & (self.ISD.posting_date[self.from_date : self.to_date])
             & (IfNull(self.ISD.reconciliation_status, "").notin(match_found))
         )
@@ -734,13 +722,7 @@ class ISDInvoice:
         if ignore_company_gstin:
             return query
 
-        return query.where(self.get_company_gstin_criterion())
-
-    def get_company_gstin_criterion(self):
-        if self.company_gstin == "All":
-            return self.ISD.company_gstin.notnull()
-
-        return self.company_gstin == self.ISD.company_gstin
+        return query.where(BaseUtil.get_company_gstin_criterion(self.ISD, self.company_gstin))
 
     def get_fields(self, additional_fields=None):
         tax_fields = [
@@ -1587,6 +1569,13 @@ class BaseUtil:
 
         # Filter periods based on Filing Preference
         return BaseUtil.get_filtered_periods(return_type, periods, company_gstin)
+
+    @staticmethod
+    def get_company_gstin_criterion(doctype, company_gstin):
+        if company_gstin == "All":
+            return IfNull(doctype.company_gstin, "") != ""
+
+        return doctype.company_gstin == company_gstin
 
     @staticmethod
     def _get_periods(start_date, end_date):

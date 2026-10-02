@@ -110,6 +110,11 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             frappe.db.delete("ISD Recipient Invoice", {"name": ("in", recipients)})
 
     def test_purchase_reconciliation_tool(self):
+        blank_gstin = create_purchase_invoice(
+            bill_no="BLANK-GSTIN-001", bill_date="2023-12-11", posting_date="2023-12-11"
+        )
+        frappe.db.set_value("Purchase Invoice", blank_gstin.name, "company_gstin", "")
+
         purchase_reconciliation_tool = frappe.get_doc("Purchase Reconciliation Tool")
         purchase_reconciliation_tool.update(
             {
@@ -140,6 +145,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             matched += 1
 
         self.assertEqual(matched, len(self.reconciled_data))
+        self.assertNotIn(blank_gstin.name, {row.purchase_invoice_name for row in reconciled_data})
 
         matched_row = next(
             row for row in reconciled_data if row.purchase_invoice_name and row.inward_supply_name
