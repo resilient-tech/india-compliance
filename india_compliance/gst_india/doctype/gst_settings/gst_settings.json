@@ -9,6 +9,7 @@
   "hsn_wise_tax_breakup",
   "enable_reverse_charge_in_sales",
   "enable_overseas_transactions",
+  "enable_fbil_exchange_rate",
   "enable_sales_through_ecommerce_operators",
   "round_off_gst_values",
   "require_supplier_invoice_no",
@@ -271,6 +272,13 @@
    "fieldname": "enable_overseas_transactions",
    "fieldtype": "Check",
    "label": "Enable SEZ / Overseas Transactions"
+  },
+  {
+   "default": "0",
+   "description": "Sync FBIL reference rates (USD, EUR, GBP to INR) into Currency Exchange every business day and apply them as the conversion rate of foreign currency Sales Invoices for Indian companies with INR as default currency",
+   "fieldname": "enable_fbil_exchange_rate",
+   "fieldtype": "Check",
+   "label": "Use FBIL Reference Rates for Foreign Currency Sales Invoices"
   },
   {
    "depends_on": "eval: india_compliance.is_api_enabled(doc)",
@@ -685,7 +693,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-03 17:03:14.259119",
+ "modified": "2026-09-28 21:40:00.000000",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
