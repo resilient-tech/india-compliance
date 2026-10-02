@@ -63,7 +63,7 @@ jobs:
       matrix:
         container: [1, 2]
 
-    name: Python Unit Tests (Postgres)
+    name: Python Unit Tests (Postgres, ${{ matrix.container }})
 
     services:
       postgres:
