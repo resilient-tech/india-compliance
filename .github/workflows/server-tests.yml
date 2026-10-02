@@ -105,7 +105,7 @@ jobs:
       matrix:
         container: [1, 2]
 
-    name: Python Unit Tests (MariaDB, ${{ matrix.container }})
+    name: Python Unit Tests - MariaDB
 
     services:
       mariadb:
