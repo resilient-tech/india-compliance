@@ -389,25 +389,7 @@ class PurchaseInvoice:
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
-        if only_names and not names:
-            return
-
-        query = self.get_query(additional_fields, ignore_company_gstin=True)
-
-        if only_names:
-            return query.where(self.PI.name.isin(names)).run(as_dict=True)
-
-        match_found = ("Reconciled", "Match Found")
-        criterion = (
-            BaseUtil.get_company_gstin_criterion(self.PI, self.company_gstin)
-            & (self.PI.posting_date[self.from_date : self.to_date])
-            & (IfNull(self.PI.reconciliation_status, "").notin(match_found))
-        )
-
-        if names:
-            criterion |= self.PI.name.isin(names)
-
-        return query.where(criterion).run(as_dict=True)
+        return BaseUtil._get_all(self, self.PI, additional_fields, names, only_names)
 
     def get_unmatched(self, category, is_return=0):
         gst_category = (
@@ -532,25 +514,7 @@ class BillOfEntry:
         self.PI = frappe.qb.DocType("Purchase Invoice")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
-        if only_names and not names:
-            return
-
-        query = self.get_query(additional_fields, ignore_company_gstin=True)
-
-        if only_names:
-            return query.where(self.BOE.name.isin(names)).run(as_dict=True)
-
-        match_found = ("Reconciled", "Match Found")
-        criterion = (
-            BaseUtil.get_company_gstin_criterion(self.BOE, self.company_gstin)
-            & (self.BOE.posting_date[self.from_date : self.to_date])
-            & (IfNull(self.BOE.reconciliation_status, "").notin(match_found))
-        )
-
-        if names:
-            criterion |= self.BOE.name.isin(names)
-
-        return query.where(criterion).run(as_dict=True)
+        return BaseUtil._get_all(self, self.BOE, additional_fields, names, only_names)
 
     def get_unmatched(self, category):
         gst_category = "SEZ" if category == "IMPGSEZ" else "Overseas"
@@ -662,25 +626,7 @@ class ISDInvoice:
         self.ISD_ITEM = frappe.qb.DocType("ISD Source Item")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
-        if only_names and not names:
-            return
-
-        query = self.get_query(additional_fields, ignore_company_gstin=True)
-
-        if only_names:
-            return query.where(self.ISD.name.isin(names)).run(as_dict=True)
-
-        match_found = ("Reconciled", "Match Found")
-        criterion = (
-            BaseUtil.get_company_gstin_criterion(self.ISD, self.company_gstin)
-            & (self.ISD.posting_date[self.from_date : self.to_date])
-            & (IfNull(self.ISD.reconciliation_status, "").notin(match_found))
-        )
-
-        if names:
-            criterion |= self.ISD.name.isin(names)
-
-        return query.where(criterion).run(as_dict=True)
+        return BaseUtil._get_all(self, self.ISD, additional_fields, names, only_names)
 
     def get_unmatched(self, is_return=0):
         query = (
@@ -1569,6 +1515,28 @@ class BaseUtil:
 
         # Filter periods based on Filing Preference
         return BaseUtil.get_filtered_periods(return_type, periods, company_gstin)
+
+    @staticmethod
+    def _get_all(doc, doctype, additional_fields=None, names=None, only_names=False):
+        if only_names and not names:
+            return
+
+        query = doc.get_query(additional_fields, ignore_company_gstin=True)
+
+        if only_names:
+            return query.where(doctype.name.isin(names)).run(as_dict=True)
+
+        match_found = ("Reconciled", "Match Found")
+        criterion = (
+            BaseUtil.get_company_gstin_criterion(doctype, doc.company_gstin)
+            & (doctype.posting_date[doc.from_date : doc.to_date])
+            & (IfNull(doctype.reconciliation_status, "").notin(match_found))
+        )
+
+        if names:
+            criterion |= doctype.name.isin(names)
+
+        return query.where(criterion).run(as_dict=True)
 
     @staticmethod
     def get_company_gstin_criterion(doctype, company_gstin):
