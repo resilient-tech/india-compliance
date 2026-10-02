@@ -437,16 +437,7 @@ class PurchaseInvoice:
             )
         )
 
-        if self.company:
-            query = query.where(self.company == self.PI.company)
-
-        if self.include_ignored == 0:
-            query = query.where(IfNull(self.PI.reconciliation_status, "") != "Ignored")
-
-        if ignore_company_gstin:
-            return query
-
-        return query.where(BaseUtil.get_company_gstin_criterion(self.PI, self.company_gstin))
+        return BaseUtil._apply_filters(self, self.PI, query, ignore_company_gstin)
 
     def get_fields(self, additional_fields=None, is_return=False):
         tax_fields = [self.query_tax_amount(f"{tax_type}_amount").as_(tax_type) for tax_type in GST_TAX_TYPES]
@@ -550,16 +541,7 @@ class BillOfEntry:
             .select(*fields, ConstantColumn("Bill of Entry").as_("doctype"))
         )
 
-        if self.company:
-            query = query.where(self.company == self.BOE.company)
-
-        if self.include_ignored == 0:
-            query = query.where(IfNull(self.BOE.reconciliation_status, "") != "Ignored")
-
-        if ignore_company_gstin:
-            return query
-
-        return query.where(BaseUtil.get_company_gstin_criterion(self.BOE, self.company_gstin))
+        return BaseUtil._apply_filters(self, self.BOE, query, ignore_company_gstin)
 
     def get_fields(self, additional_fields=None):
         tax_fields = [self.query_tax_amount(f"{tax_type}_amount").as_(tax_type) for tax_type in GST_TAX_TYPES]
@@ -659,16 +641,7 @@ class ISDInvoice:
             .select(*fields, ConstantColumn("ISD Recipient Invoice").as_("doctype"))
         )
 
-        if self.company:
-            query = query.where(self.company == self.ISD.company)
-
-        if self.include_ignored == 0:
-            query = query.where(IfNull(self.ISD.reconciliation_status, "") != "Ignored")
-
-        if ignore_company_gstin:
-            return query
-
-        return query.where(BaseUtil.get_company_gstin_criterion(self.ISD, self.company_gstin))
+        return BaseUtil._apply_filters(self, self.ISD, query, ignore_company_gstin)
 
     def get_fields(self, additional_fields=None):
         tax_fields = [
@@ -1537,6 +1510,19 @@ class BaseUtil:
             criterion |= doctype.name.isin(names)
 
         return query.where(criterion).run(as_dict=True)
+
+    @staticmethod
+    def _apply_filters(doc, doctype, query, ignore_company_gstin=False):
+        if doc.company:
+            query = query.where(doc.company == doctype.company)
+
+        if doc.include_ignored == 0:
+            query = query.where(IfNull(doctype.reconciliation_status, "") != "Ignored")
+
+        if ignore_company_gstin:
+            return query
+
+        return query.where(BaseUtil.get_company_gstin_criterion(doctype, doc.company_gstin))
 
     @staticmethod
     def get_company_gstin_criterion(doctype, company_gstin):
