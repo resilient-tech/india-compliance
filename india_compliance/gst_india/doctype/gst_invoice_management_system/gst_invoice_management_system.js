@@ -884,16 +884,6 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         }
     }
 
-    _get_button_css(action) {
-        if (action == "No Action") return "btn-secondary";
-        if (action == "Accept") return "btn-success not-grey";
-        if (action == "Reject") return "btn-danger not-grey";
-        if (action == "Pending") return "btn-warning not-grey";
-        if (action == "Create") return "btn-primary not-grey";
-        if (action == "Link") return "btn-primary not-grey link-document-btn disabled";
-        if (action == "Copy") return "btn-warning not-grey copy-btn disabled";
-    }
-
     _set_missing_doctype() {
         if (this.row.match_status == "Only in 2A/2B") this.missing_doctype = "Purchase Invoice";
         else return;
