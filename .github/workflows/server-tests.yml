@@ -189,12 +189,12 @@ jobs:
 
   tests-result:
     name: Python Unit Tests
-    needs: tests
+    needs: [changes, tests]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - name: Check test shard results
-        if: ${{ needs.tests.result == 'failure' || needs.tests.result == 'cancelled' }}
+        if: ${{ needs.changes.result != 'success' || needs.tests.result == 'failure' || needs.tests.result == 'cancelled' }}
         run: exit 1
 
   coverage:

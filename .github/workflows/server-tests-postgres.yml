@@ -154,3 +154,13 @@ jobs:
       - name: Show bench output
         if: ${{ always() }}
         run: cat ~/frappe-bench/bench_start.log || true
+
+  tests-result:
+    name: Python Unit Tests (Postgres)
+    needs: tests
+    if: ${{ always() && needs.tests.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test shard results
+        if: ${{ needs.tests.result == 'failure' || needs.tests.result == 'cancelled' }}
+        run: exit 1
