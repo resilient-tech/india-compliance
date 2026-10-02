@@ -27,7 +27,6 @@ repos:
         exclude: |
           (?x)^(
               india_compliance/public/dist/.*|
-              cypress/.*|
               .*node_modules.*|
               .*boilerplate.*|
               india_compliance/templates/includes/.*
@@ -43,7 +42,6 @@ repos:
         exclude: |
           (?x)^(
               india_compliance/public/dist/.*|
-              cypress/.*|
               .*node_modules.*|
               .*boilerplate.*|
               india_compliance/public/js/controllers/.*|
