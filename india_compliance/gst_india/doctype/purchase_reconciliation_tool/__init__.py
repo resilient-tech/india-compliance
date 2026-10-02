@@ -788,7 +788,7 @@ class BaseReconciliation:
         return ISDInvoice(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.purchase_from_date,
+            from_date=self.from_date,
             to_date=self.to_date,
             include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
