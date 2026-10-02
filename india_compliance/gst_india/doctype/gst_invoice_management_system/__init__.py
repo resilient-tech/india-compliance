@@ -2,7 +2,7 @@ import frappe
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
-from frappe.query_builder import Case, Criterion
+from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import flt
@@ -187,24 +187,18 @@ class PurchaseInvoice:
         self.PI = frappe.qb.DocType("Purchase Invoice")
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
-    def get_all(self, filters=None, names=None, only_names=False):
-        # filters, generate output based on filters
-        # names, add those docs to generated output
-        # only_names, ignore filters and return only the docs in names
+    def get_all(self, names=None, filters=None):
+        if not names:
+            return {}
+
         dimension_fields = [*get_accounting_dimensions(), "cost_center", "project"]
         additional_fields = [*dimension_fields, "posting_date"]
 
-        if only_names and not names:
-            return {}
-
-        query = self.get_query(additional_fields=additional_fields)
-
-        if only_names:
-            query = query.where(self.PI.name.isin(names))
-        else:
-            query = query.where(self.get_filter_criterion(filters, names))
-
-        purchases = query.run(as_dict=True)
+        purchases = (
+            self.get_query(filters=filters, additional_fields=additional_fields)
+            .where(self.PI.name.isin(names))
+            .run(as_dict=True)
+        )
 
         return {doc.name: doc for doc in purchases}
 
@@ -252,27 +246,18 @@ class PurchaseInvoice:
         )
 
         if filters:
-            query = query.where(self.get_filter_criterion(filters))
+            query = self.apply_filters(query, filters)
 
         return query
 
-    def get_filter_criterion(self, filters=None, names=None):
-        filters = filters or frappe._dict()
+    def apply_filters(self, query, filters):
+        if filters.get("company"):
+            query = query.where(self.PI.company == filters.company)
 
-        conditions = []
         if filters.get("company_gstin"):
-            conditions.append(self.PI.company_gstin == filters.get("company_gstin"))
+            query = query.where(self.PI.company_gstin == filters.company_gstin)
 
-        criterion = Criterion.all(conditions)
-
-        # a linked invoice stays in despite every filter above
-        if names:
-            criterion |= self.PI.name.isin(names)
-
-        if company := filters.get("company"):
-            criterion &= self.PI.company == company
-
-        return criterion
+        return query
 
     def get_fields(self, additional_fields=None, is_return=False):
         fields = [

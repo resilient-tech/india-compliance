@@ -193,7 +193,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual(shown.cgst, -450)
         self.assertEqual(shown.sgst, -450)
 
-        booked = PurchaseInvoice().get_all(names=[return_invoice.name], only_names=True)[return_invoice.name]
+        booked = PurchaseInvoice().get_all(names=[return_invoice.name])[return_invoice.name]
         self.assertEqual(booked.taxable_value, -5000)
         self.assertEqual(booked.cgst, -450)
         self.assertEqual(booked.sgst, -450)
@@ -656,25 +656,23 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         other_pinv = create_purchase_invoice(**pi_args, bill_no="IMS-GID-004")
         frappe.db.set_value("Purchase Invoice", other_pinv.name, "company_gstin", "27AAQCA8719H1Z6")
 
-        filters = frappe._dict(
-            {
-                "company": "_Test Indian Registered Company",
-                "company_gstin": "24AAQCA8719H1ZC",
-            }
-        )
+        names = [pinv.name, other_pinv.name]
+        company = frappe._dict(company="_Test Indian Registered Company")
 
-        purchases = PurchaseInvoice().get_all(filters=filters)
-        self.assertIn(pinv.name, purchases)
-        self.assertNotIn(other_pinv.name, purchases)
+        self.assertEqual(PurchaseInvoice().get_all(names=None, filters=company), {})
 
-        # company_gstin must not filter out an already matched invoice
-        purchases = PurchaseInvoice().get_all(filters=filters, names=[other_pinv.name])
+        purchases = PurchaseInvoice().get_all(names=names, filters=company)
         self.assertIn(pinv.name, purchases)
         self.assertIn(other_pinv.name, purchases)
 
-        self.assertEqual(
-            list(PurchaseInvoice().get_all(names=[other_pinv.name], only_names=True)), [other_pinv.name]
+        purchases = PurchaseInvoice().get_all(names=names, filters=frappe._dict(company="_Test Company"))
+        self.assertEqual(purchases, {})
+
+        purchases = PurchaseInvoice().get_all(
+            names=names, filters=frappe._dict(company_gstin="24AAQCA8719H1ZC")
         )
+        self.assertIn(pinv.name, purchases)
+        self.assertNotIn(other_pinv.name, purchases)
 
     def test_link_documents_with_none_purchase_invoice_name(self):
         """
