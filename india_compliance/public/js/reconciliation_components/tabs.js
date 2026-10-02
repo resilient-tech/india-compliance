@@ -479,6 +479,13 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     _apply_custom_action(action) {}
 
     _get_button_css(action) {
+        if (action == "Accept") return "btn-success not-grey";
+        if (action == "Reject") return "btn-danger not-grey";
+        if (action == "Pending") return "btn-warning not-grey";
+        if (action == "Unlink") return "btn-default not-grey";
+        if (action == "Create") return "btn-primary not-grey";
+        if (action == "Link") return "btn-primary not-grey link-document-btn disabled";
+        if (action == "Copy") return "btn-primary not-grey copy-btn disabled";
         return "btn-secondary";
     }
 
