@@ -2,7 +2,7 @@ import frappe
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
-from frappe.query_builder import Case, Criterion
+from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import flt
@@ -188,18 +188,15 @@ class PurchaseInvoice:
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
     def get_all(self, names=None, filters=None):
-        if not names:
-            return {}
-
         dimension_fields = [*get_accounting_dimensions(), "cost_center", "project"]
         additional_fields = [*dimension_fields, "posting_date"]
 
-        query = self.get_query(
-            filters=filters, additional_fields=additional_fields, ignore_company_gstin=True
-        )
-        criterion = self.get_company_gstin_criterion(filters) | self.PI.name.isin(names)
+        query = self.get_query(filters=filters, additional_fields=additional_fields)
 
-        purchases = query.where(criterion).run(as_dict=True)
+        if names:
+            query = query.where(self.PI.name.isin(names))
+
+        purchases = query.run(as_dict=True)
 
         return {doc.name: doc for doc in purchases}
 
@@ -226,7 +223,7 @@ class PurchaseInvoice:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_query(self, filters=None, additional_fields=None, is_return=False, ignore_company_gstin=False):
+    def get_query(self, filters=None, additional_fields=None, is_return=False):
         fields = self.get_fields(additional_fields, is_return)
 
         query = (
@@ -246,23 +243,19 @@ class PurchaseInvoice:
             .groupby(self.PI.name)
         )
 
-        if not filters:
-            return query
+        if filters:
+            query = self.apply_filters(query, filters)
 
-        if company := filters.get("company"):
-            query = query.where(self.PI.company == company)
+        return query
 
-        if ignore_company_gstin:
-            return query
+    def apply_filters(self, query, filters):
+        if filters.get("company"):
+            query = query.where(self.PI.company == filters.company)
 
-        return query.where(self.get_company_gstin_criterion(filters))
+        if filters.get("company_gstin"):
+            query = query.where(self.PI.company_gstin == filters.company_gstin)
 
-    def get_company_gstin_criterion(self, filters):
-        company_gstin = filters and filters.get("company_gstin")
-        if not company_gstin:
-            return Criterion.all([])
-
-        return self.PI.company_gstin == company_gstin
+        return query
 
     def get_fields(self, additional_fields=None, is_return=False):
         fields = [
