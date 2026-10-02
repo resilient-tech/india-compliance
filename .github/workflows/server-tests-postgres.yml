@@ -60,8 +60,10 @@ jobs:
 
     strategy:
       fail-fast: false
+      matrix:
+        container: [1, 2]
 
-    name: Python Unit Tests (Postgres)
+    name: Python Unit Tests - Postgres
 
     services:
       postgres:
@@ -141,7 +143,10 @@ jobs:
           ERPNEXT_BRANCH: ${{ inputs.erpnext_branch }}
 
       - name: Run Tests
-        run: cd ~/frappe-bench/ && bench --site test_site run-parallel-tests --app ${{ env.APP_NAME }}
+        run: |
+          cd ~/frappe-bench/
+          bench --site test_site run-parallel-tests --app ${{ env.APP_NAME }} \
+            --total-builds ${{ strategy.job-total }} --build-number ${{ matrix.container }}
         env:
           DB: postgres
           TYPE: server
@@ -149,3 +154,13 @@ jobs:
       - name: Show bench output
         if: ${{ always() }}
         run: cat ~/frappe-bench/bench_start.log || true
+
+  tests-result:
+    name: Python Unit Tests (Postgres)
+    needs: tests
+    if: ${{ always() && needs.tests.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test shard results
+        if: ${{ needs.tests.result == 'failure' || needs.tests.result == 'cancelled' }}
+        run: exit 1
