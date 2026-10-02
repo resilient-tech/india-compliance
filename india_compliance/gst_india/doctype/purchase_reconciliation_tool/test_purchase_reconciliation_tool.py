@@ -1152,17 +1152,6 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             return_period_2b="022024",
         )
 
-        frappe.db.set_value("Purchase Invoice", pinv.name, "company_gstin", "27AAQCA8719H1Z6")
-        frappe.db.set_value(
-            "GST Inward Supply",
-            gst_is.name,
-            {
-                "match_status": "Mismatch",
-                "link_doctype": "Purchase Invoice",
-                "link_name": pinv.name,
-            },
-        )
-
         prt = frappe.get_doc("Purchase Reconciliation Tool")
         prt.update(
             {
@@ -1174,13 +1163,68 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                 "gst_return": "GSTR 2B",
             }
         )
+        prt.link_documents(
+            purchase_invoice_name=pinv.name,
+            inward_supply_name=gst_is.name,
+            link_doctype="Purchase Invoice",
+        )
+        frappe.db.set_value("Purchase Invoice", pinv.name, "company_gstin", "27AAQCA8719H1Z6")
 
         rows = prt.reconcile_and_generate_data()
         row = next(row for row in rows if row.inward_supply_name == gst_is.name)
 
         self.assertEqual(row.purchase_invoice_name, pinv.name)
-        self.assertIn(row.match_status, ("Mismatch", "Suggested Match"))
+        self.assertEqual(row.match_status, "Manual Match")
         self.assertEqual(row.differences, "COMPANY_GSTIN")
+
+        details = prt.get_invoice_details(pinv.name, gst_is.name)
+        self.assertEqual(details.purchase_invoice_name, pinv.name)
+        self.assertEqual(details.inward_supply_name, gst_is.name)
+        self.assertEqual(details._purchase_invoice.company_gstin, "27AAQCA8719H1Z6")
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_linked_bill_of_entry_on_another_company_gstin_is_shown(self):
+        boe = create_boe(bill_no="BOE-GSTIN-DIFF-001", bill_date="2023-12-11")
+        gst_is = create_gst_inward_supply(
+            supplier_name="_Test Foreign Supplier",
+            supplier_gstin=None,
+            bill_no="BOE-GSTIN-DIFF-001",
+            bill_date="2023-12-11",
+            classification="IMPG",
+            doc_type="Bill of Entry",
+            supply_type="",
+            place_of_supply=None,
+            items=[{"taxable_value": 10000, "rate": 18, "igst": 1800}],
+            document_value=11800,
+            return_period_2b="122023",
+            gen_date_2b="2023-12-11",
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2023-12-01",
+                "to_date": "2023-12-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        prt.link_documents(
+            purchase_invoice_name=boe.name,
+            inward_supply_name=gst_is.name,
+            link_doctype="Bill of Entry",
+        )
+        frappe.db.set_value("Bill of Entry", boe.name, "company_gstin", "27AAQCA8719H1Z6")
+
+        rows = prt.reconcile_and_generate_data()
+        row = next(row for row in rows if row.inward_supply_name == gst_is.name)
+
+        self.assertEqual(row.purchase_invoice_name, boe.name)
+        self.assertEqual(row.purchase_doctype, "Bill of Entry")
+        self.assertEqual(row.match_status, "Manual Match")
+        self.assertIn("COMPANY_GSTIN", row.differences.split(", "))
 
     # ------------------------------------------------------------------ ISD Recipient Invoice
     COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
@@ -1479,22 +1523,21 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             gen_date_2b=self.POSTING_DATE,
         )
 
-        frappe.db.set_value("ISD Recipient Invoice", doc.name, "company_gstin", "27AAQCA8719H1Z6")
-        frappe.db.set_value(
-            "GST Inward Supply",
-            gst_is.name,
-            {
-                "match_status": "Mismatch",
-                "link_doctype": "ISD Recipient Invoice",
-                "link_name": doc.name,
-            },
+        tool, _rows = self.reconcile()
+        tool.link_documents(
+            purchase_invoice_name=doc.name,
+            inward_supply_name=gst_is.name,
+            link_doctype="ISD Recipient Invoice",
         )
+        frappe.db.set_value("ISD Recipient Invoice", doc.name, "company_gstin", "27AAQCA8719H1Z6")
 
-        _tool, rows = self.reconcile()
+        rows = tool.reconcile_and_generate_data()
         row = next(row for row in rows if row.inward_supply_name == gst_is.name)
 
         self.assertEqual(row.purchase_invoice_name, doc.name)
         self.assertEqual(row.purchase_doctype, "ISD Recipient Invoice")
+        self.assertEqual(row.match_status, "Manual Match")
+        self.assertIn("COMPANY_GSTIN", row.differences.split(", "))
 
     def test_isd_invoice_manual_link_and_unlink(self):
         """Manually linking an ISD Recipient Invoice writes the status back onto the document, and
