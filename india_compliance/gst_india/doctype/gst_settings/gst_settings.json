@@ -126,7 +126,7 @@
   },
   {
    "default": "1",
-   "description": "As per <a href=\"https://gstcouncil.gov.in/sites/default/files/2024-05/notfctn-78-central-tax-english-2020.pdf\" target=\"_blank\" rel=\"noopener noreferrer\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with at least 4 or 6 digits (based on turnover).<br>Not applied to purchases, except imports.",
+   "description": "As per <a href=\"https://gstcouncil.gov.in/sites/default/files/2024-05/notfctn-78-central-tax-english-2020.pdf\" target=\"_blank\" rel=\"noopener noreferrer\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with at least 4 or 6 digits (based on turnover).<br>Import purchases always require HSN/SAC.",
    "fieldname": "validate_hsn_code",
    "fieldtype": "Check",
    "label": "Validate HSN/SAC Code in Sales Items and Transactions"
@@ -677,7 +677,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-01 15:26:38.389636",
+ "modified": "2026-10-02 18:17:58.186726",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
