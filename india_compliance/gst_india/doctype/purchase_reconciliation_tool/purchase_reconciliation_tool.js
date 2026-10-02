@@ -796,11 +796,6 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         }
     }
 
-    _get_button_css(action) {
-        if (action == "Accept") return "btn-primary not-grey";
-        return super._get_button_css(action);
-    }
-
     _set_missing_doctype() {
         if (this.row.match_status == "Only in Books") this.missing_doctype = "GST Inward Supply";
         else if (this.row.match_status == "Only in 2A/2B")
