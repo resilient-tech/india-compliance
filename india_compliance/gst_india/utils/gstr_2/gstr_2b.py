@@ -55,6 +55,7 @@ class GSTR2b(GSTR):
         # delete rejected transactions
         for transaction in rejected_transactions:
             filters = {
+                "company_gstin": self.gstin,
                 "bill_no": transaction.bill_no,
                 "bill_date": transaction.bill_date,
                 "classification": transaction.classification,
