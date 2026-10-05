@@ -248,6 +248,48 @@ class TestGSTR2a(TestGSTRMixin, FrappeTestCase):
             doc,
         )
 
+<<<<<<< HEAD
+=======
+    def test_blanks_from_the_portal(self):
+        from india_compliance.gst_india.utils.gstr_2.gstr_2a import GSTR2a
+
+        handler = GSTR2a(None, self.gstin, "042020", "B2B")
+        transactions = handler.get_all_transactions(
+            [{"ctin": self.gstin, "inv": [{"inum": "NO-ITEMS-1", "idt": "24-11-2016", "val": 100}]}]
+        )
+        self.assertEqual(len(transactions), 1)
+        self.assertFalse(transactions[0]["items"])
+
+        handler = GSTR2a(None, self.gstin, "042020", "ISD")
+        transactions = handler.get_all_transactions(
+            [{"ctin": self.gstin, "doclist": [{"docnum": "ISD-NC-1", "iamt": 10, "camt": 5, "samt": 5}]}]
+        )
+        self.assertEqual(transactions[0].document_value, 20)
+
+    def test_another_gstins_download_keeps_unfiled_documents(self):
+        period = "082020"
+        other_gstin = "24AAQCA8719H1ZC"
+        supplier = {
+            "ctin": "01AAAAP1208Q1ZS",
+            "flprdr1": "Aug-20",
+            "inv": [{"inum": "UNFILED-1", "idt": "24-08-2020", "val": 100}],
+        }
+
+        save_gstr_2a(self.gstin, period, frappe._dict({"gstin": self.gstin, "fp": period, "b2b": [supplier]}))
+        doc = self.get_doc(GSTRCategory.B2B, bill_no="UNFILED-1")
+        self.addCleanup(frappe.delete_doc, self.doctype, doc.name, ignore_permissions=True)
+        self.assertEqual(doc.gstr_1_filled, 0)
+
+        other_gstin_supplier = {**supplier, "inv": [{**supplier["inv"][0], "inum": "OTHER-GSTIN-1"}]}
+        save_gstr_2a(
+            other_gstin,
+            period,
+            frappe._dict({"gstin": other_gstin, "fp": period, "b2b": [other_gstin_supplier]}),
+        )
+
+        self.assertTrue(frappe.db.exists(self.doctype, doc.name))
+
+>>>>>>> 18f0075 (fix: limit existing GSTR-2A/2B inward supplies to the gstin being saved)
     def test_gstr2a_isd(self):
         doc = self.get_doc(GSTRCategory.ISD)
         self.assertImportLog(GSTRCategory.ISD)

@@ -491,11 +491,25 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
         self.assertEqual(doc.return_period_2b, self.return_period)
         self.assertEqual(doc.is_downloaded_from_2b, 1)
 
-        save_gstr_2b(self.gstin, self.return_period, self.test_data)
+        other_gstin = "24AAQCA8719H1ZC"
+        other_gstin_b2b = {
+            **self.test_data["data"]["docdata"]["b2b"][0],
+            "inv": [{**self.test_data["data"]["docdata"]["b2b"][0]["inv"][0], "inum": "OTHER-GSTIN-1"}],
+        }
+        other_gstin_data = frappe._dict(
+            data=frappe._dict(
+                gstin=other_gstin, gendt=self.test_data["data"]["gendt"], docdata={"b2b": [other_gstin_b2b]}
+            )
+        )
 
-        doc.reload()
-        self.assertEqual(doc.return_period_2b, self.return_period)
-        self.assertEqual(doc.is_downloaded_from_2b, 1)
+        for gstin, data in ((self.gstin, self.test_data), (other_gstin, other_gstin_data)):
+            with self.subTest(gstin=gstin):
+                save_gstr_2b(gstin, self.return_period, data)
+
+                for category in (GSTRCategory.IMPG, GSTRCategory.B2B):
+                    doc = self.get_doc(category)
+                    self.assertEqual(doc.return_period_2b, self.return_period)
+                    self.assertEqual(doc.is_downloaded_from_2b, 1)
 
 
 class TestGetUniqueKey(FrappeTestCase):
