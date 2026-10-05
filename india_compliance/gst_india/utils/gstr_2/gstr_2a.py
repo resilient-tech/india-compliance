@@ -64,10 +64,10 @@ class GSTR2a(GSTR):
         if cancel_date := supplier_details.get(doc.REGISTRATION_CANCEL_DATE):
             self.cancelled_gstins.setdefault(supplier_details[doc.SUPPLIER_GSTIN], cancel_date)
 
-    def get_existing_transaction_filter(self, gst_is):
+    def get_invalid_transaction_filter(self, gst_is):
         return (gst_is.sup_return_period == self.return_period) & (gst_is.gstr_1_filled == 0)
 
-    def handle_missing_transactions(self):
+    def handle_invalid_transactions(self):
         """
         For GSTR2a, transactions are reflected immediately after it's pushed to GSTR-1.
         At times, it may later be removed from GSTR-1.
@@ -75,9 +75,9 @@ class GSTR2a(GSTR):
         In such cases, we need to delete such unfilled transactions not present in the latest data.
         """
 
-        if self.existing_transaction:
-            for inward_supply_name in self.existing_transaction.values():
-                frappe.delete_doc("GST Inward Supply", inward_supply_name, ignore_permissions=True)
+        if self.invalid_transactions:
+            for transaction in self.invalid_transactions.values():
+                frappe.delete_doc("GST Inward Supply", transaction.name, ignore_permissions=True)
 
     def get_download_details(self):
         return {"is_downloaded_from_2a": 1}

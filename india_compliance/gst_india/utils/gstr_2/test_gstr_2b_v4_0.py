@@ -24,6 +24,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         cls.doctype = "GST Inward Supply"
         cls.log_doctype = "GSTR Import Log"
         cls.test_data = parse_json(read_file(get_data_file_path("test_gstr_2b_v4_0.json")))
+        cls.test_data["data"].pop("docRejdata")
 
         save_gstr_2b(
             cls.gstin,
@@ -259,6 +260,41 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
             doc,
         )
 
+    def test_amended_original_missing_from_2b_is_deleted(self):
+        period = "062020"
+        docdata = self.test_data["data"]["docdata"]
+        original = {**docdata["b2b"][0], "inv": [{**docdata["b2b"][0]["inv"][0], "inum": "AMD-ORIG-1"}]}
+        amendment = {
+            **docdata["b2ba"][0],
+            "inv": [{**docdata["b2ba"][0]["inv"][0], "inum": "AMD-NEW-1", "oinum": "AMD-ORIG-1"}],
+        }
+
+        for b2b in ([original], []):
+            save_gstr_2b(
+                self.gstin,
+                period,
+                frappe._dict(
+                    data=frappe._dict(
+                        gstin=self.gstin,
+                        gendt=self.test_data["data"]["gendt"],
+                        docdata={"b2b": b2b, "b2ba": [amendment]},
+                    )
+                ),
+                store_raw=False,
+            )
+
+            if b2b:
+                original_doc = self.get_doc(GSTRCategory.B2B, bill_no="AMD-ORIG-1")
+                self.addCleanup(
+                    frappe.delete_doc, self.doctype, original_doc.link_name, ignore_permissions=True
+                )
+                self.assertEqual(
+                    (original_doc.match_status, original_doc.link_doctype), ("Amended", "GST Inward Supply")
+                )
+
+        self.assertFalse(frappe.db.exists(self.doctype, original_doc.name))
+        self.assertTrue(frappe.db.exists(self.doctype, original_doc.link_name))
+
     def test_rejecting_one_isd_document_leaves_the_others(self):
         """A rejected document is looked up by the same filters that stored it and deleted. Only
         that one goes: the distributor's other documents in the same 2B stay."""
@@ -270,7 +306,13 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
             data=frappe._dict(
                 gstin=self.gstin,
                 gendt=self.test_data["data"]["gendt"],
-                docdata={},
+                docdata={
+                    **self.test_data["data"]["docdata"],
+                    "isd": [
+                        {**isd, "doclist": [doc for doc in isd["doclist"] if doc["docnum"] != "S9003"]}
+                        for isd in self.test_data["data"]["docdata"]["isd"]
+                    ],
+                },
                 docRejdata={
                     "isd": [
                         {
@@ -303,16 +345,9 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
     def test_isd_credit_note_sharing_the_invoice_number_is_its_own_row(self):
         supplier = self.test_data["data"]["docdata"]["isd"][2]
         self.assertEqual(supplier["ctin"], "29AABCE2207R1Z5")
-        supplier_isd = {**supplier, "doclist": [supplier["doclist"][0]]}  # doctyp ISDI, cgst 300
-        supplier_isd_credit_note = {**supplier, "doclist": [supplier["doclist"][1]]}  # doctype ISDC, cgst 30
         period = "042020"
 
-        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
-            [supplier_isd], None
-        )
-        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
-            [supplier_isd_credit_note], None
-        )
+        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions([supplier], None)
 
         invoice = self.get_doc(
             GSTRCategory.ISD, supplier_gstin="29AABCE2207R1Z5", bill_no="S9010", doc_type="ISD Invoice"
@@ -322,7 +357,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         )
         self.assertNotEqual(invoice.name, credit_note.name)
         self.assertEqual(credit_note.return_period_2b, period)
-        self.assertEqual(invoice.return_period_2b, "")
+        self.assertEqual(invoice.return_period_2b, period)
 
     def test_isd_number_reported_as_eligible_and_ineligible_settles_each_half_separately(self):
         period = "052020"
@@ -369,12 +404,10 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         )
 
         eligible.reload()
-        ineligible.reload()
 
         self.assertEqual(eligible.return_period_2b, period)
         self.assertEqual(eligible.is_downloaded_from_2b, 1)
-        self.assertEqual(ineligible.return_period_2b, "")
-        self.assertEqual(ineligible.is_downloaded_from_2b, 0)
+        self.assertFalse(frappe.db.exists(self.doctype, ineligible.name))
 
     def test_gstr2b_isda(self):
         doc = self.get_doc(GSTRCategory.ISDA, supplier_gstin="16DEFPS8555D1Z7")

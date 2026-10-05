@@ -1,6 +1,7 @@
 from typing import ClassVar
 
 import frappe
+from frappe.query_builder.functions import IfNull
 
 from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2.gstr import GSTR
@@ -43,10 +44,15 @@ class GSTR2b(GSTR):
     def get_transaction(self, details, items=None):
         return super().get_transaction(details, [] if items is None else items)
 
-    def get_existing_transaction_filter(self, gst_is):
-        return gst_is.return_period_2b == self.return_period
+    def get_invalid_transaction_filter(self, gst_is):
+        return (gst_is.return_period_2b == self.return_period) | (
+            (gst_is.company_gstin == self.gstin)
+            & (gst_is.is_downloaded_from_2a == 1)
+            & (IfNull(gst_is.return_period_2b, "") == "")
+            & (gst_is.sup_return_period == self.return_period)
+        )
 
-    def handle_missing_transactions(self):
+    def handle_invalid_transactions(self):
         """
         For GSTR2b, only filed transactions are reported. They may be removed from GSTR-2b later
         if marked as pending / rejected from IMS Dashboard.
@@ -55,21 +61,12 @@ class GSTR2b(GSTR):
         1) we need to clear the return_period_2b as this could change in future.
         2) and delete the rejected transactions.
         """
-        if not self.existing_transaction:
-            return
+        self.handle_invalid_ims_transactions()
+        self.handle_invalid_2a_2b_transactions()
+        self.handle_rejected_transactions()
 
-        missing_transactions = list(self.existing_transaction.values())
+    def handle_rejected_transactions(self):
         rejected_transactions = self.get_all_transactions(self.rejected_data)
-
-        # clear return_period_2b
-        inward_supply = frappe.qb.DocType("GST Inward Supply")
-        (
-            frappe.qb.update(inward_supply)
-            .set(inward_supply.return_period_2b, "")
-            .set(inward_supply.is_downloaded_from_2b, 0)
-            .where(inward_supply.name.isin(missing_transactions))
-            .run()
-        )
 
         # delete rejected transactions
         for transaction in rejected_transactions:
@@ -91,6 +88,32 @@ class GSTR2b(GSTR):
             # delete doc allows passing only name
             if name:
                 frappe.delete_doc("GST Inward Supply", name, ignore_permissions=True)
+
+    def handle_invalid_ims_transactions(self):
+        names = [
+            transaction.name
+            for transaction in self.invalid_transactions.values()
+            if transaction.is_downloaded_from_ims
+        ]
+        if not names:
+            return
+
+        # clear return_period_2b
+        inward_supply = frappe.qb.DocType("GST Inward Supply")
+        (
+            frappe.qb.update(inward_supply)
+            .set(inward_supply.return_period_2b, "")
+            .set(inward_supply.is_downloaded_from_2b, 0)
+            .where(inward_supply.name.isin(names))
+            .run()
+        )
+
+    def handle_invalid_2a_2b_transactions(self):
+        for transaction in self.invalid_transactions.values():
+            if transaction.is_downloaded_from_ims:
+                continue
+
+            frappe.delete_doc("GST Inward Supply", transaction.name, ignore_permissions=True)
 
     def get_download_details(self):
         return {
