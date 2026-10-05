@@ -511,6 +511,13 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                     self.assertEqual(doc.return_period_2b, self.return_period)
                     self.assertEqual(doc.is_downloaded_from_2b, 1)
 
+        self.assertEqual(
+            frappe.db.get_value(
+                self.doctype, {"company_gstin": other_gstin, "bill_no": "OTHER-GSTIN-1"}, "return_period_2b"
+            ),
+            self.return_period,
+        )
+
 
 class TestGetUniqueKey(IntegrationTestCase):
     def test_null_gstin_matches_empty_gstin(self):
