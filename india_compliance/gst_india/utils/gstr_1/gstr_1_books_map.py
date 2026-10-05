@@ -84,7 +84,7 @@ class GSTR1BooksData:
         prepared_data.update(supecom.from_books(supecom_rows, self.operator_name))
 
         for category, rows in {
-            Category.AT.value: self.prepare_advances_recevied_data(),
+            Category.AT.value: self.prepare_advances_received_data(),
             Category.TXP.value: self.prepare_advances_adjusted_data(),
             Category.DOC_ISSUE.value: self.prepare_document_issued_data(),
             **hsn.from_books(hsn_rows, self.hsn_descriptions(hsn_rows).get),
@@ -187,7 +187,7 @@ class GSTR1BooksData:
     def prepare_document_issued_data(self):
         return doc_issue.from_books(GSTR1DocumentIssuedSummary(self.filters).get_data())
 
-    def prepare_advances_recevied_data(self):
+    def prepare_advances_received_data(self):
         return self.prepare_advances_received_or_adjusted_data("Advances")
 
     def prepare_advances_adjusted_data(self):
