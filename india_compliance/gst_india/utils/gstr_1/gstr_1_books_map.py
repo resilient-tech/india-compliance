@@ -69,9 +69,9 @@ class GSTR1BooksData:
     def prepare_mapped_data(self):
         prepared_data = {}
 
-        _class = GSTR1Invoices(self.filters)
-        data = _class.get_invoices_for_item_wise_summary()
-        _class.process_invoices(data)  # amounts come back settled to two decimals
+        gstr1_invoices = GSTR1Invoices(self.filters)
+        data = gstr1_invoices.get_invoices_for_item_wise_summary()
+        gstr1_invoices.process_invoices(data)  # amounts come back settled to two decimals
 
         hsn_rows, invoice_rows, nil_rows, b2cs_rows, supecom_rows = self.get_structured_data(data)
 
@@ -94,7 +94,7 @@ class GSTR1BooksData:
 
         self.process_for_quarterly(prepared_data)
 
-        self.update_rounding_difference(prepared_data, _class.rounding_difference)
+        self.update_rounding_difference(prepared_data, gstr1_invoices.rounding_difference)
 
         return prepared_data
 
@@ -196,21 +196,21 @@ class GSTR1BooksData:
     def prepare_advances_received_or_adjusted_data(self, type_of_business):
         self.filters.type_of_business = type_of_business
         gst_accounts = get_gst_accounts_by_type(self.filters.company, "Output")
-        _class = GSTR11A11BData(self.filters, gst_accounts)
+        advances_data = GSTR11A11BData(self.filters, gst_accounts)
 
         if type_of_business == "Advances":
-            query = _class.get_11A_query()
+            query = advances_data.get_11A_query()
             fields = (
-                _class.pe.name,
-                _class.pe.party,
-                _class.pe.posting_date,
-                _class.pe.company_gstin,
+                advances_data.pe.name,
+                advances_data.pe.party,
+                advances_data.pe.posting_date,
+                advances_data.pe.company_gstin,
             )
             multipler = 1
 
         else:
-            query = _class.get_11B_query()
-            fields = _class.get_11B_payment_entry_fields(
+            query = advances_data.get_11B_query()
+            fields = advances_data.get_11B_payment_entry_fields(
                 name="name",
                 party="party",
                 posting_date="posting_date",
