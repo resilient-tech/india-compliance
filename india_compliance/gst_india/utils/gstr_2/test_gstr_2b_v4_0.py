@@ -264,6 +264,39 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         invoice = self.get_doc(GSTRCategory.ISD, **supplier, bill_no="S9001")
         credit_note = self.get_doc(GSTRCategory.ISD, **supplier, bill_no="S9003")
 
+        other_gstin = "24AAQCA8719H1ZC"
+        distributor = {
+            "ctin": "27AABCE2207R1Z5",
+            "trdnm": "GSTN Mixed Eligibility",
+            "supprd": "022020",
+            "supfildt": "02-03-2020",
+        }
+        other_gstin_document = {
+            "doctyp": "ISDC",
+            "docnum": "S9999",
+            "docdt": "03-03-2016",
+            "igst": 0,
+            "cgst": 50,
+            "sgst": 50,
+            "cess": 0,
+            "itcelg": "Y",
+        }
+        save_gstr_2b(
+            other_gstin,
+            "072020",
+            frappe._dict(
+                data=frappe._dict(
+                    gstin=other_gstin,
+                    gendt=self.test_data["data"]["gendt"],
+                    docdata={"isd": [{**distributor, "doclist": [other_gstin_document]}]},
+                )
+            ),
+            store_raw=False,
+        )
+        other_gstin_row = frappe.db.get_value(
+            self.doctype, {"company_gstin": other_gstin, "bill_no": "S9999"}
+        )
+
         rejected = frappe._dict(
             data=frappe._dict(
                 gstin=self.gstin,
@@ -286,7 +319,8 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                                     "sgst": 50,
                                     "cess": 0,
                                     "itcelg": "Y",
-                                }
+                                },
+                                other_gstin_document,
                             ],
                         }
                     ]
@@ -297,6 +331,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
 
         self.assertFalse(frappe.db.exists(self.doctype, credit_note.name))
         self.assertTrue(frappe.db.exists(self.doctype, invoice.name))
+        self.assertTrue(frappe.db.exists(self.doctype, other_gstin_row))
 
     def test_isd_credit_note_sharing_the_invoice_number_is_its_own_row(self):
         supplier = self.test_data["data"]["docdata"]["isd"][2]
