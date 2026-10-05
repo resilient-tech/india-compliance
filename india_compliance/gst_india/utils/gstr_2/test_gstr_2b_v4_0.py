@@ -5,8 +5,14 @@ import frappe
 from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 
+from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import get_raw_return_data
 from india_compliance.gst_india.utils import get_data_file_path, get_party_for_gstin, merge_dicts
-from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr, save_gstr_2b
+from india_compliance.gst_india.utils.gstr_2 import (
+    GSTRCategory,
+    download_gstr_2b,
+    save_gstr,
+    save_gstr_2b,
+)
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
 from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
@@ -555,6 +561,44 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 self.doctype, {"company_gstin": other_gstin, "bill_no": "OTHER-GSTIN-1"}, "return_period_2b"
             ),
             self.return_period,
+        )
+
+    @patch("india_compliance.gst_india.utils.gstr_2.GSTR2bAPI")
+    def test_multi_file_download_keeps_every_files_invoices(self, gstr_2b_api):
+        period = "092020"
+        supplier = self.test_data["data"]["docdata"]["b2b"][0]
+        files = {
+            file_num: frappe._dict(
+                gstin=self.gstin,
+                gendt=self.test_data["data"]["gendt"],
+                docdata={
+                    "b2b": [{**supplier, "inv": [{**supplier["inv"][0], "inum": f"MULTI-FILE-{file_num}"}]}]
+                },
+            )
+            for file_num in (1, 2)
+        }
+        gstr_2b_api.return_value.get_data.side_effect = lambda return_period, file_num=None: frappe._dict(
+            data=files[file_num] if file_num else frappe._dict(fc=2)
+        )
+
+        download_gstr_2b(self.gstin, [period])
+
+        self.assertEqual(
+            dict(
+                frappe.get_all(
+                    self.doctype,
+                    filters={"company_gstin": self.gstin, "bill_no": ("like", "MULTI-FILE-%")},
+                    fields=["bill_no", "return_period_2b"],
+                    as_list=True,
+                )
+            ),
+            {"MULTI-FILE-1": period, "MULTI-FILE-2": period},
+        )
+
+        raw = get_raw_return_data(self.gstin, ReturnType.GSTR2B.value, period)
+        self.assertEqual(
+            [invoice["inum"] for supplier in raw["docdata"]["b2b"] for invoice in supplier["inv"]],
+            ["MULTI-FILE-1", "MULTI-FILE-2"],
         )
 
 

@@ -202,10 +202,9 @@ def download_gstr_2b(gstin, return_periods):
             for file_num in range(1, file_count + 1):
                 r = api.get_data(return_period, file_num=file_num)
                 merge_dicts(combined, r.data or {})
-                save_gstr_2b(gstin, return_period, r, store_raw=False)
 
             if combined:
-                store_raw_return_data(gstin, ReturnType.GSTR2B.value, return_period, combined)
+                save_gstr_2b(gstin, return_period, frappe._dict(data=frappe._dict(combined)))
 
             continue  # skip first response if file_count is greater than 1
 
