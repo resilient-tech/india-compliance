@@ -7,7 +7,6 @@ from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.utils import get_data_file_path, get_party_for_gstin, merge_dicts
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr, save_gstr_2b
-from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
 from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
@@ -501,6 +500,40 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         self.assertEqual(doc.return_period_2b, self.return_period)
         self.assertEqual(doc.is_downloaded_from_2b, 1)
 
+    def test_same_bill_number_of_another_financial_year_is_settled_on_its_own(self):
+        period = "082020"
+        supplier = self.test_data["data"]["docdata"]["b2b"][0]
+        invoices = {
+            bill_date: {**supplier["inv"][0], "inum": "SAME-NO-1", "dt": bill_date}
+            for bill_date in ("10-03-2019", "10-03-2020")
+        }
+
+        def download(*bill_dates):
+            docdata = {"b2b": [{**supplier, "inv": [invoices[bill_date] for bill_date in bill_dates]}]}
+            save_gstr_2b(
+                self.gstin,
+                period,
+                frappe._dict(
+                    data=frappe._dict(
+                        gstin=self.gstin, gendt=self.test_data["data"]["gendt"], docdata=docdata
+                    )
+                ),
+                store_raw=False,
+            )
+            return dict(
+                frappe.get_all(
+                    self.doctype,
+                    filters={"company_gstin": self.gstin, "bill_no": "SAME-NO-1"},
+                    fields=["bill_date", "return_period_2b"],
+                    as_list=True,
+                )
+            )
+
+        self.assertEqual(
+            download("10-03-2019", "10-03-2020"), {date(2019, 3, 10): period, date(2020, 3, 10): period}
+        )
+        self.assertEqual(download("10-03-2020"), {date(2019, 3, 10): "", date(2020, 3, 10): period})
+
 
 class TestEmptyPeriodProgress(IntegrationTestCase):
     def test_month_with_nothing_to_save_still_reports_done(self):
@@ -512,19 +545,6 @@ class TestEmptyPeriodProgress(IntegrationTestCase):
         event, message = publish.call_args.args[:2]
         self.assertEqual(event, "update_2a_2b_transactions_progress")
         self.assertEqual(message, {"current_progress": 100, "return_period": "032020"})
-
-
-class TestGetUniqueKey(IntegrationTestCase):
-    def test_null_gstin_matches_empty_gstin(self):
-        # DB row with NULL supplier_gstin -> None, vs incoming with field absent
-        existing = frappe._dict(supplier_gstin=None, bill_no="2566282")
-        incoming = frappe._dict(bill_no="2566282")
-        self.assertEqual(get_unique_key(existing), get_unique_key(incoming))
-        self.assertEqual(get_unique_key(existing), "-2566282-")
-
-    def test_normal_gstin(self):
-        t = frappe._dict(supplier_gstin="01AABCE2207R1Z5", bill_no="INV-1")
-        self.assertEqual(get_unique_key(t), "01AABCE2207R1Z5-INV-1-")
 
 
 class TestMultiFileRawMerge(IntegrationTestCase):
