@@ -54,12 +54,11 @@ class GSTR2b(GSTR):
 
     def handle_invalid_transactions(self):
         """
-        For GSTR2b, only filed transactions are reported. They may be removed from GSTR-2b later
-        if marked as pending / rejected from IMS Dashboard.
-
-        In such cases,
-        1) we need to clear the return_period_2b as this could change in future.
-        2) and delete the rejected transactions.
+        For GSTR2b, only filed transactions are reported. Inward supplies of this period that are
+        not in it (dropped from this 2B, or 2A transactions that never reached it):
+        1) downloaded from IMS: clear the return_period_2b, as this could change in future.
+        2) others: delete them, which unreconciles the linked purchase.
+        Transactions rejected from IMS Dashboard are deleted as well.
         """
         self.handle_invalid_ims_transactions()
         self.handle_invalid_2a_2b_transactions()
