@@ -168,8 +168,8 @@ class TestGSTR1BooksData(FrappeTestCase):
         for _ in range(11):
             create_invoice()
 
-        _class = GSTR1BooksData(filters=FILTERS)
-        data = _class.prepare_mapped_data()
+        books_data = GSTR1BooksData(filters=FILTERS)
+        data = books_data.prepare_mapped_data()
         self.assertDictEq(
             {
                 "rounding_difference": {
@@ -217,8 +217,8 @@ class TestGSTR1BooksData(FrappeTestCase):
         for _ in range(11):
             create_invoice()
 
-        _class = GSTR1BooksData(filters=FILTERS)
-        data = _class.prepare_mapped_data()
+        books_data = GSTR1BooksData(filters=FILTERS)
+        data = books_data.prepare_mapped_data()
         self.assertDictEq(
             {
                 "rounding_difference": {
@@ -274,8 +274,8 @@ class TestGSTR1BooksData(FrappeTestCase):
         for _ in range(11):
             create_invoice()
 
-        _class = GSTR1BooksData(filters=FILTERS)
-        data = _class.prepare_mapped_data()
+        books_data = GSTR1BooksData(filters=FILTERS)
+        data = books_data.prepare_mapped_data()
         self.assertDictEq(
             {
                 "rounding_difference": {

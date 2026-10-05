@@ -61,8 +61,8 @@ FIELDS = {
 
 
 def execute(filters=None):
-    _class = REPORT_MAP[filters.pop("report")](filters)
-    return _class.get_columns(), _class.get_data()
+    report = REPORT_MAP[filters.pop("report")](filters)
+    return report.get_columns(), report.get_data()
 
 
 class BaseAuditTrail:
