@@ -28,20 +28,6 @@ def to_period(value):
     return value and datetime.strptime(value, "%b-%y").strftime("%m%Y")
 
 
-def get_unique_key(transaction):
-    # supplier_gstin-bill_no-doc_type key matches existing inward supplies
-    supplier_gstin = transaction.get("supplier_gstin") or ""
-    bill_no = transaction.get("bill_no") or ""
-    doc_type = transaction.get("doc_type") or ""
-
-    key = f"{supplier_gstin}-{bill_no}-{doc_type}"
-
-    if transaction.get("classification") in ("ISD", "ISDA"):
-        key = f"{key}-{transaction.get('itc_availability') or ''}"
-
-    return key
-
-
 def add_original_details(row, document, keys):
     """Amendments carry the document they amend."""
     row.update(take(document, keys))
@@ -83,7 +69,7 @@ class GSTR:
         current_transaction = 0
 
         for transaction in transactions:
-            create_inward_supply(transaction)
+            inward_supply = create_inward_supply(transaction)
 
             current_transaction += 1
             frappe.publish_realtime(
@@ -95,8 +81,7 @@ class GSTR:
                 user=frappe.session.user,
             )
 
-            if transaction.get("unique_key") in self.existing_transaction:
-                self.existing_transaction.pop(transaction.get("unique_key"))
+            self.existing_transaction.pop(inward_supply.name, None)
 
         self.handle_missing_transactions()
         return total_transactions
@@ -130,8 +115,6 @@ class GSTR:
         if items:
             set_item_totals(transaction, items, TOTAL_FIELDS)
 
-        transaction["unique_key"] = get_unique_key(transaction)
-
         return transaction
 
     def get_supplier_details(self, supplier):
@@ -144,19 +127,12 @@ class GSTR:
         gst_is = frappe.qb.DocType("GST Inward Supply")
         transactions = (
             frappe.qb.from_(gst_is)
-            .select(
-                gst_is.name,
-                gst_is.supplier_gstin,
-                gst_is.bill_no,
-                gst_is.doc_type,
-                gst_is.classification,
-                gst_is.itc_availability,
-            )
+            .select(gst_is.name)
             .where(gst_is.classification == self.category)
             .where(self.get_existing_transaction_filter(gst_is))
-        ).run(as_dict=True)
+        ).run(pluck=True)
 
-        return {get_unique_key(transaction): transaction.get("name") for transaction in transactions}
+        return {name: name for name in transactions}
 
     def get_existing_transaction_filter(self, gst_is):
         raise NotImplementedError

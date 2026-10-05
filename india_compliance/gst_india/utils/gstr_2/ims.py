@@ -18,7 +18,6 @@ from india_compliance.gst_india.utils.gstr_2.gstr import (
     GST_CATEGORY,
     STATES,
     get_mapped_value,
-    get_unique_key,
 )
 from india_compliance.gst_returns.fields.ims import CLASSIFICATION_MAP
 from india_compliance.gst_returns.fields.ims import DocField as doc
@@ -63,10 +62,8 @@ class IMS:
         transactions = self.get_all_transactions(invoices)
 
         for transaction in transactions:
-            create_inward_supply(transaction)
-
-            if transaction.get("unique_key") in self.existing_transactions:
-                self.existing_transactions.pop(transaction.get("unique_key"))
+            inward_supply = create_inward_supply(transaction)
+            self.existing_transactions.pop(inward_supply.name, None)
 
         self.handle_missing_transactions()
 
@@ -100,8 +97,6 @@ class IMS:
             **self.convert_data_to_internal_format(invoice),
             **self.get_invoice_details(invoice),
         )
-
-        transaction["unique_key"] = get_unique_key(transaction)
 
         return transaction
 
@@ -224,12 +219,7 @@ class IMS:
         inward_supply = frappe.qb.DocType("GST Inward Supply")
         existing_transactions = (
             frappe.qb.from_(inward_supply)
-            .select(
-                inward_supply.name,
-                inward_supply.supplier_gstin,
-                inward_supply.bill_no,
-                inward_supply.doc_type,
-            )
+            .select(inward_supply.name)
             .where(inward_supply.is_downloaded_from_2b == 0)
             .where(inward_supply.is_downloaded_from_2a == 0)
             .where(inward_supply.is_downloaded_from_ims == 1)
@@ -237,10 +227,10 @@ class IMS:
             .where(inward_supply.classification == category)
             .where(inward_supply.doc_type == doc_type)
             .where(inward_supply.company_gstin == self.company_gstin)
-            .run(as_dict=True)
+            .run(pluck=True)
         )
 
-        return {get_unique_key(transaction): transaction.get("name") for transaction in existing_transactions}
+        return {name: name for name in existing_transactions}
 
     def handle_missing_transactions(self):
         if not self.existing_transactions:

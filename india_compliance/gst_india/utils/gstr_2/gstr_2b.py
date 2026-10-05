@@ -2,6 +2,9 @@ from typing import ClassVar
 
 import frappe
 
+from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
+    get_inward_supply_filters,
+)
 from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2.gstr import GSTR
 from india_compliance.gst_india.utils.gstr_2.sections import SECTIONS_2B
@@ -73,21 +76,7 @@ class GSTR2b(GSTR):
 
         # delete rejected transactions
         for transaction in rejected_transactions:
-            filters = {
-                "bill_no": transaction.bill_no,
-                "bill_date": transaction.bill_date,
-                "classification": transaction.classification,
-                "supplier_gstin": transaction.supplier_gstin,
-            }
-
-            if transaction.get("doc_type"):
-                filters["doc_type"] = transaction.doc_type
-
-            # eligible and ineligible parts of one ISD number are separate inward supplies
-            if transaction.classification in ("ISD", "ISDA"):
-                filters["itc_availability"] = transaction.get("itc_availability") or ("is", "not set")
-
-            name = frappe.db.get_value("GST Inward Supply", filters)
+            name = frappe.db.get_value("GST Inward Supply", get_inward_supply_filters(transaction))
             # delete doc allows passing only name
             if name:
                 frappe.delete_doc("GST Inward Supply", name, ignore_permissions=True)
