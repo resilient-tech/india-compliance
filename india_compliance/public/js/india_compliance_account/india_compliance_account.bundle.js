@@ -18,12 +18,17 @@ class IndiaComplianceAccountPage {
     }
 
     createRouter() {
-        const history = createWebHistory(
-            frappe.utils.generate_route({
-                type: "Page",
-                name: "india-compliance-account",
-            }),
-        );
+        const pathSegments = window.location.pathname.split("/");
+        const pageIndex = pathSegments.indexOf(this.pageName);
+        const base =
+            pageIndex === -1
+                ? frappe.utils.generate_route({
+                      type: "Page",
+                      name: "india-compliance-account",
+                  })
+                : pathSegments.slice(0, pageIndex + 1).join("/");
+
+        const history = createWebHistory(base);
 
         history.listen((to) => {
             if (frappe.get_route_str().startsWith(this.pageName)) return;
