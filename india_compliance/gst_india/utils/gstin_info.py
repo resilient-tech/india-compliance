@@ -34,6 +34,7 @@ GST_CATEGORIES = {
     "SEZ Developer": "SEZ",
     "United Nation Body": "UIN Holders",
     "Consulate or Embassy of Foreign Country": "UIN Holders",
+    "Non-Resident Online Services Provider and/or Non-Resident Online Money Gaming Supplier": "Overseas",
     "URP": "Unregistered",
 }
 
@@ -95,6 +96,8 @@ def _get_gstin_info(gstin, *, doc=None, throw_error=True):
     gstin_info = frappe._dict(
         gstin=response.gstin,
         business_name=titlecase(business_name or ""),
+        legal_name=response.lgnm or "",
+        trade_name=response.tradeNam or "",
         gst_category=GST_CATEGORIES.get(response.dty, ""),
         status=response.sts,
     )
@@ -248,6 +251,8 @@ def get_formatted_response_for_status(response):
     return frappe._dict(
         {
             "gstin": response.gstin,
+            "legal_name": response.lgnm or "",
+            "trade_name": response.tradeNam or "",
             "registration_date": parse_datetime(response.rgdt, day_first=True, throw=False),
             "cancelled_date": parse_datetime(response.cxdt, day_first=True, throw=False),
             "status": response.sts,

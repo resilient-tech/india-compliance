@@ -1,6 +1,8 @@
 frappe.provide("reconciliation");
 
 Object.assign(reconciliation, {
+    COPYABLE_FIELDS: { bill_no: "Bill No", bill_date: "Bill Date" },
+
     // checked rows of the open tab, as invoices. a summary row stands for many
     get_affected_rows(frm) {
         const _class = frm.reconciliation_tabs;
@@ -61,6 +63,85 @@ Object.assign(reconciliation, {
         new_data.push(...r);
         _class.refresh(new_data);
         reconciliation.after_successful_action(tab);
+    },
+
+    async copy_details(frm, selected_rows, fields) {
+        const _class = frm.reconciliation_tabs;
+        const tab = _class.tabs[frm.get_active_tab()?.df.fieldname];
+        if (!selected_rows) selected_rows = reconciliation.get_affected_rows(frm);
+
+        const rows = selected_rows.filter((row) => row.purchase_invoice_name && row.inward_supply_name);
+
+        if (!rows.length)
+            return frappe.show_alert({
+                message: __("Please select matched rows to copy"),
+                indicator: "red",
+            });
+
+        if (!fields?.length) {
+            fields = await reconciliation.prompt_copy_fields();
+            if (fields === null) return; // cancelled
+
+            if (!fields.length)
+                return frappe.show_alert({
+                    message: __("Please select at least one value to copy"),
+                    indicator: "orange",
+                });
+        }
+
+        const { message: copied_rows } = await frm._call("copy_details", { data: rows, fields });
+
+        if (!copied_rows) return; // nothing synced, server has said why
+
+        // drop the stale copies before pushing the refreshed ones back, else they double up
+        const copied_names = new Set(copied_rows.map((row) => row.inward_supply_name));
+        const new_data = _class.data.filter((row) => !copied_names.has(row.inward_supply_name));
+
+        new_data.push(...copied_rows);
+        _class.refresh(new_data);
+
+        reconciliation.after_successful_action(
+            tab,
+            __("{0} copied to {1} of {2} documents", [
+                fields.map((field) => __(reconciliation.COPYABLE_FIELDS[field])).join(", "),
+                copied_rows.length,
+                rows.length,
+            ]),
+        );
+    },
+
+    prompt_copy_fields() {
+        return new Promise((resolve) => {
+            const dialog = new frappe.ui.Dialog({
+                title: __("Copy Values from 2A/2B"),
+                fields: [
+                    {
+                        fieldtype: "HTML",
+                        options: `<p class="help-box small text-extra-muted">${__(
+                            "Copy the values reported in 2A/2B to your books",
+                        )}</p>`,
+                    },
+                    {
+                        fieldtype: "MultiCheck",
+                        fieldname: "fields",
+                        columns: 2,
+                        sort_options: false,
+                        options: Object.entries(reconciliation.COPYABLE_FIELDS).map(([value, label]) => ({
+                            value,
+                            label: __(label),
+                            checked: 1,
+                        })),
+                    },
+                ],
+                primary_action_label: __("Apply"),
+                primary_action(values) {
+                    resolve(values.fields);
+                    dialog.hide();
+                },
+            });
+            dialog.onhide = () => resolve(null);
+            dialog.show();
+        });
     },
 
     prompt_unlink_intent(count, skipped) {
@@ -183,10 +264,10 @@ Object.assign(reconciliation, {
         frappe.new_doc("Purchase Invoice");
     },
 
-    after_successful_action(tab) {
+    after_successful_action(tab, message) {
         if (tab) tab.datatable.clear_checked_items();
         frappe.show_alert({
-            message: "Action applied successfully",
+            message: message || __("Action applied successfully"),
             indicator: "green",
         });
     },

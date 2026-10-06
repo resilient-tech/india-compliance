@@ -42,10 +42,7 @@ E_WAYBILL_STOCK_ENTRY_PURPOSES = ("Material Transfer", "Material Issue", *SUBCON
 # Transporter fields that stay editable after submit until an e-Waybill is generated.
 TRANSPORTER_FIELDS = (
     "transporter",
-    "transporter_name",
     "gst_transporter_id",
-    "driver",
-    "driver_name",
     "lr_no",
     "lr_date",
     "vehicle_no",
@@ -93,6 +90,7 @@ EXPORT_TYPES = (
 
 TAXABLE_GST_TREATMENTS = ("Taxable", "Zero-Rated")
 IMPORT_GST_CATEGORIES = ("Overseas", "SEZ")
+ISD_GST_CATEGORY = "Input Service Distributor"
 
 
 STATE_NUMBERS = {
@@ -1451,8 +1449,8 @@ REGISTERED = re.compile(rf"{NORMAL}|{GOVT_DEPTID}")
 
 # Not allowed in GSTR1 B2B
 NRI_ID = r"^[0-9]{4}[A-Z]{3}[0-9]{5}[N][R][0-9A-Z]{1}$"
-OIDAR = r"^[9][9][0-9]{2}[A-Z]{3}[0-9]{5}[O][S][0-9A-Z]{1}$"
-OVERSEAS = re.compile(rf"{NRI_ID}|{OIDAR}")
+OIDAR = re.compile(r"^[9][9][0-9]{2}[A-Z]{3}[0-9]{5}[O][S][0-9A-Z]{1}$")
+OVERSEAS = re.compile(rf"{NRI_ID}|{OIDAR.pattern}")
 
 UNBODY = re.compile(r"^[0-9]{4}[A-Z]{3}[0-9]{5}[UO]{1}[N][A-Z0-9]{1}$")
 TDS = re.compile(r"^[0-9]{2}[A-Z]{4}[A-Z0-9]{1}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[D][0-9A-Z]$")

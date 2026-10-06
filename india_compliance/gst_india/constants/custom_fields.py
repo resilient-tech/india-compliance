@@ -518,6 +518,13 @@ CUSTOM_FIELDS = {
             "insert_after": "default_customs_expense_account",
         },
         {
+            "fieldname": "default_isd_provisional_account",
+            "label": "Default ISD Provisional Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "insert_after": "default_gst_expense_account",
+        },
+        {
             "fieldname": "print_options",
             "label": "Print Options",
             "fieldtype": "Tab Break",
@@ -1147,6 +1154,17 @@ CUSTOM_FIELDS = {
             "allow_on_submit": 1,
         },
         {
+            "fieldname": "isd_credit_distributed_percent",
+            "label": "ISD Credit Distributed (%)",
+            "fieldtype": "Float",
+            "insert_after": "itc_claim_period",
+            "print_hide": 1,
+            "read_only": 1,
+            "no_copy": 1,
+            "allow_on_submit": 1,
+            "depends_on": "eval:doc.is_isd_applicable",
+        },
+        {
             "fieldname": "is_boe_applicable",
             "label": "Is BOE Applicable",
             "fieldtype": "Check",
@@ -1155,6 +1173,16 @@ CUSTOM_FIELDS = {
             "default": 0,
             "read_only": 1,
             "depends_on": 'eval:doc.itc_classification === "Import Of Goods"',
+        },
+        {
+            "fieldname": "is_isd_applicable",
+            "label": "Is ISD Applicable",
+            "fieldtype": "Check",
+            "insert_after": "is_boe_applicable",
+            "print_hide": 1,
+            "default": 0,
+            "read_only": 1,
+            "no_copy": 1,
         },
     ],
     "Purchase Invoice Item": [
@@ -1615,7 +1643,7 @@ E_WAYBILL_DN_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "mode_of_transport",
@@ -1628,7 +1656,7 @@ E_WAYBILL_DN_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "gst_vehicle_type",
@@ -1642,7 +1670,7 @@ E_WAYBILL_DN_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill || doc.mode_of_transport == 'Ship'",
+        "read_only_depends_on": "",
     },
 ]
 
@@ -1665,7 +1693,7 @@ E_WAYBILL_INV_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "driver",
@@ -1676,7 +1704,7 @@ E_WAYBILL_INV_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "lr_no",
@@ -1688,7 +1716,7 @@ E_WAYBILL_INV_FIELDS = [
         "translatable": 0,
         "length": 30,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "vehicle_no",
@@ -1700,7 +1728,7 @@ E_WAYBILL_INV_FIELDS = [
         "translatable": 0,
         "length": 15,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "transporter_col_break",
@@ -1719,7 +1747,7 @@ E_WAYBILL_INV_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "driver_name",
@@ -1732,7 +1760,7 @@ E_WAYBILL_INV_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "lr_date",
@@ -1743,7 +1771,7 @@ E_WAYBILL_INV_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     *E_WAYBILL_DN_FIELDS,
 ]
@@ -1758,7 +1786,7 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "driver",
@@ -1769,7 +1797,7 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "vehicle_no",
@@ -1781,7 +1809,7 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
         "translatable": 0,
         "length": 15,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "driver_name",
@@ -1794,7 +1822,7 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     *E_WAYBILL_DN_FIELDS,
 ]
@@ -1818,7 +1846,7 @@ E_WAYBILL_TRANSPORTER_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "lr_no",
@@ -1830,7 +1858,7 @@ E_WAYBILL_TRANSPORTER_FIELDS = [
         "translatable": 0,
         "length": 30,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "vehicle_no",
@@ -1842,7 +1870,7 @@ E_WAYBILL_TRANSPORTER_FIELDS = [
         "translatable": 0,
         "length": 15,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "transporter_col_break",
@@ -1861,7 +1889,7 @@ E_WAYBILL_TRANSPORTER_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "lr_date",
@@ -1872,7 +1900,7 @@ E_WAYBILL_TRANSPORTER_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     *E_WAYBILL_DN_FIELDS,
 ]
@@ -1887,7 +1915,7 @@ E_WAYBILL_SCR_FIELDS = [
         "print_hide": 1,
         "no_copy": 1,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "gst_transporter_id",
@@ -1900,7 +1928,7 @@ E_WAYBILL_SCR_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "vehicle_no",
@@ -1912,7 +1940,7 @@ E_WAYBILL_SCR_FIELDS = [
         "translatable": 0,
         "length": 15,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "distance",
@@ -1936,7 +1964,7 @@ E_WAYBILL_SCR_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill",
+        "read_only_depends_on": "",
     },
     {
         "fieldname": "gst_vehicle_type",
@@ -1950,7 +1978,7 @@ E_WAYBILL_SCR_FIELDS = [
         "no_copy": 1,
         "translatable": 0,
         "allow_on_submit": 1,
-        "read_only_depends_on": "eval: doc.ewaybill || doc.mode_of_transport == 'Ship'",
+        "read_only_depends_on": "",
     },
 ]
 

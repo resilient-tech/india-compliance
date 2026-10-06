@@ -319,7 +319,9 @@ def store_raw_return_data(gstin, return_type, return_period, json_data, overwrit
     """Keep the portal payload (gzipped) in the period's log `raw_gov_data` field."""
     name = f"{return_type}-{return_period}-{gstin}"
     with filelock(frappe.scrub(f"raw_return_{name}")):
-        get_gst_return_log(name).update_json_for(RAW_FIELD, json_data, overwrite=overwrite)
+        log = get_gst_return_log(name)
+        log.update_json_for(RAW_FIELD, json_data, overwrite=overwrite)
+        log.db_set("section_summary", None)
 
 
 def get_raw_return_data(gstin, return_type, return_period):

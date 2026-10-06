@@ -38,7 +38,7 @@ class GSTR2b(GSTR):
         return details
 
     def get_items(self, document):
-        return [take(line, ITEM_KEYS) for line in document.get(raw2b.ITEMS, [])]
+        return [take(line, ITEM_KEYS) for line in document.get(raw2b.ITEMS) or []]
 
     def get_transaction(self, details, items=None):
         return super().get_transaction(details, [] if items is None else items)
@@ -80,7 +80,17 @@ class GSTR2b(GSTR):
                 "supplier_gstin": transaction.supplier_gstin,
             }
 
-            frappe.delete_doc("GST Inward Supply", filters, ignore_permissions=True)
+            if transaction.get("doc_type"):
+                filters["doc_type"] = transaction.doc_type
+
+            # eligible and ineligible parts of one ISD number are separate inward supplies
+            if transaction.classification in ("ISD", "ISDA"):
+                filters["itc_availability"] = transaction.get("itc_availability") or ("is", "not set")
+
+            name = frappe.db.get_value("GST Inward Supply", filters)
+            # delete doc allows passing only name
+            if name:
+                frappe.delete_doc("GST Inward Supply", name, ignore_permissions=True)
 
     def get_download_details(self):
         return {

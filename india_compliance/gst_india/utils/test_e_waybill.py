@@ -237,6 +237,10 @@ class TestEWaybill(IntegrationTestCase):
             ),
         )
 
+        version = frappe.get_last_doc("Version", {"ref_doctype": "Sales Invoice", "docname": si.name})
+        changed = {field: new for field, _old, new in version.get_data()["changed"]}
+        self.assertEqual(changed.get("gst_transporter_id"), "05AAACG2140A1ZL")
+
     @change_settings("GST Settings", {"fetch_e_waybill_data": 1})
     @responses.activate
     def test_fetch_e_waybill_data(self):

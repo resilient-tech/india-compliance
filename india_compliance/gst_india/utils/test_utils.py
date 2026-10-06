@@ -9,7 +9,13 @@ from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import getdate
 
 from india_compliance.gst_india.constants import SHIP_TO_GSTIN_APPLICABLE_DATE, TIMEZONE
-from india_compliance.gst_india.utils import is_ship_to_gstin_applicable, validate_pincode
+from india_compliance.gst_india.utils import (
+    get_pan_from_gstin,
+    guess_gst_category,
+    is_oidar_gstin,
+    is_ship_to_gstin_applicable,
+    validate_pincode,
+)
 
 
 class TestUtils(IntegrationTestCase):
@@ -67,6 +73,32 @@ class TestUtils(IntegrationTestCase):
 
                 with time_machine.travel(rollover, tick=False):
                     self.assertTrue(is_ship_to_gstin_applicable(), time_zone)
+
+    def test_is_oidar_gstin(self):
+        self.assertTrue(is_oidar_gstin("9917SGP29001OST"))
+
+        for gstin in (
+            "1234ABC56789NRM",  # Non-Resident Taxable Person
+            "24AAUPV7468F1ZW",  # Registered Regular
+            "0717UNO00157UNO",  # UIN Holders
+            "29AABCF8078M1C8",  # Tax Collector
+        ):
+            self.assertFalse(is_oidar_gstin(gstin), gstin)
+
+    def test_guess_gst_category_for_oidar(self):
+        for country in (None, "India", "Singapore"):
+            self.assertEqual(guess_gst_category("9917SGP29001OST", country), "Overseas", country)
+
+    def test_get_pan_from_gstin(self):
+        self.assertEqual(get_pan_from_gstin("24AAUPV7468F1ZW"), "AAUPV7468F")
+
+        for gstin in (
+            "9917SGP29001OST",  # OIDAR
+            "1234ABC56789NRM",  # Non-Resident Taxable Person
+            "0717UNO00157UNO",  # UIN Holders
+            "06DELI09652G1DA",  # Tax Deductor
+        ):
+            self.assertEqual(get_pan_from_gstin(gstin), "", gstin)
 
     def test_validate_pincode(self):
         def make_address(state, pincode):

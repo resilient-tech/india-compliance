@@ -14,7 +14,7 @@ from erpnext.stock.get_item_details import purchase_doctypes
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.database.utils import commit_after_response
-from frappe.desk.form.load import run_onload
+from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.query_builder.functions import Length
 from frappe.utils import (
     add_months,
@@ -43,6 +43,8 @@ from india_compliance.gst_india.constants import (
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
+    ISD_GST_CATEGORY,
+    OIDAR,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
@@ -176,6 +178,7 @@ def send_updated_doc(doc):
 
     doc.apply_fieldlevel_read_permissions()
     frappe.response.docs.append(doc)
+    get_docinfo(doc)
 
 
 def publish_doc_update(doc):
@@ -185,9 +188,10 @@ def publish_doc_update(doc):
             run_onload(doc)  # the form needs onload info too
 
         doc.apply_fieldlevel_read_permissions()
+        get_docinfo(doc)
         frappe.publish_realtime(
             "ic_doc_sync",
-            doc.as_dict(),
+            {"docs": doc.as_dict(), "docinfo": frappe.response["docinfo"]},
             user=frappe.session.user,
             after_commit=True,
         )
@@ -221,7 +225,7 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
     }
 
     if exclude_isd:
-        filters.update({"gst_category": ["!=", "Input Service Distributor"]})
+        filters.update({"gst_category": ["!=", ISD_GST_CATEGORY]})
 
     gstin_list = frappe.get_all(
         "Address",
@@ -230,9 +234,15 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
         distinct=True,
     )
 
-    default_gstin = frappe.db.get_value(party_type, party, "gstin")
-    if default_gstin and default_gstin not in gstin_list:
-        gstin_list.insert(0, default_gstin)
+    default_gstin, default_gst_category = frappe.db.get_value(party_type, party, ("gstin", "gst_category"))
+    if not default_gstin or default_gstin in gstin_list:
+        return gstin_list
+
+    # don't add default gstin to the list if it is ISD and exclude_isd is True
+    if exclude_isd and default_gst_category == ISD_GST_CATEGORY:
+        return gstin_list
+
+    gstin_list.insert(0, default_gstin)
 
     return gstin_list
 
@@ -264,14 +274,14 @@ def get_party_for_gstin(gstin: str, party_type: str = "Supplier"):
         return party[0][0]
 
 
-def validate_company_access(company, doctype="GST Inward Supply"):
+def validate_company_access(company, doctype="GST Inward Supply", perm="read"):
     """Throw unless the user may read doctype data for company."""
     if not company:
         return
 
     reference = frappe.new_doc(doctype)
     reference.company = company
-    if not frappe.has_permission(doctype, "read", doc=reference):
+    if not frappe.has_permission(doctype, perm, doc=reference):
         frappe.throw(
             _("You are not permitted to access data for Company {0}.").format(company),
             frappe.PermissionError,
@@ -420,6 +430,14 @@ def is_valid_pan(pan):
     return PAN_NUMBER.match(pan)
 
 
+def is_oidar_gstin(gstin):
+    return OIDAR.match(gstin)
+
+
+def get_pan_from_gstin(gstin):
+    return pan if is_valid_pan(pan := gstin[2:12]) else ""
+
+
 def validate_pincode(address):
     """
     Validate Pincode with following checks:
@@ -498,6 +516,9 @@ def guess_gst_category(gstin: str | None, country: str | None, gst_category: str
 
     if GSTIN_FORMATS["UIN Holders"].match(gstin):
         return "UIN Holders"
+
+    if is_oidar_gstin(gstin):
+        return "Overseas"
 
     if GSTIN_FORMATS["Overseas"].match(gstin):
         return "Overseas"
@@ -1089,19 +1110,23 @@ def get_timespan_date_range(timespan: str, company: str | None = None) -> tuple 
 
 def merge_dicts(d1: dict, d2: dict) -> dict:
     """
+    Fold d2 into d1: dicts recurse, lists join, numbers add, a null never erases, anything else d2 wins.
+
     Sample Input:
     -------------
     d1 = {
         'key1': 'value1',
         'key2': {'nested': 'value'},
         'key3': ['value1'],
-        'key4': 'value4'
+        'key4': 'value4',
+        'igst': 5
     }
     d2 = {
         'key1': 'value2',
         'key2': {'key': 'value3'},
         'key3': ['value2'],
-        'key5': 'value5'
+        'key5': 'value5',
+        'igst': 3
     }
 
     Sample Output:
@@ -1111,7 +1136,8 @@ def merge_dicts(d1: dict, d2: dict) -> dict:
         'key2': {'nested': 'value', 'key': 'value3'},
         'key3': ['value1', 'value2'],
         'key4': 'value4',
-        'key5': 'value5'
+        'key5': 'value5',
+        'igst': 8
     }
     """
     for key in set(d1.keys()) | set(d2.keys()):
@@ -1121,6 +1147,12 @@ def merge_dicts(d1: dict, d2: dict) -> dict:
 
             elif isinstance(d1[key], list) and isinstance(d2[key], list):
                 d1[key] = d1[key] + d2[key]
+
+            elif isinstance(d1[key], int | float) and isinstance(d2[key], int | float):
+                d1[key] = d1[key] + d2[key]
+
+            elif d2[key] is None:
+                continue
 
             else:
                 d1[key] = copy.deepcopy(d2[key])
@@ -1216,6 +1248,7 @@ def handle_server_errors(settings, doc, document_type, error):
         error_message += " " + _("Please try again after some time.")
 
     doc.db_set({document_status_field: document_status})
+    doc.save_version()
 
     notify_user(error_message, title=error_message_title.get(type(error)), indicator="yellow", doc=doc)
 
@@ -1346,7 +1379,7 @@ def is_same_gstin_allowed(doc):
     return bool(is_outward_stock_entry(doc)) or doc.get("doctype") == "Asset Movement"
 
 
-def create_notification(message_content, document_type, document_name=None, request_id=None):
+def create_notification(message_content, document_type, document_name=None, request_id=None, link=None):
     # request_id shows failure response
     if request_id and (doc_name := frappe.db.get_value("Integration Request", {"request_id": request_id})):
         document_type = "Integration Request"
@@ -1361,6 +1394,7 @@ def create_notification(message_content, document_type, document_name=None, requ
             "document_name": document_name or document_type,
             "subject": message_content.get("subject"),
             "email_content": message_content.get("body"),
+            "link": link,
         }
     )
     notification.insert(ignore_permissions=True)
@@ -1552,6 +1586,7 @@ def _rollback_and_set_status(doc, fieldname, status):
     # if response is pending, other viewers refetch on doc_update;
     # else the pushed doc (publish_doc_update) notifies them
     doc.db_set(fieldname, status, notify=is_response_pending())
+    doc.save_version()
     commit()
 
 

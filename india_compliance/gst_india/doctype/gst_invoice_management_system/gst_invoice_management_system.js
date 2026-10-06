@@ -641,6 +641,11 @@ class IMSAction {
                 () => reconciliation.unlink_documents(this.frm),
                 __("Actions"),
             );
+            this.frm.add_custom_button(
+                __("Copy Data"),
+                () => reconciliation.copy_details(this.frm),
+                __("Actions"),
+            );
             this.frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
 
@@ -845,7 +850,10 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
         if (this.row.is_pending_action_allowed && this.row.ims_action != "Pending") actions.push("Pending");
 
         if (this.row.match_status == "Only in 2A/2B") actions.push("Create", "Link");
-        else actions.push("Unlink");
+        else {
+            actions.push("Unlink");
+            actions.push("Copy");
+        }
 
         return actions;
     }
@@ -868,18 +876,12 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
                 this.frm.doc.company_gstin,
                 DOCTYPE,
             );
+        } else if (action == "Copy") {
+            if (!this.copy_fields.length) return;
+            return reconciliation.copy_details(this.frm, [this.row], this.copy_fields);
         } else {
             apply_action(this.frm, ACTION_MAP[action], [this.row.inward_supply_name]);
         }
-    }
-
-    _get_button_css(action) {
-        if (action == "No Action") return "btn-secondary";
-        if (action == "Accept") return "btn-success not-grey";
-        if (action == "Reject") return "btn-danger not-grey";
-        if (action == "Pending") return "btn-warning not-grey";
-        if (action == "Create") return "btn-primary not-grey";
-        if (action == "Link") return "btn-primary not-grey link-document-btn disabled";
     }
 
     _set_missing_doctype() {

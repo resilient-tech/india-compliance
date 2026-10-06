@@ -461,7 +461,14 @@ company_data_to_be_ignored = ["GST Account", "GST Credential"]
 # Links to these doctypes will be ignored when deleting a document
 ignore_links_on_delete = ["e-Waybill Log", "e-Invoice Log"]
 
-accounting_dimension_doctypes = ["Bill of Entry", "Bill of Entry Item"]
+accounting_dimension_doctypes = [
+    "Bill of Entry",
+    "Bill of Entry Item",
+    "ISD Distribution Invoice",
+    "ISD Recipient Invoice",
+    "ISD Source Item",
+    "ISD Tax Item",
+]
 
 # DocTypes for which Audit Trail must be maintained
 audit_trail_doctypes = [
@@ -494,6 +501,8 @@ audit_trail_doctypes = [
     "Asset Value Adjustment",
     # India Compliance DocTypes that make GL Entries
     "Bill of Entry",
+    "ISD Distribution Invoice",
+    "ISD Recipient Invoice",
 ]
 
 scheduler_events = {
@@ -512,6 +521,9 @@ scheduler_events = {
             "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_reconcile",
         ],
         "0 1 * * *": ["india_compliance.gst_india.utils.e_waybill.extend_scheduled_e_waybills"],
+        "0 3 * * *": [
+            "india_compliance.gst_india.doctype.gst_return_export.gst_return_export.delete_export_files",
+        ],
     }
 }
 
