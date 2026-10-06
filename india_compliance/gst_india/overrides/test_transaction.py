@@ -1905,7 +1905,7 @@ class TestSpecificTransactions(IntegrationTestCase):
 
     def test_on_margin_resolver_inclusive_deemed_margin(self):
         calc = frappe._dict(doc=frappe._dict(conversion_rate=1))
-        tax = frappe._dict(charge_type="On Margin", rate=18)
+        tax = frappe._dict(charge_type="On Margin", rate=18, included_in_print_rate=1)
 
         # margin 50000 (300000 - 250000) inclusive of 18% -> deemed = 50000*100/118
         item = frappe._dict(amount=300000, gst_purchase_price=250000, qty=1)
@@ -1926,7 +1926,9 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertAlmostEqual(item._deemed_taxable_value, 120 * 100 / 118 * 80, places=4)
 
         # Margin resolver has no flag -> reported value is the resolved (deemed margin) base.
-        margin_tax = frappe._dict(gst_tax_type="igst", charge_type="On Margin", rate=18)
+        margin_tax = frappe._dict(
+            gst_tax_type="igst", charge_type="On Margin", rate=18, included_in_print_rate=1
+        )
         margin_item = frappe._dict(amount=300000, gst_purchase_price=250000, qty=1)
         margin_doc = frappe._dict(conversion_rate=1, taxes=[margin_tax])
         self.assertAlmostEqual(

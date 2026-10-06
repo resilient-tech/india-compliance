@@ -34,14 +34,15 @@ erpnext.taxable_base_resolvers["On MRP"] = (calc, item, tax) => {
     return deemed;
 };
 
-// Margin scheme (Rule 32(5)), GST inclusive in margin (selling - cost).
-// When returning qty < 0, then negative margin is allowed.
+// Margin scheme (Rule 32(5)): margin (selling - cost); Rule 35 takes GST out when inclusive.
 erpnext.taxable_base_resolvers["On Margin"] = (calc, item, tax) => {
-    const rate = _inclusive_rate(calc, item, tax);
     const cost = flt(item.gst_purchase_price) * flt(item.qty);
 
     let margin = flt(item.amount) - cost;
     if (Math.abs(flt(item.amount)) < Math.abs(cost)) margin = 0;
 
+    if (!tax.included_in_print_rate) return margin;
+
+    const rate = _inclusive_rate(calc, item, tax);
     return rate ? (margin * 100) / (100 + rate) : margin;
 };

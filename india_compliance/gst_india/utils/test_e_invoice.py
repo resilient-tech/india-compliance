@@ -807,6 +807,28 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         total_item_val = sum(i["TotItemVal"] for i in request_data["ItemList"])
         self.assertEqual(total_item_val + val["OthChrg"], val["TotInvVal"])
 
+        si = create_sales_invoice(
+            rate=300,
+            is_in_state=True,
+            company_address="_Test Indian Registered Company-Billing",
+            do_not_save=True,
+        )
+        si.items[0].gst_purchase_price = 182
+        si.items[0].allow_zero_valuation_rate = 1
+        for tax in si.taxes:
+            tax.charge_type = "On Margin"
+        si.insert()
+
+        request_data = EInvoiceData(si).get_data()
+        item = request_data["ItemList"][0]
+        val = request_data["ValDtls"]
+
+        self.assertEqual(item["AssAmt"], 118)
+        self.assertEqual(item["CgstAmt"], 10.62)
+        self.assertEqual(item["SgstAmt"], 10.62)
+        self.assertEqual(val["OthChrg"], 182)
+        self.assertEqual(si.grand_total, 321.24)
+
     def test_request_data_for_margin_scheme_return(self):
         """Margin scheme credit note (qty -ve): the margin is only zeroed out for a sale, so
         the return mirrors the sale it reverses — the same deemed margin (100) and the same

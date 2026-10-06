@@ -80,18 +80,20 @@ def on_mrp(calc, item, tax):
 
 
 def on_margin(calc, item, tax):
-    """Second-hand margin scheme, Rule 32(5), GST inclusive in margin. Only the margin
-    (selling - cost) is taxable; deemed = margin*100/(100+rate), reported as taxable value
-    (tax == rate*taxable holds). Negative margin -> 0 (no GST).
-
-    When returning qty < 0, then negative margin is allowed
+    """Second-hand margin scheme, Rule 32(5). Only the margin (selling - cost) is taxable,
+    reported as taxable value (tax == rate*taxable holds). When the tax row is inclusive,
+    Rule 35 takes the GST out: deemed = margin*100/(100+rate). Selling below cost -> 0
+    (no GST), on a sale or its return.
 
     Cost from the user-entered `gst_purchase_price`; no fallback.
     """
-    rate = _inclusive_rate(calc.doc, item, tax)
     cost = flt(item.get("gst_purchase_price")) * flt(item.qty)
     margin = flt(item.amount) - cost
     if abs(flt(item.amount)) < abs(cost):
         margin = 0
 
+    if not tax.get("included_in_print_rate"):
+        return margin
+
+    rate = _inclusive_rate(calc.doc, item, tax)
     return margin * 100 / (100 + rate) if rate else margin
