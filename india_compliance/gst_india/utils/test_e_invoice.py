@@ -737,9 +737,6 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         self.assertEqual(111, request_data["ValDtls"]["TotInvVal"])
 
     def test_request_data_for_rsp_on_mrp(self):
-        """Tobacco RSP ("On MRP"): tax is computed on the RSP-deemed value, but AssAmt is the
-        net sale value (not the RSP), with no other charges. RSP 118 inclusive of 18% (9+9)
-        on a net sale of 90 -> deemed 100, CGST/SGST 9 each, AssAmt 90, TotItemVal 108."""
         si = create_sales_invoice(
             rate=90,
             is_in_state=True,
@@ -770,11 +767,6 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         self.assertEqual(total_item_val + val["OthChrg"], val["TotInvVal"])
 
     def test_request_data_for_margin_scheme(self):
-        """Margin scheme ("On Margin"), GST inclusive in the margin: only the margin is
-        taxable, the purchase cost surfaces as document-level OthChrg via the existing plug
-        (grand_total - taxable - tax), so taxable + tax < invoice value. Sale 300, cost 182
-        -> margin 118 incl 18% -> deemed 100, CGST/SGST 9 each. Item AssAmt 100, OthChrg 0,
-        TotItemVal 118; doc OthChrg 182, TotInvVal 300."""
         si = create_sales_invoice(
             rate=300,
             is_in_state=True,
@@ -830,9 +822,6 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         self.assertEqual(si.grand_total, 321.24)
 
     def test_request_data_for_margin_scheme_return(self):
-        """Margin scheme credit note (qty -ve): the margin is only zeroed out for a sale, so
-        the return mirrors the sale it reverses — the same deemed margin (100) and the same
-        CGST/SGST of 9 each, now as a credit. The cost still rides doc-level OthChrg."""
         si = create_sales_invoice(
             rate=300,
             is_in_state=True,
@@ -854,7 +843,6 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
         item = request_data["ItemList"][0]
         val = request_data["ValDtls"]
 
-        # the sale charged 9 + 9 on a deemed margin of 100 — the credit note reverses it
         self.assertEqual(cn.items[0].cgst_amount, -9)
         self.assertEqual(cn.items[0].sgst_amount, -9)
         self.assertEqual(cn.items[0].taxable_value, -100)
@@ -872,9 +860,6 @@ class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
 
     @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Taxable Values"})
     def test_margin_scheme_not_folded_by_nil_as_taxable(self):
-        """The 'Generate with Taxable Values' option folds nil/exempt supplies into taxable.
-        A margin line's cost rides the document-level OthChrg (not item non_taxable), so the
-        fold has nothing to grab — AssVal stays the margin (100), not 100 + 182."""
         si = create_sales_invoice(
             rate=300,
             is_in_state=True,

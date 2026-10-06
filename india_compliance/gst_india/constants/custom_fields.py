@@ -1556,7 +1556,7 @@ PURCHASE_REVERSE_CHARGE_FIELDS = {
     "Supplier Quotation": {**reverse_charge_field, "insert_after": "has_unit_price_items"},
 }
 
-# User-entered (company currency), no fallback. Hidden until the GST Setting enables it.
+# no fallback: a blank value means 0
 SALES_ITEM_DOCTYPES = (
     "Quotation Item",
     "Sales Order Item",
