@@ -2080,6 +2080,13 @@ class TestSpecificTransactions(IntegrationTestCase):
         # inclusive: the printed price still holds
         self.assertAlmostEqual(doc.grand_total, 300, places=2)
 
+        doc = self._margin_scheme_invoice()
+        doc.items[0].rate = 299.99
+        doc.insert()
+
+        item = doc.items[0]
+        self.assertEqual(item.taxable_value, flt(117.99 * 100 / 118, item.precision("taxable_value")))
+
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
         dn = create_transaction(doctype="Delivery Note", vehicle_no="GJ01AA1111")

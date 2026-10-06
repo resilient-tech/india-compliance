@@ -124,7 +124,9 @@ def update_taxable_values(doc):
         has_no_qty_value = True
 
     for item in doc.items:
-        item.taxable_value = get_item_taxable_value(doc, item, item.base_net_amount)
+        item.taxable_value = flt(
+            get_item_taxable_value(doc, item, item.base_net_amount), item.precision("taxable_value")
+        )
 
         if not total_charges:
             continue
