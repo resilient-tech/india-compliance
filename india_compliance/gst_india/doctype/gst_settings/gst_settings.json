@@ -262,14 +262,14 @@
   },
   {
    "default": "0",
-   "description": "Adds the 'On MRP' charge type for RSP-based valuation (e.g. tobacco, Rule 31D). Enter the Retail Sale Price (MRP) per item row.",
+   "description": "Adds the 'On MRP' charge type for RSP-based valuation (e.g. tobacco, Rule 31D). Enter the Retail Sale Price (MRP) in company currency per item row.",
    "fieldname": "enable_taxes_on_mrp",
    "fieldtype": "Check",
    "label": "Enable Taxes on MRP"
   },
   {
    "default": "0",
-   "description": "Adds the 'On Margin' charge type for the margin scheme (Rule 32(5)). Enter the Purchase Price per item row.",
+   "description": "Adds the 'On Margin' charge type for the margin scheme (Rule 32(5)). Enter the Purchase Price in company currency per item row.",
    "fieldname": "enable_margin_scheme",
    "fieldtype": "Check",
    "label": "Enable Margin Scheme"
