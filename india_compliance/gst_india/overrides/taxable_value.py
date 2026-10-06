@@ -91,7 +91,7 @@ def on_margin(calc, item, tax):
     rate = _inclusive_rate(calc.doc, item, tax)
     cost = flt(item.get("gst_purchase_price")) * flt(item.qty)
     margin = flt(item.amount) - cost
-    if margin < 0 and item.qty > 0:
+    if abs(flt(item.amount)) < abs(cost):
         margin = 0
 
     return margin * 100 / (100 + rate) if rate else margin

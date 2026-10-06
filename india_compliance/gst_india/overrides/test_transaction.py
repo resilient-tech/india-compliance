@@ -2002,9 +2002,8 @@ class TestSpecificTransactions(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0, "enable_margin_scheme": 1})
     def test_margin_scheme_return_reverses_gst(self):
-        """A credit note must reverse the GST the sale charged. The margin is only zeroed out
-        for a sale (qty > 0), so a return keeps its negative margin instead of reading as a
-        loss and dropping the reversal."""
+        """A credit note must reverse the GST the sale charged: a profitable sale's return keeps
+        its negative margin, and a loss-making sale's return stays nil like the sale."""
         doc = self._margin_scheme_invoice()
         doc.insert()
         doc.submit()
@@ -2019,6 +2018,20 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertEqual(return_doc.items[0].taxable_value, -100)
         self.assertEqual(return_doc.items[0].cgst_amount, -9)
         self.assertEqual(return_doc.items[0].sgst_amount, -9)
+
+        loss_doc = self._margin_scheme_invoice()
+        loss_doc.items[0].rate = 100
+        loss_doc.items[0].gst_purchase_price = 250
+        loss_doc.insert()
+        loss_doc.submit()
+
+        loss_return = make_return_doc("Sales Invoice", loss_doc.name)
+        loss_return.insert()
+
+        for item in (loss_doc.items[0], loss_return.items[0]):
+            self.assertEqual(item.taxable_value, 0)
+            self.assertEqual(item.cgst_amount, 0)
+            self.assertEqual(item.sgst_amount, 0)
 
     @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0, "enable_taxes_on_mrp": 1})
     def test_resolver_uses_item_tax_template_rate(self):

@@ -41,7 +41,7 @@ erpnext.taxable_base_resolvers["On Margin"] = (calc, item, tax) => {
     const cost = flt(item.gst_purchase_price) * flt(item.qty);
 
     let margin = flt(item.amount) - cost;
-    if (margin < 0 && item.qty > 0) margin = 0;
+    if (Math.abs(flt(item.amount)) < Math.abs(cost)) margin = 0;
 
     return rate ? (margin * 100) / (100 + rate) : margin;
 };
