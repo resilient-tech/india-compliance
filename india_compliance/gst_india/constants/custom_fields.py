@@ -1556,7 +1556,7 @@ PURCHASE_REVERSE_CHARGE_FIELDS = {
     "Supplier Quotation": {**reverse_charge_field, "insert_after": "has_unit_price_items"},
 }
 
-# User-entered (transaction currency), no fallback. Hidden until the GST Setting enables it.
+# User-entered (company currency), no fallback. Hidden until the GST Setting enables it.
 SALES_ITEM_DOCTYPES = (
     "Quotation Item",
     "Sales Order Item",
@@ -1570,7 +1570,7 @@ RSP_FIELDS = {
         "fieldname": "gst_retail_sale_price",
         "label": "Retail Sale Price (MRP)",
         "fieldtype": "Currency",
-        "options": "currency",
+        "options": "Company:company:default_currency",
         "insert_after": "price_list_rate",
         "hidden": 1,
         "print_hide": 1,
@@ -1583,7 +1583,7 @@ MARGIN_FIELDS = {
         "fieldname": "gst_purchase_price",
         "label": "Purchase Price",
         "fieldtype": "Currency",
-        "options": "currency",
+        "options": "Company:company:default_currency",
         "insert_after": "gst_retail_sale_price",
         "hidden": 1,
         "print_hide": 1,

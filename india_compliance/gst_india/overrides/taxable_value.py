@@ -67,14 +67,15 @@ def on_mrp(calc, item, tax):
     assessable = RSP*100/(100+rate). Tax adds on top of the net sale value, which is what's
     reported — so flag report-as-net and hand validation the deemed base.
 
-    RSP from the user-entered `gst_retail_sale_price`; no fallback.
+    RSP from the user-entered `gst_retail_sale_price` (company currency); no fallback.
     """
+    conversion_rate = flt(calc.doc.get("conversion_rate")) or 1
     rate = _inclusive_rate(calc.doc, item, tax)
-    rsp = flt(item.get("gst_retail_sale_price")) * flt(item.qty)
+    rsp = flt(item.get("gst_retail_sale_price")) * flt(item.qty) / conversion_rate
     deemed = rsp * 100 / (100 + rate) if rate else rsp
 
     item._dont_update_taxable_value = True
-    item._deemed_taxable_value = deemed * (flt(calc.doc.get("conversion_rate")) or 1)
+    item._deemed_taxable_value = deemed * conversion_rate
 
     return deemed
 
@@ -85,9 +86,10 @@ def on_margin(calc, item, tax):
     Rule 35 takes the GST out: deemed = margin*100/(100+rate). Selling below cost -> 0
     (no GST), on a sale or its return.
 
-    Cost from the user-entered `gst_purchase_price`; no fallback.
+    Cost from the user-entered `gst_purchase_price` (company currency); no fallback.
     """
-    cost = flt(item.get("gst_purchase_price")) * flt(item.qty)
+    conversion_rate = flt(calc.doc.get("conversion_rate")) or 1
+    cost = flt(item.get("gst_purchase_price")) * flt(item.qty) / conversion_rate
     margin = flt(item.amount) - cost
     if abs(flt(item.amount)) < abs(cost):
         margin = 0

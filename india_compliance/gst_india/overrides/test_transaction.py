@@ -1866,7 +1866,7 @@ class TestSpecificTransactions(IntegrationTestCase):
             rate=100,
             do_not_save=True,
         )
-        doc.items[0].gst_retail_sale_price = 120
+        doc.items[0].gst_retail_sale_price = 9600
         for tax in doc.taxes:
             tax.charge_type = "On MRP"
 
@@ -1875,7 +1875,7 @@ class TestSpecificTransactions(IntegrationTestCase):
         item = doc.items[0]
         self.assertEqual(flt(doc.conversion_rate), 80)
         self.assertEqual(item.taxable_value, flt(item.base_net_amount))
-        self.assertTrue(getattr(item, "_deemed_taxable_value", None))
+        self.assertAlmostEqual(item._deemed_taxable_value, 9600 * 100 / 118, places=2)
         self.assertAlmostEqual(item.igst_amount, flt(item._deemed_taxable_value) * 18 / 100, delta=1)
         self.assertGreater(item.igst_amount, flt(item.taxable_value * 18 / 100))
 
@@ -1923,7 +1923,7 @@ class TestSpecificTransactions(IntegrationTestCase):
 
         self.assertEqual(get_item_taxable_value(doc, item, 8000), 8000)
         self.assertTrue(item._dont_update_taxable_value)
-        self.assertAlmostEqual(item._deemed_taxable_value, 120 * 100 / 118 * 80, places=4)
+        self.assertAlmostEqual(item._deemed_taxable_value, 120 * 100 / 118, places=4)
 
         # Margin resolver has no flag -> reported value is the resolved (deemed margin) base.
         margin_tax = frappe._dict(

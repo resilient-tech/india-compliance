@@ -24,19 +24,21 @@ const _inclusive_rate = (calc, item, tax) => {
 
 // Tobacco RSP (Rule 31D): tax on RSP-deemed value, report net sale value.
 erpnext.taxable_base_resolvers["On MRP"] = (calc, item, tax) => {
+    const conversion_rate = flt(calc.frm && calc.frm.doc.conversion_rate) || 1;
     const rate = _inclusive_rate(calc, item, tax);
-    const rsp = flt(item.gst_retail_sale_price) * flt(item.qty);
+    const rsp = (flt(item.gst_retail_sale_price) * flt(item.qty)) / conversion_rate;
     const deemed = rate ? (rsp * 100) / (100 + rate) : rsp;
 
     item._dont_update_taxable_value = true;
-    item._deemed_taxable_value = deemed * (flt(calc.frm && calc.frm.doc.conversion_rate) || 1);
+    item._deemed_taxable_value = deemed * conversion_rate;
 
     return deemed;
 };
 
 // Margin scheme (Rule 32(5)): margin (selling - cost); Rule 35 takes GST out when inclusive.
 erpnext.taxable_base_resolvers["On Margin"] = (calc, item, tax) => {
-    const cost = flt(item.gst_purchase_price) * flt(item.qty);
+    const conversion_rate = flt(calc.frm && calc.frm.doc.conversion_rate) || 1;
+    const cost = (flt(item.gst_purchase_price) * flt(item.qty)) / conversion_rate;
 
     let margin = flt(item.amount) - cost;
     if (Math.abs(flt(item.amount)) < Math.abs(cost)) margin = 0;
