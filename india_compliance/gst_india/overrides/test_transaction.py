@@ -54,7 +54,6 @@ from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice,
     create_sales_invoice,
     create_transaction,
-    enable_custom_gst_charge_types,
 )
 
 
@@ -1845,7 +1844,7 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertFalse(_is_multicurrency_doc({}))
         self.assertFalse(_is_multicurrency_doc('{"conversion_rate": 1}'))
 
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1, "enable_taxes_on_mrp": 1})
     @change_settings(
         "Accounts Settings",
         {"allow_multi_currency_invoices_against_single_party_account": 1},
@@ -1867,8 +1866,6 @@ class TestSpecificTransactions(IntegrationTestCase):
             rate=100,
             do_not_save=True,
         )
-        enable_custom_gst_charge_types()
-        self.addCleanup(frappe.clear_cache, doctype="Sales Taxes and Charges")
         doc.items[0].gst_retail_sale_price = 120
         for tax in doc.taxes:
             tax.charge_type = "On MRP"
@@ -1986,9 +1983,6 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertNotIn("On Margin", opts)
 
     def _margin_scheme_invoice(self, **kwargs):
-        enable_custom_gst_charge_types()
-        self.addCleanup(frappe.clear_cache, doctype="Sales Taxes and Charges")
-
         doc = create_transaction(
             doctype="Sales Invoice",
             rate=300,
@@ -2006,7 +2000,7 @@ class TestSpecificTransactions(IntegrationTestCase):
 
         return doc
 
-    @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0})
+    @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0, "enable_margin_scheme": 1})
     def test_margin_scheme_return_reverses_gst(self):
         """A credit note must reverse the GST the sale charged. The margin is only zeroed out
         for a sale (qty > 0), so a return keeps its negative margin instead of reading as a
@@ -2026,13 +2020,10 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertEqual(return_doc.items[0].cgst_amount, -9)
         self.assertEqual(return_doc.items[0].sgst_amount, -9)
 
-    @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0})
+    @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0, "enable_taxes_on_mrp": 1})
     def test_resolver_uses_item_tax_template_rate(self):
         """The deemed base is grossed down by the rate that is actually charged on the item.
         An Item Tax Template overrides the tax row rate, so the row rate cannot be used."""
-        enable_custom_gst_charge_types()
-        self.addCleanup(frappe.clear_cache, doctype="Sales Taxes and Charges")
-
         doc = create_transaction(
             doctype="Sales Invoice",
             rate=100,
@@ -2058,7 +2049,7 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertAlmostEqual(doc.items[1].cgst_amount, 14, places=2)
         self.assertAlmostEqual(doc.items[1].sgst_amount, 14, places=2)
 
-    @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0})
+    @change_settings("GST Settings", {"enable_api": 0, "enable_e_invoice": 0, "enable_margin_scheme": 1})
     def test_on_margin_uses_item_tax_template_rate(self):
         doc = self._margin_scheme_invoice()  # rate 300
         doc.items[0].item_tax_template = "GST 28% - _TIRC"
