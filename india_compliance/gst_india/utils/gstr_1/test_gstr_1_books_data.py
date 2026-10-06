@@ -168,8 +168,8 @@ class TestGSTR1BooksData(IntegrationTestCase):
         for _ in range(11):
             create_invoice()
 
-        _class = GSTR1BooksData(filters=FILTERS)
-        data = _class.prepare_mapped_data()
+        books_data = GSTR1BooksData(filters=FILTERS)
+        data = books_data.prepare_mapped_data()
         self.assertDictEq(
             {
                 "rounding_difference": {
@@ -184,7 +184,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
         )
 
         # Check if HSN Summary is same as Invoice Summary
-        for key in _class.DATA_TO_ITEM_FIELD_MAPPING:
+        for key in books_data.DATA_TO_ITEM_FIELD_MAPPING:
             invoice_total = 0
             for row in data[GSTR1_SubCategory.B2B_REGULAR.value].values():
                 invoice_total += row.get(key, 0.0)
@@ -217,8 +217,8 @@ class TestGSTR1BooksData(IntegrationTestCase):
         for _ in range(11):
             create_invoice()
 
-        _class = GSTR1BooksData(filters=FILTERS)
-        data = _class.prepare_mapped_data()
+        books_data = GSTR1BooksData(filters=FILTERS)
+        data = books_data.prepare_mapped_data()
         self.assertDictEq(
             {
                 "rounding_difference": {
@@ -233,7 +233,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
         )
 
         # Check if HSN Summary is same as Invoice Summary
-        for key in _class.DATA_TO_ITEM_FIELD_MAPPING:
+        for key in books_data.DATA_TO_ITEM_FIELD_MAPPING:
             invoice_total = 0
             for invoices in data[GSTR1_SubCategory.B2CS.value].values():
                 for row in invoices:
@@ -274,8 +274,8 @@ class TestGSTR1BooksData(IntegrationTestCase):
         for _ in range(11):
             create_invoice()
 
-        _class = GSTR1BooksData(filters=FILTERS)
-        data = _class.prepare_mapped_data()
+        books_data = GSTR1BooksData(filters=FILTERS)
+        data = books_data.prepare_mapped_data()
         self.assertDictEq(
             {
                 "rounding_difference": {
@@ -286,7 +286,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
         )
 
         # Check if HSN Summary is same as Invoice Summary
-        for key in _class.DATA_TO_ITEM_FIELD_MAPPING:
+        for key in books_data.DATA_TO_ITEM_FIELD_MAPPING:
             invoice_total = 0
             for invoices in data[GSTR1_SubCategory.NIL_EXEMPT.value].values():
                 for row in invoices:
