@@ -266,6 +266,39 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         invoice = self.get_doc(GSTRCategory.ISD, **supplier, bill_no="S9001")
         credit_note = self.get_doc(GSTRCategory.ISD, **supplier, bill_no="S9003")
 
+        other_gstin = "24AAQCA8719H1ZC"
+        distributor = {
+            "ctin": "27AABCE2207R1Z5",
+            "trdnm": "GSTN Mixed Eligibility",
+            "supprd": "022020",
+            "supfildt": "02-03-2020",
+        }
+        other_gstin_document = {
+            "doctyp": "ISDC",
+            "docnum": "S9999",
+            "docdt": "03-03-2016",
+            "igst": 0,
+            "cgst": 50,
+            "sgst": 50,
+            "cess": 0,
+            "itcelg": "Y",
+        }
+        save_gstr_2b(
+            other_gstin,
+            "072020",
+            frappe._dict(
+                data=frappe._dict(
+                    gstin=other_gstin,
+                    gendt=self.test_data["data"]["gendt"],
+                    docdata={"isd": [{**distributor, "doclist": [other_gstin_document]}]},
+                )
+            ),
+            store_raw=False,
+        )
+        other_gstin_row = frappe.db.get_value(
+            self.doctype, {"company_gstin": other_gstin, "bill_no": "S9999"}
+        )
+
         rejected = frappe._dict(
             data=frappe._dict(
                 gstin=self.gstin,
@@ -288,7 +321,8 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                                     "sgst": 50,
                                     "cess": 0,
                                     "itcelg": "Y",
-                                }
+                                },
+                                other_gstin_document,
                             ],
                         }
                     ]
@@ -299,6 +333,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
 
         self.assertFalse(frappe.db.exists(self.doctype, credit_note.name))
         self.assertTrue(frappe.db.exists(self.doctype, invoice.name))
+        self.assertTrue(frappe.db.exists(self.doctype, other_gstin_row))
 
     def test_isd_credit_note_sharing_the_invoice_number_is_its_own_row(self):
         supplier = self.test_data["data"]["docdata"]["isd"][2]
@@ -495,11 +530,32 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         self.assertEqual(doc.return_period_2b, self.return_period)
         self.assertEqual(doc.is_downloaded_from_2b, 1)
 
-        save_gstr_2b(self.gstin, self.return_period, self.test_data)
+        other_gstin = "24AAQCA8719H1ZC"
+        other_gstin_b2b = {
+            **self.test_data["data"]["docdata"]["b2b"][0],
+            "inv": [{**self.test_data["data"]["docdata"]["b2b"][0]["inv"][0], "inum": "OTHER-GSTIN-1"}],
+        }
+        other_gstin_data = frappe._dict(
+            data=frappe._dict(
+                gstin=other_gstin, gendt=self.test_data["data"]["gendt"], docdata={"b2b": [other_gstin_b2b]}
+            )
+        )
 
-        doc.reload()
-        self.assertEqual(doc.return_period_2b, self.return_period)
-        self.assertEqual(doc.is_downloaded_from_2b, 1)
+        for gstin, data in ((self.gstin, self.test_data), (other_gstin, other_gstin_data)):
+            with self.subTest(gstin=gstin):
+                save_gstr_2b(gstin, self.return_period, data)
+
+                for category in (GSTRCategory.IMPG, GSTRCategory.B2B):
+                    doc = self.get_doc(category)
+                    self.assertEqual(doc.return_period_2b, self.return_period)
+                    self.assertEqual(doc.is_downloaded_from_2b, 1)
+
+        self.assertEqual(
+            frappe.db.get_value(
+                self.doctype, {"company_gstin": other_gstin, "bill_no": "OTHER-GSTIN-1"}, "return_period_2b"
+            ),
+            self.return_period,
+        )
 
 
 class TestEmptyPeriodProgress(IntegrationTestCase):

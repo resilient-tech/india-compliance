@@ -152,6 +152,7 @@ class GSTR:
                 gst_is.classification,
                 gst_is.itc_availability,
             )
+            .where(gst_is.company_gstin == self.gstin)
             .where(gst_is.classification == self.category)
             .where(self.get_existing_transaction_filter(gst_is))
         ).run(as_dict=True)
