@@ -37,6 +37,12 @@ TRANSPORTER_DETAILS = {
 }
 
 
+def enable_custom_gst_charge_types():
+    from india_compliance.gst_india.setup.property_setters import toggle_charge_type_options
+
+    toggle_charge_type_options(frappe._dict(enable_taxes_on_mrp=1, enable_margin_scheme=1))
+
+
 def create_sales_invoice(**data):
     data["doctype"] = "Sales Invoice"
     return create_transaction(**data)
