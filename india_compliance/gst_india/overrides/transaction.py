@@ -1225,7 +1225,13 @@ def validate_reverse_charge_transaction(doc):
 
                 base_reverse_charge_booked += tax_amount
 
-    condition = flt(base_gst_tax + base_reverse_charge_booked, 2) == 0
+    condition = (
+        flt(
+            base_gst_tax + base_reverse_charge_booked,
+            doc.precision("base_tax_amount_after_discount_amount", "taxes"),
+        )
+        == 0
+    )
 
     if not condition:
         msg = _("Booked reverse charge is not equal to applied tax amount")
