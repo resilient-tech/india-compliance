@@ -25,7 +25,7 @@ class GSTInwardSupply(Document):
             update_docs_for_amendment(self)
 
     def on_trash(self):
-        if self.link_doctype and self.link_name:
+        if self.link_doctype and self.link_doctype != "GST Inward Supply" and self.link_name:
             frappe.db.set_value(
                 self.link_doctype,
                 self.link_name,

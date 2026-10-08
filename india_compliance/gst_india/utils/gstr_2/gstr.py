@@ -70,10 +70,10 @@ class GSTR:
 
     def create_transactions(self, suppliers, rejected_data):
         self.rejected_data = rejected_data or []
-        self.existing_transaction = self.get_existing_transaction()
+        self.invalid_transactions = self.get_invalid_transactions()
 
         if not suppliers:
-            self.handle_missing_transactions()
+            self.handle_invalid_transactions()
             return 0
 
         transactions = self.get_all_transactions(suppliers)
@@ -95,10 +95,10 @@ class GSTR:
                 user=frappe.session.user,
             )
 
-            if transaction.get("unique_key") in self.existing_transaction:
-                self.existing_transaction.pop(transaction.get("unique_key"))
+            if transaction.get("unique_key") in self.invalid_transactions:
+                self.invalid_transactions.pop(transaction.get("unique_key"))
 
-        self.handle_missing_transactions()
+        self.handle_invalid_transactions()
         return total_transactions
 
     def get_all_transactions(self, suppliers):
@@ -140,7 +140,7 @@ class GSTR:
     def get_items(self, document):
         return None
 
-    def get_existing_transaction(self):
+    def get_invalid_transactions(self):
         gst_is = frappe.qb.DocType("GST Inward Supply")
         transactions = (
             frappe.qb.from_(gst_is)
@@ -151,21 +151,22 @@ class GSTR:
                 gst_is.doc_type,
                 gst_is.classification,
                 gst_is.itc_availability,
+                gst_is.is_downloaded_from_ims,
             )
             .where(gst_is.company_gstin == self.gstin)
             .where(gst_is.classification == self.category)
-            .where(self.get_existing_transaction_filter(gst_is))
+            .where(self.get_invalid_transaction_filter(gst_is))
         ).run(as_dict=True)
 
-        return {get_unique_key(transaction): transaction.get("name") for transaction in transactions}
+        return {get_unique_key(transaction): transaction for transaction in transactions}
 
-    def get_existing_transaction_filter(self, gst_is):
+    def get_invalid_transaction_filter(self, gst_is):
         raise NotImplementedError
 
     def get_download_details(self):
         return {}
 
-    def handle_missing_transactions(self):
+    def handle_invalid_transactions(self):
         return
 
     def update_gstins(self):
