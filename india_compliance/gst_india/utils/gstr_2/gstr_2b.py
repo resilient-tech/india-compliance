@@ -23,6 +23,7 @@ class GSTR2b(GSTR):
             )
             .where(gst_is.return_period_2b == self.return_period)
             .where(gst_is.classification == self.category)
+            .where(gst_is.company_gstin == self.gstin)
         ).run(as_dict=True)
 
         return {get_unique_key(transaction): transaction.get("name") for transaction in existing_transactions}

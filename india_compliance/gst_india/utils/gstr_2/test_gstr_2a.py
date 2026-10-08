@@ -248,8 +248,6 @@ class TestGSTR2a(TestGSTRMixin, FrappeTestCase):
             doc,
         )
 
-<<<<<<< HEAD
-=======
     def test_blanks_from_the_portal(self):
         from india_compliance.gst_india.utils.gstr_2.gstr_2a import GSTR2a
 
@@ -289,7 +287,6 @@ class TestGSTR2a(TestGSTRMixin, FrappeTestCase):
 
         self.assertTrue(frappe.db.exists(self.doctype, doc.name))
 
->>>>>>> 18f0075 (fix: limit existing GSTR-2A/2B inward supplies to the gstin being saved)
     def test_gstr2a_isd(self):
         doc = self.get_doc(GSTRCategory.ISD)
         self.assertImportLog(GSTRCategory.ISD)
