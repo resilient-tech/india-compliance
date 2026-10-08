@@ -1,4 +1,5 @@
 import frappe
+from frappe.query_builder import Bracket
 
 
 def execute():
@@ -14,18 +15,20 @@ def execute():
 
 
 def update_tax_id(party_type, companies):
-    twe = frappe.qb.DocType("Tax Withholding Entry", alias="twe")
+    twe = frappe.qb.DocType("Tax Withholding Entry")
     party = frappe.qb.DocType(party_type, alias="party")
+
+    party_pan = frappe.qb.from_(party).select(party.pan).where(party.name == twe.party)
+    parties_with_pan = (
+        frappe.qb.from_(party).select(party.name).where(party.pan.isnotnull()).where(party.pan != "")
+    )
 
     (
         frappe.qb.update(twe)
-        .join(party)
-        .on(twe.party == party.name)
-        .set(twe.tax_id, party.pan)
+        .set(twe.tax_id, Bracket(party_pan))
         .where(twe.party_type == party_type)
         .where(twe.company.isin(companies))
-        .where(party.pan.isnotnull())
-        .where(party.pan != "")
+        .where(twe.party.isin(parties_with_pan))
         .where(twe.created_by_migration == 0)
         .run()
     )

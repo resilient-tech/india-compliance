@@ -21,29 +21,44 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
 )
 from frappe.model.mapper import get_mapped_doc
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import add_days, flt, getdate, today
+from frappe.utils import add_days, add_to_date, flt, getdate, now_datetime, today
 from parameterized import parameterized_class
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
+from india_compliance.gst_india.constants import (
+    GST_TAX_TYPES,
+    SALES_DOCTYPES,
+)
+from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_FIELDS
 from india_compliance.gst_india.overrides.transaction import (
     ADDRESS_DEPENDENT_FIELDS,
     DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
     _is_multicurrency_doc,
-    sync_address_dependent_fields_on_submit,
+    sync_address_dependent_fields_after_submit,
     sync_gst_details_from_address,
     validate_gst_refund_accounts,
     validate_item_tax_template,
 )
-from india_compliance.gst_india.setup.property_setters import (
-    ADDRESS_FIELDS_BY_DOCTYPE,
+from india_compliance.gst_india.setup.property_setters import ADDRESS_FIELDS_BY_DOCTYPE
+from india_compliance.gst_india.utils.e_waybill import (
+    mark_e_waybill_as_cancelled,
+    mark_e_waybill_as_generated,
 )
 from india_compliance.gst_india.utils.jinja import get_gst_breakup
 from india_compliance.gst_india.utils.tests import (
+    TRANSPORTER_DETAILS,
     _append_taxes,
     append_item,
     create_purchase_invoice,
+    create_sales_invoice,
     create_transaction,
+)
+from india_compliance.income_tax_india.overrides.company import (
+    TDS_ACCOUNT_NAME,
+    create_tds_account,
+)
+from india_compliance.income_tax_india.overrides.test_tax_withholding_category import (
+    create_tax_withholding_category,
 )
 
 
@@ -287,7 +302,7 @@ class TestTransaction(IntegrationTestCase):
                 msg=f"{self.doctype}.{company_address_field} must stay locked so company_gstin can't change",
             )
 
-    def test_sync_address_dependent_fields_on_submit(self):
+    def test_sync_address_dependent_fields_after_submit(self):
         """Tax-neutral address change is allowed; party GSTIN/category re-sync."""
         doc = create_transaction(**self.transaction_details)
 
@@ -310,7 +325,7 @@ class TestTransaction(IntegrationTestCase):
 
         doc.load_doc_before_save()
         doc.set(address_field, new_address)
-        sync_address_dependent_fields_on_submit(doc)
+        sync_address_dependent_fields_after_submit(doc)
 
         self.assertEqual(doc.get(gstin_field), expected_gstin)
         self.assertEqual(doc.get("gst_category"), expected_category)
@@ -470,6 +485,80 @@ class TestTransaction(IntegrationTestCase):
             "Cannot change the Place of Supply or address after the e-Waybill",
             doc.save,
         )
+
+    def test_transporter_details_after_submit(self):
+        """Transporter details stay editable after submit, until an e-Waybill is generated."""
+        if self.doctype not in E_WAYBILL_FIELDS:
+            return
+
+        doc = create_transaction(**self.transaction_details)
+        self.assertFalse(doc.ewaybill)
+
+        # editable as long as no e-Waybill is generated
+        doc.update(TRANSPORTER_DETAILS)
+        doc.save()
+
+        doc.reload()
+        for fieldname, value in TRANSPORTER_DETAILS.items():
+            self.assertEqual(
+                doc.get(fieldname),
+                getdate(value) if fieldname == "lr_date" else value,
+                msg=f"{self.doctype}.{fieldname} must be editable after submit",
+            )
+
+        # transporter_name follows transporter, even though it isn't set explicitly
+        self.assertEqual(doc.transporter_name, TRANSPORTER_DETAILS["transporter"])
+
+        # validate isn't run after submit, and hence validated by the guard
+        doc.gst_transporter_id = "05AAACG2140A1Z"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            "GST Transporter ID.*must have 15 characters",
+            doc.save,
+        )
+
+        doc.reload()
+        mark_e_waybill_as_generated(
+            doc.doctype,
+            doc.name,
+            values={
+                "ewaybill": "351002721233",
+                "e_waybill_date": str(now_datetime()),
+                "valid_upto": str(add_to_date(now_datetime(), days=1)),
+            },
+        )
+
+        # locked once the e-Waybill is generated
+        doc.reload()
+        doc.vehicle_no = "GJ01AA5678"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            "Cannot change transporter details after the e-Waybill",
+            doc.save,
+        )
+
+        doc.reload()
+        doc.driver_name = "Test Driver"
+        doc.save()
+        self.assertEqual(frappe.db.get_value(doc.doctype, doc.name, "driver_name"), "Test Driver")
+
+        mark_e_waybill_as_cancelled(
+            doc.doctype,
+            doc.name,
+            values={
+                "reason": "Data Entry Mistake",
+                "remark": "Manually Cancelled",
+                "cancelled_on": str(now_datetime()),
+            },
+        )
+
+        # editable again, as the e-Waybill is cancelled
+        doc.reload()
+        doc.vehicle_no = "GJ01AA5678"
+        doc.save()
+
+        doc.reload()
+        self.assertEqual(doc.vehicle_no, "GJ01AA5678")
 
     def test_validate_mandatory_gst_category(self):
         doc = create_transaction(**self.transaction_details, do_not_submit=True)
@@ -745,21 +834,25 @@ class TestTransaction(IntegrationTestCase):
         if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
             return
 
-        doc = create_transaction(**self.transaction_details, is_in_state=True, do_not_save=True)
+        for item_code in ("_Test Trading Goods 1", "_Test Nil Rated Item"):
+            with self.subTest(item_code=item_code):
+                doc = create_transaction(
+                    **self.transaction_details, item_code=item_code, is_in_state=True, do_not_save=True
+                )
 
-        # Adding charges
-        doc.append(
-            "taxes",
-            {
-                "charge_type": "Actual",
-                "account_head": "Freight and Forwarding Charges - _TIRC",
-                "description": "Freight",
-                "tax_amount": 20,
-                "cost_center": "Main - _TIRC",
-            },
-        )
-        doc.insert()
-        self.assertDocumentEqual({"taxable_value": 100}, doc.items[0])
+                # Adding charges
+                doc.append(
+                    "taxes",
+                    {
+                        "charge_type": "Actual",
+                        "account_head": "Freight and Forwarding Charges - _TIRC",
+                        "description": "Freight",
+                        "tax_amount": 20,
+                        "cost_center": "Main - _TIRC",
+                    },
+                )
+                doc.insert()
+                self.assertDocumentEqual({"taxable_value": 100}, doc.items[0])
 
     def test_credit_note_without_quantity(self):
         if self.doctype != "Sales Invoice":
@@ -793,6 +886,46 @@ class TestTransaction(IntegrationTestCase):
         # Ensure correct taxable_value and gst details
         for item in doc.items:
             self.assertDocumentEqual({"taxable_value": 10, "cgst_amount": 0.9, "sgst_amount": 0.9}, item)
+
+    def test_taxable_value_with_charges_before_and_after_tax(self):
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
+            return
+
+        for item_code, gst_amount in (("_Test Nil Rated Item", 0), ("_Test Trading Goods 1", 10.8)):
+            with self.subTest(item_code=item_code):
+                doc = create_transaction(**self.transaction_details, item_code=item_code, do_not_save=True)
+
+                doc.append(
+                    "taxes",
+                    {
+                        "charge_type": "Actual",
+                        "account_head": "Freight and Forwarding Charges - _TIRC",
+                        "description": "Freight",
+                        "tax_amount": 20,
+                        "cost_center": "Main - _TIRC",
+                    },
+                )
+
+                _append_taxes(doc, ("CGST", "SGST"), charge_type="On Previous Row Total", row_id=1)
+
+                # not a Tax Withholding Account: only its position below GST keeps it out
+                doc.append(
+                    "taxes",
+                    {
+                        "charge_type": "On Previous Row Total",
+                        "row_id": 3,
+                        "account_head": create_tax_accounts("TCS Payable").name,
+                        "description": "TCS",
+                        "rate": 1,
+                        "cost_center": "Main - _TIRC",
+                    },
+                )
+                doc.insert()
+
+                self.assertDocumentEqual(
+                    {"taxable_value": 120, "cgst_amount": gst_amount, "sgst_amount": gst_amount},
+                    doc.items[0],
+                )
 
     def test_validate_place_of_supply(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
@@ -915,6 +1048,72 @@ class TestTransaction(IntegrationTestCase):
             frappe.exceptions.ValidationError,
             re.compile(r"^(.*purchase is from a Supplier without GSTIN.*)$"),
             doc.insert,
+        )
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_purchase_from_oidar_supplier(self):
+        if self.is_sales_doctype:
+            return
+
+        def _oidar_purchase(**kwargs):
+            details = self.transaction_details.copy()
+            if self.doctype == "Purchase Invoice":
+                details["bill_no"] = frappe.generate_hash(length=5)
+
+            return create_transaction(
+                **details,
+                supplier="_Test OIDAR Supplier",
+                item_code="_Test Service Item",
+                **kwargs,
+            )
+
+        doc = _oidar_purchase(is_out_state=True)
+        self.assertEqual(doc.gst_category, "Overseas")
+        self.assertEqual(doc.supplier_gstin, "9917SGP29001OST")
+        self.assertTrue(doc.taxes)
+
+        doc = _oidar_purchase(is_out_state_rcm=True, is_reverse_charge=1)
+        self.assertEqual(doc.gst_category, "Overseas")
+        self.assertEqual(doc.supplier_gstin, "9917SGP29001OST")
+        self.assertTrue(doc.taxes)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_sales_to_oidar_is_blocked(self):
+        if not self.is_sales_doctype:
+            return
+
+        details = self.transaction_details.copy()
+        details["customer"] = "_Test OIDAR Customer"
+        if self.doctype == "Quotation":
+            details["party_name"] = "_Test OIDAR Customer"
+
+        doc = create_transaction(**details, item_code="_Test Service Item", do_not_save=True)
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Non-Resident Online Services Provider.*)$"),
+            doc.insert,
+        )
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_sales_to_oidar_is_blocked_after_submit(self):
+        if self.doctype != "Sales Invoice":
+            return
+
+        doc = create_sales_invoice(
+            customer="_Test Registered Customer",
+            shipping_address_name="_Test Registered Customer-Billing",
+            item_code="_Test Service Item",
+            is_in_state=True,
+        )
+        self.assertEqual(doc.docstatus, 1)
+
+        doc.customer_address = "_Test OIDAR Customer-Billing"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Non-Resident Online Services Provider.*)$"),
+            doc.save,
         )
 
     def test_invalid_charge_type_as_actual(self):
@@ -1075,6 +1274,71 @@ class TestTransaction(IntegrationTestCase):
 
         self.assertDocumentEqual({"taxable_value": 62.51, "cgst_amount": 5.63}, doc.items[0])
 
+    def test_rounding_gst_details_across_many_items(self):
+        """
+        Rounding loss of each item must be diffused across items. It used to accumulate
+        into the last item, which then failed validation once it crossed
+        ALLOWED_TAX_DIFFERENCE.
+        """
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
+            return
+
+        doc = create_transaction(**self.transaction_details, rate=12.345, is_in_state=True, do_not_save=True)
+        for _ in range(249):
+            append_item(doc, frappe._dict(rate=12.345))
+
+        doc.save().reload()
+
+        precision = ItemGSTDetails.get_tax_amount_precisions(self.doctype).get("cgst_amount")
+        allowed_difference = 10**-precision
+
+        for tax_row in doc.taxes:
+            tax_type = tax_row.gst_tax_type
+            item_wise_amount = 0
+
+            for item in doc.items:
+                tax_amount = item.get(f"{tax_type}_amount")
+                item_wise_amount += tax_amount
+
+                # no item is off by more than a single unit of precision
+                expected_amount = item.get(f"{tax_type}_rate") * item.taxable_value / 100
+                self.assertLessEqual(flt(abs(tax_amount - expected_amount), precision), allowed_difference)
+
+            # item wise amounts still add up to the tax row
+            self.assertEqual(
+                flt(item_wise_amount, precision),
+                flt(tax_row.base_tax_amount_after_discount_amount, precision),
+            )
+
+    @change_settings("GST Settings", {"round_off_gst_values": 1})
+    def test_item_gst_details_tie_to_rounded_tax_row(self):
+        """
+        With round_off_gst_values the tax row is rounded to whole rupees, so it no longer
+        matches rate x taxable value. Item wise amounts must still add up to it.
+        """
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
+            return
+
+        doc = create_transaction(**self.transaction_details, rate=12.345, is_in_state=True, do_not_save=True)
+        for _ in range(249):
+            append_item(doc, frappe._dict(rate=12.345))
+
+        doc.save().reload()
+
+        for tax_row in doc.taxes:
+            if not tax_row.gst_tax_type:
+                continue
+
+            # rounding must actually be in effect, else this proves nothing
+            tax_amount = tax_row.base_tax_amount_after_discount_amount
+            self.assertEqual(tax_amount, flt(tax_amount, 0))
+
+            item_wise_amount = sum(item.get(f"{tax_row.gst_tax_type}_amount") for item in doc.items)
+            self.assertEqual(
+                flt(item_wise_amount, 2),
+                flt(tax_row.base_tax_amount_after_discount_amount, 2),
+            )
+
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_import_service_purchase_transaction_are_taxable(self):
         if self.is_sales_doctype:
@@ -1184,6 +1448,32 @@ class TestTransaction(IntegrationTestCase):
         # Place of Supply as Gujarat for Shipping Address in Gujarat
         self.assertEqual(doc.gst_category, "Overseas")
         self.assertEqual(doc.place_of_supply, "24-Gujarat")
+
+    def test_other_countries_place_of_supply_requires_overseas(self):
+        if not self.is_sales_doctype:
+            return
+
+        for customer, customer_address in (
+            ("_Test Unregistered Customer", None),
+            ("_Test Registered Customer", "_Test Registered Customer-Billing"),
+        ):
+            doc = create_transaction(
+                **{
+                    **self.transaction_details,
+                    "customer": customer,
+                    "party_name": customer,
+                },
+                customer_address=customer_address,
+                place_of_supply="96-Other Countries",
+                is_out_state=True,
+                do_not_save=True,
+            )
+
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"^(Place of Supply .*96-Other Countries.* is only allowed for GST Category .*)$"),
+                doc.save,
+            )
 
     def test_purchase_with_different_place_of_supply(self):
         if self.is_sales_doctype:
@@ -1461,7 +1751,7 @@ class TestTransaction(IntegrationTestCase):
         for item in doc.items:
             item.taxable_value = None
 
-        ItemGSTDetails().update(doc)
+        ItemGSTDetails(doc).update()
 
     def test_none_tax_amount_after_discount_amount(self):
         """
@@ -1480,7 +1770,7 @@ class TestTransaction(IntegrationTestCase):
             tax.tax_amount_after_discount_amount = None
             tax.base_tax_amount_after_discount_amount = None
 
-        ItemGSTDetails().update(doc)
+        ItemGSTDetails(doc).update()
 
 
 def create_refund_transaction():
@@ -1654,6 +1944,36 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertFalse(_is_multicurrency_doc({}))
         self.assertFalse(_is_multicurrency_doc('{"conversion_rate": 1}'))
 
+    def test_taxable_value_excludes_tcs_without_gst_rows(self):
+        """
+        Zero-rated Sales Invoice with no GST rows and TCS via Tax Withholding Category.
+        TCS row is identified by `is_tax_withholding_account` and must not be
+        apportioned into the item's taxable value.
+        """
+        company = "_Test Indian Registered Company"
+        category = "_Test TCS Category"
+
+        create_tds_account(company)
+        create_tax_withholding_category(category, f"{TDS_ACCOUNT_NAME} - _TIRC")
+
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            item_code="_Test Nil Rated Item",
+            apply_tds=1,
+            do_not_save=True,
+        )
+        doc.items[0].tax_withholding_category = category
+        doc.save()
+
+        self.assertFalse([row for row in doc.taxes if row.gst_tax_type])
+
+        tcs_rows = [row for row in doc.taxes if row.is_tax_withholding_account]
+        self.assertTrue(tcs_rows)
+        self.assertTrue(tcs_rows[0].base_tax_amount_after_discount_amount)
+
+        item = doc.items[0]
+        self.assertEqual(item.taxable_value, item.base_net_amount)
+
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
         dn = create_transaction(doctype="Delivery Note", vehicle_no="GJ01AA1111")
@@ -1800,7 +2120,7 @@ class TestSpecificTransactions(IntegrationTestCase):
             self.assertRaisesRegex(
                 frappe.exceptions.ValidationError,
                 re.compile(r"You are not allowed to update Sales Invoice"),
-                sync_address_dependent_fields_on_submit,
+                sync_address_dependent_fields_after_submit,
                 si,
             )
 
@@ -1999,7 +2319,7 @@ class TestItemUpdate(IntegrationTestCase):
                 doc.items[1],
             )
 
-            breakup = json.loads(get_gst_breakup(doc))
+            breakup = get_gst_breakup(doc)
             total_taxable = sum(row["Taxable Amount"] for row in breakup)
             self.assertEqual(total_taxable, doc.base_net_total)
 
@@ -2063,7 +2383,7 @@ class TestPlaceOfSupply(IntegrationTestCase):
         doc_args = {
             "doctype": "Sales Invoice",
             "customer": "_Test Registered Composition Customer",
-            "shipping_address_name": "_Test Indian Registered Company-Billing",
+            "shipping_address_name": "_Test Same GSTIN Customer-Billing",
         }
 
         settings = ["Accounts Settings", "determine_address_tax_category_from"]
@@ -2298,3 +2618,23 @@ class TestPlaceOfSupply(IntegrationTestCase):
         # Customer is in Karnataka (29). place_of_supply on the DN must reflect
         # that, not the PR's "24-Gujarat".
         self.assertEqual(dn.place_of_supply, "29-Karnataka")
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_pos_payment_entry_for_overseas_customer(self):
+        # Payment Entry has no shipping address field, so the overseas branch must not
+        # assume one. An advance from an overseas customer is 96-Other Countries.
+        doc = create_transaction(
+            doctype="Payment Entry",
+            payment_type="Receive",
+            mode_of_payment="Cash",
+            company_address="_Test Indian Registered Company-Billing",
+            party_type="Customer",
+            party="_Test Foreign Customer",
+            customer_address="_Test Foreign Customer-Billing",
+            paid_to="Cash - _TIRC",
+            paid_amount=500,
+            received_amount=500,
+            is_out_state=1,
+        )
+
+        self.assertEqual(doc.place_of_supply, "96-Other Countries")

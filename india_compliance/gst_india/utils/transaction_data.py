@@ -2,7 +2,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import format_date, get_link_to_form, getdate, rounded
+from frappe.utils import cint, format_date, get_link_to_form, getdate, rounded
 
 from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
@@ -20,6 +20,7 @@ from india_compliance.gst_india.constants.e_waybill import (
 from india_compliance.gst_india.overrides.transaction import _validate_hsn_codes
 from india_compliance.gst_india.utils import (
     get_gst_uom,
+    get_items,
     get_validated_country_code,
     validate_invoice_number,
     validate_pincode,
@@ -69,6 +70,16 @@ class GSTTransactionData:
                 "customer_name",
             )
 
+    @property
+    def _items(self):
+        """Rows of the doctype's item table, which isn't always called `items`."""
+        return get_items(self.doc)
+
+    @property
+    def _document_date(self):
+        """Date the document is dated, whatever the doctype calls it."""
+        return self.doc.get("posting_date") or self.doc.get("transaction_date")
+
     def set_transaction_details(self):
         rounding_adjustment = self.rounded(self.doc.get("base_rounding_adjustment") or 0)
 
@@ -86,7 +97,7 @@ class GSTTransactionData:
         # Initialize all tax totals to 0
         self.transaction_details.update({key: 0 for key in tax_total_keys})
 
-        for row in self.doc.items:
+        for row in self._items:
             taxable_value = self.rounded(row.taxable_value)
             total += taxable_value
 
@@ -112,7 +123,7 @@ class GSTTransactionData:
                     self.party_name
                     or frappe.db.get_value(self.doc.doctype, self.party_name, self.party_name_field)
                 ),
-                "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
+                "date": format_date(self._document_date, self.DATE_FORMAT),
                 "total": abs(self.rounded(total)),
                 "total_taxable_value": abs(self.rounded(total_taxable_value)),
                 "total_non_taxable_value": abs(self.rounded(total - total_taxable_value)),
@@ -213,9 +224,10 @@ class GSTTransactionData:
         return True
 
     def set_transporter_details(self):
-        self.transaction_details.distance = (
-            self.doc.distance if self.doc.distance and self.doc.distance < 4000 else 0
-        )
+        # Distance must be a whole number of km for the e-Waybill portal.
+        # cint() guards against a non-Int value (e.g. modified custom field).
+        distance = cint(self.doc.distance)
+        self.transaction_details.distance = distance if distance < 4000 else 0
 
         if self.validate_mode_of_transport(False):
             self.transaction_details.update(
@@ -257,7 +269,7 @@ class GSTTransactionData:
             )
 
         validate_invoice_number(self.doc)
-        posting_date = getdate(self.doc.posting_date)
+        posting_date = getdate(self._document_date)
 
         if posting_date > getdate():
             frappe.throw(
@@ -284,7 +296,7 @@ class GSTTransactionData:
         # progressive error of item tax amounts
         self.rounding_errors = {f"{tax}_rounding_error": 0 for tax in GST_TAX_TYPES}
 
-        items = self.doc.items
+        items = self._items
         if self.doc.get("group_same_items"):
             items = self.group_same_items()
 
@@ -302,7 +314,7 @@ class GSTTransactionData:
                     "non_taxable_amount": 0 if is_taxable else line_value,
                     "hsn_code": row.gst_hsn_code,
                     "item_name": self.sanitize_value(row.item_name, regex=3, max_length=300),
-                    "uom": get_gst_uom(row.get("uom") or row.stock_uom, self.settings),
+                    "uom": get_gst_uom(row.get("uom") or row.get("stock_uom"), self.settings),
                     "gst_treatment": row.gst_treatment,
                 }
             )
@@ -317,7 +329,7 @@ class GSTTransactionData:
         grouped_items = {}
         idx = 1
 
-        for row in self.doc.items:
+        for row in self._items:
             item = grouped_items.setdefault(
                 row.item_code,
                 frappe._dict(
@@ -512,7 +524,9 @@ class GSTTransactionData:
 
     @staticmethod
     def rounded(value, precision=2):
-        return rounded(value, precision)
+        # round the size, then put sign back. frappe rounds half up, so -1.005 != -(1.005)
+        result = rounded(abs(value), precision)
+        return -result if value < 0 and result else result
 
     @staticmethod
     def sanitize_value(

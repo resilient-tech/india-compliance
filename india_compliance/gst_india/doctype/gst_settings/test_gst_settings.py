@@ -6,6 +6,10 @@ import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils.data import getdate
 
+from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
+    RETRY_E_INVOICE_E_WAYBILL_JOB,
+)
+
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "Account", "UOM"]
 
 
@@ -18,6 +22,16 @@ class TestGSTSettings(IntegrationTestCase):
     def test_api_key_enabled(self):
         doc = frappe.get_doc("GST Settings")
         doc.save()
+
+    def test_retry_scheduled_job_follows_setting(self):
+        job = frappe.db.get_value("Scheduled Job Type", {"method": RETRY_E_INVOICE_E_WAYBILL_JOB})
+        self.assertTrue(job, f"Scheduled Job Type is missing for {RETRY_E_INVOICE_E_WAYBILL_JOB}")
+
+        with change_settings("GST Settings", {"enable_retry_einv_ewb_generation": 0}):
+            with change_settings("GST Settings", {"enable_retry_einv_ewb_generation": 1}):
+                self.assertEqual(frappe.db.get_value("Scheduled Job Type", job, "stopped"), 0)
+
+            self.assertEqual(frappe.db.get_value("Scheduled Job Type", job, "stopped"), 1)
 
     def test_validate_duplicate_account(self):
         doc = frappe.get_doc("GST Settings")

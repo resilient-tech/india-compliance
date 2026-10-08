@@ -26,7 +26,7 @@ class EcommerceSupplyTypeExt:
 
 
 class AddressDisplayExt:
-    """Resolves the four subcontracting ``*_address_display`` virtual fields (Stock Entry)."""
+    """Resolves the four subcontracting ``*_address_display`` virtual fields (Stock Entry, Asset Movement)."""
 
     def _get_address_display(self, address_field):
         address = self.get(address_field)

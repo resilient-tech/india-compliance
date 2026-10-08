@@ -1,8 +1,14 @@
 import re
 
 from erpnext.stock.get_item_details import sales_doctypes
+from frappe.utils import getdate
 
 TIMEZONE = "Asia/Kolkata"
+
+# Date from which NIC requires Ship To GSTIN in the e-Invoice and e-Waybill APIs.
+# Kept on hold by GSTN advisory dated 29.07.2026 with no revised date, so this is
+# deliberately unreachable. Sandbox stays reachable via sandbox_mode.
+SHIP_TO_GSTIN_APPLICABLE_DATE = getdate("2099-12-31")
 
 ABBREVIATIONS = {"SEZ", "GST", "CGST", "SGST", "IGST", "CESS", "HSN"}
 
@@ -32,6 +38,19 @@ SUBCONTRACTING_PURPOSES = ("Send to Subcontractor", *SUBCONTRACTING_INWARD_PURPO
 
 # Stock Entry purposes eligible for e-Waybill
 E_WAYBILL_STOCK_ENTRY_PURPOSES = ("Material Transfer", "Material Issue", *SUBCONTRACTING_PURPOSES)
+
+# Transporter fields that stay editable after submit until an e-Waybill is generated.
+TRANSPORTER_FIELDS = (
+    "transporter",
+    "gst_transporter_id",
+    "lr_no",
+    "lr_date",
+    "vehicle_no",
+    "distance",
+    "mode_of_transport",
+    "gst_vehicle_type",
+)
+
 
 # Map for e-Invoice Supply Type
 GST_CATEGORIES = {
@@ -71,6 +90,7 @@ EXPORT_TYPES = (
 
 TAXABLE_GST_TREATMENTS = ("Taxable", "Zero-Rated")
 IMPORT_GST_CATEGORIES = ("Overseas", "SEZ")
+ISD_GST_CATEGORY = "Input Service Distributor"
 
 
 STATE_NUMBERS = {
@@ -1429,8 +1449,8 @@ REGISTERED = re.compile(rf"{NORMAL}|{GOVT_DEPTID}")
 
 # Not allowed in GSTR1 B2B
 NRI_ID = r"^[0-9]{4}[A-Z]{3}[0-9]{5}[N][R][0-9A-Z]{1}$"
-OIDAR = r"^[9][9][0-9]{2}[A-Z]{3}[0-9]{5}[O][S][0-9A-Z]{1}$"
-OVERSEAS = re.compile(rf"{NRI_ID}|{OIDAR}")
+OIDAR = re.compile(r"^[9][9][0-9]{2}[A-Z]{3}[0-9]{5}[O][S][0-9A-Z]{1}$")
+OVERSEAS = re.compile(rf"{NRI_ID}|{OIDAR.pattern}")
 
 UNBODY = re.compile(r"^[0-9]{4}[A-Z]{3}[0-9]{5}[UO]{1}[N][A-Z0-9]{1}$")
 TDS = re.compile(r"^[0-9]{2}[A-Z]{4}[A-Z0-9]{1}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[D][0-9A-Z]$")
@@ -1468,6 +1488,8 @@ SUBCONTRACTING_DOCTYPES = (
     "Stock Entry",
 )
 
+CUSTOM_ADDRESS_FIELDS_DOCTYPES = ("Stock Entry", "Asset Movement")
+
 BUG_REPORT_URL = "https://github.com/resilient-tech/india-compliance/issues/new"
 
 ORIGINAL_VS_AMENDED = (
@@ -1490,6 +1512,10 @@ ORIGINAL_VS_AMENDED = (
     {
         "original": "IMPGSEZ",
         "amended": "",
+    },
+    {
+        "original": "ECOM",
+        "amended": "ECOMA",
     },
 )
 

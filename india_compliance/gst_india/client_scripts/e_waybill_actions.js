@@ -5,16 +5,36 @@ const E_WAYBILL_CLASS = {
     "Purchase Receipt": PurchaseReceiptEwaybill,
     "Stock Entry": StockEntryEwaybill,
     "Subcontracting Receipt": SubcontractingReceiptEwaybill,
+    "Asset Movement": AssetMovementEwaybill,
 };
 
+const E_WAYBILL_TRANSPORTER_FIELDS = ["transporter", "gst_transporter_id"];
+const E_WAYBILL_VEHICLE_FIELDS = ["vehicle_no", "mode_of_transport", "gst_vehicle_type", "lr_no", "lr_date"];
+
 function setup_e_waybill_actions(doctype) {
+    setup_gst_update_notifications(doctype);
+    setup_cancel_confirmation(doctype);
+
     if (!gst_settings.enable_e_waybill) return;
 
     frappe.ui.form.on(doctype, {
         mode_of_transport(frm) {
             frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
+            toggle_transport_fields(frm);
+        },
+        // these fields are fetch_if_empty, so clear them explicitly on removal
+        transporter(frm) {
+            if (frm.doc.transporter) return;
+
+            frm.set_value("gst_transporter_id", "");
+            frm.set_value("transporter_name", "");
+        },
+        driver(frm) {
+            if (!frm.doc.driver) frm.set_value("driver_name", "");
         },
         setup(frm) {
+            intercept_update_for_e_waybill(frm);
+
             if (!india_compliance.is_api_enabled()) return;
 
             frappe.realtime.on("e_waybill_pdf_update", (message) => {
@@ -30,12 +50,42 @@ function setup_e_waybill_actions(doctype) {
             });
         },
         refresh(frm) {
+            toggle_transport_fields(frm);
+
             if (frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode)
                 frm.get_field("ewaybill").set_description("Generated in Sandbox Mode");
 
+            if (
+                frm.doc.ewaybill &&
+                frm.doc.docstatus === 2 &&
+                frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
+            ) {
+                frm.add_custom_button(
+                    __("Mark as Cancelled"),
+                    () => show_mark_e_waybill_as_cancelled_dialog(frm),
+                    "e-Waybill",
+                );
+
+                india_compliance.make_text_red("e-Waybill", "Mark as Cancelled");
+            }
+
             if (!is_e_waybill_api_enabled(frm) || frm.is_dirty()) return;
 
-            if (frm.doc.docstatus === 2) return;
+            // portal cancel is open for 24h, doc cancelled or not
+            if (frm.doc.docstatus === 2) {
+                // with an IRN the e-Waybill goes with it: cancel from the e-Invoice side
+                if (!frm.doc.irn && can_cancel_e_waybill(frm)) {
+                    india_compliance.show_cancel_headline(
+                        frm,
+                        __("e-Waybill is still active and cancellable."),
+                        () => show_cancel_e_waybill_dialog(frm),
+                    );
+
+                    add_cancel_e_waybill_button(frm);
+                }
+
+                return;
+            }
 
             const is_ewb_generatable = is_e_waybill_generatable(frm, true);
 
@@ -45,7 +95,9 @@ function setup_e_waybill_actions(doctype) {
                 frm.doc.e_waybill_status === "Not Applicable"
             ) {
                 if (frm.doc.e_waybill_status === "Not Applicable" && is_ewb_generatable) {
-                    frm._ewb_message = "To generate e-Waybill, change e-Waybill Status to Pending.";
+                    frm._ewb_message_list = [
+                        __("To generate e-Waybill, change e-Waybill Status to Pending."),
+                    ];
                 }
 
                 frm.add_custom_button(
@@ -97,20 +149,22 @@ function setup_e_waybill_actions(doctype) {
                         () => show_mark_e_waybill_as_cancelled_dialog(frm),
                         "e-Waybill",
                     );
+
+                    india_compliance.make_text_red("e-Waybill", "Mark as Cancelled");
                 }
                 return;
             }
 
-            if (frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) && is_e_waybill_valid(frm)) {
+            if (can_update_e_waybill(frm)) {
                 frm.add_custom_button(
                     __("Update Vehicle Info"),
-                    () => show_update_vehicle_info_dialog(frm),
+                    () => show_update_e_waybill_dialog(frm, { vehicle: true }),
                     "e-Waybill",
                 );
 
                 frm.add_custom_button(
                     __("Update Transporter"),
-                    () => show_update_transporter_dialog(frm),
+                    () => show_update_e_waybill_dialog(frm, { transporter: true }),
                     "e-Waybill",
                 );
             }
@@ -154,12 +208,10 @@ function setup_e_waybill_actions(doctype) {
             }
 
             if (frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)) {
-                if (is_e_waybill_cancellable(frm)) {
+                if (can_cancel_e_waybill(frm)) {
                     india_compliance.add_divider_to_btn_group("e-Waybill");
 
-                    frm.add_custom_button(__("Cancel"), () => show_cancel_e_waybill_dialog(frm), "e-Waybill");
-
-                    india_compliance.make_text_red("e-Waybill", "Cancel");
+                    add_cancel_e_waybill_button(frm);
                 }
 
                 frm.add_custom_button(
@@ -170,53 +222,6 @@ function setup_e_waybill_actions(doctype) {
 
                 india_compliance.make_text_red("e-Waybill", "Mark as Cancelled");
             }
-        },
-        async on_submit(frm) {
-            if (!(await auto_generate_e_waybill(frm))) return;
-
-            frappe.show_alert(__("Attempting to generate e-Waybill"));
-
-            await frappe.xcall("india_compliance.gst_india.utils.e_waybill.generate_e_waybill", {
-                doctype: frm.doctype,
-                docname: frm.doc.name,
-            });
-        },
-        before_cancel(frm) {
-            // if IRN is present, e-Waybill gets cancelled in e-Invoice action
-            if (!india_compliance.is_api_enabled() || frm.doc.irn || !frm.doc.ewaybill) return;
-
-            frappe.validated = false;
-
-            return new Promise((resolve) => {
-                const continueCancellation = () => {
-                    frappe.validated = true;
-                    resolve();
-                };
-
-                if (!is_e_waybill_cancellable(frm)) {
-                    const d = frappe.warn(
-                        __("Cannot Cancel e-Waybill"),
-                        __(
-                            `The e-Waybill created against this invoice cannot be
-                            cancelled.<br><br>
-
-                            Do you want to continue anyway?`,
-                        ),
-                        continueCancellation,
-                        __("Yes"),
-                    );
-
-                    d.set_secondary_action_label(__("No"));
-                    return;
-                }
-
-                if (gst_settings.auto_cancel_e_waybill === 1) {
-                    continueCancellation();
-                    return;
-                }
-
-                return show_cancel_e_waybill_dialog(frm, continueCancellation);
-            });
         },
     });
 }
@@ -391,7 +396,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
         {
             label: "Distance (in km)",
             fieldname: "distance",
-            fieldtype: "Float",
+            fieldtype: "Int",
             default: frm.doc.distance || 0,
             description: "Set as zero to update distance as per the e-Waybill portal (if available)",
         },
@@ -444,7 +449,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
             default: frm.doc.mode_of_transport || "Road",
             onchange: () => {
                 update_generation_dialog(d, frm.doc);
-                update_vehicle_type(d);
+                update_vehicle_type(d, frm);
             },
         },
         {
@@ -551,6 +556,16 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
                 sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
             }
         }
+    } else if (frm.doctype === "Asset Movement") {
+        // NIC allows "For Own Use" only when both sides share the same GSTIN
+        const same_gstin = frm.doc.bill_from_gstin === frm.doc.bill_to_gstin;
+        const is_inward = frm.doc.purpose === "Receipt";
+
+        document_type = "Delivery Challan";
+        supply_type = is_inward ? "Inward" : "Outward";
+        sub_supply_type = same_gstin
+            ? ["For Own Use", "Exhibition or Fairs", "Others"]
+            : [is_inward ? "Job Work Returns" : "Job Work", "SKD/CKD", "Others"];
     } else if (frm.doctype === "Sales Invoice" && frm.doc.is_return === 0 && is_foreign_transaction) {
         supply_type = "Outward";
         sub_supply_type = ["Export"];
@@ -682,30 +697,90 @@ function show_mark_e_waybill_as_generated_dialog(frm) {
     d.show();
 }
 
-function show_cancel_e_waybill_dialog(frm, callback) {
-    const d = new frappe.ui.Dialog({
-        title: __("Cancel e-Waybill"),
-        fields: get_cancel_e_waybill_dialog_fields(frm),
-        primary_action_label: __("Cancel"),
-        primary_action(values) {
-            frappe.call({
-                method: "india_compliance.gst_india.utils.e_waybill.cancel_e_waybill",
-                args: {
-                    doctype: frm.doctype,
-                    docname: frm.doc.name,
-                    values,
-                },
-                callback: () => {
-                    frm.refresh();
-                    if (callback) callback();
-                },
-            });
-            d.hide();
-        },
-    });
+function add_cancel_e_waybill_button(frm) {
+    if (!can_cancel_e_waybill(frm)) return;
 
-    india_compliance.primary_to_danger_btn(d);
-    d.show();
+    frm.add_custom_button(__("Cancel"), () => show_cancel_e_waybill_dialog(frm), "e-Waybill");
+
+    india_compliance.make_text_red("e-Waybill", "Cancel");
+}
+
+// true: go ahead with the cancel, false: stop
+function confirm_portal_cancellation(frm) {
+    // IRN cancel takes its e-Waybill with it
+    if (frm.doc.irn) return confirm_irn_cancellation(frm);
+
+    if (frm.doc.ewaybill) return confirm_e_waybill_cancellation(frm);
+
+    return Promise.resolve(true);
+}
+
+function confirm_e_waybill_cancellation(frm) {
+    if (!is_e_waybill_api_enabled(frm) || !is_e_waybill_cancellable(frm))
+        return india_compliance.warn(
+            __("Cannot Cancel e-Waybill"),
+            __(
+                `The e-Waybill created against this document cannot be
+                        cancelled.<br><br>
+
+                        Do you want to continue anyway?`,
+            ),
+        );
+
+    // auto-cancelled after the document is cancelled
+    if (gst_settings.auto_cancel_e_waybill) return Promise.resolve(true);
+
+    return show_cancel_e_waybill_dialog(frm, { before_doc_cancel: true });
+}
+
+// true if the portal cancelled it; frappe shows any error
+function cancel_on_portal(frm, method, args, btn) {
+    return frappe.xcall(method, args, null, { btn }).then(
+        () => {
+            frm.refresh();
+            return true;
+        },
+        () => false,
+    );
+}
+
+// true: e-Waybill cancelled or skipped, false: backed out
+function show_cancel_e_waybill_dialog(frm, { before_doc_cancel = false } = {}) {
+    return new Promise((resolve) => {
+        const d = new frappe.ui.Dialog({
+            title: __("Cancel e-Waybill"),
+            fields: get_cancel_e_waybill_dialog_fields(frm),
+            primary_action_label: __("Cancel"),
+            async primary_action(values) {
+                const cancelled = await cancel_on_portal(
+                    frm,
+                    "india_compliance.gst_india.utils.e_waybill.cancel_e_waybill",
+                    { doctype: frm.doctype, docname: frm.doc.name, values },
+                    d.get_primary_btn(),
+                );
+
+                // failed: keep the dialog open to retry, skip or close
+                if (!cancelled) return;
+
+                d.onhide = null;
+                d.hide();
+                resolve(true);
+            },
+            onhide: () => resolve(false), // closed without acting
+        });
+
+        if (before_doc_cancel) {
+            d.set_secondary_action_label(__("Cancel Document Only"));
+            d.set_secondary_action(() => {
+                d.onhide = null;
+                d.hide();
+                resolve(true);
+            });
+        }
+
+        india_compliance.primary_to_danger_btn(d);
+        d.show();
+    });
 }
 
 function show_mark_e_waybill_as_cancelled_dialog(frm) {
@@ -767,123 +842,142 @@ function get_cancel_e_waybill_dialog_fields(frm) {
     ];
 }
 
-async function show_update_vehicle_info_dialog(frm) {
-    const source_address = await get_source_destination_address(frm, "source_address");
-    const d = new frappe.ui.Dialog({
-        title: __("Update Vehicle Information"),
-        fields: [
-            {
-                label: "e-Waybill",
-                fieldname: "ewaybill",
-                fieldtype: "Data",
-                read_only: 1,
-                default: frm.doc.ewaybill,
-            },
-            {
-                label: "Place of Change",
-                fieldname: "place_of_change",
-                fieldtype: "Data",
-                reqd: 1,
-                default: source_address.city,
-            },
-            {
-                label: "Vehicle No",
-                fieldname: "vehicle_no",
-                fieldtype: "Data",
-                default: frm.doc.vehicle_no,
-                mandatory_depends_on: "eval: ['Road', 'Ship'].includes(doc.mode_of_transport)",
-            },
-            {
-                label: "Transport Receipt No",
-                fieldname: "lr_no",
-                fieldtype: "Data",
-                default: frm.doc.lr_no,
-                mandatory_depends_on: "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport)",
-            },
-            {
-                fieldtype: "Column Break",
-            },
-            {
-                label: "Mode Of Transport",
-                fieldname: "mode_of_transport",
-                fieldtype: "Select",
-                options: `\nRoad\nAir\nRail\nShip`,
-                default: frm.doc.mode_of_transport,
-                mandatory_depends_on: "eval: doc.lr_no",
-                onchange: () => update_vehicle_type(d),
-            },
-            {
-                label: "State",
-                fieldname: "state",
-                fieldtype: "Autocomplete",
-                options: frappe.boot.india_state_options.join("\n"),
-                reqd: 1,
-                default: source_address.state,
-            },
-            {
-                label: "GST Vehicle Type",
-                fieldname: "gst_vehicle_type",
-                fieldtype: "Select",
-                options: `Regular\nOver Dimensional Cargo (ODC)`,
-                depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
-                read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
-                default: frm.doc.gst_vehicle_type,
-            },
-            {
-                label: "Transport Receipt Date",
-                fieldname: "lr_date",
-                fieldtype: "Date",
-                default: frm.doc.lr_date,
-                mandatory_depends_on: "eval:doc.lr_no",
-            },
-            {
-                fieldtype: "Section Break",
-            },
-            {
-                fieldname: "reason",
-                label: "Reason",
-                fieldtype: "Select",
-                options: ["Due to Break Down", "Due to Trans Shipment", "First Time", "Others"],
-                reqd: 1,
-            },
-            {
-                label: "Update e-Waybill Print/Data",
-                fieldname: "update_e_waybill_data",
-                fieldtype: "Check",
-                default: gst_settings.fetch_e_waybill_data,
-            },
-            {
-                fieldtype: "Column Break",
-            },
-            {
-                fieldname: "remark",
-                label: "Remark",
-                fieldtype: "Data",
-                mandatory_depends_on: 'eval: doc.reason == "Others"',
-            },
-        ],
-        primary_action_label: __("Update"),
-        primary_action(values) {
-            frappe.call({
-                method: "india_compliance.gst_india.utils.e_waybill.update_vehicle_info",
-                args: {
-                    doctype: frm.doctype,
-                    docname: frm.doc.name,
-                    values,
-                },
-                callback: () => frm.refresh(),
-            });
-            d.hide();
+// one dialog for vehicle and/or transporter; both at once become two pages
+async function show_update_e_waybill_dialog(frm, { vehicle = false, transporter = false }) {
+    const both = vehicle && transporter;
+    const steps = { vehicle, transporter };
+    const page = (name) => (both ? `eval: doc.page == '${name}'` : "");
+    const source_address = vehicle ? await get_source_destination_address(frm, "source_address") : {};
+
+    const vehicle_fields = [
+        {
+            fieldtype: "Section Break",
+            label: __("Vehicle Details"),
+            depends_on: page("vehicle"),
         },
-    });
+        {
+            label: "Place of Change",
+            fieldname: "place_of_change",
+            fieldtype: "Data",
+            reqd: 1,
+            default: source_address.city,
+        },
+        {
+            label: "Vehicle No",
+            fieldname: "vehicle_no",
+            fieldtype: "Data",
+            default: frm.doc.vehicle_no,
+            mandatory_depends_on: "eval: ['Road', 'Ship'].includes(doc.mode_of_transport)",
+        },
+        {
+            label: "Transport Receipt No",
+            fieldname: "lr_no",
+            fieldtype: "Data",
+            default: frm.doc.lr_no,
+            mandatory_depends_on: "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport)",
+        },
+        {
+            fieldtype: "Column Break",
+        },
+        {
+            label: "Mode Of Transport",
+            fieldname: "mode_of_transport",
+            fieldtype: "Select",
+            options: `\nRoad\nAir\nRail\nShip`,
+            default: frm.doc.mode_of_transport,
+            mandatory_depends_on: "eval: doc.lr_no",
+            onchange: () => update_vehicle_type(d, frm),
+        },
+        {
+            label: "State",
+            fieldname: "state",
+            fieldtype: "Autocomplete",
+            options: frappe.boot.india_state_options.join("\n"),
+            reqd: 1,
+            default: source_address.state,
+        },
+        {
+            label: "GST Vehicle Type",
+            fieldname: "gst_vehicle_type",
+            fieldtype: "Select",
+            options: `Regular\nOver Dimensional Cargo (ODC)`,
+            depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
+            read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
+            default: frm.doc.gst_vehicle_type,
+        },
+        {
+            label: "Transport Receipt Date",
+            fieldname: "lr_date",
+            fieldtype: "Date",
+            default: frm.doc.lr_date,
+            mandatory_depends_on: "eval:doc.lr_no",
+        },
+        {
+            fieldtype: "Section Break",
+            depends_on: page("vehicle"),
+        },
+        {
+            fieldname: "reason",
+            label: "Reason",
+            fieldtype: "Select",
+            options: ["Due to Break Down", "Due to Trans Shipment", "First Time", "Others"],
+            reqd: 1,
+        },
+        {
+            fieldtype: "Column Break",
+        },
+        {
+            fieldname: "remark",
+            label: "Remark",
+            fieldtype: "Data",
+            mandatory_depends_on: 'eval: doc.reason == "Others"',
+        },
+    ];
 
-    d.show();
-}
+    const transporter_fields = [
+        {
+            fieldtype: "Section Break",
+            label: __("Transporter Details"),
+            depends_on: page("transporter"),
+        },
+        {
+            label: "Transporter",
+            fieldname: "transporter",
+            fieldtype: "Link",
+            options: "Supplier",
+            default: frm.doc.transporter,
+            get_query: () => {
+                return {
+                    filters: {
+                        is_transporter: 1,
+                    },
+                };
+            },
+            onchange: () => update_gst_tranporter_id(d),
+        },
+        {
+            fieldtype: "Column Break",
+        },
+        {
+            label: "GST Transporter ID",
+            fieldname: "gst_transporter_id",
+            fieldtype: "Data",
+            mandatory_depends_on: "eval: doc.page == 'transporter'",
+            default:
+                frm.doc.gst_transporter_id && frm.doc.gst_transporter_id.length === 15
+                    ? frm.doc.gst_transporter_id
+                    : "",
+            onchange: () => validate_gst_transporter_id(d, frm.doc),
+        },
+    ];
 
-function show_update_transporter_dialog(frm) {
     frappe.ui.form.ControlData.trigger_change_on_input_event = false;
     const d = new frappe.ui.Dialog({
-        title: __("Update Transporter"),
+        title: both
+            ? __("Update e-Waybill")
+            : vehicle
+              ? __("Update Vehicle Information")
+              : __("Update Transporter"),
         fields: [
             {
                 label: "e-Waybill",
@@ -893,30 +987,16 @@ function show_update_transporter_dialog(frm) {
                 default: frm.doc.ewaybill,
             },
             {
-                label: "Transporter",
-                fieldname: "transporter",
-                fieldtype: "Link",
-                options: "Supplier",
-                default: frm.doc.transporter,
-                get_query: () => {
-                    return {
-                        filters: {
-                            is_transporter: 1,
-                        },
-                    };
-                },
-                onchange: () => update_gst_tranporter_id(d),
-            },
-            {
-                label: "GST Transporter ID",
-                fieldname: "gst_transporter_id",
+                fieldname: "page",
                 fieldtype: "Data",
-                reqd: 1,
-                default:
-                    frm.doc.gst_transporter_id && frm.doc.gst_transporter_id.length === 15
-                        ? frm.doc.gst_transporter_id
-                        : "",
-                onchange: () => validate_gst_transporter_id(d, frm.doc),
+                hidden: 1,
+                default: vehicle ? "vehicle" : "transporter",
+            },
+            ...(vehicle ? vehicle_fields : []),
+            ...(transporter ? transporter_fields : []),
+            {
+                fieldtype: "Section Break",
+                depends_on: page(transporter ? "transporter" : "vehicle"),
             },
             {
                 label: "Update e-Waybill Print/Data",
@@ -925,25 +1005,57 @@ function show_update_transporter_dialog(frm) {
                 default: gst_settings.fetch_e_waybill_data,
             },
         ],
-        primary_action_label: __("Update"),
+        primary_action_label: both ? __("Next") : __("Update"),
         primary_action(values) {
-            frappe.call({
-                method: "india_compliance.gst_india.utils.e_waybill.update_transporter",
-                args: {
-                    doctype: frm.doctype,
-                    docname: frm.doc.name,
-                    values,
-                },
-                callback: () => frm.refresh(),
-            });
-            d.hide();
+            if (both && values.page === "vehicle") return show_page("transporter");
+
+            update_e_waybill(frm, values, steps).then(() => d.hide());
         },
     });
     // HACK!
     // To prevent triggering of change event on input twice
     frappe.ui.form.ControlData.trigger_change_on_input_event = true;
     d.show();
-    validate_gst_transporter_id(d, frm.doc);
+    if (transporter) validate_gst_transporter_id(d, frm.doc);
+
+    function show_page(name) {
+        d.set_value("page", name);
+
+        const last = name === "transporter";
+        d.set_primary_action(last ? __("Update") : __("Next"), d.primary_action);
+        if (!last) return d.get_secondary_btn().addClass("hide");
+
+        d.set_secondary_action_label(__("Back"));
+        d.set_secondary_action(() => show_page("vehicle"));
+    }
+}
+
+async function update_e_waybill(frm, values, steps) {
+    const call = (method, values) =>
+        frappe.call({
+            method: `india_compliance.gst_india.utils.e_waybill.${method}`,
+            args: { doctype: frm.doctype, docname: frm.doc.name, values },
+            freeze: true,
+        });
+
+    try {
+        if (frm.is_dirty()) {
+            Object.assign(frm.doc, await get_saved_transport_fields(frm));
+            await frm._save_without_e_waybill_check("Update");
+        }
+
+        // portal takes Part-B from the generator only while no transporter is assigned, so vehicle goes first
+        if (steps.vehicle) {
+            await call("update_vehicle_info", {
+                ...values,
+                update_e_waybill_data: steps.transporter ? 0 : values.update_e_waybill_data,
+            });
+            steps.vehicle = false;
+        }
+        if (steps.transporter) await call("update_transporter", values);
+    } finally {
+        frm.refresh();
+    }
 }
 
 async function show_extend_validity_dialog(frm) {
@@ -976,7 +1088,7 @@ async function show_extend_validity_dialog(frm) {
             {
                 label: "Remaining Distance (in km)",
                 fieldname: "remaining_distance",
-                fieldtype: "Float",
+                fieldtype: "Int",
                 default: frm.doc.distance,
                 reqd: 1,
             },
@@ -1221,10 +1333,6 @@ function is_e_waybill_generatable(frm, show_message) {
     return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable(show_message);
 }
 
-async function auto_generate_e_waybill(frm) {
-    return await new E_WAYBILL_CLASS[frm.doctype](frm).auto_generate_e_waybill();
-}
-
 function get_hours(date, hours, date_time_format = frappe.defaultDatetimeFormat) {
     return moment(date).add(hours, "hours").format(date_time_format);
 }
@@ -1252,6 +1360,14 @@ function is_e_waybill_cancellable(frm) {
     return (
         e_waybill_info &&
         frappe.datetime.convert_to_user_tz(e_waybill_info.created_on, false).add("days", 1).diff() > 0
+    );
+}
+
+function can_cancel_e_waybill(frm) {
+    return (
+        frm.doc.ewaybill &&
+        is_e_waybill_cancellable(frm) &&
+        frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
     );
 }
 
@@ -1312,12 +1428,12 @@ function are_transport_details_available(doc) {
     );
 }
 
-function update_vehicle_type(dialog) {
-    dialog.set_value("gst_vehicle_type", get_vehicle_type(dialog.get_values(true)));
+function update_vehicle_type(dialog, frm) {
+    dialog.set_value("gst_vehicle_type", get_vehicle_type(dialog.get_values(true), frm.doc.gst_vehicle_type));
 }
 
-function get_vehicle_type(doc) {
-    if (doc.mode_of_transport == "Road") return "Regular";
+function get_vehicle_type(doc, saved_type) {
+    if (doc.mode_of_transport == "Road") return saved_type || "Regular";
     if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
     return "";
 }
@@ -1336,12 +1452,13 @@ function get_transit_type(dialog) {
 
 function show_e_waybill_generatable_status(frm, is_ewb_generatable) {
     if (frm.doc.docstatus === 0 && is_ewb_generatable) {
-        frm._ewb_message = __("Please submit the doc to generate e-Waybill.");
+        frm._ewb_message_list = [__("Please submit the doc to generate e-Waybill.")];
     }
 
     frappe.msgprint({
         title: is_ewb_generatable ? __("e-Waybill can be generated") : __("e-Waybill cannot be generated"),
-        message: frm._ewb_message,
+        message: frm._ewb_message_list,
+        as_list: true,
         indicator: is_ewb_generatable ? "green" : "red",
     });
 }
@@ -1374,6 +1491,110 @@ async function get_source_destination_address(frm, address_type) {
     });
 
     return address?.message;
+}
+
+function can_update_e_waybill(frm) {
+    return (
+        is_e_waybill_api_enabled(frm) &&
+        is_e_waybill_valid(frm) &&
+        frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
+    );
+}
+
+function toggle_transport_fields(frm) {
+    const editable = !frm.doc.ewaybill || can_update_e_waybill(frm);
+    frm.toggle_enable([...E_WAYBILL_TRANSPORTER_FIELDS, ...E_WAYBILL_VEHICLE_FIELDS], editable);
+
+    frm.toggle_enable("gst_vehicle_type", editable && frm.doc.mode_of_transport !== "Ship");
+}
+
+async function get_saved_transport_fields(frm) {
+    const fields = [...E_WAYBILL_TRANSPORTER_FIELDS, ...E_WAYBILL_VEHICLE_FIELDS].filter(
+        (f) => frm.fields_dict[f],
+    );
+    const { message } = await frappe.db.get_value(frm.doctype, frm.docname, fields);
+    return message;
+}
+
+function intercept_update_for_e_waybill(frm) {
+    if (frm._save_without_e_waybill_check) return;
+
+    frm._save_without_e_waybill_check = frm.save;
+    frm.save = async function (action, ...args) {
+        if (action === "Update" && (await open_e_waybill_update_dialog(frm))) return;
+
+        return frm._save_without_e_waybill_check(action, ...args);
+    };
+}
+
+async function open_e_waybill_update_dialog(frm) {
+    if (frm.doc.docstatus !== 1 || !frm.doc.ewaybill || !can_update_e_waybill(frm)) return false;
+
+    const saved = await get_saved_transport_fields(frm);
+    const changed = Object.keys(saved).filter((f) => (saved[f] || "") != (frm.doc[f] || ""));
+
+    const vehicle = changed.some((f) => E_WAYBILL_VEHICLE_FIELDS.includes(f));
+    const transporter = changed.some((f) => E_WAYBILL_TRANSPORTER_FIELDS.includes(f));
+    if (!vehicle && !transporter) return false;
+
+    show_update_e_waybill_dialog(frm, { vehicle, transporter });
+    return true;
+}
+
+// ask before cancelling: from the Cancel button or a workflow action
+function setup_cancel_confirmation(doctype) {
+    frappe.ui.form.on(doctype, {
+        before_cancel(frm) {
+            return confirm_portal_cancellation(frm).then((proceed) => {
+                if (!proceed) frappe.validated = false;
+            });
+        },
+
+        before_workflow_action(frm) {
+            if (!is_cancel_transition(frm)) return;
+
+            // unfreeze for the dialog; freeze again before frappe continues
+            frappe.dom.unfreeze();
+
+            return confirm_portal_cancellation(frm).then((proceed) => {
+                if (!proceed) return new Promise(() => {}); // stop the action
+
+                frappe.dom.freeze();
+            });
+        },
+    });
+}
+
+function is_cancel_transition(frm) {
+    const state_field = frappe.workflow.get_state_fieldname(frm.doctype); // also loads the workflow
+    const workflow = frappe.workflow.workflows[frm.doctype];
+    if (!workflow || !frm.selected_workflow_action) return false;
+
+    const transition = workflow.transitions.find(
+        (t) => t.action === frm.selected_workflow_action && t.state === frm.doc[state_field],
+    );
+    const next_state = workflow.states.find((s) => s.state === transition?.next_state);
+
+    return frm.doc.docstatus === 1 && cint(next_state?.doc_status) === 2;
+}
+
+function setup_gst_update_notifications(doctype) {
+    if (!india_compliance.is_api_enabled()) return;
+
+    frappe.ui.form.on(doctype, {
+        setup(frm) {
+            frappe.realtime.on("ic_doc_sync", (message) => {
+                const doc = message.docs;
+                if (doc.doctype !== frm.doctype || doc.name !== frm.doc?.name) return;
+
+                // unsaved changes: leave it to frappe
+                if (frm.is_dirty()) return;
+
+                frappe.model.sync(message);
+                frm.refresh();
+            });
+        },
+    });
 }
 
 function show_sandbox_mode_indicator() {

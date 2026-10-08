@@ -26,6 +26,15 @@ on:
         version-16,
       ]
 
+    paths-ignore:
+      - "**.css"
+      - "**.js"
+      - "**.md"
+      - "**.svg"
+      - "**.png"
+      - "india_compliance/public/**/*.html"
+      - "**.csv"
+
   workflow_dispatch:
     inputs:
       frappe_remote:
@@ -73,14 +82,17 @@ jobs:
       - uses: dorny/paths-filter@v4
         id: filter
         with:
+          predicate-quantifier: every
           filters: |
             backend:
               - '**'
-              - '!**.css'
-              - '!**.js'
-              - '!**.md'
-              - '!**.html'
-              - '!**.csv'
+              - '!**/*.css'
+              - '!**/*.js'
+              - '!**/*.md'
+              - '!**/*.svg'
+              - '!**/*.png'
+              - '!india_compliance/public/**/*.html'
+              - '!**/*.csv'
 
   tests:
     runs-on: ubuntu-latest
@@ -90,8 +102,10 @@ jobs:
 
     strategy:
       fail-fast: false
+      matrix:
+        container: [1, 2]
 
-    name: Python Unit Tests
+    name: Python Unit Tests - MariaDB
 
     services:
       mariadb:
@@ -107,12 +121,12 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.14"
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           check-latest: true
@@ -164,7 +178,10 @@ jobs:
           ERPNEXT_BRANCH: ${{ inputs.erpnext_branch }}
 
       - name: Run Tests
-        run: cd ~/frappe-bench/ && bench --site test_site run-parallel-tests --app ${{ env.APP_NAME }} --with-coverage
+        run: |
+          cd ~/frappe-bench/
+          bench --site test_site run-parallel-tests --app ${{ env.APP_NAME }} --with-coverage \
+            --total-builds ${{ strategy.job-total }} --build-number ${{ matrix.container }}
         env:
           TYPE: server
 
@@ -175,13 +192,23 @@ jobs:
       - name: Upload coverage data
         uses: actions/upload-artifact@v7
         with:
-          name: coverage
+          name: coverage-${{ matrix.container }}
           path: /home/runner/frappe-bench/sites/coverage.xml
+
+  tests-result:
+    name: Python Unit Tests
+    needs: [changes, tests]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test shard results
+        if: ${{ needs.changes.result != 'success' || needs.tests.result == 'failure' || needs.tests.result == 'cancelled' }}
+        run: exit 1
 
   coverage:
     name: Coverage Wrap Up
-    if: ${{ github.event_name == 'push' && needs.changes.outputs.backend == 'true' }}
-    needs: [changes, tests]
+    if: ${{ github.event_name == 'push' }}
+    needs: tests
     runs-on: ubuntu-latest
     steps:
       - name: Clone

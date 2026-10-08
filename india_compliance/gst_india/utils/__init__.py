@@ -1,8 +1,10 @@
 import copy
 import datetime
 import functools
+import inspect
 import io
 import tarfile
+from collections.abc import Callable
 
 import frappe
 from dateutil import parser
@@ -11,7 +13,9 @@ from erpnext.accounts.utils import get_fiscal_year
 from erpnext.stock.get_item_details import purchase_doctypes
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
+from frappe.database.utils import commit_after_response
 from frappe.desk.form.load import get_docinfo, run_onload
+from frappe.query_builder.functions import Length
 from frappe.utils import (
     add_months,
     add_to_date,
@@ -32,16 +36,20 @@ from titlecase import titlecase as _titlecase
 from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
+    CUSTOM_ADDRESS_FIELDS_DOCTYPES,
     E_INVOICE_MASTER_CODES_URL,
     GST_ACCOUNT_FIELDS,
     GST_INVOICE_NUMBER_FORMAT,
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
     IMPORT_GST_CATEGORIES,
+    ISD_GST_CATEGORY,
+    OIDAR,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
     SERVICE_HSN_PREFIX,
+    SHIP_TO_GSTIN_APPLICABLE_DATE,
     STATE_NUMBERS,
     STATE_PINCODE_MAPPING,
     TAX_TYPES,
@@ -71,6 +79,14 @@ def load_doc(doctype, name, perm="read"):
     return doc
 
 
+def has_changed(doc, fieldname):
+    return doc.meta.has_field(fieldname) and doc.has_value_changed(fieldname)
+
+
+def get_changed_fields(doc, fieldnames):
+    return [fieldname for fieldname in fieldnames if has_changed(doc, fieldname)]
+
+
 def update_onload(doc, key, value):
     """Set or update onload key in doc"""
 
@@ -84,18 +100,115 @@ def update_onload(doc, key, value):
         onload[key].update(value)
 
 
-def send_updated_doc(doc, set_docinfo=False):
+def is_response_pending():
+    """can we still reply to the user? no once the response is out."""
+    return bool(frappe.request) and not frappe.flags.in_after_response
+
+
+def run_after_response_or_enqueue(action: Callable, reference_doc, failure_message: str, **kwargs):
+    """Run a portal action once the doc is saved, without making the user wait.
+
+    - from the desk: right after the response (frappe's commit_after_response)
+    - anything else (REST, worker, CLI): the queue
+    - either way only after commit -> a rolled back submit / cancel never reaches the portal
+    - a failure is logged against the doc and reported to the user
+    """
+    is_ui_request = getattr(frappe.local, "is_ajax", False)
+
+    if not is_ui_request:
+        frappe.enqueue(
+            run_or_report_failure,
+            enqueue_after_commit=True,
+            queue="short",
+            action=action,
+            reference_doctype=reference_doc.doctype,
+            reference_name=reference_doc.name,
+            failure_message=failure_message,
+            **kwargs,
+        )
+        return
+
+    def run():
+        frappe.flags.in_after_response = True
+
+        try:
+            run_or_report_failure(
+                action, reference_doc.doctype, reference_doc.name, failure_message, **kwargs
+            )
+        finally:
+            frappe.flags.in_after_response = False
+
+    frappe.db.after_commit.add(lambda: commit_after_response(run))
+
+
+def run_or_report_failure(action: Callable, reference_doctype, reference_name, failure_message, **kwargs):
+    """Run a portal action; a failure is logged against the doc and reported to the user."""
+    try:
+        action(**kwargs)
+
+    except Exception:
+        frappe.log_error(
+            title=failure_message,
+            message=frappe.get_traceback(),
+            reference_doctype=reference_doctype,
+            reference_name=reference_name,
+        )
+        notify_user(
+            failure_message,
+            indicator="red",
+            alert=True,
+            doc=frappe.get_doc(reference_doctype, reference_name),
+        )
+
+    finally:
+        commit()  # realtime updates go out on commit; so do actions queued meanwhile
+
+
+def commit():
+    """the test runner owns the transaction"""
+    if not frappe.flags.in_test:
+        frappe.db.commit()  # nosemgrep
+
+
+def send_updated_doc(doc):
     """Apply fieldlevel perms and send doc if called while handling a request"""
 
-    if not frappe.request:
+    if not is_response_pending() or doc in frappe.response.docs:
         return
 
     doc.apply_fieldlevel_read_permissions()
-
-    if set_docinfo:
-        get_docinfo(doc)
-
     frappe.response.docs.append(doc)
+    get_docinfo(doc)
+
+
+def publish_doc_update(doc):
+    """Send the updated doc to the user's open form."""
+    if not frappe.flags.in_bulk_generation:
+        if not doc.get("__onload"):
+            run_onload(doc)  # the form needs onload info too
+
+        doc.apply_fieldlevel_read_permissions()
+        get_docinfo(doc)
+        frappe.publish_realtime(
+            "ic_doc_sync",
+            {"docs": doc.as_dict(), "docinfo": frappe.response["docinfo"]},
+            user=frappe.session.user,
+            after_commit=True,
+        )
+
+    doc.notify_update()
+
+
+def notify_user(message, title=None, indicator=None, alert=False, doc=None):
+    pending = is_response_pending()
+
+    if not frappe.flags.in_bulk_generation:  # no alert per doc in bulk
+        frappe.msgprint(message, title=title, indicator=indicator, alert=alert, realtime=not pending)
+
+    if not doc:
+        return
+
+    return send_updated_doc(doc) if pending else publish_doc_update(doc)
 
 
 @frappe.whitelist()
@@ -112,7 +225,7 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
     }
 
     if exclude_isd:
-        filters.update({"gst_category": ["!=", "Input Service Distributor"]})
+        filters.update({"gst_category": ["!=", ISD_GST_CATEGORY]})
 
     gstin_list = frappe.get_all(
         "Address",
@@ -121,9 +234,15 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
         distinct=True,
     )
 
-    default_gstin = frappe.db.get_value(party_type, party, "gstin")
-    if default_gstin and default_gstin not in gstin_list:
-        gstin_list.insert(0, default_gstin)
+    default_gstin, default_gst_category = frappe.db.get_value(party_type, party, ("gstin", "gst_category"))
+    if not default_gstin or default_gstin in gstin_list:
+        return gstin_list
+
+    # don't add default gstin to the list if it is ISD and exclude_isd is True
+    if exclude_isd and default_gst_category == ISD_GST_CATEGORY:
+        return gstin_list
+
+    gstin_list.insert(0, default_gstin)
 
     return gstin_list
 
@@ -153,6 +272,76 @@ def get_party_for_gstin(gstin: str, party_type: str = "Supplier"):
     )
     if party:
         return party[0][0]
+
+
+def validate_company_access(company, doctype="GST Inward Supply", perm="read"):
+    """Throw unless the user may read doctype data for company."""
+    if not company:
+        return
+
+    reference = frappe.new_doc(doctype)
+    reference.company = company
+    if not frappe.has_permission(doctype, perm, doc=reference):
+        frappe.throw(
+            _("You are not permitted to access data for Company {0}.").format(company),
+            frappe.PermissionError,
+        )
+
+
+def validate_company_gstin_access(company_gstin, doctype="GST Inward Supply"):
+    """Throw unless the user may read doctype data for company_gstin's Company."""
+    if not company_gstin or company_gstin == "All":
+        return
+
+    company = get_party_for_gstin(company_gstin, "Company")
+    if not company:
+        frappe.throw(
+            _("GSTIN {0} is not linked to any Company.").format(company_gstin),
+            frappe.ValidationError,
+        )
+
+    validate_company_access(company, doctype)
+
+
+def validate_gstin_permission(fn=None, *, doctype=None):
+    """Whitelist decorator gating a method on its company_gstin / gstin argument.
+    Place below @frappe.whitelist() and above @otp_handler.
+    """
+    if fn is None:
+        return functools.partial(validate_gstin_permission, doctype=doctype)
+
+    signature = inspect.signature(fn)
+    if "company_gstin" in signature.parameters:
+        field = "company_gstin"
+    elif "gstin" in signature.parameters:
+        field = "gstin"
+    else:
+        raise ValueError(
+            f"validate_gstin_permission requires '{fn.__name__}' to declare a "
+            "'company_gstin' or 'gstin' parameter."
+        )
+
+    resolved_doctype = doctype or "GST Inward Supply"
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        bound = signature.bind_partial(*args, **kwargs)
+        company_gstin = bound.arguments.get(field)
+
+        if company_gstin == "All":
+            company = bound.arguments.get("company") or getattr(bound.arguments.get("self"), "company", None)
+            if not company:
+                frappe.throw(
+                    _("Company is required to validate access for all GSTINs."),
+                    frappe.PermissionError,
+                )
+            validate_company_access(company, resolved_doctype)
+        else:
+            validate_company_gstin_access(company_gstin, resolved_doctype)
+
+        return fn(*args, **kwargs)
+
+    return wrapper
 
 
 @frappe.whitelist()
@@ -241,6 +430,14 @@ def is_valid_pan(pan):
     return PAN_NUMBER.match(pan)
 
 
+def is_oidar_gstin(gstin):
+    return OIDAR.match(gstin)
+
+
+def get_pan_from_gstin(gstin):
+    return pan if is_valid_pan(pan := gstin[2:12]) else ""
+
+
 def validate_pincode(address):
     """
     Validate Pincode with following checks:
@@ -320,6 +517,9 @@ def guess_gst_category(gstin: str | None, country: str | None, gst_category: str
     if GSTIN_FORMATS["UIN Holders"].match(gstin):
         return "UIN Holders"
 
+    if is_oidar_gstin(gstin):
+        return "Overseas"
+
     if GSTIN_FORMATS["Overseas"].match(gstin):
         return "Overseas"
 
@@ -367,6 +567,16 @@ def is_overseas_transaction(doctype, gst_category, place_of_supply):
     return gst_category == "Overseas"
 
 
+def is_ship_to_gstin_applicable(settings=None):
+    """Ship To GSTIN is mandatory, and must differ from Bill To GSTIN, in both the
+    e-Invoice and e-Waybill APIs. Live in sandbox, and in production from the rollout date.
+    """
+    if not settings:
+        settings = frappe.get_cached_doc("GST Settings")
+
+    return settings.sandbox_mode or getdate(as_ist()) >= SHIP_TO_GSTIN_APPLICABLE_DATE
+
+
 def is_foreign_doc(doc):
     return is_foreign_transaction(doc.gst_category, doc.place_of_supply)
 
@@ -407,6 +617,28 @@ def get_hsn_settings():
     valid_hsn_length = tuple(length for length in VALID_HSN_LENGTHS if length >= min_hsn_digits)
 
     return validate_hsn_code, valid_hsn_length
+
+
+@frappe.whitelist()
+def get_hsn_code_list(txt: str | None = None, limit: int = 20):
+    # GST HSN Code is public data, hence no permission check.
+
+    hsn_code = frappe.qb.DocType("GST HSN Code")
+    query = (
+        frappe.qb.from_(hsn_code)
+        .select(hsn_code.name.as_("value"), hsn_code.name.as_("label"), hsn_code.description)
+        .orderby(hsn_code.name)
+        .limit(cint(limit))
+    )
+
+    validate_hsn_code, valid_hsn_length = get_hsn_settings()
+    if validate_hsn_code and valid_hsn_length:
+        query = query.where(Length(hsn_code.name).isin(valid_hsn_length))
+
+    if txt:
+        query = query.where(hsn_code.name.like(f"{txt}%") | hsn_code.description.like(f"%{txt}%"))
+
+    return query.run(as_dict=True)
 
 
 def get_place_of_supply(party_details, doctype):
@@ -452,7 +684,19 @@ def get_place_of_supply(party_details, doctype):
         # for registered
         pos_gstin = customer_gstin or party_details.company_gstin
 
-    elif doctype == "Stock Entry":
+    elif doctype in CUSTOM_ADDRESS_FIELDS_DOCTYPES:
+        # Place of supply for goods is where the movement terminates (s.10(1)(a)), so
+        # read it off the Bill To address whenever that party has no GSTIN to derive it
+        # from - an unregistered consignee, or one billed as URP.
+        if not party_details.bill_to_gstin and (bill_to_address := party_details.get("bill_to_address")):
+            gst_state_number, gst_state = frappe.db.get_value(
+                "Address",
+                bill_to_address,
+                ("gst_state_number", "gst_state"),
+            )
+            if gst_state_number and gst_state:
+                return f"{gst_state_number}-{gst_state}"
+
         pos_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
     else:
         # for purchase, subcontracting order and receipt
@@ -475,7 +719,8 @@ def get_overseas_place_of_supply(party_details):
     """
     place_of_supply = "96-Other Countries"
 
-    if not party_details.shipping_address_name:
+    # Payment Entry has no shipping address field
+    if not party_details.get("shipping_address_name"):
         return place_of_supply
 
     shipping_address_details = frappe.get_value(
@@ -865,19 +1110,23 @@ def get_timespan_date_range(timespan: str, company: str | None = None) -> tuple 
 
 def merge_dicts(d1: dict, d2: dict) -> dict:
     """
+    Fold d2 into d1: dicts recurse, lists join, numbers add, a null never erases, anything else d2 wins.
+
     Sample Input:
     -------------
     d1 = {
         'key1': 'value1',
         'key2': {'nested': 'value'},
         'key3': ['value1'],
-        'key4': 'value4'
+        'key4': 'value4',
+        'igst': 5
     }
     d2 = {
         'key1': 'value2',
         'key2': {'key': 'value3'},
         'key3': ['value2'],
-        'key5': 'value5'
+        'key5': 'value5',
+        'igst': 3
     }
 
     Sample Output:
@@ -887,7 +1136,8 @@ def merge_dicts(d1: dict, d2: dict) -> dict:
         'key2': {'nested': 'value', 'key': 'value3'},
         'key3': ['value1', 'value2'],
         'key4': 'value4',
-        'key5': 'value5'
+        'key5': 'value5',
+        'igst': 8
     }
     """
     for key in set(d1.keys()) | set(d2.keys()):
@@ -897,6 +1147,12 @@ def merge_dicts(d1: dict, d2: dict) -> dict:
 
             elif isinstance(d1[key], list) and isinstance(d2[key], list):
                 d1[key] = d1[key] + d2[key]
+
+            elif isinstance(d1[key], int | float) and isinstance(d2[key], int | float):
+                d1[key] = d1[key] + d2[key]
+
+            elif d2[key] is None:
+                continue
 
             else:
                 d1[key] = copy.deepcopy(d2[key])
@@ -969,7 +1225,9 @@ def handle_server_errors(settings, doc, document_type, error):
     if not doc.doctype == "Sales Invoice":
         return
 
-    error_message = "Government services are currently slow/down. We apologize for the inconvenience caused."
+    error_message = _(
+        "Government services are currently slow/down. We apologize for the inconvenience caused."
+    )
 
     error_message_title = {
         GatewayTimeoutError: _("Gateway Timeout Error"),
@@ -983,17 +1241,16 @@ def handle_server_errors(settings, doc, document_type, error):
     if settings.enable_retry_einv_ewb_generation and (not settings.sandbox_mode or frappe.flags.in_test):
         document_status = "Auto-Retry"
         settings.db_set("is_retry_einv_ewb_generation_pending", 1, update_modified=False)
-        error_message += f" Your {document_type} generation will be automatically retried every 5 minutes."
+        error_message += " " + _("Your {0} generation will be automatically retried every 5 minutes.").format(
+            document_type
+        )
     else:
-        error_message += " Please try again after some time."
+        error_message += " " + _("Please try again after some time.")
 
     doc.db_set({document_status_field: document_status})
+    doc.save_version()
 
-    frappe.msgprint(
-        msg=_(error_message),
-        title=error_message_title.get(type(error)),
-        indicator="yellow",
-    )
+    notify_user(error_message, title=error_message_title.get(type(error)), indicator="yellow", doc=doc)
 
 
 def get_month_or_quarter_dict():
@@ -1052,6 +1309,46 @@ def get_periods_between_dates(
     return periods
 
 
+def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
+    """Add a GST Logs section to a doctype's dashboard.
+
+    Shared by every doctype that can carry an e-Waybill / e-Invoice.
+    """
+    if not is_api_enabled():
+        return data
+
+    data.setdefault("non_standard_fieldnames", {}).update(
+        {
+            "e-Waybill Log": "reference_name",
+            "Integration Request": "reference_docname",
+            "GST Inward Supply": "link_name",
+            "e-Invoice Log": "reference_name",
+        }
+    )
+
+    data.setdefault("dynamic_links", {}).update(
+        reference_docname=[doctype, "reference_doctype"],
+        reference_name=[doctype, "reference_doctype"],
+    )
+
+    transactions = data.setdefault("transactions", [])
+
+    # GST Logs section looks best at the 3rd position
+    # If there are less than 2 transactions, insert will be equivalent to append
+    transactions.insert(2, {"label": _("GST Logs"), "items": log_doctypes})
+
+    return data
+
+
+def get_items_fieldname(doctype):
+    return "assets" if doctype == "Asset Movement" else "items"
+
+
+def get_items(doc):
+    """Rows of the doctype's item table, which isn't always called `items`."""
+    return doc.get(get_items_fieldname(doc.doctype)) or []
+
+
 def is_outward_stock_entry(doc):
     if (
         doc.doctype == "Stock Entry"
@@ -1061,7 +1358,28 @@ def is_outward_stock_entry(doc):
         return True
 
 
-def create_notification(message_content, document_type, document_name=None, request_id=None):
+def is_inward_transaction(doc):
+    """True when the goods flow towards the company, ie Bill To is the company's side.
+
+    Everywhere else this is `is_return`; Asset Movement has no such field and states the
+    direction through `purpose` instead.
+    """
+    if doc.get("doctype") == "Asset Movement":
+        return doc.get("purpose") == "Receipt"
+
+    return bool(doc.get("is_return"))
+
+
+def is_same_gstin_allowed(doc):
+    """Whether both sides of the transaction may carry the same GSTIN.
+
+    The company is moving its own goods, so no supply takes place between distinct
+    persons and NIC accepts the e-Waybill as Self -> Self ("For Own Use" and friends).
+    """
+    return bool(is_outward_stock_entry(doc)) or doc.get("doctype") == "Asset Movement"
+
+
+def create_notification(message_content, document_type, document_name=None, request_id=None, link=None):
     # request_id shows failure response
     if request_id and (doc_name := frappe.db.get_value("Integration Request", {"request_id": request_id})):
         document_type = "Integration Request"
@@ -1076,6 +1394,7 @@ def create_notification(message_content, document_type, document_name=None, requ
             "document_name": document_name or document_type,
             "subject": message_content.get("subject"),
             "email_content": message_content.get("body"),
+            "link": link,
         }
     )
     notification.insert(ignore_permissions=True)
@@ -1096,25 +1415,35 @@ def enable_autocommit(fn):
     return wrapper
 
 
-def get_company_gstin_number(company, address=None, all_gstins=False):
-    gstin = ""
+def get_company_gstin_number(company, address=None, gstin=None):
+    """Resolve the GSTIN a report is filed for. Never picks one on the user's behalf."""
     if address:
-        gstin = frappe.db.get_value("Address", address, "gstin")
-
-    if not gstin:
-        gstin = get_gstin_list(company)
-        if gstin and not all_gstins:
-            gstin = gstin[0]
-
-    if not gstin:
-        address = frappe.bold(address) if address else ""
-        frappe.throw(
-            _("Please set valid GSTIN No. in Company Address {} for company {}").format(
-                address, frappe.bold(company)
-            )
+        # an address determines the GSTIN, so resolve it through the company it is linked to
+        linked_address = frappe.get_all(
+            "Address",
+            filters={"name": address, "link_doctype": "Company", "link_name": company},
+            pluck="gstin",
         )
 
-    return gstin
+        if not linked_address:
+            frappe.throw(
+                _("Address {0} is not linked to {1}").format(frappe.bold(address), frappe.bold(company))
+            )
+
+        if not linked_address[0]:
+            frappe.throw(_("Please set GSTIN in Address {0}").format(frappe.bold(address)))
+
+        return linked_address[0]
+
+    if gstin:
+        if gstin not in get_gstin_list(company):
+            frappe.throw(
+                _("GSTIN {0} does not belong to {1}").format(frappe.bold(gstin), frappe.bold(company))
+            )
+
+        return gstin
+
+    frappe.throw(_("Please select Company GSTIN"), title=_("Missing Filter"))
 
 
 def has_permission_of_page(page_name, throw=False):
@@ -1238,30 +1567,27 @@ def _get_duplicate_gstin_party(gstin, party_type, party=None):
     return list(duplicates_dict.values())
 
 
-def set_einvoice_status(
-    doc,
-    status,
-    *,
-    commit=False,
-    notify=True,
-):
+def rollback_and_set_einvoice_status(doc, status):
+    _rollback_and_set_status(doc, "einvoice_status", status)
+
+
+def rollback_and_set_ewaybill_status(doc, status):
+    _rollback_and_set_status(doc, "e_waybill_status", status)
+
+
+def _rollback_and_set_status(doc, fieldname, status):
+    """drop the failed attempt's writes, persist only the status"""
+    if not frappe.flags.in_test:
+        frappe.db.rollback()
+
     if doc.doctype != "Sales Invoice":
         return
 
-    doc.db_set("einvoice_status", status, commit=commit, notify=notify)
-
-
-def set_ewaybill_status(
-    doc,
-    status,
-    *,
-    commit=False,
-    notify=True,
-):
-    if doc.doctype != "Sales Invoice":
-        return
-
-    doc.db_set("e_waybill_status", status, commit=commit, notify=notify)
+    # if response is pending, other viewers refetch on doc_update;
+    # else the pushed doc (publish_doc_update) notifies them
+    doc.db_set(fieldname, status, notify=is_response_pending())
+    doc.save_version()
+    commit()
 
 
 def has_gst_taxes(doc):

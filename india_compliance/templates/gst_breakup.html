@@ -1,4 +1,4 @@
-{% set tax_breakup_data = json.loads(get_gst_breakup(doc)) %}
+{% set tax_breakup_data = get_gst_breakup(doc) %}
 {% if tax_breakup_data %}
 <div class="tax-break-up" style="overflow-x: auto">
     <table class="table table-bordered table-hover">

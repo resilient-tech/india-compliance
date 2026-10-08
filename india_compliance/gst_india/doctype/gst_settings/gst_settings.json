@@ -17,6 +17,9 @@
   "min_hsn_digits",
   "enable_rcm_for_unregistered_supplier",
   "rcm_threshold",
+  "isd_section_break",
+  "distribute_expense_with_isd_credit",
+  "auto_create_isd_recipient_invoice",
   "api_section",
   "enable_api",
   "enable_retry_einv_ewb_generation",
@@ -30,6 +33,7 @@
   "enable_e_waybill_from_pi",
   "enable_e_waybill_from_pr",
   "enable_e_waybill_for_sc",
+  "enable_e_waybill_from_asset_movement",
   "fetch_e_waybill_data",
   "attach_e_waybill_print",
   "column_break_10",
@@ -74,18 +78,6 @@
   "enable_auto_reconciliation",
   "inward_supply_period",
   "column_break_zlfe",
-  "gst_categories_section",
-  "reconcile_for_b2b",
-  "reconcile_for_b2ba",
-  "column_break_notc",
-  "reconcile_for_cdnr",
-  "reconcile_for_cdnra",
-  "column_break_jpws",
-  "reconcile_for_isd",
-  "reconcile_for_isda",
-  "column_break_brkt",
-  "reconcile_for_impg",
-  "reconcile_for_impgsez",
   "auto_reconciliation_days_section",
   "reconcile_on_monday",
   "reconcile_on_friday",
@@ -135,7 +127,7 @@
   },
   {
    "default": "1",
-   "description": "As per <a href=\"https://old.cbic.gov.in/resources/htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf\" rel=\"noopener noreferrer\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with atleast 4 or 6 digits (based on turnover)",
+   "description": "As per <a href=\"https://gstcouncil.gov.in/sites/default/files/2024-05/notfctn-78-central-tax-english-2020.pdf\" target=\"_blank\" rel=\"noopener noreferrer\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with at least 4 or 6 digits (based on turnover).<br>Import purchases always require HSN/SAC.",
    "fieldname": "validate_hsn_code",
    "fieldtype": "Check",
    "label": "Validate HSN/SAC Code in Sales Items and Transactions"
@@ -379,6 +371,20 @@
    "label": "Invoice Value Threshold for Reverse Charge"
   },
   {
+   "default": "1",
+   "description": "The expense of the ISD applicable Purchase Invoice is distributed to the recipient branch along with the Input Tax Credit",
+   "fieldname": "distribute_expense_with_isd_credit",
+   "fieldtype": "Check",
+   "label": "Distribute Expense with ISD Credit"
+  },
+  {
+   "default": "1",
+   "description": "Applicable when Is against Customer/Supplier is unchecked in the ISD Distribution Invoice",
+   "fieldname": "auto_create_isd_recipient_invoice",
+   "fieldtype": "Check",
+   "label": "Auto Create ISD Recipient Invoice for Intra-Company Distributions"
+  },
+  {
    "default": "0",
    "description": "Reverse Charge will automatically be applied if the Supplier is Unregistered and Reverse Charge value threshold is met",
    "fieldname": "enable_rcm_for_unregistered_supplier",
@@ -457,24 +463,6 @@
    "label": "Inward Supply Period in months"
   },
   {
-   "depends_on": "eval: doc.enable_auto_reconciliation",
-   "fieldname": "gst_categories_section",
-   "fieldtype": "Section Break",
-   "label": "GST Categories"
-  },
-  {
-   "fieldname": "column_break_brkt",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "column_break_notc",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "column_break_jpws",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "column_break_koqs",
    "fieldtype": "Column Break"
   },
@@ -523,54 +511,6 @@
    "fieldname": "reconcile_on_thursday",
    "fieldtype": "Check",
    "label": "Thursday"
-  },
-  {
-   "default": "1",
-   "fieldname": "reconcile_for_b2b",
-   "fieldtype": "Check",
-   "label": "B2B"
-  },
-  {
-   "default": "0",
-   "fieldname": "reconcile_for_b2ba",
-   "fieldtype": "Check",
-   "label": "B2BA"
-  },
-  {
-   "default": "1",
-   "fieldname": "reconcile_for_cdnr",
-   "fieldtype": "Check",
-   "label": "CDNR"
-  },
-  {
-   "default": "0",
-   "fieldname": "reconcile_for_cdnra",
-   "fieldtype": "Check",
-   "label": "CDNRA"
-  },
-  {
-   "default": "0",
-   "fieldname": "reconcile_for_isd",
-   "fieldtype": "Check",
-   "label": "ISD"
-  },
-  {
-   "default": "0",
-   "fieldname": "reconcile_for_isda",
-   "fieldtype": "Check",
-   "label": "ISDA"
-  },
-  {
-   "default": "0",
-   "fieldname": "reconcile_for_impg",
-   "fieldtype": "Check",
-   "label": "IMPG"
-  },
-  {
-   "default": "0",
-   "fieldname": "reconcile_for_impgsez",
-   "fieldtype": "Check",
-   "label": "IMPGSEZ"
   },
   {
    "default": "0",
@@ -623,6 +563,13 @@
    "fieldname": "enable_e_waybill_for_sc",
    "fieldtype": "Check",
    "label": "Enable e-Waybill Generation for Subcontracting and Material Transfer"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_e_waybill",
+   "fieldname": "enable_e_waybill_from_asset_movement",
+   "fieldtype": "Check",
+   "label": "Enable e-Waybill Generation from Asset Movement"
   },
   {
    "default": "1",
@@ -726,13 +673,19 @@
    "fieldtype": "Select",
    "label": "Nil / Exempted / Non-GST Items in e-Invoice",
    "options": "Do Not Generate\nGenerate with Other Charges\nGenerate with Taxable Values"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "isd_section_break",
+   "fieldtype": "Section Break",
+   "label": "Input Service Distributor"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-05-15 18:15:50.948178",
+ "modified": "2026-10-02 18:17:58.186726",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

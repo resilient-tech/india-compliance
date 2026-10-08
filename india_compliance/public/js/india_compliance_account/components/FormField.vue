@@ -19,8 +19,8 @@
             />
             <div class="suffix-icon">
                 <Loading radius="15" color="var(--text-light)" stroke="1.8" v-if="isLoading" />
-                <i class="fa fa-times-circle" style="color: var(--red-500)" v-else-if="hasError"></i>
-                <i class="fa fa-check-circle" style="color: var(--green-500)" v-else-if="isValid"></i>
+                <span style="color: var(--red-500)" v-else-if="hasError" v-html="error_icon"></span>
+                <span style="color: var(--green-500)" v-else-if="isValid" v-html="valid_icon"></span>
             </div>
         </div>
         <div class="input-error" v-if="error">
@@ -75,6 +75,14 @@ export default {
 
         isValid() {
             return this.state === UiState.success;
+        },
+
+        error_icon() {
+            return frappe.utils.icon("circle-x", "sm");
+        },
+
+        valid_icon() {
+            return frappe.utils.icon("circle-check", "sm");
         },
     },
 };

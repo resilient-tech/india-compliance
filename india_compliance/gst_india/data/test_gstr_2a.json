@@ -228,5 +228,95 @@
       "csamt": 0.5,
       "amd": "N"
     }
+  ],
+  "ecom": [
+    {
+      "ctin": "01AABCE2207R1Z5",
+      "cfs": "Y",
+      "cfs3b": "Y",
+      "fldtr1": "18-Nov-19",
+      "flprdr1": "Nov-19",
+      "inv": [
+        {
+          "inum": "ECO-001",
+          "idt": "24-11-2019",
+          "val": 1180,
+          "pos": "06",
+          "rchrg": "N",
+          "inv_typ": "R",
+          "itms": [
+            {
+              "num": 1,
+              "itm_det": {
+                "rt": 18,
+                "txval": 1000,
+                "iamt": 0,
+                "camt": 90,
+                "samt": 90,
+                "csamt": 0
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "ecoma": [
+    {
+      "ctin": "01AABCE2207R1Z5",
+      "cfs": "Y",
+      "cfs3b": "Y",
+      "fldtr1": "18-Nov-19",
+      "flprdr1": "Nov-19",
+      "inv": [
+        {
+          "inum": "ECO-001-A",
+          "idt": "25-11-2019",
+          "oinum": "ECO-001",
+          "oidt": "24-11-2019",
+          "val": 1180,
+          "pos": "06",
+          "rchrg": "N",
+          "inv_typ": "R",
+          "atyp": "R",
+          "itms": [
+            {
+              "num": 1,
+              "itm_det": {
+                "rt": 18,
+                "txval": 1000,
+                "iamt": 0,
+                "camt": 90,
+                "samt": 90,
+                "csamt": 0
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "tds": [
+    {
+      "gstin_deductor": "24AANFA2543R1ZG",
+      "gstin_ded": "01AABCE2207R1Z5",
+      "deductor_name": "Test Deductor",
+      "month": "022020",
+      "amt_ded": 10000,
+      "iamt": 0,
+      "camt": 100,
+      "samt": 100
+    }
+  ],
+  "tcs": [
+    {
+      "etin": "01AABCE2207R1Z5",
+      "sup_val": 50000,
+      "tx_val": 48000,
+      "iamt": 0,
+      "camt": 240,
+      "samt": 240,
+      "csamt": 0
+    }
   ]
 }

@@ -66,13 +66,13 @@
    "depends_on": "eval: !doc.__gst_data",
    "fieldname": "tabs_empty_state",
    "fieldtype": "HTML",
-   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Generate to view the data\") }}</p>"
+   "options": "<div class=\"ic-empty-state\">\n<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Generate to view the data\") }}</p>\n</div>"
   },
   {
    "depends_on": "eval: doc.__gst_data && Object.keys(doc.__gst_data).length === 0",
    "fieldname": "tabs_no_data",
    "fieldtype": "HTML",
-   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters\") }}</p>"
+   "options": "<div class=\"ic-empty-state\">\n<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters\") }}</p>\n</div>"
   },
   {
    "fieldname": "data_section",

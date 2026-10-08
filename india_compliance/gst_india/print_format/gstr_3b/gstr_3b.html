@@ -1,0 +1,22 @@
+<style>
+	@media print {
+		@page {
+			size: A4 landscape;
+		}
+	}
+	.print-format {
+		orientation: Landscape;
+	}
+</style>
+
+{% if letter_head and not no_letterhead %}
+	<div class="letter-head">{{ letter_head }}</div>
+{% endif %}
+
+{% set json_output = frappe.db.get_value("GSTR 3B Report", doc.name, "json_output") %}
+{% if json_output %}
+	{% set __ = _ %}
+	{% set flt = frappe.utils.flt %}
+	{% set data = json.loads(json_output) %}
+	{% include "india_compliance/gst_india/doctype/gstr_3b_report/gstr_3b_report.html" %}
+{% endif %}

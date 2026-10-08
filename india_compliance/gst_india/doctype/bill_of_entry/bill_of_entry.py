@@ -25,7 +25,6 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import (
-    _is_gstr3b_filed,
     set_or_validate_itc_claim_period,
     validate_itc_claim_period_on_update_after_submit,
 )
@@ -44,12 +43,6 @@ class BillofEntry(Document):
     def onload(self):
         if self.docstatus != 1:
             return
-
-        if self.itc_claim_period:
-            self.set_onload(
-                "is_itc_period_filed",
-                _is_gstr3b_filed(self.company_gstin, self.itc_claim_period),
-            )
 
         self.set_onload(
             "journal_entry_exists",
@@ -425,19 +418,16 @@ class BillofEntry(Document):
 
         submitted_boe_qty = (
             frappe.qb.from_(boe_item)
-            .select(boe_item.pi_detail, Sum(boe_item.qty).as_("qty"))
-            .where(boe_item.pi_detail.isin(pi_item_names))
+            .select(Sum(boe_item.qty))
+            .where(boe_item.pi_detail == pi_item.name)
             .where(boe_item.docstatus == 1)
-            .groupby(boe_item.pi_detail)
         )
 
         (
             frappe.qb.update(pi_item)
-            .left_join(submitted_boe_qty)
-            .on(pi_item.name == submitted_boe_qty.pi_detail)
             .set(
                 pi_item.pending_boe_qty,
-                pi_item.qty - IfNull(submitted_boe_qty.qty, 0),
+                pi_item.qty - IfNull(submitted_boe_qty, 0),
             )
             .where(pi_item.name.isin(pi_item_names))
             .run()
@@ -788,10 +778,6 @@ def fetch_pending_boe_invoices(
 
     if txt and not filters.get("name"):
         filters.name = ["like", f"%{txt}%"]
-
-    # TODO: fix required in frappe
-    if filters.name and filters.name[1] is None:
-        filters.name = ["!=", ""]
 
     return frappe.get_list(
         "Purchase Invoice",

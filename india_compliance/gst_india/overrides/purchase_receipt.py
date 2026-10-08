@@ -4,15 +4,12 @@ from india_compliance.gst_india.overrides.purchase_invoice import (
     get_ineligibility_reason,
     show_ineligibility_alert,
 )
-from india_compliance.gst_india.overrides.sales_invoice import (
-    update_dashboard_with_gst_logs,
-)
 from india_compliance.gst_india.overrides.transaction import (
     ignore_gst_validations,
     validate_mandatory_fields,
     validate_transaction,
 )
-from india_compliance.gst_india.utils import is_api_enabled
+from india_compliance.gst_india.utils import is_api_enabled, update_dashboard_with_gst_logs
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 
 

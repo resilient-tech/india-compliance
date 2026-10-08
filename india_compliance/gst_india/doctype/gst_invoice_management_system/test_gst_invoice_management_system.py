@@ -3,18 +3,31 @@
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import add_to_date
+from frappe.utils import add_to_date, formatdate, getdate
 
+from india_compliance.gst_india.doctype.gst_invoice_management_system import (
+    InwardSupply,
+    PurchaseInvoice,
+    apply_declared_overrides,
+)
 from india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system import (
     IMSReconciler,
     get_data_for_upload,
     get_period_options,
     update_previous_ims_action,
 )
+from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
+    preserve_pending_itc_declaration,
+)
+from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
+    update_previous_ims_action as sync_uploaded_ims_action,
+)
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.test_purchase_reconciliation_tool import (
     create_gst_inward_supply,
+    get_copy_version,
 )
 from india_compliance.gst_india.utils.api import create_integration_request
+from india_compliance.gst_india.utils.gstr_2.ims import IMSB2B, IMSB2BCN
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     update_gstr3b_filing_status,
@@ -139,6 +152,319 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         upload_data = get_data_for_upload("24AAQCA8719H1ZC", "reset")
         self.assertEqual("BILL-24-00002", upload_data["b2b"][0]["inum"])
 
+    def test_credit_note_is_signed_on_screen_but_not_for_upload(self):
+        """
+        A credit note reduces the ITC, so it reads negative wherever it is shown or
+        matched. The portal is sent back the values it reported, so those stay positive.
+        """
+        # the class shares one transaction across its tests, so these must not outlive it
+        credit_note = create_gst_inward_supply(
+            bill_no="CN-24-00001",
+            bill_date="2024-12-11",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-11",
+            classification="CDNR",
+            doc_type="Credit Note",
+            # 2A/2B reports note values as positive
+            items=[{"taxable_value": 5000, "rate": 18, "sgst": 450, "cgst": 450}],
+            document_value=5900,
+            previous_ims_action="No Action",
+            action="Pending",
+        )
+        self.addCleanup(frappe.delete_doc, "GST Inward Supply", credit_note.name, force=True)
+
+        return_invoice = create_purchase_invoice(
+            bill_no="CN-24-00001",
+            bill_date="2024-12-11",
+            posting_date="2024-12-11",
+            supplier_gstin="24AABCR6898M1ZN",
+            is_in_state=1,
+            is_return=1,
+            qty=-5,
+            rate=1000,
+        )
+        # cleanups run last in first out, so this cancels before the delete above it
+        self.addCleanup(frappe.delete_doc, "Purchase Invoice", return_invoice.name, force=True)
+        self.addCleanup(return_invoice.cancel)
+
+        # on screen: both sides negative, so the note nets off the invoice it reverses
+        shown = InwardSupply().get_all("24AAQCA8719H1ZC", names=[credit_note.name])[0]
+        self.assertEqual(shown.taxable_value, -5000)
+        self.assertEqual(shown.cgst, -450)
+        self.assertEqual(shown.sgst, -450)
+
+        booked = PurchaseInvoice().get_all(names=[return_invoice.name])[return_invoice.name]
+        self.assertEqual(booked.taxable_value, -5000)
+        self.assertEqual(booked.cgst, -450)
+        self.assertEqual(booked.sgst, -450)
+
+        # on upload: the portal gets back exactly the values it reported
+        self.gst_ims.update_action((credit_note.name,), "Accepted")
+        uploaded = next(
+            row
+            for row in get_data_for_upload("24AAQCA8719H1ZC", "save")["b2bcn"]
+            if row["nt_num"] == "CN-24-00001"
+        )
+        self.assertEqual(uploaded["txval"], 5000)
+        self.assertEqual(uploaded["camt"], 450)
+        self.assertEqual(uploaded["samt"], 450)
+
+    def test_full_reversal_on_a_signed_credit_note_omits_declared_values(self):
+        """
+        set_itc_reduction compares the declared reversal against the supplier's own
+        amounts. Those read negative, so the comparison has to be made on magnitudes
+        or a full reversal would be sent as a partial one.
+        """
+        handler = IMSB2BCN(self.gst_ims.company, self.gst_ims.company_gstin)
+
+        # as the query hands it over: a credit note, signed for the screen
+        signed = self.gov_invoice(
+            igst=0,
+            cgst=-900,
+            sgst=-900,
+            cess=0,
+            taxable_value=-10000,
+            declared_cgst=900,
+            declared_sgst=900,
+        )
+        data = handler.convert_data_to_gov_format(signed)
+
+        # the portal reads an absent declared block as a full reversal
+        self.assertEqual(data["itcRedReq"], "Y")
+        self.assertNotIn("declCgst", data)
+        self.assertNotIn("declSgst", data)
+
+        self.assertEqual(data["camt"], 900)
+        self.assertEqual(data["samt"], 900)
+        self.assertEqual(data["txval"], 10000)
+
+    def test_gov_format_itc_reduction(self):
+        handler = IMSB2BCN(self.gst_ims.company, self.gst_ims.company_gstin)
+
+        # partial reversal -> declared values sent
+        data = handler.convert_data_to_gov_format(self.gov_invoice())
+        self.assertEqual(data["itcRedReq"], "Y")
+        self.assertEqual(data["declCgst"], 850)
+        self.assertEqual(data["declSgst"], 850)
+
+        # full reversal (declared = supplier) -> Y, values omitted (portal reads absence as full)
+        data = handler.convert_data_to_gov_format(self.gov_invoice(declared_cgst=900, declared_sgst=900))
+        self.assertEqual(data["itcRedReq"], "Y")
+        self.assertNotIn("declCgst", data)
+
+        # zero reversal (nothing declared) -> N, no declared block
+        data = handler.convert_data_to_gov_format(
+            self.gov_invoice(declared_igst=0, declared_cgst=0, declared_sgst=0, declared_cess=0)
+        )
+        self.assertEqual(data["itcRedReq"], "N")
+        self.assertNotIn("declCgst", data)
+
+        # remarks ride along on accept
+        data = handler.convert_data_to_gov_format(self.gov_invoice(remarks="as per books"))
+        self.assertEqual(data["remarks"], "as per books")
+
+        # govt blocked -> suppressed
+        data = handler.convert_data_to_gov_format(self.gov_invoice(is_itc_reduction_blocked=1))
+        self.assertNotIn("itcRedReq", data)
+
+        # reject -> no declared block, remarks carried
+        data = handler.convert_data_to_gov_format(
+            self.gov_invoice(ims_action="Rejected", remarks="not our purchase")
+        )
+        self.assertNotIn("itcRedReq", data)
+        self.assertEqual(data["remarks"], "not our purchase")
+
+        # non-specified record -> never declares
+        data = IMSB2B(self.gst_ims.company, self.gst_ims.company_gstin).convert_data_to_gov_format(
+            self.gov_invoice()
+        )
+        self.assertNotIn("itcRedReq", data)
+
+    def test_download_declared_reversal(self):
+        # portal -> ERP: no value = full reversal (supplier); N / non-specified = as-is
+        specified = IMSB2BCN(self.gst_ims.company, self.gst_ims.company_gstin)
+        b2b = IMSB2B(self.gst_ims.company, self.gst_ims.company_gstin)
+
+        self.assertEqual(specified._declared_reversal(None, 900, "Y"), 900)  # full
+        self.assertEqual(specified._declared_reversal(8, 900, "Y"), 8)  # partial
+        self.assertIsNone(specified._declared_reversal(None, 900, "N"))  # explicit zero
+        self.assertIsNone(b2b._declared_reversal(None, 900, "Y"))  # non-specified
+
+    def test_preserve_pending_itc_declaration(self):
+        # ours differs from portal -> keep ours, flag for re-upload
+        downloaded = {"declared_cgst": 5, "itc_reduction_required": 1, "is_itc_reduction_blocked": 0}
+        preserve_pending_itc_declaration(
+            frappe._dict(
+                ims_action="Accepted", previous_ims_action="", declared_cgst=10, itc_reduction_required=1
+            ),
+            downloaded,
+        )
+        self.assertNotIn("declared_cgst", downloaded)
+        self.assertNotIn("itc_reduction_required", downloaded)
+        self.assertIn("is_itc_reduction_blocked", downloaded)  # not a declared field -> untouched
+        self.assertEqual(downloaded["is_declaration_pending_upload"], 1)
+
+        # portal already matches ours -> take the download, nothing pending
+        downloaded = {"declared_cgst": 10, "itc_reduction_required": 1}
+        preserve_pending_itc_declaration(
+            frappe._dict(
+                ims_action="Accepted", previous_ims_action="", declared_cgst=10, itc_reduction_required=1
+            ),
+            downloaded,
+        )
+        self.assertIn("declared_cgst", downloaded)
+        self.assertNotIn("is_declaration_pending_upload", downloaded)
+
+        # no local action -> take the download
+        downloaded = {"declared_cgst": 5}
+        preserve_pending_itc_declaration(
+            frappe._dict(ims_action="", previous_ims_action="", declared_cgst=10), downloaded
+        )
+        self.assertIn("declared_cgst", downloaded)
+
+    def test_update_action_with_declared_overrides(self):
+        cn = create_gst_inward_supply(
+            bill_no="CN-IMS-OVERRIDE",
+            bill_date="2024-12-11",
+            classification="CDNR",
+            doc_type="Credit Note",
+            is_amended=0,
+            previous_ims_action="No Action",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-11",
+        )
+        self.addCleanup(self.delete_inward_supply, cn.name)
+        frappe.db.set_value(
+            "GST Inward Supply",
+            cn.name,
+            {"link_doctype": "Purchase Invoice", "link_name": self.pinv.name},
+        )
+
+        # supplier tax cgst = sgst = 900; override above supplier -> capped; remarks stored
+        overrides = {cn.name: {"igst": 0, "cgst": 5000, "sgst": 5000, "cess": 0, "remarks": "as per books"}}
+        self.gst_ims.update_action((cn.name,), "Accepted", declared_overrides=overrides)
+
+        cn.reload()
+        self.assertEqual(cn.declared_cgst, 900)  # capped at document
+        self.assertEqual(cn.declared_sgst, cn.declared_cgst)  # govt: CGST == SGST
+        self.assertEqual(cn.itc_reduction_required, 1)
+        self.assertEqual(cn.remarks, "as per books")  # remarks carried through
+
+    def test_declaration_change_requeues_upload(self):
+        # An already-uploaded accept (ims_action == previous_ims_action) must re-upload
+        # when the declared ITC changes, without disturbing previous_ims_action/prev_status.
+        cn = create_gst_inward_supply(
+            bill_no="CN-IMS-REDECLARE",
+            bill_date="2024-12-11",
+            classification="CDNR",
+            doc_type="Credit Note",
+            is_amended=0,
+            previous_ims_action="Accepted",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-11",
+        )
+        self.addCleanup(self.delete_inward_supply, cn.name)
+        frappe.db.set_value(
+            "GST Inward Supply",
+            cn.name,
+            {
+                "link_doctype": "Purchase Invoice",
+                "link_name": self.pinv.name,
+                "ims_action": "Accepted",
+                "itc_reduction_required": 1,
+                "declared_igst": 0,
+                "declared_cgst": 850,
+                "declared_sgst": 850,
+                "declared_cess": 0,
+                "is_declaration_pending_upload": 0,
+            },
+        )
+
+        # supplier tax is cgst = sgst = 900; changing the declaration to 500 marks it dirty
+        apply_declared_overrides({cn.name: {"igst": 0, "cgst": 500, "sgst": 500, "cess": 0}})
+
+        cn.reload()
+        self.assertEqual(cn.declared_cgst, 500)
+        self.assertEqual(cn.is_declaration_pending_upload, 1)
+        self.assertEqual(cn.previous_ims_action, "Accepted")  # untouched -> prev_status stays valid
+
+        # queued for save despite ims_action == previous_ims_action
+        queued = [row.name for row in InwardSupply().get_for_save(self.gst_ims.company_gstin)]
+        self.assertIn(cn.name, queued)
+
+        # re-applying the same declaration is a no-op and does not re-dirty a clean record
+        frappe.db.set_value("GST Inward Supply", cn.name, "is_declaration_pending_upload", 0)
+        apply_declared_overrides({cn.name: {"igst": 0, "cgst": 500, "sgst": 500, "cess": 0}})
+        self.assertEqual(
+            frappe.db.get_value("GST Inward Supply", cn.name, "is_declaration_pending_upload"), 0
+        )
+
+    def test_upload_clears_declaration_flag(self):
+        cn = create_gst_inward_supply(
+            bill_no="CN-IMS-FLAG-CLEAR",
+            bill_date="2024-12-11",
+            classification="CDNR",
+            doc_type="Credit Note",
+            is_amended=0,
+            previous_ims_action="Accepted",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-11",
+        )
+        self.addCleanup(self.delete_inward_supply, cn.name)
+        frappe.db.set_value(
+            "GST Inward Supply",
+            cn.name,
+            {"ims_action": "Accepted", "is_declaration_pending_upload": 1},
+        )
+
+        cn.reload()
+        sync_uploaded_ims_action(
+            frappe._dict(
+                bill_no=cn.bill_no,
+                bill_date=cn.bill_date,
+                classification=cn.classification,
+                supplier_gstin=cn.supplier_gstin,
+                previous_ims_action="Accepted",
+            )
+        )
+
+        cn.reload()
+        self.assertEqual(cn.is_declaration_pending_upload, 0)
+        self.assertEqual(cn.previous_ims_action, "Accepted")
+
+    def gov_invoice(self, **overrides):
+        invoice = frappe._dict(
+            {
+                "supplier_gstin": "24MAYAS0100J1JD",
+                "supply_type": "Regular",
+                "supplier_return_form": "R1",
+                "sup_return_period": "012023",
+                "document_value": 1000,
+                "place_of_supply": "07-Delhi",
+                "previous_ims_action": "No Action",
+                "igst": 0,
+                "cgst": 900,
+                "sgst": 900,
+                "cess": 0,
+                "taxable_value": 10000,
+                "ims_action": "Accepted",
+                "is_itc_reduction_blocked": 0,
+                "itc_reduction_required": 1,
+                "declared_igst": 0,
+                "declared_cgst": 850,
+                "declared_sgst": 850,
+                "declared_cess": 0,
+                "remarks": None,
+                "is_remarks_blocked": 0,
+            }
+        )
+        invoice.update(overrides)
+        return invoice
+
+    def delete_inward_supply(self, name):
+        if frappe.db.exists("GST Inward Supply", name):
+            frappe.delete_doc("GST Inward Supply", name, force=True)
+
     def test_update_previous_ims_action(self):
         self.gst_ims.update_action((self.invoice_name_1,), "Accepted")
         self.gst_ims.update_action((self.invoice_name_2,), "No Action")
@@ -207,6 +533,48 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             if data._inward_supply.bill_no == "BILL-24-00001":
                 self.assertEqual(data._purchase_invoice.name, self.pinv.name)
 
+    def test_linked_purchase_invoice_on_another_company_gstin_is_shown(self):
+        gst_is = create_gst_inward_supply(
+            bill_no="IMS-GSTIN-DIFF-001",
+            bill_date="2024-12-13",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-13",
+            previous_ims_action="No Action",
+            ims_action="No Action",
+        )
+        pinv = create_purchase_invoice(
+            bill_no="IMS-GSTIN-DIFF-001",
+            bill_date="2024-12-13",
+            posting_date="2024-12-13",
+            qty=10,
+            rate=1000,
+            is_in_state=1,
+            supplier="_Test Registered Supplier",
+            supplier_gstin="24AABCR6898M1ZN",
+        )
+
+        self.gst_ims.link_documents(
+            purchase_invoice_name=pinv.name,
+            inward_supply_name=gst_is.name,
+            link_doctype="Purchase Invoice",
+        )
+        frappe.db.set_value("Purchase Invoice", pinv.name, "company_gstin", "27AAQCA8719H1Z6")
+
+        invoice_data = self.gst_ims.autoreconcile_and_get_data().get("invoice_data")
+        row = next(row for row in invoice_data if row.inward_supply_name == gst_is.name)
+
+        self.assertEqual(row.purchase_invoice_name, pinv.name)
+        self.assertEqual(row.match_status, "Manual Match")
+        self.assertEqual(row.differences, "COMPANY_GSTIN")
+
+        details = self.gst_ims.get_invoice_details(pinv.name, gst_is.name)
+        self.assertEqual(details.purchase_invoice_name, pinv.name)
+        self.assertEqual(details._purchase_invoice.company_gstin, "27AAQCA8719H1Z6")
+
+        frappe.db.set_value("Purchase Invoice", pinv.name, "company", "_Test Company")
+        details = self.gst_ims.get_invoice_details(pinv.name, gst_is.name)
+        self.assertIsNone(details.purchase_invoice_name)
+
     def test_get_invoice_details_with_none_purchase_name(self):
         """
         Regression test: IMS detail view sends purchase_name=None for
@@ -236,7 +604,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         )
 
         self.assertEqual(result.inward_supply_name, gst_is.name)
-        self.assertEqual(result.match_status, "Missing in PI")
+        self.assertEqual(result.match_status, "Only in 2A/2B")
         self.assertIsNone(result.purchase_invoice_name)
 
     def test_get_invoice_details_with_none_inward_supply_name(self):
@@ -275,7 +643,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         )
 
         self.assertEqual(result.purchase_invoice_name, pinv.name)
-        self.assertEqual(result.match_status, "Missing in 2A/2B")
+        self.assertEqual(result.match_status, "Only in Books")
         self.assertIsNone(result.inward_supply_name)
 
     def test_link_documents_with_none_purchase_invoice_name(self):
@@ -356,6 +724,123 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
 
         self.assertIsNone(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
         self.assertTrue(any(row.inward_supply_name == gst_is.name for row in result))
+
+    def test_unlink_documents(self):
+        pinv = create_purchase_invoice(
+            bill_no="IMS-GID-005",
+            bill_date="2024-12-12",
+            posting_date="2024-12-12",
+            supplier="_Test Registered Supplier",
+            supplier_gstin="24AABCR6898M1ZN",
+            company="_Test Indian Registered Company",
+            company_gstin="24AAQCA8719H1ZC",
+            items=[
+                {
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1,
+                }
+            ],
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="IMS-GID-005",
+            bill_date="2024-12-12",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-12",
+            previous_ims_action="No Action",
+            ims_action="No Action",
+        )
+
+        gst_ims = frappe.get_doc(
+            {
+                "doctype": "GST Invoice Management System",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "return_period": "122024",
+            }
+        )
+
+        gst_ims.link_documents(
+            purchase_invoice_name=pinv.name,
+            inward_supply_name=gst_is.name,
+            link_doctype="Purchase Invoice",
+        )
+        self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+
+        gst_ims.unlink_documents(
+            [
+                {
+                    "purchase_invoice_name": pinv.name,
+                    "inward_supply_name": gst_is.name,
+                    "purchase_doctype": "Purchase Invoice",
+                }
+            ]
+        )
+
+        self.assertFalse(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
+
+    def test_copy_details(self):
+        """
+        Bill no / date reported in IMS are copied onto the linked Purchase Invoice, and
+        the synced rows come back as IMS invoice data so the grid can be refreshed.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="IMS-SYNC-001",
+            bill_date="2024-12-11",
+            posting_date="2024-12-11",
+            supplier="_Test Registered Supplier",
+            supplier_gstin="24AABCR6898M1ZN",
+            company="_Test Indian Registered Company",
+            company_gstin="24AAQCA8719H1ZC",
+            items=[
+                {
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1,
+                }
+            ],
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="IMS-SYNC-001-A",
+            bill_date="2024-12-15",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-15",
+            previous_ims_action="No Action",
+            ims_action="No Action",
+        )
+        self.addCleanup(self.delete_inward_supply, gst_is.name)
+        frappe.db.set_value(
+            "GST Inward Supply",
+            gst_is.name,
+            {"link_doctype": "Purchase Invoice", "link_name": pinv.name},
+        )
+
+        # the grid sends the row back as it was rendered, purchase_doctype and all
+        row = {
+            "purchase_invoice_name": pinv.name,
+            "inward_supply_name": gst_is.name,
+            "purchase_doctype": "Purchase Invoice",
+        }
+        result = self.gst_ims.copy_details([row], fields=["bill_no", "bill_date"])
+
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinv.name, ["bill_no", "bill_date"], as_dict=True),
+            {"bill_no": "IMS-SYNC-001-A", "bill_date": getdate("2024-12-15")},
+        )
+
+        # set_value writes no version, so the sync records one itself
+        self.assertEqual(
+            get_copy_version("Purchase Invoice", pinv.name, "GST Invoice Management System"),
+            {"bill_no": "IMS-SYNC-001-A", "bill_date": formatdate("2024-12-15")},
+        )
+
+        # rows come back IMS shaped, with what a re-sync of the same row needs
+        self.assertEqual([synced.inward_supply_name for synced in result], [gst_is.name])
+        self.assertEqual(result[0].purchase_invoice_name, pinv.name)
+        self.assertEqual(result[0].purchase_doctype, "Purchase Invoice")
+        self.assertEqual(result[0].ims_action, "No Action")
+        self.assertEqual(result[0].bill_no, "IMS-SYNC-001-A")
+
+        # now in agreement: nothing left to sync
+        self.assertIsNone(self.gst_ims.copy_details([row], fields=["bill_no", "bill_date"]))
 
     def get_periods(self):
         periods = []

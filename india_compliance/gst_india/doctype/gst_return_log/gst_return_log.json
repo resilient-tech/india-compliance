@@ -22,6 +22,7 @@
   "section_break_oisv",
   "unfiled",
   "filed",
+  "raw_gov_data",
   "upload_error",
   "column_break_hxfu",
   "unfiled_summary",
@@ -38,7 +39,8 @@
   "column_break_ndup",
   "reconcile_summary",
   "pending_request_info_section",
-  "actions"
+  "actions",
+  "section_summary"
  ],
  "fields": [
   {
@@ -114,6 +116,12 @@
    "fieldname": "filed",
    "fieldtype": "Attach",
    "label": "Filed Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_gov_data",
+   "fieldtype": "Attach",
+   "label": "Raw Gov Data",
    "read_only": 1
   },
   {
@@ -228,6 +236,15 @@
    "fieldname": "is_nil",
    "fieldtype": "Check",
    "label": "Is Nil Return",
+   "read_only": 1
+  },
+  {
+   "description": "Cached totals for the Return Export tool",
+   "fieldname": "section_summary",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Section Summary",
+   "no_copy": 1,
    "read_only": 1
   }
  ],

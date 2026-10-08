@@ -236,6 +236,33 @@ class TestTransactionData(IntegrationTestCase):
 
         self.assertEqual(gst_transaction_data.transaction_details["transporter_name"], "A" * 100)
 
+    def test_set_transporter_details_distance_is_coerced_to_int(self):
+        """Distance must reach the e-Waybill portal as a whole number of km.
+
+        Guards against a fractional value (e.g. if the custom field type was
+        modified) and enforces the portal's out-of-range reset to 0.
+        """
+        doc = create_sales_invoice(vehicle_no="GJ07DL9009", do_not_submit=True)
+
+        # Fractional value should truncate to an int
+        doc.distance = 10.9
+        gst_transaction_data = GSTTransactionData(doc)
+        gst_transaction_data.set_transporter_details()
+        self.assertEqual(gst_transaction_data.transaction_details["distance"], 10)
+        self.assertIsInstance(gst_transaction_data.transaction_details["distance"], int)
+
+        # Value at/above the portal limit (4000 km) resets to 0
+        doc.distance = 4000
+        gst_transaction_data = GSTTransactionData(doc)
+        gst_transaction_data.set_transporter_details()
+        self.assertEqual(gst_transaction_data.transaction_details["distance"], 0)
+
+        # Normal integer passes through unchanged
+        doc.distance = 42
+        gst_transaction_data = GSTTransactionData(doc)
+        gst_transaction_data.set_transporter_details()
+        self.assertEqual(gst_transaction_data.transaction_details["distance"], 42)
+
     def test_get_all_item_details(self):
         """Assertion for all Item Details fetched from transaction docs"""
         doc = create_sales_invoice(do_not_submit=True)
@@ -301,6 +328,19 @@ class TestTransactionData(IntegrationTestCase):
                 }
             ],
         )
+
+    @change_settings("System Settings", {"rounding_method": "Banker's Rounding (legacy)"})
+    def test_rounded_is_symmetric_about_zero(self):
+        """-x must round to the same size as x."""
+        for value in (1.005, 2.675, 0.125, 1234.565):
+            for precision in (2, 3):
+                self.assertEqual(
+                    GSTTransactionData.rounded(-value, precision),
+                    -GSTTransactionData.rounded(value, precision),
+                )
+
+        # no -0.0 in the payload
+        self.assertEqual(repr(GSTTransactionData.rounded(-0.001)), "0.0")
 
     @change_settings("System Settings", {"currency_precision": 3})
     def test_transaction_total_equals_sum_of_rounded_item_values(self):

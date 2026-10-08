@@ -4,11 +4,12 @@
 		font-size: 8.0pt !important;
 		font-family: Tahoma, sans-serif;
 	}
-	.disabled {
+	.gstr3b-report .disabled {
 		background-color: #d9d9d9;
 	}
 
 </style>
+<div class="gstr3b-report">
 <div>
 	<h3 class="text-center">{{ __("GSTR3B-Form")}}</h3>
 	<h5>{{__("GSTIN")}}: &nbsp {{ data.gstin }}</h5>
@@ -322,10 +323,11 @@
 		</tr>
 	</tbody>
 </table>
+</div>
 
 <style>
 
-.right{
+.gstr3b-report .right{
 	text-align: right;
 }
 

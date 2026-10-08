@@ -23,7 +23,7 @@ frappe.ui.form.on(DOCTYPE, {
             frm.set_query(field, { filters: { country: "India", disabled: 0 } });
         });
 
-        set_address_display_events();
+        india_compliance.set_address_display_events(DOCTYPE);
 
         frm.set_query("link_doctype", "doc_references", {
             name: ["=", "Stock Entry"],
@@ -135,21 +135,6 @@ frappe.ui.form.on(DOCTYPE, {
         frm.refresh_field("doc_references");
     },
 });
-
-function set_address_display_events() {
-    const event_fields = ["bill_from_address", "bill_to_address", "ship_from_address", "ship_to_address"];
-
-    const events = Object.fromEntries(
-        event_fields.map((field) => [
-            field,
-            (frm) => {
-                erpnext.utils.get_address_display(frm, field, field + "_display", false);
-            },
-        ]),
-    );
-
-    frappe.ui.form.on(DOCTYPE, events);
-}
 
 function on_change_set_address(frm, source_field, target_field, label1, label2) {
     if (frm.doc.docstatus > 0) return;

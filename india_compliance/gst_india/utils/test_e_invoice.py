@@ -1,8 +1,10 @@
 import json
 import re
+from unittest.mock import patch
 
 import frappe
 import responses
+import time_machine
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
@@ -10,7 +12,10 @@ from frappe.utils.data import format_date
 from responses import matchers
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
+from india_compliance.gst_india.constants import SHIP_TO_GSTIN_APPLICABLE_DATE
 from india_compliance.gst_india.overrides.test_transaction import (
+    create_cess_accounts,
     create_refund_transaction,
 )
 from india_compliance.gst_india.utils import load_doc
@@ -24,10 +29,14 @@ from india_compliance.gst_india.utils.e_invoice import (
     validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import EWaybillData
-from india_compliance.gst_india.utils.tests import append_item, create_sales_invoice
+from india_compliance.gst_india.utils.tests import (
+    _append_taxes,
+    append_item,
+    create_sales_invoice,
+)
 
 
-class TestEInvoice(IntegrationTestCase):
+class EInvoiceTestMixin:
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -54,6 +63,31 @@ class TestEInvoice(IntegrationTestCase):
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
 
+    def _mock_e_invoice_response(self, data, api="ei/api/invoice"):
+        """Mock response for e-Invoice API"""
+        url = BASE_URL + "/test/" + api
+
+        responses.add(
+            responses.POST,
+            url,
+            body=json.dumps(data.get("response_data")),
+            match=[matchers.json_params_matcher(data.get("request_data"))],
+            status=200,
+        )
+
+        # Mock get e_invoice by IRN response
+        data = self.e_invoice_test_data.get("get_e_invoice_by_irn")
+
+        responses.add(
+            responses.GET,
+            url + "/irn",
+            body=json.dumps(data.get("response_data")),
+            match=[matchers.query_string_matcher(data.get("request_data"))],
+            status=200,
+        )
+
+
+class TestEInvoice(EInvoiceTestMixin, IntegrationTestCase):
     def test_request_data_for_different_shipping_dispatch_address(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill
         si = create_sales_invoice(
@@ -83,6 +117,54 @@ class TestEInvoice(IntegrationTestCase):
             EInvoiceData(si).get_data(),
         )
 
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    def test_e_invoice_ship_to_gstin_outside_sandbox(self):
+        """Outside sandbox, an unregistered consignee yields ShipDtls.Gstin == 'URP'
+        while the registered buyer keeps its real GSTIN. A differing dispatch address
+        adds DispDtls (the e-Waybill transaction-type-4 analog: both dispatch and
+        ship-to differ).
+        """
+        si = create_sales_invoice(
+            company_address="_Test Indian Registered Company-Billing",
+            dispatch_address_name="_Test Indian Registered Company-Shipping",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name="_Test Unregistered Consignee-Shipping",
+            is_in_state=True,
+            do_not_submit=True,
+        )
+
+        data = EInvoiceData(si).get_data()
+
+        self.assertNotEqual(data["BuyerDtls"]["Gstin"], "URP")
+        self.assertEqual(data["ShipDtls"]["Gstin"], "URP")
+        self.assertTrue(data["ShipDtls"]["LglNm"])
+        self.assertIn("DispDtls", data)
+
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    def test_e_invoice_for_same_buyer_and_ship_to_gstin(self):
+        """Two addresses of the same party is a regular transaction, since Ship To
+        GSTIN can't be the same as Buyer GSTIN. ERROR CODE: 2323"""
+        si = create_sales_invoice(
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            # different address, same GSTIN as the billing address
+            shipping_address_name="_Test Registered Customer Warehouse-Shipping",
+            is_in_state=True,
+            do_not_submit=True,
+        )
+
+        # before rollout -> reported as-is, so production is unaffected
+        with time_machine.travel(
+            get_datetime(add_to_date(SHIP_TO_GSTIN_APPLICABLE_DATE, days=-1)), tick=True
+        ):
+            self.assertIn("ShipDtls", EInvoiceData(si).get_data())
+
+        # on/after rollout -> omitted, as Ship To GSTIN is mandatory from here
+        with time_machine.travel(get_datetime(SHIP_TO_GSTIN_APPLICABLE_DATE), tick=False):
+            self.assertNotIn("ShipDtls", EInvoiceData(si).get_data())
+
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_request_data_for_foreign_transactions(self):
         test_data = self.e_invoice_test_data.foreign_transaction
@@ -104,8 +186,42 @@ class TestEInvoice(IntegrationTestCase):
             EInvoiceData(si).get_data(),
         )
 
+    @change_settings("GST Settings", {"sandbox_mode": 1})
+    def test_e_invoice_ship_to_gstin_in_sandbox(self):
+        """In sandbox (Bill To-Ship To), ShipDtls.Gstin is mandatory:
+        - in case GSTIN is not present "URP" is used
+        - for registered sanbox's GSTIN is provided, which must differ
+          from the buyer GSTIN ('buyer and shipping gstin can't be the same')
+        """
+        # unregistered shipping address -> ShipDtls stays URP, buyer substituted
+        si = create_sales_invoice(
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name="_Test Unregistered Consignee-Shipping",
+            is_in_state=True,
+            do_not_submit=True,
+        )
+        data = EInvoiceData(si).get_data()
+        self.assertEqual(data["ShipDtls"]["Gstin"], "URP")
+        self.assertEqual(data["BuyerDtls"]["Gstin"], "36AMBPG7773M002")
+
+        # registered consignee -> sandbox GSTIN, distinct from the buyer GSTIN
+        si = create_sales_invoice(
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name="_Test Registered Customer-Billing-1",
+            is_in_state=True,
+            do_not_submit=True,
+        )
+        data = EInvoiceData(si).get_data()
+        self.assertEqual(data["ShipDtls"]["Gstin"], "02AMBPG7773M002")
+        self.assertNotEqual(data["ShipDtls"]["Gstin"], data["BuyerDtls"]["Gstin"])
+
     def test_progressive_item_tax_amount(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill
+        create_cess_accounts()
 
         si = create_sales_invoice(
             **test_data.get("kwargs"),
@@ -119,6 +235,8 @@ class TestEInvoice(IntegrationTestCase):
             si,
             frappe._dict(rate=7.6, item_tax_template="GST 12% - _TIRC", uom="Nos"),
         )
+        _append_taxes(si, "Cess", rate=3)
+        _append_taxes(si, "Cess Non Advol", charge_type="On Item Quantity", rate=0.2)
         si.save()
         si.submit()
 
@@ -145,11 +263,11 @@ class TestEInvoice(IntegrationTestCase):
                     "IgstAmt": 0,
                     "CgstAmt": 0.46,
                     "SgstAmt": 0.46,
-                    "CesRt": 0,
-                    "CesAmt": 0,
-                    "CesNonAdvlAmt": 0,
+                    "CesRt": 3.0,
+                    "CesAmt": 0.23,
+                    "CesNonAdvlAmt": 0.2,
                     "OthChrg": 0,
-                    "TotItemVal": 8.52,
+                    "TotItemVal": 8.95,
                     "BchDtls": {"Nm": None, "ExpDt": None},
                 },
                 {
@@ -169,11 +287,11 @@ class TestEInvoice(IntegrationTestCase):
                     "IgstAmt": 0,
                     "CgstAmt": 0.45,
                     "SgstAmt": 0.45,
-                    "CesRt": 0,
-                    "CesAmt": 0,
-                    "CesNonAdvlAmt": 0,
+                    "CesRt": 3.0,
+                    "CesAmt": 0.23,
+                    "CesNonAdvlAmt": 0.2,
                     "OthChrg": 0,
-                    "TotItemVal": 8.5,
+                    "TotItemVal": 8.93,
                     "BchDtls": {"Nm": None, "ExpDt": None},
                 },
             ],
@@ -189,6 +307,7 @@ class TestEInvoice(IntegrationTestCase):
             EInvoiceData(si).get_data().get("ValDtls").get("CgstVal"),
             total_item_wise_cgst,
         )
+        self.assertEqual(0.86, EInvoiceData(si).get_data().get("ValDtls").get("CesVal"))
 
     @change_settings("Selling Settings", {"allow_multiple_items": 1})
     def test_validate_transaction(self):
@@ -582,7 +701,7 @@ class TestEInvoice(IntegrationTestCase):
         append_item(
             si,
             frappe._dict(
-                rate=10,
+                rate=10.04,
                 item_tax_template="GST 12% - _TIRC",
                 uom="Nos",
                 gst_hsn_code="61149090",
@@ -608,15 +727,15 @@ class TestEInvoice(IntegrationTestCase):
         self.assertEqual(0, nil_item["OthChrg"])
         self.assertEqual(100, nil_item["TotItemVal"])
 
-        self.assertEqual(10, taxable_item["AssAmt"])
-        self.assertEqual(10, taxable_item["TotAmt"])
-        self.assertEqual(10, taxable_item["UnitPrice"])
+        self.assertEqual(10.04, taxable_item["AssAmt"])
+        self.assertEqual(10.04, taxable_item["TotAmt"])
+        self.assertEqual(10.04, taxable_item["UnitPrice"])
         self.assertEqual(12.0, taxable_item["GstRt"])
         self.assertEqual(0.6, taxable_item["CgstAmt"])
         self.assertEqual(0.6, taxable_item["SgstAmt"])
-        self.assertEqual(11.2, taxable_item["TotItemVal"])
+        self.assertEqual(11.24, taxable_item["TotItemVal"])
 
-        self.assertEqual(110, request_data["ValDtls"]["AssVal"])
+        self.assertEqual(110.04, request_data["ValDtls"]["AssVal"])
         self.assertEqual(0, request_data["ValDtls"]["OthChrg"])
         self.assertEqual(111, request_data["ValDtls"]["TotInvVal"])
 
@@ -797,6 +916,45 @@ class TestEInvoice(IntegrationTestCase):
             cancelled_doc,
         )
         self.assertDocumentEqual({"ewaybill": ""}, cancelled_doc)
+
+    @responses.activate
+    def test_irn_cancel_failure_after_e_waybill_cancel_is_retryable(self):
+        """The e-Waybill is cancelled on the portal first and that is saved for good: if the IRN
+        cancel is then rejected, local state matches the portal (e-Waybill gone, IRN active) and the
+        IRN cancel can be retried on its own."""
+        test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
+        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000, is_in_state=True)
+        test_data.get("response_data").get("result").update({"AckDt": str(now_datetime())})
+        self._mock_e_invoice_response(data=test_data)
+        generate_e_invoice(si.name)
+
+        values = frappe._dict({"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"})
+        doc = load_doc("Sales Invoice", si.name, "cancel")
+
+        cancel_e_waybill = self.e_invoice_test_data.get("cancel_e_waybill")
+        cancel_e_waybill.get("response_data").get("result").update({"ewayBillNo": doc.ewaybill})
+        self._mock_e_invoice_response(data=cancel_e_waybill, api="ei/api/ewayapi")
+
+        # the portal rejects the IRN cancellation
+        with patch.object(
+            EInvoiceAPI, "cancel_irn", side_effect=frappe.ValidationError("IRN cancel rejected")
+        ):
+            self.assertRaises(frappe.ValidationError, cancel_e_invoice, doc.name, values=values)
+
+        doc.reload()
+        self.assertEqual(doc.ewaybill, "")  # gone on the portal, gone here
+        self.assertEqual(doc.e_waybill_status, "Cancelled")
+        self.assertTrue(frappe.db.get_value("e-Waybill Log", {"reference_name": doc.name}, "is_cancelled"))
+        self.assertTrue(doc.irn)  # still active, still cancellable
+
+        # retry: only the IRN is left to cancel
+        cancel_irn = self.e_invoice_test_data.get("cancel_e_invoice")
+        cancel_irn.get("response_data").get("result").update({"Irn": doc.irn})
+        self._mock_e_invoice_response(data=cancel_irn, api="ei/api/invoice/cancel")
+        cancel_e_invoice(doc.name, values=values)
+
+        doc.reload()
+        self.assertDocumentEqual({"einvoice_status": "Cancelled", "irn": ""}, doc)
 
     @responses.activate
     def test_auto_cancel_e_invoice(self):
@@ -1318,31 +1476,15 @@ class TestEInvoice(IntegrationTestCase):
             api="ei/api/invoice/cancel",
         )
 
+        # cancel the invoice first, then the portal: the IRN stays cancellable for 24h
+        doc.cancel()
+
         cancel_e_invoice(doc.name, values=values)
-        return frappe.get_doc("Sales Invoice", doc.name)
 
-    def _mock_e_invoice_response(self, data, api="ei/api/invoice"):
-        """Mock response for e-Invoice API"""
-        url = BASE_URL + "/test/" + api
+        cancelled = frappe.get_doc("Sales Invoice", doc.name)
+        self.assertEqual(cancelled.docstatus, 2)
 
-        responses.add(
-            responses.POST,
-            url,
-            body=json.dumps(data.get("response_data")),
-            match=[matchers.json_params_matcher(data.get("request_data"))],
-            status=200,
-        )
-
-        # Mock get e_invoice by IRN response
-        data = self.e_invoice_test_data.get("get_e_invoice_by_irn")
-
-        responses.add(
-            responses.GET,
-            url + "/irn",
-            body=json.dumps(data.get("response_data")),
-            match=[matchers.query_string_matcher(data.get("request_data"))],
-            status=200,
-        )
+        return cancelled
 
 
 def update_dates_for_test_data(test_data):

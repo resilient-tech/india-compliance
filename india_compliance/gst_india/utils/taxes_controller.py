@@ -11,7 +11,7 @@ from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     ItemGSTTreatment,
 )
-from india_compliance.gst_india.utils import get_all_gst_accounts
+from india_compliance.gst_india.utils import get_all_gst_accounts, get_items
 
 
 class CustomItemGSTDetails(ItemGSTDetails):
@@ -36,7 +36,7 @@ class CustomItemGSTDetails(ItemGSTDetails):
 
     def set_temp_item_wise_tax_detail_object(self):
         self.doc._item_wise_tax_details = []
-        item_map = {item.name: item for item in self.doc.items}
+        item_map = {item.name: item for item in self._items}
 
         for row in self.doc.taxes:
             if not row.gst_tax_type:
@@ -84,8 +84,8 @@ class CustomItemGSTDetails(ItemGSTDetails):
 
 def update_gst_details(doc, method=None):
     # TODO: add item tax template validation post exclude from GST
-    ItemGSTTreatment().set(doc)
-    CustomItemGSTDetails().update(doc)
+    ItemGSTTreatment(doc).set()
+    CustomItemGSTDetails(doc).update()
 
 
 @frappe.whitelist()
@@ -111,6 +111,10 @@ class CustomTaxController:
 
         self.doc = doc
         self.field_map = field_map or {}
+
+    @property
+    def _items(self):
+        return get_items(self.doc)
 
     def set_taxes_and_totals(self):
         self.set_item_wise_tax_rates()
@@ -155,17 +159,18 @@ class CustomTaxController:
         return taxes
 
     def update_item_taxable_value(self):
-        for item in self.doc.get("items"):
-            taxable_value = self.get_value("amount", item)
+        for item in self._items:
+            # a new row has no value yet, and get() cannot default a key that is set to None
+            taxable_value = flt(self.get_value("amount", item), item.precision("taxable_value"))
             taxable_value += flt(item.get("additional_taxable_value", 0), item.precision("taxable_value"))
 
             item.taxable_value = taxable_value
 
     def set_additional_taxable_value(self):
-        if self.doc.doctype != "Stock Entry" or not self.doc.items:
+        if self.doc.doctype != "Stock Entry" or not self._items:
             return
 
-        for item in self.doc.items:
+        for item in self._items:
             item.additional_taxable_value = 0
 
         # Imported lazily: subcontracting_transaction imports this module at load time.
@@ -237,7 +242,7 @@ class CustomTaxController:
         If item_name and tax_name are not passed, all items and taxes are returned.
 
         """
-        items = self.doc.get("items") or []
+        items = self._items
         taxes = self.doc.get("taxes") or []
 
         if item_name:
@@ -253,14 +258,14 @@ class CustomTaxController:
             item_wise_tax_rates = json.loads(item_wise_tax_rates)
 
         tax_amount = 0
-        for item in self.doc.get("items"):
+        for item in self._items:
             multiplier = item.qty if charge_type == "On Item Quantity" else item.taxable_value / 100
             tax_amount += flt(item_wise_tax_rates.get(item.name, 0)) * multiplier
 
         return tax_amount
 
     def calculate_total_taxable_value(self):
-        return sum([item.taxable_value for item in self.doc.get("items")])
+        return sum([item.taxable_value for item in self._items])
 
     def get_value(self, field, doc=None, default=0):
         doc = doc or self.doc

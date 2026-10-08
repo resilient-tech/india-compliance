@@ -17,7 +17,12 @@ from india_compliance.gst_india.api_classes.taxpayer_base import (
     otp_handler,
 )
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
-from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
+from india_compliance.gst_india.utils import (
+    parse_datetime,
+    titlecase,
+    validate_gstin,
+    validate_gstin_permission,
+)
 
 GST_CATEGORIES = {
     "Regular": "Registered Regular",
@@ -29,8 +34,12 @@ GST_CATEGORIES = {
     "SEZ Developer": "SEZ",
     "United Nation Body": "UIN Holders",
     "Consulate or Embassy of Foreign Country": "UIN Holders",
+    "Non-Resident Online Services Provider and/or Non-Resident Online Money Gaming Supplier": "Overseas",
     "URP": "Unregistered",
 }
+
+# business types (constitution of business) where trade name is preferred over legal name
+TRADE_NAME_BUSINESS_TYPES = frozenset(("Proprietorship", "Hindu Undivided Family"))
 
 # order of address keys is important
 KEYS_TO_SANITIZE = ("dst", "stcd", "pncd", "bno", "flno", "bnm", "st", "loc", "city")
@@ -80,13 +89,15 @@ def _get_gstin_info(gstin, *, doc=None, throw_error=True):
             frappe.clear_last_message()
             return frappe._dict()
 
-    business_name = (
-        response.tradeNam if response.ctb in ["Proprietorship", "Hindu Undivided Family"] else response.lgnm
-    )
+    business_name = response.lgnm
+    if response.ctb in TRADE_NAME_BUSINESS_TYPES and response.tradeNam:
+        business_name = response.tradeNam
 
     gstin_info = frappe._dict(
         gstin=response.gstin,
         business_name=titlecase(business_name or ""),
+        legal_name=response.lgnm or "",
+        trade_name=response.tradeNam or "",
         gst_category=GST_CATEGORIES.get(response.dty, ""),
         status=response.sts,
     )
@@ -240,6 +251,8 @@ def get_formatted_response_for_status(response):
     return frappe._dict(
         {
             "gstin": response.gstin,
+            "legal_name": response.lgnm or "",
+            "trade_name": response.tradeNam or "",
             "registration_date": parse_datetime(response.rgdt, day_first=True, throw=False),
             "cancelled_date": parse_datetime(response.cxdt, day_first=True, throw=False),
             "status": response.sts,
@@ -382,6 +395,7 @@ def get_latest_3b_filed_period(company, company_gstin):
 
 
 @frappe.whitelist()
+@validate_gstin_permission(doctype="GST Return Log")
 @otp_handler
 def get_and_update_filing_preference(gstin: str, period: str):
     frappe.has_permission("GST Return Log", throw=True)

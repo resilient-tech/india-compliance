@@ -1,0 +1,29 @@
+// styles js/components/data_table_manager.js
+
+// the table closes with its own line, so the footer must not add a second one
+.ic-datatable ~ .report-footer {
+    border-top: 0;
+}
+
+.ic-datatable {
+    --dt-row-height: 34px;
+
+    .datatable {
+        .dt-scrollable {
+            overflow-y: auto !important;
+        }
+
+        // let rows grow, but keep the filter row fixed
+        .dt-row {
+            height: unset;
+        }
+
+        .dt-row-filter {
+            height: var(--dt-row-height);
+
+            .dt-cell {
+                max-height: var(--dt-row-height);
+            }
+        }
+    }
+}

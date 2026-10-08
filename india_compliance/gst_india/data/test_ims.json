@@ -105,6 +105,14 @@
             "samt": 20,
             "cess": 0,
             "srcfilstatus": "Not Filed",
+            "itcRedReq": "Y",
+            "isItcRedReqBlocked": "N",
+            "isRemarksBlocked": "N",
+            "declIgst": 0,
+            "declCgst": 10,
+            "declSgst": 10,
+            "declCess": 0,
+            "remarks": "partial reversal",
             "hash": "1f5fb5de9e491c24dcdee9ac01d3fa5f7889f20d3a8c923bfd2e3c7f0d0125f1"
         }
     ],

@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_Category
+from india_compliance.gst_india.utils.gstr_1 import Category
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 
@@ -29,22 +29,24 @@ def validate_filters(filters):
 
 
 def get_data(filters):
-    _class = GSTR1Invoices(filters)
+    gstr1_invoices = GSTR1Invoices(filters)
     invoices = []
 
     if filters.summary_by == "Summary by Item":
-        invoices = _class.get_invoices_for_item_wise_summary()
+        invoices = gstr1_invoices.get_invoices_for_item_wise_summary()
 
     if filters.summary_by == "Summary by HSN":
-        invoices = _class.get_invoices_for_hsn_wise_summary()
+        invoices = gstr1_invoices.get_invoices_for_hsn_wise_summary()
 
     if filters.summary_by == "Overview":
-        return _class.get_overview()
+        return gstr1_invoices.get_overview()
 
     if filters.invoice_category:
-        return _class.get_filtered_invoices(invoices, filters.invoice_category, filters.invoice_sub_category)
+        return gstr1_invoices.get_filtered_invoices(
+            invoices, filters.invoice_category, filters.invoice_sub_category
+        )
 
-    _class.process_invoices(invoices)
+    gstr1_invoices.process_invoices(invoices)
 
     return invoices
 
@@ -312,7 +314,7 @@ def get_columns(filters):
         ]
     )
 
-    if not filters.invoice_category or filters.invoice_category == GSTR1_Category.SUPECOM.value:
+    if not filters.invoice_category or filters.invoice_category == Category.SUPECOM.value:
         columns.append(
             {
                 "label": _("Invoice Category"),
@@ -322,7 +324,7 @@ def get_columns(filters):
             }
         )
 
-    if not filters.invoice_sub_category or filters.invoice_category == GSTR1_Category.SUPECOM.value:
+    if not filters.invoice_sub_category or filters.invoice_category == Category.SUPECOM.value:
         columns.append(
             {
                 "label": _("Invoice Sub Category"),

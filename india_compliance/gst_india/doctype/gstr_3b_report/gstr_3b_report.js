@@ -1,9 +1,13 @@
 // Copyright (c) 2019, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
+const REPORT_METHOD = "india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report";
+
 frappe.ui.form.on("GSTR 3B Report", {
-    setup: function () {
+    setup: function (frm) {
         frappe.require("assets/india_compliance/js/gstr_2b.js");
+
+        frappe.realtime.on("gstr3b_report_generation", () => frm.reload_doc());
     },
 
     onload: function (frm) {
@@ -14,77 +18,45 @@ frappe.ui.form.on("GSTR 3B Report", {
                 if (options && options.length) frm.set_value("company_gstin", options[0]);
             });
         }
-
-        frappe.realtime.on("gstr3b_report_generation", function () {
-            frm.reload_doc();
-        });
     },
 
     refresh: function (frm) {
+        frm.toggle_display("json_output", 0);
+        set_primary_action_label(frm);
+
         if (frm.is_new()) return;
 
         const is_filed = frm.doc.filing_status === "Filed";
         frm.page.set_indicator(is_filed ? __("Filed") : __("Not Filed"), is_filed ? "green" : "orange");
 
-        frm.set_intro(__("Please save the report again to rebuild or update"));
+        // Marked dirty without UI changes so Regenerate actually re-saves:
         frm.doc.__unsaved = 1;
 
-        // Download JSON Button
-        frm.add_custom_button(__("Download JSON"), function () {
-            var w = window.open(
-                frappe.urllib.get_full_url(
-                    "/api/method/india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.make_json?" +
-                        "name=" +
-                        encodeURIComponent(frm.doc.name),
-                ),
-            );
-
-            if (!w) {
-                frappe.msgprint(__("Please enable pop-ups"));
-                return;
-            }
-        });
-
-        // Download Excel Button
-        frm.add_custom_button(__("Download Excel"), function () {
-            var w = window.open(
-                frappe.urllib.get_full_url(
-                    "/api/method/india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.download_gstr3b_as_excel?" +
-                        "name=" +
-                        encodeURIComponent(frm.doc.name),
-                ),
-            );
-
-            if (!w) {
-                frappe.msgprint(__("Please enable pop-ups"));
-                return;
-            }
-        });
-
-        // View Form Button
-        frm.add_custom_button(__("View Form"), function () {
-            frappe.call({
-                method: "india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.view_report",
-                args: {
-                    name: frm.doc.name,
-                },
-                callback: function (r) {
-                    let data = r.message;
-
-                    frappe.ui.get_print_settings(false, (print_settings) => {
-                        frappe.render_grid({
-                            template: "gstr_3b_report",
-                            title: __(this.doctype),
-                            print_settings: print_settings,
-                            data: data,
-                            columns: [],
-                        });
-                    });
-                },
-            });
-        });
-
         append_form(frm);
+
+        // Download Buttons
+        const docname = encodeURIComponent(frm.doc.name);
+        const download_group = __("Download");
+
+        if (frappe.model.can_read(frm.doctype) && frm.doc.json_output) {
+            frm.add_custom_button(
+                __("JSON"),
+                () => open_download(`${REPORT_METHOD}.make_json?name=${docname}`),
+                download_group,
+            );
+
+            frm.add_custom_button(
+                __("Excel"),
+                () => open_download(`${REPORT_METHOD}.download_gstr3b_as_excel?name=${docname}`),
+                download_group,
+            );
+
+            frm.add_custom_button(
+                __("PDF"),
+                () => open_download(`${REPORT_METHOD}.download_gstr3b_as_pdf?name=${docname}`),
+                download_group,
+            );
+        }
 
         // Regenerate Button
         frm.add_custom_button(__("Regenerate 2B"), function () {
@@ -107,36 +79,30 @@ frappe.ui.form.on("GSTR 3B Report", {
             });
         });
 
-        if (!frm.is_new()) {
-            let action = frm.doc.filing_status === "Filed" ? "Not Filed" : "Filed";
-            let status_label = action === "Filed" ? __("Filed") : __("Unfiled");
+        let action = frm.doc.filing_status === "Filed" ? "Not Filed" : "Filed";
+        let status_label = action === "Filed" ? __("Filed") : __("Unfiled");
 
-            frm.add_custom_button(
-                __("Mark as {0}", [status_label]),
-                function () {
-                    frappe.confirm(
-                        __("Mark GSTR-3B for {0} {1} as {2}?", [
-                            frm.doc.month_or_quarter,
-                            frm.doc.year,
-                            status_label,
-                        ]),
-                        () => {
-                            frappe.call({
-                                method: "india_compliance.gst_india.utils.itc_claim.update_gstr3b_filing_status",
-                                args: {
-                                    company_gstin: frm.doc.company_gstin,
-                                    month_or_quarter: frm.doc.month_or_quarter,
-                                    year: frm.doc.year,
-                                    status: action,
-                                },
-                                callback: () => frm.reload_doc(),
-                            });
+        frm.add_custom_button(__("Mark as {0}", [status_label]), function () {
+            frappe.confirm(
+                __("Mark GSTR-3B for {0} {1} as {2}?", [
+                    frm.doc.month_or_quarter,
+                    frm.doc.year,
+                    status_label,
+                ]),
+                () => {
+                    frappe.call({
+                        method: "india_compliance.gst_india.utils.itc_claim.update_gstr3b_filing_status",
+                        args: {
+                            company_gstin: frm.doc.company_gstin,
+                            month_or_quarter: frm.doc.month_or_quarter,
+                            year: frm.doc.year,
+                            status: action,
                         },
-                    );
+                        callback: () => frm.reload_doc(),
+                    });
                 },
-                __("Filing Status"),
             );
-        }
+        });
     },
 
     company: async function (frm) {
@@ -150,15 +116,41 @@ frappe.ui.form.on("GSTR 3B Report", {
     },
 });
 
-function append_form(frm) {
-    if (frm.is_new()) return;
+function open_download(method) {
+    if (!window.open(frappe.urllib.get_full_url(`/api/method/${method}`))) {
+        frappe.msgprint(__("Please enable pop-ups"));
+    }
+}
 
-    $(frm.fields_dict.gstr3b_form.wrapper).empty();
+function set_primary_action_label(frm) {
+    const apply = () =>
+        frm.page.set_primary_action(frm.is_new() ? __("Generate") : __("Regenerate"), () => frm.save());
+
+    apply();
+
+    // Re-applied on "dirty" because the framework resets it to "Save" on any edit.
+    $(frm.wrapper).off("dirty.gstr3b").on("dirty.gstr3b", apply);
+}
+
+function append_form(frm) {
+    const wrapper = $(frm.fields_dict.gstr3b_form.wrapper).empty();
+
+    if (!frm.doc.json_output) {
+        const message = {
+            "In Process": __("Report generation is in progress. This page will refresh automatically."),
+            Failed: __("Report generation failed. Please try regenerating."),
+        }[frm.doc.generation_status];
+
+        if (message) wrapper.append($("<div class='text-muted'>").text(message));
+
+        return;
+    }
+
     $(
         frappe.render_template("gstr_3b_report", {
             data: JSON.parse(frm.doc.json_output),
         }),
-    ).appendTo(frm.fields_dict.gstr3b_form.wrapper);
+    ).appendTo(wrapper);
 }
 
 function set_options_for_year_month(frm) {

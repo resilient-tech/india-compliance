@@ -20,14 +20,10 @@ frappe.ui.form.on("GST Return Log", {
             $(frm.fields_dict[field].wrapper).on("click", ".control-value a", function (e) {
                 e.preventDefault();
 
-                const args = {
-                    cmd: "india_compliance.gst_india.doctype.gst_return_log.gst_return_log.download_file",
-                    file_field: field,
-                    name: frm.doc.name,
-                    doctype: frm.doc.doctype,
-                    file_name: `${field}.json.gz`,
-                };
-                open_url_post(frappe.request.url, args);
+                open_url_post(frappe.request.url, {
+                    cmd: "frappe.core.doctype.file.file.download_file",
+                    file_url: frm.doc[field],
+                });
             });
         });
     },

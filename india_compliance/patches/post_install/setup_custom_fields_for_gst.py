@@ -1,4 +1,5 @@
 import frappe
+from frappe.query_builder.functions import Concat, Length
 
 from india_compliance.utils.custom_fields import delete_old_fields
 
@@ -17,9 +18,12 @@ def delete_tax_id_custom_field():
 
 def set_correct_state_number():
     # set correct state number for all states with single digit state number
-    frappe.db.sql(
-        """UPDATE tabAddress SET gst_state_number=concat("0", gst_state_number)
-            WHERE length(gst_state_number) = 1"""
+    address = frappe.qb.DocType("Address")
+    (
+        frappe.qb.update(address)
+        .set(address.gst_state_number, Concat("0", address.gst_state_number))
+        .where(Length(address.gst_state_number) == 1)
+        .run()
     )
 
 

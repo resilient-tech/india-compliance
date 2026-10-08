@@ -9,6 +9,7 @@ from india_compliance.exceptions import (
     GSPServerError,
     NotApplicableError,
 )
+from india_compliance.gst_india.utils import run_or_report_failure
 from india_compliance.gst_india.utils.e_invoice import (
     generate_e_invoice,
     generate_e_invoices,
@@ -274,7 +275,10 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
         frappe.db.commit()  # nosemgrep
 
-    def test_auto_gen_ui_unhandled_exception_still_raises(self):
+    def test_auto_gen_ui_unhandled_exception_raises(self):
+        """throw=False covers the known failures; an unexpected one is raised (HTTP 500).
+        The status is saved as Failed before that (see the server test: tests skip commits, so
+        the 500's rollback hides it across the HTTP boundary)."""
         with patch(E_INVOICE_DATA) as mock_data:
             mock_data.side_effect = RuntimeError("Unexpected")
             response = self._post_e_invoice(self.si.name, throw=False)
@@ -321,13 +325,13 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         frappe.db.commit()  # nosemgrep
 
     def test_auto_gen_server_unhandled_exception_raises(self):
+        """raised whatever `throw` says, after the status is saved as Failed"""
         with patch(E_INVOICE_DATA) as mock_data:
             mock_data.side_effect = RuntimeError("Unexpected")
-            self.assertRaises(
-                RuntimeError,
-                generate_e_invoice,
-                self.si.name,
-            )
+            self.assertRaises(RuntimeError, generate_e_invoice, self.si.name, throw=False)
+
+        self.si.reload()
+        self.assertEqual(self.si.einvoice_status, "Failed")
 
 
 class TestEWaybillWorkflow(WorkflowTestBase):
@@ -460,13 +464,17 @@ class TestEWaybillWorkflow(WorkflowTestBase):
         frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
         frappe.db.commit()  # nosemgrep
 
-    def test_auto_gen_unhandled_exception_always_raises(self):
+    @check_error_logged_for_doc(doctype="Sales Invoice", error_substr="Unexpected")
+    def test_auto_gen_unhandled_exception_logs_and_sets_failed(self):
         with patch(E_WAYBILL_DATA) as mock_data:
             mock_data.side_effect = RuntimeError("Unexpected")
-            self.assertRaises(
-                RuntimeError,
+            # raised by the generator; the after-response runner logs and reports it
+            run_or_report_failure(
                 _generate_e_waybill,
-                self.si,
+                "Sales Invoice",
+                self.si.name,
+                "e-Waybill generation failed",
+                doc=self.si,
                 throw=False,
             )
 
