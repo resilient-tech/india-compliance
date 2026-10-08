@@ -291,7 +291,6 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
                     docdata={"isd": [{**distributor, "doclist": [other_gstin_document]}]},
                 )
             ),
-            store_raw=False,
         )
         other_gstin_row = frappe.db.get_value(
             self.doctype, {"company_gstin": other_gstin, "bill_no": "S9999"}
