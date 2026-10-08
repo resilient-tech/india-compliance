@@ -165,7 +165,6 @@ doc_events = {
     },
     "Delivery Note": {
         "onload": "india_compliance.gst_india.overrides.delivery_note.onload",
-        "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
         "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         "before_update_after_submit": [
             "india_compliance.gst_india.overrides.transaction.validate_transporter_fields_after_submit",
@@ -196,7 +195,6 @@ doc_events = {
     },
     "Purchase Invoice": {
         "onload": "india_compliance.gst_india.overrides.purchase_invoice.onload",
-        "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
         "before_validate": [
             "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         ],
@@ -212,7 +210,6 @@ doc_events = {
         "on_cancel": "india_compliance.gst_india.overrides.purchase_invoice.on_cancel",
     },
     "Purchase Order": {
-        "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
         "before_validate": [
             "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         ],
@@ -225,7 +222,6 @@ doc_events = {
     },
     "Purchase Receipt": {
         "onload": "india_compliance.gst_india.overrides.purchase_receipt.onload",
-        "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
         "before_validate": [
             "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         ],
@@ -241,7 +237,6 @@ doc_events = {
     },
     "Sales Invoice": {
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
-        "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
         "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
         "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
@@ -256,7 +251,6 @@ doc_events = {
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },
     "Sales Order": {
-        "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
         "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         "validate": ("india_compliance.gst_india.overrides.transaction.validate_transaction"),
         "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit",
@@ -302,12 +296,10 @@ doc_events = {
         "before_submit": "india_compliance.gst_india.overrides.unreconcile_payment.before_submit",
     },
     "POS Invoice": {
-        "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
         "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         "validate": ("india_compliance.gst_india.overrides.transaction.validate_transaction"),
     },
     "Quotation": {
-        "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
         "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         "validate": ("india_compliance.gst_india.overrides.transaction.validate_transaction"),
         "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit",
@@ -316,7 +308,6 @@ doc_events = {
         "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
     },
     "Supplier Quotation": {
-        "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
         "before_validate": [
             "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         ],
@@ -430,8 +421,7 @@ override_doctype_class = {
 }
 
 
-# Extended Doctype Map
-CLASS_EXTENSION_MAP = {
+_CLASS_EXTENSION_MAP = {
     "india_compliance.gst_india.overrides.virtual_fields.GSTBreakupExt": (
         "Quotation",
         "Sales Order",
@@ -456,9 +446,13 @@ CLASS_EXTENSION_MAP = {
 }
 
 extend_doctype_class = {}
-for extclass, _doctypes in CLASS_EXTENSION_MAP.items():
+for _extension_class, _doctypes in _CLASS_EXTENSION_MAP.items():
     for _doctype in _doctypes:
-        extend_doctype_class.setdefault(_doctype, []).append(extclass)
+        extend_doctype_class.setdefault(_doctype, []).append(_extension_class)
+
+doc_events[tuple(extend_doctype_class)] = {
+    "before_print": "india_compliance.gst_india.overrides.virtual_fields.before_print",
+}
 
 
 # DocTypes to be ignored while clearing transactions of a Company

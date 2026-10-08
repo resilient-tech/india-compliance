@@ -313,9 +313,6 @@ def get_tax_amount(taxes, gst_tax_type):
 
 
 def get_ineligibility_reason(doc):
-    """
-    Return the ITC ineligibility reason.
-    """
     ineligibility_reason = ""
 
     for item in doc.items:
@@ -323,6 +320,7 @@ def get_ineligibility_reason(doc):
             ineligibility_reason = "Ineligible As Per Section 17(5)"
             break
 
+    # also read as a property on unsaved docs, where these can still be blank
     if (
         doc.place_of_supply
         and doc.company_gstin
@@ -337,6 +335,7 @@ def get_ineligibility_reason(doc):
 def show_ineligibility_alert(reason):
     if not reason:
         return
+
     frappe.msgprint(
         _("ITC Ineligible: {0}").format(frappe.bold(reason)),
         alert=True,
@@ -344,11 +343,9 @@ def show_ineligibility_alert(reason):
     )
 
 
-def set_ineligibility_reason(doc, show_alert=True):
+def set_ineligibility_reason(doc):
     doc.ineligibility_reason = get_ineligibility_reason(doc)
-
-    if show_alert:
-        show_ineligibility_alert(doc.ineligibility_reason)
+    show_ineligibility_alert(doc.ineligibility_reason)
 
 
 def validate_reverse_charge(doc):

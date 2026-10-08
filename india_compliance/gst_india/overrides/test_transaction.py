@@ -773,10 +773,9 @@ class TestTransaction(IntegrationTestCase):
         self.assertNotEqual(updated_breakup, breakup)
         self.assertEqual(doc.as_dict().get("gst_breakup_table"), updated_breakup)
 
+        self.assertIsNone(frappe.get_doc({"doctype": self.doctype}).as_dict().get("gst_breakup_table"))
+
     def test_gst_breakup_table_in_print(self):
-        # The server print renderer gates on`doc.get(fieldname)` (instance dict, bypassing the property), so the
-        # `before_print` hook must materialize it.
-        # Fix required in Frappe
         if self.doctype != "Sales Invoice":
             return
 
@@ -786,7 +785,7 @@ class TestTransaction(IntegrationTestCase):
             doc.doctype, doc.name, print_format="GST Tax Invoice", no_letterhead=1
         )
 
-        # `tax-break-up` is the wrapper class from templates/gst_breakup.html.
+        # wrapper class from templates/gst_breakup.html
         self.assertIn("tax-break-up", html)
         self.assertIn("tax-break-up", html_no_letterhead)
         self.assertIn(doc.gst_breakup_table, html)
@@ -805,6 +804,9 @@ class TestTransaction(IntegrationTestCase):
 
             doc.is_reverse_charge = 1
             self.assertEqual(doc.ecommerce_supply_type, "Liable to pay tax u/s 9(5)")
+
+            draft = frappe.get_doc({"doctype": self.doctype, "ecommerce_gstin": doc.ecommerce_gstin})
+            self.assertIsNone(draft.ecommerce_supply_type)
 
     def test_taxable_value_with_charges(self):
         if self.doctype not in DOCTYPES_WITH_GST_DETAIL:

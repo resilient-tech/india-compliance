@@ -51,5 +51,5 @@ def validate(doc, method=None):
     if validate_transaction(doc) is False:
         return
 
-    reason = get_ineligibility_reason(doc)
-    show_ineligibility_alert(reason)
+    # the reason is a virtual property here, so there is nothing to set
+    show_ineligibility_alert(get_ineligibility_reason(doc))
