@@ -24,7 +24,7 @@ class IndiaComplianceAccountPage {
             pageIndex === -1
                 ? frappe.utils.generate_route({
                       type: "Page",
-                      name: "india-compliance-account",
+                      name: this.pageName,
                   })
                 : pathSegments.slice(0, pageIndex + 1).join("/");
 
