@@ -25,6 +25,15 @@ frappe = ">=17.0.0-dev,<18.0.0"
 [tool.bench.dev-dependencies]
 parameterized = "~=0.8.1"
 time-machine = "~=3.2.0"
+pytest = "~=9.1"
+pytest-playwright = "~=0.9.0"
+pytest-timeout = "~=2.4"
+python-dotenv = "~=1.2"
+
+[tool.pytest.ini_options]
+testpaths = ["ui_tests"]
+addopts = "--browser=chromium --tracing=retain-on-failure --video=retain-on-failure --screenshot=only-on-failure --timeout=30"
+timeout_func_only = false
 
 [tool.ruff]
 line-length = 110
