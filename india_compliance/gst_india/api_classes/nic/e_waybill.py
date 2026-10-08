@@ -18,6 +18,10 @@ from india_compliance.gst_india.constants import DISTANCE_REGEX
 class EWaybillAPI(BaseAPI):
     API_NAME = "e-Waybill"
 
+    # fail fast, slow govt servers shouldn't block workers
+    REQUEST_TIMEOUT = (10, 30)
+    FAIL_FAST_IF_SERVER_DOWN = True
+
     IGNORED_ERROR_CODES: ClassVar[dict] = {
         "238": "Invalid auth token",
         #  Cancel e-waybill errors
@@ -26,6 +30,8 @@ class EWaybillAPI(BaseAPI):
         "604": "E-way bill(s) are already generated for the same document number, you cannot generate again on same document number",
         # Transporter details not found
         "328": "Could not retrieve transporter details from gstin",
+        # e-Waybills by date: none that day
+        "418": "No record found",
     }
 
     # Response Keys
@@ -91,6 +97,7 @@ class EWaybillAPI(BaseAPI):
         for error_code, error_message in self.IGNORED_ERROR_CODES.items():
             if error_message in message:
                 response_json.error_code = error_code
+                response_json.error_message = message
                 return True
 
         return False
@@ -100,7 +107,8 @@ class EWaybillAPI(BaseAPI):
         return self.get(action, params={"ewbNo": ewaybill_number})
 
     def get_e_waybills_by_date(self, date):
-        return self.get("GetEwayBillsByDate", params={"date": date})
+        response = self.get("GetEwayBillsByDate", params={"date": date})
+        return [] if getattr(response, "error_code", None) == "418" else response
 
     def generate_e_waybill(self, data):
         result = self.post("GENEWAYBILL", json=data)
