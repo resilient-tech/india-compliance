@@ -203,10 +203,7 @@ def download_gstr_2b(gstin, return_periods):
                 r = api.get_data(return_period, file_num=file_num)
                 merge_dicts(combined, r.data or {})
 
-            if combined:
-                save_gstr_2b(gstin, return_period, frappe._dict(data=frappe._dict(combined)))
-
-            continue  # skip first response if file_count is greater than 1
+            response = frappe._dict(data=frappe._dict(combined))
 
         save_gstr_2b(gstin, return_period, response)
 
@@ -299,7 +296,7 @@ def save_gstr_2a(gstin, return_period, json_data):
     save_gstr(gstin, return_type, return_period, json_data)
 
 
-def save_gstr_2b(gstin, return_period, json_data, *, store_raw=True):
+def save_gstr_2b(gstin, return_period, json_data):
     json_data = json_data.data
     return_type = ReturnType.GSTR2B
     if not json_data or json_data.get("gstin") != gstin:
@@ -311,8 +308,7 @@ def save_gstr_2b(gstin, return_period, json_data, *, store_raw=True):
             title=_("Invalid Response Received."),
         )
 
-    if store_raw:
-        store_raw_return_data(gstin, return_type.value, return_period, dict(json_data))
+    store_raw_return_data(gstin, return_type.value, return_period, dict(json_data))
 
     create_import_log(gstin, return_type.value, return_period)
     save_gstr(
