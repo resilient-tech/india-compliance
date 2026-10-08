@@ -263,3 +263,21 @@ class TestAssetMovementGST(IntegrationTestCase):
             *frappe.db.get_value("Address", UNREGISTERED_ADDRESS, ("gst_state_number", "gst_state"))
         )
         self.assertEqual(get_place_of_supply(party_details, "Asset Movement"), expected)
+
+    def test_address_display_in_print(self):
+        doc = create_asset_movement(
+            asset=self.asset,
+            ship_from_address=COMPANY_ADDRESS,
+            ship_to_address=COMPANY_PARTY_ADDRESS,
+        )
+        html = frappe.get_print(doc.doctype, doc.name)
+
+        for fieldname in (
+            "bill_from_address_display",
+            "bill_to_address_display",
+            "ship_from_address_display",
+            "ship_to_address_display",
+        ):
+            address_display = getattr(doc, fieldname)
+            self.assertTrue(address_display)
+            self.assertIn(address_display, html)
