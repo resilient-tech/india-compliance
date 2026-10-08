@@ -17,7 +17,11 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
-from india_compliance.gst_india.utils import get_party_for_gstin, validate_gstin_permission
+from india_compliance.gst_india.utils import (
+    get_party_for_gstin,
+    merge_dicts,
+    validate_gstin_permission,
+)
 from india_compliance.gst_india.utils.gstr_2 import gstr_2a, gstr_2b, ims
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
@@ -218,11 +222,12 @@ def download_gstr_2b(gstin, return_periods):
 
         # Handle multiple files for GSTR2B
         if response.data and (file_count := response.data.get("fc")):
+            combined = {}
             for file_num in range(1, file_count + 1):
                 r = api.get_data(return_period, file_num=file_num)
-                save_gstr_2b(gstin, return_period, r)
+                merge_dicts(combined, r.data or {})
 
-            continue  # skip first response if file_count is greater than 1
+            response = frappe._dict(data=frappe._dict(combined))
 
         save_gstr_2b(gstin, return_period, response)
 
