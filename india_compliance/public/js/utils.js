@@ -52,6 +52,12 @@ Object.assign(india_compliance, {
 
     HSN_BIFURCATION_FROM: frappe.datetime.str_to_obj("2025-05-01"),
 
+    // Stock Entry purposes where goods move between subcontracting parties
+    SUBCONTRACTING_PURPOSES: ["Send to Subcontractor"],
+
+    // Stock Entry purposes eligible for e-Waybill
+    E_WAYBILL_STOCK_ENTRY_PURPOSES: ["Material Transfer", "Material Issue", "Send to Subcontractor"],
+
     get_month_year_from_period(period) {
         /**
          * Returns month or quarter and year from the period
@@ -649,7 +655,7 @@ Object.assign(india_compliance, {
 
         if (doc.doctype != "Stock Entry") return true;
 
-        if (!["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(doc.purpose)) {
+        if (!india_compliance.E_WAYBILL_STOCK_ENTRY_PURPOSES.includes(doc.purpose)) {
             return false;
         }
 
@@ -660,6 +666,10 @@ Object.assign(india_compliance, {
         if (!company) return false;
 
         return frappe.boot.indian_registered_companies?.includes(company);
+    },
+
+    get_items(doc) {
+        return doc.items || [];
     },
 
     get_inward_subcategory_options(sub_section) {
