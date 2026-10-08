@@ -7,7 +7,7 @@ from typing import ClassVar
 import frappe
 from frappe.query_builder import Case, Criterion
 from frappe.query_builder.functions import Date, IfNull, Sum
-from frappe.utils import cint, flt, getdate
+from frappe.utils import cint, getdate
 from pypika import Order
 
 from india_compliance.gst_india.constants import (
