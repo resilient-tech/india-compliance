@@ -108,7 +108,11 @@ class GSTInvoiceManagementSystem(Document):
         if not purchase:
             purchase = [doc.link_name for doc in inward_supplies]
 
-        purchases = PurchaseInvoice().get_all(names=purchase, filters=filters)
+        purchases = (
+            PurchaseInvoice().get_all(names=purchase, filters=frappe._dict(company=filters.company))
+            if purchase
+            else {}
+        )
 
         invoice_data = []
         for doc in inward_supplies:
@@ -208,7 +212,11 @@ class GSTInvoiceManagementSystem(Document):
             if inward_supply_names
             else []
         )
-        purchases = PurchaseInvoice().get_all(names=purchase_names) if purchase_names else {}
+        purchases = (
+            PurchaseInvoice().get_all(names=purchase_names, filters=frappe._dict(company=self.company))
+            if purchase_names
+            else {}
+        )
 
         reconciliation_data = [
             frappe._dict(
@@ -482,14 +490,14 @@ def get_data_for_upload(company_gstin, request_type):
 
     for key, invoices in key_invoice_map.items():
         category = CATEGORY_MAP[key]
-        _class = get_data_handler(ReturnType.IMS.value, category)()
+        data_handler = get_data_handler(ReturnType.IMS.value, category)()
         upload_invoices = []
 
         for invoice in invoices:
             upload_invoices.append(
                 {
-                    **_class.convert_data_to_gov_format(invoice),
-                    **_class.get_category_details(invoice),
+                    **data_handler.convert_data_to_gov_format(invoice),
+                    **data_handler.get_category_details(invoice),
                 }
             )
 
@@ -539,8 +547,8 @@ def update_previous_ims_action(request_id, error_report=None):
     uploaded_invoices = get_uploaded_invoices(request_id)
 
     for category, invoices in uploaded_invoices.items():
-        _class = get_data_handler(ReturnType.IMS.value, category.upper())
-        _class().update_previous_ims_action(invoices, error_report.get(category, []))
+        data_handler = get_data_handler(ReturnType.IMS.value, category.upper())
+        data_handler().update_previous_ims_action(invoices, error_report.get(category, []))
 
 
 def get_uploaded_invoices(request_id):

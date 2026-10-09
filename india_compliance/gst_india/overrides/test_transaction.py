@@ -55,6 +55,13 @@ from india_compliance.gst_india.utils.tests import (
     create_sales_invoice,
     create_transaction,
 )
+from india_compliance.income_tax_india.overrides.company import (
+    TDS_ACCOUNT_NAME,
+    create_tds_account,
+)
+from india_compliance.income_tax_india.overrides.test_tax_withholding_category import (
+    create_tax_withholding_category,
+)
 
 
 @parameterized_class(
@@ -532,6 +539,11 @@ class TestTransaction(IntegrationTestCase):
             doc.save,
         )
 
+        doc.reload()
+        doc.driver_name = "Test Driver"
+        doc.save()
+        self.assertEqual(frappe.db.get_value(doc.doctype, doc.name, "driver_name"), "Test Driver")
+
         mark_e_waybill_as_cancelled(
             doc.doctype,
             doc.name,
@@ -773,21 +785,25 @@ class TestTransaction(IntegrationTestCase):
         if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
             return
 
-        doc = create_transaction(**self.transaction_details, is_in_state=True, do_not_save=True)
+        for item_code in ("_Test Trading Goods 1", "_Test Nil Rated Item"):
+            with self.subTest(item_code=item_code):
+                doc = create_transaction(
+                    **self.transaction_details, item_code=item_code, is_in_state=True, do_not_save=True
+                )
 
-        # Adding charges
-        doc.append(
-            "taxes",
-            {
-                "charge_type": "Actual",
-                "account_head": "Freight and Forwarding Charges - _TIRC",
-                "description": "Freight",
-                "tax_amount": 20,
-                "cost_center": "Main - _TIRC",
-            },
-        )
-        doc.insert()
-        self.assertDocumentEqual({"taxable_value": 100}, doc.items[0])
+                # Adding charges
+                doc.append(
+                    "taxes",
+                    {
+                        "charge_type": "Actual",
+                        "account_head": "Freight and Forwarding Charges - _TIRC",
+                        "description": "Freight",
+                        "tax_amount": 20,
+                        "cost_center": "Main - _TIRC",
+                    },
+                )
+                doc.insert()
+                self.assertDocumentEqual({"taxable_value": 100}, doc.items[0])
 
     def test_credit_note_without_quantity(self):
         if self.doctype != "Sales Invoice":
@@ -821,6 +837,46 @@ class TestTransaction(IntegrationTestCase):
         # Ensure correct taxable_value and gst details
         for item in doc.items:
             self.assertDocumentEqual({"taxable_value": 10, "cgst_amount": 0.9, "sgst_amount": 0.9}, item)
+
+    def test_taxable_value_with_charges_before_and_after_tax(self):
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
+            return
+
+        for item_code, gst_amount in (("_Test Nil Rated Item", 0), ("_Test Trading Goods 1", 10.8)):
+            with self.subTest(item_code=item_code):
+                doc = create_transaction(**self.transaction_details, item_code=item_code, do_not_save=True)
+
+                doc.append(
+                    "taxes",
+                    {
+                        "charge_type": "Actual",
+                        "account_head": "Freight and Forwarding Charges - _TIRC",
+                        "description": "Freight",
+                        "tax_amount": 20,
+                        "cost_center": "Main - _TIRC",
+                    },
+                )
+
+                _append_taxes(doc, ("CGST", "SGST"), charge_type="On Previous Row Total", row_id=1)
+
+                # not a Tax Withholding Account: only its position below GST keeps it out
+                doc.append(
+                    "taxes",
+                    {
+                        "charge_type": "On Previous Row Total",
+                        "row_id": 3,
+                        "account_head": create_tax_accounts("TCS Payable").name,
+                        "description": "TCS",
+                        "rate": 1,
+                        "cost_center": "Main - _TIRC",
+                    },
+                )
+                doc.insert()
+
+                self.assertDocumentEqual(
+                    {"taxable_value": 120, "cgst_amount": gst_amount, "sgst_amount": gst_amount},
+                    doc.items[0],
+                )
 
     def test_validate_place_of_supply(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
@@ -1838,6 +1894,36 @@ class TestSpecificTransactions(IntegrationTestCase):
         self.assertFalse(_is_multicurrency_doc({"conversion_rate": 0}))
         self.assertFalse(_is_multicurrency_doc({}))
         self.assertFalse(_is_multicurrency_doc('{"conversion_rate": 1}'))
+
+    def test_taxable_value_excludes_tcs_without_gst_rows(self):
+        """
+        Zero-rated Sales Invoice with no GST rows and TCS via Tax Withholding Category.
+        TCS row is identified by `is_tax_withholding_account` and must not be
+        apportioned into the item's taxable value.
+        """
+        company = "_Test Indian Registered Company"
+        category = "_Test TCS Category"
+
+        create_tds_account(company)
+        create_tax_withholding_category(category, f"{TDS_ACCOUNT_NAME} - _TIRC")
+
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            item_code="_Test Nil Rated Item",
+            apply_tds=1,
+            do_not_save=True,
+        )
+        doc.items[0].tax_withholding_category = category
+        doc.save()
+
+        self.assertFalse([row for row in doc.taxes if row.gst_tax_type])
+
+        tcs_rows = [row for row in doc.taxes if row.is_tax_withholding_account]
+        self.assertTrue(tcs_rows)
+        self.assertTrue(tcs_rows[0].base_tax_amount_after_discount_amount)
+
+        item = doc.items[0]
+        self.assertEqual(item.taxable_value, item.base_net_amount)
 
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"

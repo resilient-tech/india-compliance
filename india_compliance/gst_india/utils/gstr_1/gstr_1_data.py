@@ -7,7 +7,7 @@ from typing import ClassVar
 import frappe
 from frappe.query_builder import Case, Criterion
 from frappe.query_builder.functions import Date, IfNull, Sum
-from frappe.utils import cint, flt, getdate
+from frappe.utils import cint, getdate
 from pypika import Order
 
 from india_compliance.gst_india.constants import (
@@ -970,14 +970,6 @@ class GSTR11A11BData:
         self.gl_entry = frappe.qb.DocType("GL Entry")
         self.gst_accounts = gst_accounts
 
-    def get_data(self):
-        if self.filters.get("type_of_business") == "Advances":
-            records = self.get_11A_query().run(as_dict=True)
-        elif self.filters.get("type_of_business") == "Adjustment":
-            records = self.get_11B_query().run(as_dict=True)
-
-        return self.process_data(records)
-
     def get_11A_query(self):
         # For tax-inclusive payments the GST is embedded in paid_amount, exclusive -> 0.
         from india_compliance.gst_india.overrides.payment_entry import (
@@ -1060,16 +1052,3 @@ class GSTR11A11BData:
             conditions.append(self.gl_entry.company_gstin == self.filters.get("company_gstin"))
 
         return conditions
-
-    def process_data(self, records):
-        data = {}
-        for entry in records:
-            taxable_value = flt(entry.taxable_value, 2)
-            tax_rate = round((entry.tax_amount / taxable_value) * 100) if taxable_value else 0
-
-            data.setdefault((entry.place_of_supply, tax_rate), [0.0, 0.0])
-
-            data[(entry.place_of_supply, tax_rate)][0] += taxable_value
-            data[(entry.place_of_supply, tax_rate)][1] += flt(entry.cess_amount, 2)
-
-        return data

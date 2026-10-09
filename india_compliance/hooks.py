@@ -296,9 +296,6 @@ doc_events = {
         "after_insert": ("india_compliance.gst_india.overrides.party.create_primary_address"),
     },
     "Tax Category": {"validate": "india_compliance.gst_india.overrides.tax_category.validate"},
-    "Tax Withholding Category": {
-        "on_change": "india_compliance.income_tax_india.overrides.tax_withholding_category.on_change",
-    },
     "Unreconcile Payment": {
         "before_submit": "india_compliance.gst_india.overrides.unreconcile_payment.before_submit",
     },
