@@ -33,10 +33,7 @@ GST_PARTY_TYPES = ("Customer", "Supplier", "Company")
 # Transporter fields that stay editable after submit until an e-Waybill is generated.
 TRANSPORTER_FIELDS = (
     "transporter",
-    "transporter_name",
     "gst_transporter_id",
-    "driver",
-    "driver_name",
     "lr_no",
     "lr_date",
     "vehicle_no",

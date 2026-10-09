@@ -318,10 +318,8 @@ class IneligibleITC:
         item._ineligible_tax_amount = ineligible_tax_amount
 
     def update_item_valuation_rate(self, item, ineligible_tax_amount):
-        item.valuation_rate = flt(
-            item.valuation_rate + ineligible_tax_amount / item.stock_qty,
-            item.precision("valuation_rate"),
-        )
+        # Do not round off valuation rate to avoid precision loss(ERPNext Convention)
+        item.valuation_rate += ineligible_tax_amount / item.stock_qty
 
     def is_debit_entry_required(self, item):
         return True

@@ -533,6 +533,48 @@ class TestGSTInvoiceManagementSystem(FrappeTestCase):
             if data._inward_supply.bill_no == "BILL-24-00001":
                 self.assertEqual(data._purchase_invoice.name, self.pinv.name)
 
+    def test_linked_purchase_invoice_on_another_company_gstin_is_shown(self):
+        gst_is = create_gst_inward_supply(
+            bill_no="IMS-GSTIN-DIFF-001",
+            bill_date="2024-12-13",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-13",
+            previous_ims_action="No Action",
+            ims_action="No Action",
+        )
+        pinv = create_purchase_invoice(
+            bill_no="IMS-GSTIN-DIFF-001",
+            bill_date="2024-12-13",
+            posting_date="2024-12-13",
+            qty=10,
+            rate=1000,
+            is_in_state=1,
+            supplier="_Test Registered Supplier",
+            supplier_gstin="24AABCR6898M1ZN",
+        )
+
+        self.gst_ims.link_documents(
+            purchase_invoice_name=pinv.name,
+            inward_supply_name=gst_is.name,
+            link_doctype="Purchase Invoice",
+        )
+        frappe.db.set_value("Purchase Invoice", pinv.name, "company_gstin", "27AAQCA8719H1Z6")
+
+        invoice_data = self.gst_ims.autoreconcile_and_get_data().get("invoice_data")
+        row = next(row for row in invoice_data if row.inward_supply_name == gst_is.name)
+
+        self.assertEqual(row.purchase_invoice_name, pinv.name)
+        self.assertEqual(row.match_status, "Manual Match")
+        self.assertEqual(row.differences, "COMPANY_GSTIN")
+
+        details = self.gst_ims.get_invoice_details(pinv.name, gst_is.name)
+        self.assertEqual(details.purchase_invoice_name, pinv.name)
+        self.assertEqual(details._purchase_invoice.company_gstin, "27AAQCA8719H1Z6")
+
+        frappe.db.set_value("Purchase Invoice", pinv.name, "company", "_Test Company")
+        details = self.gst_ims.get_invoice_details(pinv.name, gst_is.name)
+        self.assertIsNone(details.purchase_invoice_name)
+
     def test_get_invoice_details_with_none_purchase_name(self):
         """
         Regression test: IMS detail view sends purchase_name=None for

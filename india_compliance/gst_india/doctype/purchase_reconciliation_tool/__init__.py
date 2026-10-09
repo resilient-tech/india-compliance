@@ -389,31 +389,7 @@ class PurchaseInvoice:
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
-        query = self.get_query(additional_fields)
-        match_found = ("Reconciled", "Match Found")
-
-        if only_names and not names:
-            return
-
-        elif only_names:
-            query = query.where(self.PI.name.isin(names))
-
-        elif names:
-            query = query.where(
-                (
-                    (self.PI.posting_date[self.from_date : self.to_date])
-                    & (IfNull(self.PI.reconciliation_status, "").notin(match_found))
-                )
-                | (self.PI.name.isin(names))
-            )
-
-        else:
-            query = query.where(
-                (self.PI.posting_date[self.from_date : self.to_date])
-                & (IfNull(self.PI.reconciliation_status, "").notin(match_found))
-            )
-
-        return query.run(as_dict=True)
+        return BaseUtil._get_all(self, self.PI, additional_fields, names, only_names)
 
     def get_unmatched(self, category, is_return=0):
         gst_category = (
@@ -442,7 +418,7 @@ class PurchaseInvoice:
 
         return data
 
-    def get_query(self, additional_fields=None, is_return=False):
+    def get_query(self, additional_fields=None, is_return=False, ignore_company_gstin=False):
         fields = self.get_fields(additional_fields, is_return)
 
         query = (
@@ -461,18 +437,7 @@ class PurchaseInvoice:
             )
         )
 
-        if self.company:
-            query = query.where(self.company == self.PI.company)
-
-        if self.company_gstin == "All":
-            query = query.where(self.PI.company_gstin.notnull())
-        else:
-            query = query.where(self.company_gstin == self.PI.company_gstin)
-
-        if self.include_ignored == 0:
-            query = query.where(IfNull(self.PI.reconciliation_status, "") != "Ignored")
-
-        return query
+        return BaseUtil._apply_filters(self, self.PI, query, ignore_company_gstin)
 
     def get_fields(self, additional_fields=None, is_return=False):
         tax_fields = [self.query_tax_amount(f"{tax_type}_amount").as_(tax_type) for tax_type in GST_TAX_TYPES]
@@ -540,31 +505,7 @@ class BillOfEntry:
         self.PI = frappe.qb.DocType("Purchase Invoice")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
-        query = self.get_query(additional_fields)
-        match_found = ("Reconciled", "Match Found")
-
-        if only_names and not names:
-            return
-
-        elif only_names:
-            query = query.where(self.BOE.name.isin(names))
-
-        elif names:
-            query = query.where(
-                (
-                    (self.BOE.posting_date[self.from_date : self.to_date])
-                    & (IfNull(self.BOE.reconciliation_status, "").notin(match_found))
-                )
-                | (self.BOE.name.isin(names))
-            )
-
-        else:
-            query = query.where(
-                (self.BOE.posting_date[self.from_date : self.to_date])
-                & (IfNull(self.BOE.reconciliation_status, "").notin(match_found))
-            )
-
-        return query.run(as_dict=True)
+        return BaseUtil._get_all(self, self.BOE, additional_fields, names, only_names)
 
     def get_unmatched(self, category):
         gst_category = "SEZ" if category == "IMPGSEZ" else "Overseas"
@@ -583,7 +524,7 @@ class BillOfEntry:
 
         return data
 
-    def get_query(self, additional_fields=None):
+    def get_query(self, additional_fields=None, ignore_company_gstin=False):
         fields = self.get_fields(additional_fields)
 
         query = (
@@ -600,18 +541,7 @@ class BillOfEntry:
             .select(*fields, ConstantColumn("Bill of Entry").as_("doctype"))
         )
 
-        if self.company:
-            query = query.where(self.company == self.BOE.company)
-
-        if self.company_gstin == "All":
-            query = query.where(self.BOE.company_gstin.notnull())
-        else:
-            query = query.where(self.company_gstin == self.BOE.company_gstin)
-
-        if self.include_ignored == 0:
-            query = query.where(IfNull(self.BOE.reconciliation_status, "") != "Ignored")
-
-        return query
+        return BaseUtil._apply_filters(self, self.BOE, query, ignore_company_gstin)
 
     def get_fields(self, additional_fields=None):
         tax_fields = [self.query_tax_amount(f"{tax_type}_amount").as_(tax_type) for tax_type in GST_TAX_TYPES]
@@ -676,31 +606,7 @@ class ISDInvoice:
         self.ISD_ITEM = frappe.qb.DocType("ISD Source Item")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
-        query = self.get_query(additional_fields)
-        match_found = ("Reconciled", "Match Found")
-
-        if only_names and not names:
-            return
-
-        elif only_names:
-            query = query.where(self.ISD.name.isin(names))
-
-        elif names:
-            query = query.where(
-                (
-                    (self.ISD.posting_date[self.from_date : self.to_date])
-                    & (IfNull(self.ISD.reconciliation_status, "").notin(match_found))
-                )
-                | (self.ISD.name.isin(names))
-            )
-
-        else:
-            query = query.where(
-                (self.ISD.posting_date[self.from_date : self.to_date])
-                & (IfNull(self.ISD.reconciliation_status, "").notin(match_found))
-            )
-
-        return query.run(as_dict=True)
+        return BaseUtil._get_all(self, self.ISD, additional_fields, names, only_names)
 
     def get_unmatched(self, is_return=0):
         query = (
@@ -717,7 +623,7 @@ class ISDInvoice:
 
         return data
 
-    def get_query(self, additional_fields=None):
+    def get_query(self, additional_fields=None, ignore_company_gstin=False):
         fields = self.get_fields(additional_fields)
 
         query = (
@@ -733,17 +639,7 @@ class ISDInvoice:
             .select(*fields, ConstantColumn("ISD Recipient Invoice").as_("doctype"))
         )
 
-        if self.company:
-            query = query.where(self.company == self.ISD.company)
-
-        if self.company_gstin == "All":
-            query = query.where(self.ISD.company_gstin.notnull())
-        else:
-            query = query.where(self.company_gstin == self.ISD.company_gstin)
-
-        if self.include_ignored == 0:
-            query = query.where(IfNull(self.ISD.reconciliation_status, "") != "Ignored")
-        return query
+        return BaseUtil._apply_filters(self, self.ISD, query, ignore_company_gstin)
 
     def get_fields(self, additional_fields=None):
         tax_fields = [
@@ -890,7 +786,7 @@ class BaseReconciliation:
         return ISDInvoice(
             company=self.company,
             company_gstin=self.company_gstin,
-            from_date=self.purchase_from_date,
+            from_date=self.from_date,
             to_date=self.to_date,
             include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
@@ -1590,6 +1486,48 @@ class BaseUtil:
 
         # Filter periods based on Filing Preference
         return BaseUtil.get_filtered_periods(return_type, periods, company_gstin)
+
+    @staticmethod
+    def _get_all(doc, doctype, additional_fields=None, names=None, only_names=False):
+        if only_names and not names:
+            return
+
+        query = doc.get_query(additional_fields, ignore_company_gstin=True)
+
+        if only_names:
+            return query.where(doctype.name.isin(names)).run(as_dict=True)
+
+        match_found = ("Reconciled", "Match Found")
+        criterion = (
+            BaseUtil.get_company_gstin_criterion(doctype, doc.company_gstin)
+            & (doctype.posting_date[doc.from_date : doc.to_date])
+            & (IfNull(doctype.reconciliation_status, "").notin(match_found))
+        )
+
+        if names:
+            criterion |= doctype.name.isin(names)
+
+        return query.where(criterion).run(as_dict=True)
+
+    @staticmethod
+    def _apply_filters(doc, doctype, query, ignore_company_gstin=False):
+        if doc.company:
+            query = query.where(doc.company == doctype.company)
+
+        if doc.include_ignored == 0:
+            query = query.where(IfNull(doctype.reconciliation_status, "") != "Ignored")
+
+        if ignore_company_gstin:
+            return query
+
+        return query.where(BaseUtil.get_company_gstin_criterion(doctype, doc.company_gstin))
+
+    @staticmethod
+    def get_company_gstin_criterion(doctype, company_gstin):
+        if company_gstin == "All":
+            return IfNull(doctype.company_gstin, "") != ""
+
+        return doctype.company_gstin == company_gstin
 
     @staticmethod
     def _get_periods(start_date, end_date):

@@ -285,6 +285,65 @@ class TestIneligibleITC(FrappeTestCase):
         self.assertEqual(status, "Completed")
         self.assertGLEntry(doc.name, expected_entries)
 
+    def test_purchase_invoice_with_update_stock_for_fractional_tax_per_unit(self):
+        doc = create_transaction(
+            doctype="Purchase Invoice",
+            bill_no="BILL-02",
+            update_stock=1,
+            items=[{"item_code": "Test Ineligible Stock Item", "qty": 150, "rate": 462.86}],
+            is_in_state=1,
+        )
+
+        self.assertGLEntry(
+            doc.name,
+            [
+                {
+                    "account": "Round Off - _TIRC",
+                    "debit": 0.0,
+                    "credit": 0.22,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 12497.22,
+                    "credit": 12497.22,
+                    "debit_in_transaction_currency": 12497.22,
+                    "credit_in_transaction_currency": 12497.22,
+                },
+                {
+                    "account": "Input Tax SGST - _TIRC",
+                    "debit": 6248.61,
+                    "credit": 6248.61,
+                    "debit_in_transaction_currency": 6248.61,
+                    "credit_in_transaction_currency": 6248.61,
+                },
+                {
+                    "account": "Input Tax CGST - _TIRC",
+                    "debit": 6248.61,
+                    "credit": 6248.61,
+                    "debit_in_transaction_currency": 6248.61,
+                    "credit_in_transaction_currency": 6248.61,
+                },
+                {
+                    "account": "Stock In Hand - _TIRC",
+                    "debit": 81926.22,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 81926.22,
+                    "credit_in_transaction_currency": 0.0,
+                },
+                {
+                    "account": "Creditors - _TIRC",
+                    "debit": 0.0,
+                    "credit": 81926.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 81926.0,
+                },
+            ],
+        )
+
+        self.assertStockValues(doc.name, {"Test Ineligible Stock Item": 546.1748})
+
     @toggle_perpetual_inventory()
     def test_purchase_invoice_with_update_stock_for_non_perpetual(self):
         """
