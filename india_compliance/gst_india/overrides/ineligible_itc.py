@@ -90,8 +90,10 @@ class IneligibleITC:
         if not self.tax_account_dict:
             return
 
+        is_restricted_due_to_pos = self.is_eligibility_restricted_due_to_pos()
+
         for item in self.doc.items:
-            if not self.is_eligibility_restricted_due_to_pos() and not item.is_ineligible_for_itc:
+            if not is_restricted_due_to_pos and not item.is_ineligible_for_itc:
                 continue
 
             self.update_ineligible_taxes(item)
@@ -338,14 +340,10 @@ class IneligibleITC:
         )
 
     def is_eligibility_restricted_due_to_pos(self):
-        return self.doc.get("ineligibility_reason") == "ITC restricted due to PoS rules"
+        return self.doc.ineligibility_reason == "ITC restricted due to PoS rules"
 
 
 class PurchaseReceipt(IneligibleITC):
-    def __init__(self, doc):
-        doc.run_method("onload")
-        super().__init__(doc)
-
     def update_valuation_rate(self):
         for item in self.doc.items:
             item._remarks = self.doc.get("remarks") or _("Accounting Entry for {0}").format(

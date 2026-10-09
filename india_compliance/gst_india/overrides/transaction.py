@@ -69,12 +69,15 @@ DOCTYPES_WITH_GST_DETAIL = {
 ALLOWED_TAX_DIFFERENCE = 1  # Allowable difference in tax amount due to rounding off
 
 
-def set_gst_breakup(doc):
+def get_gst_breakup_html(doc):
+    if doc.is_new() or not doc.place_of_supply or not doc.company_gstin or ignore_gst_validations(doc):
+        return
+
     gst_breakup_html = frappe.render_template("templates/gst_breakup.html", dict(doc=doc))  # nosemgrep
     if not gst_breakup_html:
         return
 
-    doc.gst_breakup_table = gst_breakup_html.replace("\n", "").replace("    ", "")
+    return gst_breakup_html.replace("\n", "").replace("    ", "")
 
 
 def update_taxable_values(doc):
@@ -1838,23 +1841,6 @@ def update_item_gst_treatment(doc, method=None):
     ItemGSTTreatment(doc).set()
 
 
-def before_print(doc, method=None, print_settings=None):
-    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
-        return
-
-    set_ecommerce_supply_type(doc)
-    set_gst_breakup(doc)
-
-
-def onload(doc, method=None):
-    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
-        return
-
-    set_ecommerce_supply_type(doc)
-    set_gst_breakup(doc)
-    doc.set_onload("_gst_breakup_table", doc.gst_breakup_table)
-
-
 def validate_ecommerce_gstin(doc):
     if not doc.get("ecommerce_gstin"):
         return
@@ -2106,17 +2092,11 @@ def sync_gst_details_from_address(doc, changed_address_fields):
             doc.set(category_field, gst_category or "Unregistered")
 
 
-def set_ecommerce_supply_type(doc):
-    """
-    - Set GSTR-1 E-commerce section for virtual field ecommerce_supply_type
-    """
-    if doc.doctype not in ("Sales Order", "Sales Invoice", "Delivery Note"):
-        return
-
-    if not doc.ecommerce_gstin:
+def get_ecommerce_supply_type(doc):
+    if not doc.ecommerce_gstin or not doc.company_gstin or ignore_gst_validations(doc):
         return
 
     if doc.is_reverse_charge:
-        doc.ecommerce_supply_type = SubCategory.SUPECOM_9_5.value
-    else:
-        doc.ecommerce_supply_type = SubCategory.SUPECOM_52.value
+        return SubCategory.SUPECOM_9_5.value
+
+    return SubCategory.SUPECOM_52.value

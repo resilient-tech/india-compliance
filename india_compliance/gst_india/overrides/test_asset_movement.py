@@ -1,5 +1,6 @@
 import frappe
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
+from frappe.contacts.doctype.address.address import get_address_display
 from frappe.desk.form.load import run_onload
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import now_datetime
@@ -263,3 +264,15 @@ class TestAssetMovementGST(IntegrationTestCase):
             *frappe.db.get_value("Address", UNREGISTERED_ADDRESS, ("gst_state_number", "gst_state"))
         )
         self.assertEqual(get_place_of_supply(party_details, "Asset Movement"), expected)
+
+    def test_address_display_in_print(self):
+        doc = create_asset_movement(
+            asset=self.asset,
+            ship_from_address=COMPANY_ADDRESS,
+            ship_to_address=COMPANY_PARTY_ADDRESS,
+        )
+
+        html = frappe.get_print(doc.doctype, doc.name, print_format="Standard")
+
+        for address_field in ("bill_from_address", "bill_to_address", "ship_from_address", "ship_to_address"):
+            self.assertIn(get_address_display(doc.get(address_field)), html)

@@ -755,6 +755,32 @@ class TestTransaction(IntegrationTestCase):
             doc.save,
         )
 
+    def test_gst_breakup_table_in_print(self):
+        if self.doctype != "Sales Invoice":
+            return
+
+        doc = create_transaction(**self.transaction_details)
+        doc.last_scanned_warehouse = doc.items[0].warehouse
+        html = frappe.get_print(doc.doctype, doc.name, print_format="GST Tax Invoice", doc=doc)
+
+        self.assertIn(doc.gst_breakup_table, html)
+        self.assertEqual(doc.last_scanned_warehouse, doc.items[0].warehouse)
+
+    def test_ecommerce_supply_type_virtual_field(self):
+        if self.doctype != "Sales Invoice":
+            return
+
+        doc = create_transaction(
+            **self.transaction_details, ecommerce_gstin="29AABCF8078M1C8", do_not_submit=True
+        )
+        self.assertEqual(doc.ecommerce_supply_type, "Liable to collect tax u/s 52(TCS)")
+
+        doc.is_reverse_charge = 1
+        self.assertEqual(doc.ecommerce_supply_type, "Liable to pay tax u/s 9(5)")
+
+        draft = frappe.get_doc({"doctype": self.doctype, "ecommerce_gstin": doc.ecommerce_gstin})
+        self.assertIsNone(draft.ecommerce_supply_type)
+
     def test_taxable_value_with_charges(self):
         if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
             return
@@ -2441,6 +2467,9 @@ class TestPlaceOfSupply(IntegrationTestCase):
         self.assertDocumentEqual(expected, so.items[0])
 
         dn = make_delivery_note(so.name)
+        # taxable values are filled on save, so the mapped form must not show a zero breakup
+        self.assertIsNone(dn.as_dict().get("gst_breakup_table"))
+
         dn.insert()
         self.assertDocumentEqual(expected, dn.items[0])
 

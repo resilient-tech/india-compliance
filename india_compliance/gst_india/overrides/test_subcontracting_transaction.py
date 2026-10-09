@@ -279,8 +279,6 @@ class TestSubcontractingTransaction(IntegrationTestCase):
     def test_create_and_update_stock_entry(self):
         stock_entry = make_subcontracting_stock_entry(do_not_submit=True)
 
-        # Update the subcontracting transaction
-        stock_entry.run_method("onload")  # update virtual fields
         stock_entry.select_print_heading = "Credit Note"
         stock_entry.save()
 
