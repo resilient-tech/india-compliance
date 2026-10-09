@@ -1,5 +1,6 @@
 import frappe
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
+from frappe.contacts.doctype.address.address import get_address_display
 from frappe.desk.form.load import run_onload
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import now_datetime
@@ -270,14 +271,8 @@ class TestAssetMovementGST(IntegrationTestCase):
             ship_from_address=COMPANY_ADDRESS,
             ship_to_address=COMPANY_PARTY_ADDRESS,
         )
-        html = frappe.get_print(doc.doctype, doc.name)
 
-        for fieldname in (
-            "bill_from_address_display",
-            "bill_to_address_display",
-            "ship_from_address_display",
-            "ship_to_address_display",
-        ):
-            address_display = getattr(doc, fieldname)
-            self.assertTrue(address_display)
-            self.assertIn(address_display, html)
+        html = frappe.get_print(doc.doctype, doc.name, print_format="Standard")
+
+        for address_field in ("bill_from_address", "bill_to_address", "ship_from_address", "ship_to_address"):
+            self.assertIn(get_address_display(doc.get(address_field)), html)

@@ -136,7 +136,39 @@ doctype_list_js = {
     ]
 }
 
+_CLASS_EXTENSION_MAP = {
+    "india_compliance.gst_india.overrides.virtual_fields.GSTBreakupExtension": (
+        "Quotation",
+        "Sales Order",
+        "Delivery Note",
+        "Sales Invoice",
+        "POS Invoice",
+        "Supplier Quotation",
+        "Purchase Order",
+        "Purchase Receipt",
+        "Purchase Invoice",
+    ),
+    "india_compliance.gst_india.overrides.virtual_fields.EcommerceSupplyTypeExtension": (
+        "Sales Order",
+        "Delivery Note",
+        "Sales Invoice",
+    ),
+    "india_compliance.gst_india.overrides.virtual_fields.AddressDisplayExtension": (
+        "Stock Entry",
+        "Asset Movement",
+    ),
+    "india_compliance.gst_india.overrides.virtual_fields.IneligibilityReasonExtension": ("Purchase Receipt",),
+}
+
+extend_doctype_class = {}
+for _extension_class, _doctypes in _CLASS_EXTENSION_MAP.items():
+    for _doctype in _doctypes:
+        extend_doctype_class.setdefault(_doctype, []).append(_extension_class)
+
 doc_events = {
+    tuple(extend_doctype_class): {
+        "before_print": "india_compliance.gst_india.overrides.virtual_fields.before_print",
+    },
     "Address": {
         "validate": [
             "india_compliance.gst_india.overrides.address.validate",
@@ -418,40 +450,6 @@ override_doctype_dashboards = {
 
 override_doctype_class = {
     "Customize Form": ("india_compliance.audit_trail.overrides.customize_form.CustomizeForm"),
-}
-
-
-_CLASS_EXTENSION_MAP = {
-    "india_compliance.gst_india.overrides.virtual_fields.GSTBreakupExt": (
-        "Quotation",
-        "Sales Order",
-        "Delivery Note",
-        "Sales Invoice",
-        "POS Invoice",
-        "Supplier Quotation",
-        "Purchase Order",
-        "Purchase Receipt",
-        "Purchase Invoice",
-    ),
-    "india_compliance.gst_india.overrides.virtual_fields.EcommerceSupplyTypeExt": (
-        "Sales Order",
-        "Delivery Note",
-        "Sales Invoice",
-    ),
-    "india_compliance.gst_india.overrides.virtual_fields.AddressDisplayExt": (
-        "Stock Entry",
-        "Asset Movement",
-    ),
-    "india_compliance.gst_india.overrides.virtual_fields.IneligibilityReasonExt": ("Purchase Receipt",),
-}
-
-extend_doctype_class = {}
-for _extension_class, _doctypes in _CLASS_EXTENSION_MAP.items():
-    for _doctype in _doctypes:
-        extend_doctype_class.setdefault(_doctype, []).append(_extension_class)
-
-doc_events[tuple(extend_doctype_class)] = {
-    "before_print": "india_compliance.gst_india.overrides.virtual_fields.before_print",
 }
 
 

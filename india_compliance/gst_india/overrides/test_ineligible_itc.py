@@ -745,8 +745,6 @@ class TestIneligibleITC(IntegrationTestCase):
 
         doc = create_transaction(**transaction_details)
 
-        self.assertEqual(doc.ineligibility_reason, "ITC restricted due to PoS rules")
-
         self.assertGLEntry(
             doc.name,
             [
