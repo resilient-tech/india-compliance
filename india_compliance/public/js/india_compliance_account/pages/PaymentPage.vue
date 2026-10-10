@@ -237,7 +237,12 @@ export default {
             const style = getComputedStyle(document.body);
             const primaryColor = style.getPropertyValue("--primary");
             const cardBg = style.getPropertyValue("--card-bg");
-            const theme = document.documentElement.getAttribute("data-theme-mode") || "light";
+            
+            const isDarkMode = 
+                document.documentElement.getAttribute("data-theme") === "dark" || 
+                document.body.classList.contains("dark");
+                
+            const theme = isDarkMode ? "dark" : "light";
 
             const dropConfig = {
                 components: ["card", "netbanking", "app", "upi"],
