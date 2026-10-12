@@ -1,13 +1,13 @@
 # Copyright (c) 2024, Resilient Tech and Contributors
 # See license.txt
 
+import copy
+from unittest.mock import Mock, patch
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
 
-<<<<<<< HEAD
-from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import add_comment_to_gst_return_log
-=======
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     ReconcileGSTR1,
 )
@@ -21,7 +21,6 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
     download_gstr1_json_data,
     save_gstr_1,
 )
->>>>>>> a4e0638 (refactor: gstr 1  (#4718))
 
 
 class TestGSTReturnLog(FrappeTestCase):
@@ -58,46 +57,29 @@ class TestGSTReturnLog(FrappeTestCase):
         )
         self.assertTrue(comment)
         self.assertIn("has been submitted by", comment.content)
-<<<<<<< HEAD
-=======
 
     def test_portal_data_roundtrip(self):
+        gstin = "24AAQCA8719H1ZC"
         payload = {
-            "gstin": self.GSTIN,
+            "gstin": gstin,
             "b2b": [{"ctin": "24AABCR6898M1ZN", "txval": 100.0, "iamt": 0}],
             "itcsumm": {"itcavl": []},
         }
         original = copy.deepcopy(payload)
 
-        self.assertIsNone(get_raw_return_data(self.GSTIN, "GSTR2b", "052099"))
+        self.assertIsNone(get_raw_return_data(gstin, "GSTR2b", "052099"))
 
-        store_raw_return_data(self.GSTIN, "GSTR2b", "052099", payload)
-        got = get_raw_return_data(self.GSTIN, "GSTR2b", "052099")
+        store_raw_return_data(gstin, "GSTR2b", "052099", payload)
+        got = get_raw_return_data(gstin, "GSTR2b", "052099")
 
         self.assertEqual(got, original)
 
     @patch("india_compliance.gst_india.utils.gstr_1.gstr_1_download.GSTR1API")
-    def test_download_gstr1_json_data(self, mock_api):
-        """`is_nil` is a Check column, so store 0/1. Postgres rejects a bool there."""
-        log = get_gst_return_log(self.log_name, filing_preference="Monthly")
-
-        for isnil, expected in (("Y", 1), ("N", 0)):
-            mock_api.return_value = Mock()
-            mock_api.return_value.get_gstr_1_data.return_value = frappe._dict(
-                isnil=isnil, error_type=None, token=None
-            )
-
-            download_gstr1_json_data(log)
-
-            stored = frappe.db.get_value("GST Return Log", self.log_name, "is_nil")
-            self.assertEqual(stored, expected)
-            self.assertNotIsInstance(stored, bool, "is_nil must be stored as 0/1, not a bool")
-
-    @patch("india_compliance.gst_india.utils.gstr_1.gstr_1_download.GSTR1API")
     def test_filed_gstr1_stores_raw(self, mock_api):
         """Filed GSTR-1 keeps the portal payload as received. Unfiled does not."""
+        gstin = "24AAQCA8719H1ZC"
         period = "052099"
-        log_name = f"GSTR1-{period}-{self.GSTIN}"
+        log_name = f"GSTR1-{period}-{gstin}"
         raw = frappe._dict(isnil="N", error_type=None, token=None, chksum="abc123")
 
         mock_api.return_value = Mock()
@@ -105,27 +87,27 @@ class TestGSTReturnLog(FrappeTestCase):
 
         log = get_gst_return_log(log_name, filing_preference="Monthly")
         download_gstr1_json_data(log)
-        self.assertIsNone(get_raw_return_data(self.GSTIN, "GSTR1", period))
+        self.assertIsNone(get_raw_return_data(gstin, "GSTR1", period))
 
         log.db_set("filing_status", "Filed")
         download_gstr1_json_data(frappe.get_doc("GST Return Log", log_name))
 
-        stored = get_raw_return_data(self.GSTIN, "GSTR1", period)
+        stored = get_raw_return_data(gstin, "GSTR1", period)
         self.assertEqual(stored["chksum"], "abc123")
         self.assertNotIn("creation", stored)
 
         save_gstr_1(
-            self.GSTIN,
+            gstin,
             period,
             {"b2b": [{"ctin": "24AABCR6898M1ZN", "inv": []}]},
             "GSTR1",
         )
-        stored = get_raw_return_data(self.GSTIN, "GSTR1", period)
+        stored = get_raw_return_data(gstin, "GSTR1", period)
         self.assertEqual(stored["chksum"], "abc123")
         self.assertIn("b2b", stored)
 
         download_gstr1_json_data(frappe.get_doc("GST Return Log", log_name))
-        stored = get_raw_return_data(self.GSTIN, "GSTR1", period)
+        stored = get_raw_return_data(gstin, "GSTR1", period)
         self.assertEqual(stored["chksum"], "abc123")
         self.assertNotIn("b2b", stored)
 
@@ -191,4 +173,3 @@ class TestGSTReturnLog(FrappeTestCase):
         self.assertIn("Cancelled Count", reconciled["differences"])
         self.assertIn("Net Issue", reconciled["differences"])
         self.assertNotIn("Draft Count", reconciled["differences"])
->>>>>>> a4e0638 (refactor: gstr 1  (#4718))

@@ -1610,7 +1610,7 @@ class TestRETSUM(FrappeTestCase):
         self.assertEqual(get_differing_categories(books_summary, self.get_gov_summary()), set())
 
 
-class TestUploadErrorReport(IntegrationTestCase):
+class TestUploadErrorReport(FrappeTestCase):
     """The report the portal sends back when it rejects individual records."""
 
     def test_a_rejected_invoice_is_reported(self):

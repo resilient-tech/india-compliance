@@ -31,23 +31,13 @@ class ITC04DataMapper(GovDataMapper):
         ITC04_ItemField.CESS_AMOUNT.value: 0,
     }
 
-<<<<<<< HEAD
     FLOAT_FIELDS: ClassVar[dict] = {
-        GovDataField.TAXABLE_VALUE.value,
-        GovDataField.IGST.value,
-        GovDataField.CGST.value,
-        GovDataField.SGST.value,
-        GovDataField.CESS_AMOUNT.value,
-        GovDataField.QUANTITY.value,
-=======
-    FLOAT_FIELDS: ClassVar[set] = {
         RawField.TAXABLE_VALUE.value,
         RawField.IGST.value,
         RawField.CGST.value,
         RawField.SGST.value,
         RawField.CESS_AMOUNT.value,
         RawField.QUANTITY.value,
->>>>>>> a4e0638 (refactor: gstr 1  (#4718))
     }
 
     def __init__(self):

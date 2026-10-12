@@ -7,6 +7,10 @@ from typing import ClassVar
 import frappe
 from frappe.utils import cint, flt
 
+from india_compliance.gst_india.report.gstr_1.gstr_1 import (
+    GSTR1DocumentIssuedSummary,
+    GSTR11A11BData,
+)
 from india_compliance.gst_india.utils import (
     MONTHS,
     get_gst_accounts_by_type,
@@ -19,11 +23,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     ItemField,
     SubCategory,
 )
-from india_compliance.gst_india.utils.gstr_1.gstr_1_data import (
-    GSTR1DocumentIssuedSummary,
-    GSTR1Invoices,
-    GSTR11A11BData,
-)
+from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 
 class BooksDataMapper:
@@ -487,9 +487,9 @@ class GSTR1BooksData(BooksDataMapper):
     def prepare_mapped_data(self):
         prepared_data = {}
 
-        _class = GSTR1Invoices(self.filters)
-        data = _class.get_invoices_for_item_wise_summary()
-        _class.process_invoices(data)
+        gstr1_invoices = GSTR1Invoices(self.filters)
+        data = gstr1_invoices.get_invoices_for_item_wise_summary()
+        gstr1_invoices.process_invoices(data)
 
         # initialize rounding difference and hsn error
         self.initialize_totals()
@@ -504,7 +504,7 @@ class GSTR1BooksData(BooksDataMapper):
         self.process_data_for_supecom(data_for_supecom, prepared_data)
 
         other_categories = {
-            Category.AT.value: self.prepare_advances_recevied_data(),
+            Category.AT.value: self.prepare_advances_received_data(),
             Category.TXP.value: self.prepare_advances_adjusted_data(),
             Category.DOC_ISSUE.value: self.prepare_document_issued_data(),
         }
@@ -591,7 +591,7 @@ class GSTR1BooksData(BooksDataMapper):
 
         return doc_issued_data
 
-    def prepare_advances_recevied_data(self):
+    def prepare_advances_received_data(self):
         return self.prepare_advances_received_or_adjusted_data("Advances")
 
     def prepare_advances_adjusted_data(self):
@@ -601,26 +601,26 @@ class GSTR1BooksData(BooksDataMapper):
         advances_data = {}
         self.filters.type_of_business = type_of_business
         gst_accounts = get_gst_accounts_by_type(self.filters.company, "Output")
-        _class = GSTR11A11BData(self.filters, gst_accounts)
+        gstr_11a11b_data = GSTR11A11BData(self.filters, gst_accounts)
 
         if type_of_business == "Advances":
-            query = _class.get_11A_query()
+            query = gstr_11a11b_data.get_11A_query()
             fields = (
-                _class.pe.name,
-                _class.pe.party,
-                _class.pe.posting_date,
-                _class.pe.company_gstin,
+                gstr_11a11b_data.pe.name,
+                gstr_11a11b_data.pe.party,
+                gstr_11a11b_data.pe.posting_date,
+                gstr_11a11b_data.pe.company_gstin,
             )
             multipler = 1
 
         else:
-            query = _class.get_11B_query()
-            fields = _class.get_11B_payment_entry_fields(
-                name="name",
-                party="party",
-                posting_date="posting_date",
-                company_gstin="company_gstin",
-                reference_name="reference_name",
+            query = gstr_11a11b_data.get_11B_query()
+            fields = (
+                gstr_11a11b_data.pe.name,
+                gstr_11a11b_data.pe.party,
+                gstr_11a11b_data.pe.posting_date,
+                gstr_11a11b_data.pe.company_gstin,
+                gstr_11a11b_data.pe_ref.reference_name,
             )
             multipler = -1
 

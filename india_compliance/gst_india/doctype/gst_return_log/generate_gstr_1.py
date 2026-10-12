@@ -414,15 +414,9 @@ class ReconcileGSTR1:
         }
 
         # Compute Differences
-<<<<<<< HEAD
-        for key, value in reconcile_row.items():
-            if isinstance(value, (int, float)) and key not in AggregateInvoices.IGNORED_FIELDS:
-                reconcile_row[key] = flt((books_row.get(key) or 0) - (gov_row.get(key) or 0), 2)
-=======
         for key in [*reconcile_row, *sorted(amount_keys - set(reconcile_row))]:
             if key in amount_keys and key not in AggregateInvoices.IGNORED_FIELDS:
                 reconcile_row[key] = flt((books_values.get(key) or 0) - (gov_row.get(key) or 0), 2)
->>>>>>> a4e0638 (refactor: gstr 1  (#4718))
                 has_different_value = reconcile_row[key] != 0
 
             elif key in ("customer_gstin", "place_of_supply"):
