@@ -2,9 +2,11 @@
 # See license.txt
 
 import copy
+import io
 from unittest.mock import Mock, patch
 
 import frappe
+import openpyxl
 from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
@@ -17,9 +19,20 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     get_raw_return_data,
     store_raw_return_data,
 )
+from india_compliance.gst_india.doctype.gstr_1.gstr_1_export import ReconcileExcel
+from india_compliance.gst_india.utils.gstr_1 import (
+    DocField,
+    JsonKey,
+    RawField,
+    SheetName,
+    SubCategory,
+)
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
     download_gstr1_json_data,
     save_gstr_1,
+)
+from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
+    convert_to_internal_data_format,
 )
 
 
@@ -190,3 +203,40 @@ class TestGSTReturnLog(IntegrationTestCase):
         self.assertIn("Cancelled Count", reconciled["differences"])
         self.assertIn("Net Issue", reconciled["differences"])
         self.assertNotIn("Draft Count", reconciled["differences"])
+
+    def test_a_blank_portal_amount_reconciles_and_exports(self):
+        """The portal can send IGST as null: it stays blank, yet reconcile, aggregation and the Excel treat it as 0."""
+        log = get_gst_return_log(f"GSTR1-062099-{self.GSTIN}", filing_preference="Monthly")
+        row = {
+            RawField.SUPPLY_TYPE: "INTER",
+            RawField.POS: "27",
+            RawField.TYPE: "OE",
+            RawField.TAX_RATE: 18,
+            RawField.TAXABLE_VALUE: 100,
+            RawField.IGST: 18,
+            RawField.CESS: 0,
+        }
+        books = convert_to_internal_data_format({JsonKey.B2CS.value: [row]})
+        gov = convert_to_internal_data_format(
+            {
+                JsonKey.B2CS.value: [
+                    {**row, RawField.TAXABLE_VALUE: 102, RawField.IGST: None},
+                    {**row, RawField.POS: "33", RawField.IGST: None},
+                ]
+            }
+        )
+
+        gov_rows = gov[SubCategory.B2CS.value].values()
+        self.assertEqual([r[0][DocField.IGST] for r in gov_rows], [None, None])
+
+        reconcile = log.normalize_data(log.get_reconcile_gstr1_data(gov, books))
+        aggregated = log.get_aggregate_data(books)[SubCategory.B2CS.value]
+        self.assertEqual(sorted(r[0][DocField.IGST] for r in aggregated.values()), [0, 18])
+
+        log.summarize_data({"reconcile": reconcile}, frappe._dict(month_or_quarter="June", year="2099"))
+        ReconcileExcel(self.GSTIN, "June", "2099").export_data()
+
+        sheet = openpyxl.load_workbook(io.BytesIO(frappe.local.response.filecontent))[SheetName.B2CS.value]
+        rows = [[cell.value for cell in row] for row in sheet.iter_rows()]
+        column = rows[1].index("Tax Difference")
+        self.assertEqual(sorted(row[column] for row in rows[2:]), [0, 18])
