@@ -23,6 +23,7 @@ class ReturnType(Enum):
     GSTR2B = "GSTR2b"
     GSTR1 = "GSTR1"
     UnfiledGSTR1 = "Unfiled GSTR1"
+    GSTR3B = "GSTR3B"
     IMS = "IMS"
 
 
