@@ -1,14 +1,16 @@
+from .helpers import round2
+
 _MISSING = object()
 
 
-def _clean(value, precision):
+def _clean(value):
     if isinstance(value, float):
-        return round(value, precision)
+        return round2(value)
     if isinstance(value, dict):
-        cleaned = ((k, _clean(v, precision)) for k, v in value.items())
+        cleaned = ((k, _clean(v)) for k, v in value.items())
         return {k: v for k, v in cleaned if not _is_empty(v)}
     if isinstance(value, (list, tuple)):
-        cleaned = (_clean(v, precision) for v in value)
+        cleaned = (_clean(v) for v in value)
         return [v for v in cleaned if not _is_empty(v)]
     return value
 
@@ -47,9 +49,9 @@ def _first_diff(a, b, path="root"):
     return None if a == b else (path, a, b)
 
 
-def assert_roundtrip(original, roundtripped, precision=2):
+def assert_roundtrip(original, roundtripped):
     """Raise if roundtrip lost data. Path in message."""
-    diff = _first_diff(_clean(original, precision), _clean(roundtripped, precision))
+    diff = _first_diff(_clean(original), _clean(roundtripped))
     if diff:
         path, a, b = diff
         raise AssertionError(f"round-trip mismatch at {path}: {a!r} != {b!r}")
