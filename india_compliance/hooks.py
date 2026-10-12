@@ -136,8 +136,8 @@ doctype_list_js = {
     ]
 }
 
-_CLASS_EXTENSION_MAP = {
-    "india_compliance.gst_india.overrides.virtual_fields.GSTBreakupExtension": (
+_VIRTUAL_FIELD_RESOLVERS = {
+    (
         "Quotation",
         "Sales Order",
         "Delivery Note",
@@ -147,26 +147,25 @@ _CLASS_EXTENSION_MAP = {
         "Purchase Order",
         "Purchase Receipt",
         "Purchase Invoice",
+    ): "india_compliance.gst_india.overrides.virtual_fields.resolve_gst_breakup",
+    ("Sales Order", "Delivery Note", "Sales Invoice"): (
+        "india_compliance.gst_india.overrides.virtual_fields.resolve_ecommerce_supply_type"
     ),
-    "india_compliance.gst_india.overrides.virtual_fields.EcommerceSupplyTypeExtension": (
-        "Sales Order",
-        "Delivery Note",
-        "Sales Invoice",
-    ),
-    "india_compliance.gst_india.overrides.virtual_fields.AddressDisplayExtension": (
+    (
         "Stock Entry",
         "Asset Movement",
-    ),
-    "india_compliance.gst_india.overrides.virtual_fields.IneligibilityReasonExtension": ("Purchase Receipt",),
+    ): "india_compliance.gst_india.overrides.virtual_fields.resolve_address_displays",
+    ("Purchase Receipt",): "india_compliance.gst_india.overrides.virtual_fields.resolve_ineligibility_reason",
 }
 
-extend_doctype_class = {}
-for _extension_class, _doctypes in _CLASS_EXTENSION_MAP.items():
+ic_virtual_field_resolvers = {}
+for _doctypes, _resolver in _VIRTUAL_FIELD_RESOLVERS.items():
     for _doctype in _doctypes:
-        extend_doctype_class.setdefault(_doctype, []).append(_extension_class)
+        ic_virtual_field_resolvers.setdefault(_doctype, []).append(_resolver)
 
 doc_events = {
-    tuple(extend_doctype_class): {
+    tuple(ic_virtual_field_resolvers): {
+        "onload": "india_compliance.gst_india.overrides.virtual_fields.onload",
         "before_print": "india_compliance.gst_india.overrides.virtual_fields.before_print",
     },
     "Address": {

@@ -49,6 +49,18 @@ for (const doctype of ["Sales Invoice", "Sales Order", "Delivery Note"]) {
     set_e_commerce_ecommerce_supply_type(doctype);
 }
 
+frappe.ui.form.on("*", {
+    refresh(frm) {
+        const values = frm.doc.__onload?.ic_virtual_fields;
+        if (!values) return;
+
+        for (const [fieldname, value] of Object.entries(values)) {
+            frm.doc[fieldname] = value;
+            frm.refresh_field(fieldname);
+        }
+    },
+});
+
 function fetch_gst_details(doctype) {
     const event_fields = ["tax_category", "company_gstin", "place_of_supply", "is_reverse_charge"];
 
