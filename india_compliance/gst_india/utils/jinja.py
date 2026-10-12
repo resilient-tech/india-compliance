@@ -195,6 +195,10 @@ class GSTBreakup:
             self.tax_headers += self.CESS_HEADERS
 
         self.needs_hsn_wise_breakup = self.is_hsn_wise_breakup_needed()
+        self.tax_fields = {
+            tax_type: (f"{scrub(tax_type)}_rate", f"{scrub(tax_type)}_amount")
+            for tax_type in self.tax_headers
+        }
 
     def get(self):
         self.gst_breakup_data = {}
@@ -203,17 +207,11 @@ class GSTBreakup:
             gst_breakup_row = self.get_default_item_tax_row(item)
             gst_breakup_row["Taxable Amount"] += flt(item.taxable_value, self.precision)
 
-            for tax_type in self.tax_headers:
-                _tax_type = scrub(tax_type)
-                tax_details = gst_breakup_row.setdefault(
-                    tax_type,
-                    {
-                        "tax_rate": flt(item.get(f"{_tax_type}_rate", 0)),
-                        "tax_amount": 0,
-                    },
-                )
+            for tax_type, (rate_field, amount_field) in self.tax_fields.items():
+                if tax_type not in gst_breakup_row:
+                    gst_breakup_row[tax_type] = {"tax_rate": flt(item.get(rate_field, 0)), "tax_amount": 0}
 
-                tax_details["tax_amount"] += flt(item.get(f"{_tax_type}_amount", 0), self.precision)
+                gst_breakup_row[tax_type]["tax_amount"] += flt(item.get(amount_field, 0), self.precision)
 
         return list(self.gst_breakup_data.values())
 
@@ -221,10 +219,16 @@ class GSTBreakup:
         if not self.doc.items:
             return False
 
+<<<<<<< HEAD
         return any(
             any(getattr(item, f"{scrub(tax_type)}_amount", 0) != 0 for tax_type in self.CESS_HEADERS)
             for item in self.doc.items
         )
+=======
+        cess_amount_fields = [f"{scrub(tax_type)}_amount" for tax_type in self.CESS_HEADERS]
+
+        return any(any(getattr(item, field, 0) != 0 for field in cess_amount_fields) for item in self._items)
+>>>>>>> 00c7193 (perf: render each address once and trim GST breakup loop)
 
     def get_default_item_tax_row(self, item):
         if self.needs_hsn_wise_breakup:
