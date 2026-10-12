@@ -1285,22 +1285,7 @@ class ReconcileExcel:
     AMOUNT_FORMAT = AMOUNT_FORMAT
     DATE_FORMAT = DATE_FORMAT
 
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
-    COLOR_PALLATE: ClassVar[dict] = frappe._dict(
-        {
-            "dark_gray": "d9d9d9",
-            "light_gray": "f2f2f2",
-            "dark_pink": "e6b9b8",
-            "light_pink": "f2dcdb",
-            "sky_blue": "c6d9f1",
-            "light_blue": "dce6f2",
-            "green": "d7e4bd",
-            "light_green": "ebf1de",
-        }
-    )
-=======
     COLOR_PALLATE = COLOR_PALLATE
->>>>>>> eebf40f (refactor: de-deuplicate shared excel engine):india_compliance/gst_india/doctype/gstr_1/gstr_1_export.py
 
     DEFAULT_HEADER_FORMAT: ClassVar[dict] = {"bg_color": COLOR_PALLATE.dark_gray}
     DEFAULT_DATA_FORMAT: ClassVar[dict] = {"bg_color": COLOR_PALLATE.light_gray}

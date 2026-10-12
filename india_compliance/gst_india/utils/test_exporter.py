@@ -1,12 +1,12 @@
 # Copyright (c) 2024, Resilient Tech and Contributors
 # See license.txt
 
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 
 
-class TestExcelExporter(IntegrationTestCase):
+class TestExcelExporter(FrappeTestCase):
     def test_insert_data_keeps_zero(self):
         """insert_data must write a numeric 0, not blank it out (regression: `value or ""`)."""
         excel = ExcelExporter()
