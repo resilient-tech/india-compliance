@@ -5,11 +5,13 @@ import frappe
 from frappe import parse_json, read_file
 from frappe.tests.utils import FrappeTestCase
 
+from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import get_raw_return_data
 from india_compliance.gst_india.utils import get_data_file_path, get_party_for_gstin, merge_dicts
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, download_gstr_2b, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
 from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2bISD
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
+from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
 
 class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
@@ -583,6 +585,12 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
                 )
             ),
             {"MULTI-FILE-1": period, "MULTI-FILE-2": period},
+        )
+
+        raw = get_raw_return_data(self.gstin, ReturnType.GSTR2B.value, period)
+        self.assertEqual(
+            [invoice["inum"] for supplier in raw["docdata"]["b2b"] for invoice in supplier["inv"]],
+            ["MULTI-FILE-1", "MULTI-FILE-2"],
         )
 
 

@@ -22,6 +22,7 @@
   "section_break_oisv",
   "unfiled",
   "filed",
+  "raw_gov_data",
   "upload_error",
   "column_break_hxfu",
   "unfiled_summary",
@@ -114,6 +115,12 @@
    "fieldname": "filed",
    "fieldtype": "Attach",
    "label": "Filed Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_gov_data",
+   "fieldtype": "Attach",
+   "label": "Raw Gov Data",
    "read_only": 1
   },
   {

@@ -11,6 +11,7 @@ from india_compliance.gst_india.api_classes.taxpayer_returns import (
 )
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     create_ims_return_log,
+    store_raw_return_data,
 )
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
@@ -280,6 +281,8 @@ def save_gstr_2a(gstin, return_period, json_data):
             title=_("Invalid Response Received."),
         )
 
+    raw_data = dict(json_data)
+
     for action, category in GSTR_2A_ACTIONS.items():
         if action.lower() not in json_data:
             continue
@@ -289,6 +292,7 @@ def save_gstr_2a(gstin, return_period, json_data):
         # making consistent with GSTR2b
         json_data[category.value.lower()] = json_data.pop(action.lower())
 
+    store_raw_return_data(gstin, return_type.value, return_period, raw_data)
     save_gstr(gstin, return_type, return_period, json_data)
 
 
@@ -303,6 +307,8 @@ def save_gstr_2b(gstin, return_period, json_data):
             ),
             title=_("Invalid Response Received."),
         )
+
+    store_raw_return_data(gstin, return_type.value, return_period, dict(json_data))
 
     create_import_log(gstin, return_type.value, return_period)
     save_gstr(
