@@ -34,10 +34,11 @@ def resolve_ecommerce_supply_type(doc):
 
 
 def resolve_address_displays(doc):
-    return {
-        f"{field}_display": get_address_display(doc.get(field)) if doc.get(field) else None
-        for field in ("bill_from_address", "bill_to_address", "ship_from_address", "ship_to_address")
-    }
+    address_fields = ("bill_from_address", "bill_to_address", "ship_from_address", "ship_to_address")
+    addresses = {doc.get(field) for field in address_fields if doc.get(field)}
+    displays = {address: get_address_display(address) for address in addresses}
+
+    return {f"{field}_display": displays.get(doc.get(field)) for field in address_fields}
 
 
 def resolve_ineligibility_reason(doc):
