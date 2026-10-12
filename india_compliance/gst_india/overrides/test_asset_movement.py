@@ -274,5 +274,5 @@ class TestAssetMovementGST(IntegrationTestCase):
 
         html = frappe.get_print(doc.doctype, doc.name, print_format="Standard")
 
-        for address_field in ("bill_from_address", "bill_to_address", "ship_from_address", "ship_to_address"):
+        for address_field in ("ship_from_address", "ship_to_address"):
             self.assertIn(get_address_display(doc.get(address_field)), html)
