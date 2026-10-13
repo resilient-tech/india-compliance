@@ -1296,32 +1296,7 @@ def is_outward_stock_entry(doc):
         return True
 
 
-<<<<<<< HEAD
-def create_notification(message_content, document_type, document_name=None, request_id=None):
-=======
-def is_inward_transaction(doc):
-    """True when the goods flow towards the company, ie Bill To is the company's side.
-
-    Everywhere else this is `is_return`; Asset Movement has no such field and states the
-    direction through `purpose` instead.
-    """
-    if doc.get("doctype") == "Asset Movement":
-        return doc.get("purpose") == "Receipt"
-
-    return bool(doc.get("is_return"))
-
-
-def is_same_gstin_allowed(doc):
-    """Whether both sides of the transaction may carry the same GSTIN.
-
-    The company is moving its own goods, so no supply takes place between distinct
-    persons and NIC accepts the e-Waybill as Self -> Self ("For Own Use" and friends).
-    """
-    return bool(is_outward_stock_entry(doc)) or doc.get("doctype") == "Asset Movement"
-
-
 def create_notification(message_content, document_type, document_name=None, request_id=None, link=None):
->>>>>>> f7476e5 (feat: gstr 2a/2b export tool (#4861))
     # request_id shows failure response
     if request_id and (doc_name := frappe.db.get_value("Integration Request", {"request_id": request_id})):
         document_type = "Integration Request"

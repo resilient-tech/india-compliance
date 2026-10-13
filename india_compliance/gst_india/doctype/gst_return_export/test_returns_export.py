@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import frappe
 from frappe import parse_json, read_file
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
 
 from india_compliance.gst_india.doctype.gst_return_export import gst_return_export as controller
@@ -33,7 +33,7 @@ GSTIN = "01AABCE2207R1Z5"
 PERIOD_2B = "032020"
 
 
-class TestMergeMonths(IntegrationTestCase):
+class TestMergeMonths(FrappeTestCase):
     def test_lists_concatenate(self):
         self.assertEqual(merge_dicts({"b2b": [1]}, {"b2b": [2, 3]}), {"b2b": [1, 2, 3]})
 
@@ -62,7 +62,7 @@ class TestMergeMonths(IntegrationTestCase):
         self.assertEqual(merge_dicts({"b2b": [1, 2]}, {"b2b": None}), {"b2b": [1, 2]})
 
 
-class TestSummaryHelpers(IntegrationTestCase):
+class TestSummaryHelpers(FrappeTestCase):
     def test_section_rank_orders_known_sections(self):
         self.assertEqual(section_rank("B2B"), 0)
         self.assertEqual(section_rank("TCS"), len(SECTION_ORDER) - 1)
@@ -118,7 +118,7 @@ class TestSummaryHelpers(IntegrationTestCase):
         self.assertIsNone(sum_summaries(summaries)["itc_summary"])
 
 
-class TestRangeSummary(IntegrationTestCase):
+class TestRangeSummary(FrappeTestCase):
     """get_range_summary driven by crafted stored summaries (no DB)."""
 
     STORED: ClassVar = [
@@ -200,7 +200,7 @@ class TestRangeSummary(IntegrationTestCase):
         self.assertAlmostEqual(result["itc_summary"]["available"], 30.6)
 
 
-class TestComputeSummary2B(IntegrationTestCase):
+class TestComputeSummary2B(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -246,7 +246,7 @@ class TestComputeSummary2B(IntegrationTestCase):
         self.assertTrue(status["has_missing_sync"])
 
 
-class TestComputeSummary2A(IntegrationTestCase):
+class TestComputeSummary2A(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -267,7 +267,7 @@ class TestComputeSummary2A(IntegrationTestCase):
         self.assertIn("CDNRA", sections)
 
 
-class TestRawReturnDataRoundTrip(IntegrationTestCase):
+class TestRawReturnDataRoundTrip(FrappeTestCase):
     def test_store_get_and_overwrite(self):
         raw = {"b2b": [{"ctin": GSTIN}], "itcsumm": {"itcavl": {"igst": 10}}}
         store_raw_return_data(GSTIN, ReturnType.GSTR2B.value, "062024", raw)
@@ -324,7 +324,7 @@ class TestRawReturnDataRoundTrip(IntegrationTestCase):
         self.assertEqual(summary["totals"]["documents"], 2)
 
 
-class TestGSTReturnExportController(IntegrationTestCase):
+class TestGSTReturnExportController(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

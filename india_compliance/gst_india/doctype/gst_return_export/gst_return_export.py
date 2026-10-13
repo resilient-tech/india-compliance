@@ -408,7 +408,7 @@ def download_export_file(
     from frappe.utils.response import send_private_file
 
     make_access_log(doctype=RETURN_LOG, document=file.file_name, file_type=file.file_name.rsplit(".", 1)[-1])
-    response = send_private_file(file.file_url.split("/private", 1)[1], filename=file.file_name)
+    response = send_private_file(file.file_url.split("/private", 1)[1])
     response.headers["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(file.file_name)}"
     return response
 

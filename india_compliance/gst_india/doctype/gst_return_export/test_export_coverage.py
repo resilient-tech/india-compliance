@@ -6,7 +6,7 @@
 from typing import ClassVar
 
 import openpyxl
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.doctype.gst_return_export.gstr_2_export import (
     EXPORTERS,
@@ -19,7 +19,7 @@ from india_compliance.gst_india.doctype.gst_return_export.template_exporter impo
 from india_compliance.gst_india.utils import get_data_file_path
 
 
-class TestTemplateCoverage(IntegrationTestCase):
+class TestTemplateCoverage(FrappeTestCase):
     """The goldens only see columns their fixture fills. These see every column."""
 
     # 2B rows carry no per-document rate

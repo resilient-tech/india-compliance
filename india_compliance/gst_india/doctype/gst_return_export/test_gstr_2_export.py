@@ -13,7 +13,7 @@ import frappe
 import openpyxl
 from frappe import parse_json, read_file
 from frappe.core.doctype.file.utils import delete_file
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, add_to_date, now_datetime
 
 from india_compliance.gst_india.doctype.gst_return_export.gst_return_export import (
@@ -172,7 +172,7 @@ def _build(exporter_cls, gstin, period, raw, supplier_names=None):
     return _build_periods(exporter_cls, gstin, [period], raw, supplier_names)[1]
 
 
-class TestGSTR2BExport(IntegrationTestCase):
+class TestGSTR2BExport(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -375,7 +375,7 @@ class TestGSTR2BExport(IntegrationTestCase):
         self.assertEqual((ws.cell(7, 3).data_type, ws.cell(7, 3).value), ("s", "=1+1"))
 
 
-class TestGSTR2AExport(IntegrationTestCase):
+class TestGSTR2AExport(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -544,7 +544,7 @@ class TestGSTR2AExport(IntegrationTestCase):
         self.assertIn(f"{PERIOD_2A}_062024", name)
 
 
-class TestPeriodGrouping(IntegrationTestCase):
+class TestPeriodGrouping(FrappeTestCase):
     """Groups follow the financial year, never across it."""
 
     FY_2024_25: ClassVar[list] = ["042024", "052024", "062024", "072024", "082024", "092024"]
@@ -588,7 +588,7 @@ class TestPeriodGrouping(IntegrationTestCase):
         )
 
 
-class TestGroupedExport(IntegrationTestCase):
+class TestGroupedExport(FrappeTestCase):
     """Several groups arrive as a zip, one workbook each."""
 
     STEM_2A = f"GSTR-2A-{GSTIN_2A}"
@@ -644,7 +644,7 @@ class TestGroupedExport(IntegrationTestCase):
             build_export(GSTIN_2A, "GSTR-2A", ["042024", "052024"], "monthly")
 
 
-class TestSheetRowSpill(IntegrationTestCase):
+class TestSheetRowSpill(FrappeTestCase):
     """A section with more rows than Excel allows continues on "<sheet> Part N"."""
 
     def test_overflow_continues_on_a_part_sheet(self):
@@ -669,7 +669,7 @@ class TestSheetRowSpill(IntegrationTestCase):
         self.assertNotIn("B2B Part 2", wb.sheetnames)
 
 
-class TestGSTR2ExportIntegration(IntegrationTestCase):
+class TestGSTR2ExportIntegration(FrappeTestCase):
     """Store the payload, build through the public entry point."""
 
     @classmethod
@@ -699,7 +699,7 @@ class TestGSTR2ExportIntegration(IntegrationTestCase):
         self.assertEqual(ws.cell(7, 3).value, "S008400")
 
 
-class TestSupplierNamesAreBatched(IntegrationTestCase):
+class TestSupplierNamesAreBatched(FrappeTestCase):
     """One name query for the whole payload, not one per supplier."""
 
     SUPPLIERS: ClassVar[list] = [f"24AACT{i:04d}F1Z5" for i in range(5)]
@@ -762,7 +762,7 @@ class TestSupplierNamesAreBatched(IntegrationTestCase):
         self.assertEqual(len(names), len(self.SUPPLIERS))
 
 
-class TestSupplierNameSource(IntegrationTestCase):
+class TestSupplierNameSource(FrappeTestCase):
     """Historical rows can carry different names for one GSTIN; the newest row's name wins."""
 
     SUPPLIER = "24AACT9999F1Z5"
@@ -791,7 +791,7 @@ class TestSupplierNameSource(IntegrationTestCase):
         self.assertEqual(exporter._supplier_names({self.SUPPLIER}), {self.SUPPLIER: "Acme Current Traders"})
 
 
-class TestExportFileLifecycle(IntegrationTestCase):
+class TestExportFileLifecycle(FrappeTestCase):
     """Generated exports are scratch files: handed over on download, swept if abandoned."""
 
     PERIOD = "082020"
@@ -842,7 +842,6 @@ class TestExportFileLifecycle(IntegrationTestCase):
         self.assertTrue(send.called, "file was never handed to the browser")
         self.assertTrue(send.call_args.args[0].startswith("/files/"), send.call_args)
         file_name = f"GSTR-2B-{GSTIN_2B}-{self.PERIOD}.xlsx"
-        self.assertEqual(send.call_args.kwargs["filename"], file_name)
         send.return_value.headers.__setitem__.assert_called_once_with(
             "Content-Disposition", f"attachment; filename*=UTF-8''{file_name}"
         )
@@ -943,7 +942,9 @@ class TestExportFileLifecycle(IntegrationTestCase):
         with patch("frappe.utils.response.send_private_file") as send:
             self._download("2020-09-01", "2020-09-30")
         self.assertEqual(send.call_args.args[0], file.file_url.split("/private", 1)[1])
-        self.assertEqual(send.call_args.kwargs["filename"], file.file_name)
+        send.return_value.headers.__setitem__.assert_called_once_with(
+            "Content-Disposition", f"attachment; filename*=UTF-8''{file.file_name}"
+        )
 
     def test_slow_build_also_rings_the_bell(self):
         """Over a minute in: the user has likely left, so a bell whose click downloads the file."""
@@ -968,7 +969,7 @@ class TestExportFileLifecycle(IntegrationTestCase):
         self.assertFalse(frappe.db.exists("File", name))
 
 
-class TestExportReuse(IntegrationTestCase):
+class TestExportReuse(FrappeTestCase):
     """Repeat clicks within a day serve the file already built; a resync forces a rebuild."""
 
     PERIODS: ClassVar[list] = ["052024"]
@@ -1013,7 +1014,7 @@ class TestExportReuse(IntegrationTestCase):
         self.assertNotEqual(monthly, quarterly)
 
 
-class TestGSTINNameLookup(IntegrationTestCase):
+class TestGSTINNameLookup(FrappeTestCase):
     """Names come off the cached GSTIN row only. Nothing cached, nothing shown."""
 
     def tearDown(self):
@@ -1029,7 +1030,7 @@ class TestGSTINNameLookup(IntegrationTestCase):
         self.assertEqual((info.legal_name, info.trade_name), (MOCK_LEGAL, MOCK_TRADE))
 
 
-class TestExportPermissions(IntegrationTestCase):
+class TestExportPermissions(FrappeTestCase):
     """No export permission, no service."""
 
     USER = "export-noperms@example.com"

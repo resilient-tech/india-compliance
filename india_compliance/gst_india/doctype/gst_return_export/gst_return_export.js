@@ -69,6 +69,8 @@ async function load_period_bounds(frm) {
 
 function on_period_change(frm) {
     const bounds = frm._bounds;
+    india_compliance.setup_month_range_fields(frm, "from_date", "to_date", bounds);
+
     if (bounds) {
         const { first, latest } = bounds;
         const default_from = india_compliance.fiscal_year_start(latest);
@@ -79,7 +81,6 @@ function on_period_change(frm) {
         if (to_date !== frm.doc.to_date) return frm.set_value("to_date", to_date);
     }
 
-    india_compliance.setup_month_range_fields(frm, "from_date", "to_date", frm._bounds);
     get_view(frm).refresh_view();
 }
 
