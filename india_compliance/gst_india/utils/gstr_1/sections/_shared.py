@@ -162,20 +162,10 @@ def round_money(row, fields):
 
 
 def sum_money(row, fields):
-    """Rounded total of the named amounts. Blank counts as nothing."""
+    """Rounded total of the named amounts on one row. Blank counts as nothing."""
     return flt(sum(row.get(field) or 0 for field in fields), 2)
 
 
-<<<<<<< HEAD
-def add_item_totals(row, items, totals):
-    """Item amounts into the invoice totals. Adds up, so call once per invoice."""
-    for line in items or []:
-        for field, total in totals.items():
-            if not is_blank(line.get(field)):
-                row[total] = (row.get(total) or 0) + line[field]
-
-    return row
-=======
 def sum_column(rows, field):
     """Rounded total of one amount over many rows. Blank counts as nothing."""
     return flt(sum(row.get(field) or 0 for row in rows), 2)
@@ -201,7 +191,6 @@ def split(total, weights):
         done = upto
 
     return pieces
->>>>>>> 5bce372 (refactor: gstr 2a-2b)
 
 
 def flip_signs(row, multiplier, fields):

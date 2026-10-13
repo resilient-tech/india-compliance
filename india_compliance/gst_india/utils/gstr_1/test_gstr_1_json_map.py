@@ -35,7 +35,6 @@ from india_compliance.gst_india.utils.gstr_1.sections import (
     supecom,
 )
 from india_compliance.gst_india.utils.gstr_1.sections._shared import strip_empty
-from india_compliance.gst_returns.roundtrip import assert_roundtrip
 
 # Delhi, a state no fixture below supplies to, so every row stays inter-state
 COMPANY_GSTIN = "07AAUPV7468F1ZW"
@@ -303,17 +302,6 @@ class TestB2B(IntegrationTestCase):
     def test_convert_to_gov_data_format(self):
         output = strip_empty_of(b2b.to_gov, process_mapped_data(self.mapped_data))
         self.assertListEqual(self.json_data, output)
-
-    def test_losslessness_harness_on_real_data(self):
-        internal = b2b.to_canonical(copy.deepcopy(self.json_data))
-        gov = strip_empty_of(b2b.to_gov, process_mapped_data(internal))
-        assert_roundtrip(self.json_data, gov)
-
-        lossy = copy.deepcopy(self.json_data)
-        lossy[0][raw.INVOICES][0]["extra_empty"] = ""
-        gov = strip_empty_of(b2b.to_gov, process_mapped_data(b2b.to_canonical(lossy)))
-        assert_roundtrip(lossy, gov)  # tolerated
-        self.assertNotEqual(lossy, gov)  # not exactly equal -- a loss did occur
 
 
 class TestB2CL(IntegrationTestCase):

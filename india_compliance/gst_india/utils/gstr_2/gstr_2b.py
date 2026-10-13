@@ -29,26 +29,7 @@ ITEM_KEYS = {
 
 
 class GSTR2b(GSTR):
-<<<<<<< HEAD
-    def get_existing_transaction(self):
-        gst_is = frappe.qb.DocType("GST Inward Supply")
-        existing_transactions = (
-            frappe.qb.from_(gst_is)
-            .select(
-                gst_is.name,
-                gst_is.supplier_gstin,
-                gst_is.bill_no,
-                gst_is.doc_type,
-                gst_is.classification,
-                gst_is.itc_availability,
-            )
-            .where(gst_is.return_period_2b == self.return_period)
-            .where(gst_is.classification == self.category)
-            .where(gst_is.company_gstin == self.gstin)
-        ).run(as_dict=True)
-=======
     SECTIONS: ClassVar[dict] = SECTIONS_2B
->>>>>>> 5bce372 (refactor: gstr 2a-2b)
 
     def get_supplier_details(self, supplier):
         details = take(supplier, SUPPLIER_KEYS)
