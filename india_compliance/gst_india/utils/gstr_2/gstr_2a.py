@@ -37,32 +37,12 @@ class GSTR2a(GSTR):
         self.all_gstins = set()
         self.cancelled_gstins = {}
 
-<<<<<<< HEAD
-    def get_existing_transaction(self):
-        gst_is = frappe.qb.DocType("GST Inward Supply")
-        existing_transactions = (
-            frappe.qb.from_(gst_is)
-            .select(
-                gst_is.name,
-                gst_is.supplier_gstin,
-                gst_is.bill_no,
-                gst_is.doc_type,
-                gst_is.classification,
-                gst_is.itc_availability,
-            )
-            .where(gst_is.sup_return_period == self.return_period)
-            .where(gst_is.classification == self.category)
-            .where(gst_is.gstr_1_filled == 0)
-            .where(gst_is.company_gstin == self.gstin)
-        ).run(as_dict=True)
-=======
     def get_supplier_details(self, supplier):
         details = take(supplier, SUPPLIER_KEYS)
         decode(details, doc.GSTR_3B_FILLED, Y_N_TO_CHECK)
         details[doc.GSTR_1_FILING_DATE] = parse_datetime(details[doc.GSTR_1_FILING_DATE])
         details[doc.REGISTRATION_CANCEL_DATE] = parse_datetime(details[doc.REGISTRATION_CANCEL_DATE])
         details[doc.SUP_RETURN_PERIOD] = to_period(details[doc.SUP_RETURN_PERIOD])
->>>>>>> 5bce372 (refactor: gstr 2a-2b)
 
         self.update_gstins_list(details)
 

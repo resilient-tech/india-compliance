@@ -29,11 +29,7 @@ def to_period(value):
 
 
 def get_unique_key(transaction):
-<<<<<<< HEAD
     # supplier_gstin-bill_no-doc_type key matches existing inward supplies
-=======
-    # supplier_gstin-bill_no key matches existing inward supplies
->>>>>>> 5bce372 (refactor: gstr 2a-2b)
     supplier_gstin = transaction.get("supplier_gstin") or ""
     bill_no = transaction.get("bill_no") or ""
     doc_type = transaction.get("doc_type") or ""
@@ -147,7 +143,15 @@ class GSTR:
         gst_is = frappe.qb.DocType("GST Inward Supply")
         transactions = (
             frappe.qb.from_(gst_is)
-            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no)
+            .select(
+                gst_is.name,
+                gst_is.supplier_gstin,
+                gst_is.bill_no,
+                gst_is.doc_type,
+                gst_is.classification,
+                gst_is.itc_availability,
+            )
+            .where(gst_is.company_gstin == self.gstin)
             .where(gst_is.classification == self.category)
             .where(self.get_existing_transaction_filter(gst_is))
         ).run(as_dict=True)

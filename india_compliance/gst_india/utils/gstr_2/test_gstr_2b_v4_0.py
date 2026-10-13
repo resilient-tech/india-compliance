@@ -9,7 +9,7 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import get
 from india_compliance.gst_india.utils import get_data_file_path, get_party_for_gstin, merge_dicts
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, download_gstr_2b, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
-from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2bISD
+from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
@@ -342,8 +342,10 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
         supplier_isd_credit_note = {**supplier, "doclist": [supplier["doclist"][1]]}  # doctype ISDC, cgst 30
         period = "042020"
 
-        GSTR2bISD(self.company, self.gstin, period, None).create_transactions([supplier_isd], None)
-        GSTR2bISD(self.company, self.gstin, period, None).create_transactions(
+        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
+            [supplier_isd], None
+        )
+        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
             [supplier_isd_credit_note], None
         )
 
@@ -383,7 +385,7 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
             ]
 
         # what save_gstr does
-        GSTR2bISD(self.company, self.gstin, period, None).create_transactions(
+        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
             [{**supplier, "doclist": doclist("Y", "N")}], None
         )
 
@@ -397,7 +399,7 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
         self.assertEqual(eligible.return_period_2b, period)
         self.assertEqual(ineligible.return_period_2b, period)
 
-        GSTR2bISD(self.company, self.gstin, period, None).create_transactions(
+        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
             [{**supplier, "doclist": doclist("Y")}], None
         )
 
