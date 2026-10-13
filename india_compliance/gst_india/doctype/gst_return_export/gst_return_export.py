@@ -176,7 +176,7 @@ def _sync_return_data(company_gstin, return_type, periods):
         raise e
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 @validate_gstin_permission(doctype=DOCTYPE)
 def export_file(
     company_gstin: str,
