@@ -2,16 +2,11 @@ import frappe
 from frappe.utils import flt
 from frappe.utils.data import format_date
 
-<<<<<<< HEAD
 from india_compliance.gst_india.constants import (
     ACTION_MAP,
-    GST_CATEGORY_MAP,
     GST_TAX_TYPES,
     STATE_NUMBERS,
 )
-=======
-from india_compliance.gst_india.constants import ACTION_MAP, STATE_NUMBERS
->>>>>>> 7d37603 (refactor: ims)
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     create_inward_supply,
 )
