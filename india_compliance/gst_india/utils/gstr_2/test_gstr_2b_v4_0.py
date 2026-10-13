@@ -7,11 +7,12 @@ from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import get_raw_return_data
 from india_compliance.gst_india.utils import get_data_file_path, get_party_for_gstin, merge_dicts
-<<<<<<< HEAD
-from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, download_gstr_2b, save_gstr_2b
-=======
-from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr, save_gstr_2b
->>>>>>> f7476e5 (feat: gstr 2a/2b export tool (#4861))
+from india_compliance.gst_india.utils.gstr_2 import (
+    GSTRCategory,
+    download_gstr_2b,
+    save_gstr,
+    save_gstr_2b,
+)
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
 from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
