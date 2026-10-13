@@ -4,6 +4,7 @@ Reading keeps blanks and rounds nothing, so the payload can be rebuilt. Writing 
 blanks go at the JSON boundary.
 """
 
+import math
 from datetime import datetime
 
 import frappe
@@ -177,12 +178,12 @@ def round_money(row, fields):
 
 def sum_money(row, fields):
     """Rounded total of the named amounts on one row. Blank counts as nothing."""
-    return flt(sum(row.get(field) or 0 for field in fields), 2)
+    return flt(math.fsum(row.get(field) or 0 for field in fields), 2)
 
 
 def sum_column(rows, field):
     """Rounded total of one amount over many rows. Blank counts as nothing."""
-    return flt(sum(row.get(field) or 0 for row in rows), 2)
+    return flt(math.fsum(row.get(field) or 0 for row in rows), 2)
 
 
 def split(total, weights):

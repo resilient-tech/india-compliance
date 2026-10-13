@@ -1,5 +1,6 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
+import math
 from itertools import combinations
 from typing import ClassVar
 
@@ -483,7 +484,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         for rows in rows_by_rate.values():
             for field in self.AMOUNT_FIELDS:
                 weights = [row.get(field) or 0 for row in rows]
-                raw_total = sum(weights)
+                raw_total = math.fsum(weights)
                 total = flt(raw_total, 2)
                 lost[field] += raw_total - total
 
