@@ -241,9 +241,9 @@ doc_events = {
         "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
     },
     "Stock Entry": {
-        "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
-        "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
-        "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+        "onload": "india_compliance.gst_india.overrides.stock_entry.onload",
+        "validate": "india_compliance.gst_india.overrides.stock_entry.validate",
+        "before_save": "india_compliance.gst_india.overrides.stock_entry.before_save",
         "before_submit": "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
         "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.validate_transporter_fields_after_submit",
         "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
@@ -397,7 +397,7 @@ override_doctype_dashboards = {
     "Delivery Note": ("india_compliance.gst_india.overrides.delivery_note.get_dashboard_data"),
     "Purchase Invoice": ("india_compliance.gst_india.overrides.purchase_invoice.get_dashboard_data"),
     "Purchase Receipt": ("india_compliance.gst_india.overrides.purchase_receipt.get_dashboard_data"),
-    "Stock Entry": ("india_compliance.gst_india.overrides.subcontracting_transaction.get_dashboard_data"),
+    "Stock Entry": ("india_compliance.gst_india.overrides.stock_entry.get_dashboard_data"),
     "Subcontracting Receipt": (
         "india_compliance.gst_india.overrides.subcontracting_transaction.get_dashboard_data"
     ),
