@@ -8,12 +8,7 @@ from india_compliance.gst_returns.fields.itc04 import (  # noqa: F401
 from india_compliance.gst_returns.fields.itc04 import (  # noqa: F401
     ItemField as ITC04_ItemField,
 )
-from india_compliance.gst_returns.fields.itc04 import (  # noqa: F401
-    JsonKey as GovJsonKey,
-)
-from india_compliance.gst_returns.fields.itc04 import (  # noqa: F401
-    RawField as GovDataField,
-)
+from india_compliance.gst_returns.fields.itc04 import JsonKey, RawField  # noqa: F401
 from india_compliance.gst_returns.fields.itc04 import (  # noqa: F401
     RawFieldSE as GovDataField_SE,
 )

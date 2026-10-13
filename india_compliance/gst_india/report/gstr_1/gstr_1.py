@@ -24,7 +24,8 @@ from india_compliance.gst_india.utils import (
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
-from india_compliance.gst_india.utils.gstr_1 import SUPECOM, get_b2c_limit
+from india_compliance.gst_india.utils.gstr_1 import get_b2c_limit
+from india_compliance.gst_returns.fields.gstr1 import SubCategory
 
 TYPES_OF_BUSINESS = {
     "B2B": "b2b",
@@ -557,8 +558,8 @@ class Gstr1Report:
                 Sum(IfNull(taxes_query.total_sgst_amount, 0)).as_("total_sgst_amount"),
                 Sum(IfNull(taxes_query.total_cess_amount, 0)).as_("total_cess_amount"),
                 Case()
-                .when(si.is_reverse_charge == 1, SUPECOM.US_9_5.value)
-                .else_(SUPECOM.US_52.value)
+                .when(si.is_reverse_charge == 1, SubCategory.SUPECOM_9_5.value)
+                .else_(SubCategory.SUPECOM_52.value)
                 .as_("ecommerce_supply_type"),
             )
             .where(si.is_opening == "No")
@@ -1995,7 +1996,7 @@ def get_document_issued_summary_json(data):
 def get_section_14_json(res, data):
     out = res["superco"]
     for item in data:
-        key = "clttx" if item["ecommerce_supply_type"] == SUPECOM.US_52.value else "paytx"
+        key = "clttx" if item["ecommerce_supply_type"] == SubCategory.SUPECOM_52.value else "paytx"
         out.setdefault(key, []).append(
             {
                 "etin": item["ecommerce_gstin"],
