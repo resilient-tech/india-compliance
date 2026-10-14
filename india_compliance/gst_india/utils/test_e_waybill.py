@@ -1530,11 +1530,11 @@ class TestEWaybill(IntegrationTestCase):
 
     @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_ship_to_gstin_for_transaction_type_4(self):
-        # ship to GSTIN is mandatory in transaction type 4.
+        # ship to GSTIN and dispatch from GSTIN are mandatory in transaction type 4.
         si = create_sales_invoice(
             vehicle_no="GJ07DL9009",
             company_address="_Test Indian Registered Company-Billing",
-            dispatch_address_name="_Test Indian Registered Company-Shipping",
+            dispatch_address_name="_Test ISD Distribution-Billing",
             customer="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
             shipping_address_name="_Test Unregistered Consignee-Shipping",
@@ -1552,8 +1552,8 @@ class TestEWaybill(IntegrationTestCase):
         self.assertEqual(e_waybill_data.get("transactionType"), 4)
         self.assertTrue(e_waybill_data.get("shipToGSTIN"))
         self.assertTrue(e_waybill_data.get("shipToTradeName"))
-        self.assertTrue(e_waybill_data.get("dispatchFromGSTIN"))
-        self.assertTrue(e_waybill_data.get("dispatchFromTradeName"))
+        self.assertEqual(e_waybill_data.get("dispatchFromGSTIN"), "24AAQCA8719H2ZB")
+        self.assertEqual(e_waybill_data.get("dispatchFromTradeName"), "_Test ISD Distribution")
 
     @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_for_same_bill_to_and_ship_to_gstin(self):
@@ -1588,11 +1588,11 @@ class TestEWaybill(IntegrationTestCase):
 
     @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_for_same_bill_to_and_ship_to_gstin_with_dispatch_from(self):
-        """Same party for Bill To and Ship To, with a different Dispatch From."""
+        """Same party for Bill To and Ship To, with a different GSTIN Dispatch From."""
         si = create_sales_invoice(
             vehicle_no="GJ07DL9009",
             company_address="_Test Indian Registered Company-Billing",
-            dispatch_address_name="_Test Indian Registered Company-Shipping",
+            dispatch_address_name="_Test ISD Distribution-Billing",
             customer="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
             # different address, same GSTIN as the billing address
@@ -1611,8 +1611,39 @@ class TestEWaybill(IntegrationTestCase):
         self.assertEqual(e_waybill_data.get("transactionType"), 3)
         self.assertNotIn("shipToGSTIN", e_waybill_data)
         self.assertNotIn("shipToTradeName", e_waybill_data)
-        self.assertTrue(e_waybill_data.get("dispatchFromGSTIN"))
-        self.assertTrue(e_waybill_data.get("dispatchFromTradeName"))
+        self.assertEqual(e_waybill_data.get("dispatchFromGSTIN"), "24AAQCA8719H2ZB")
+        self.assertEqual(e_waybill_data.get("dispatchFromTradeName"), "_Test ISD Distribution")
+
+    @change_settings("GST Settings", {"sandbox_mode": 1})
+    def test_e_waybill_for_same_bill_from_and_dispatch_from_gstin(self):
+        """
+        Two addresses of the same GSTIN is a Regular transaction, since NIC rejects
+        an e-Waybill where Dispatch From GSTIN equals Bill From GSTIN. ERROR CODE: 617
+        """
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            # different address, same GSTIN as the billing address
+            dispatch_address_name="_Test Indian Registered Company-Shipping",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            is_in_state=1,
+            distance=10,
+            transporter="_Test Common Supplier",
+            mode_of_transport="Road",
+            do_not_submit=True,
+        )
+        si.gst_transporter_id = ""
+        si.submit()
+
+        e_waybill_data = EWaybillData(si).get_data()
+
+        self.assertEqual(e_waybill_data.get("transactionType"), 1)
+        self.assertNotIn("dispatchFromGSTIN", e_waybill_data)
+        self.assertNotIn("dispatchFromTradeName", e_waybill_data)
+
+        # goods still move from the dispatch address
+        self.assertEqual(e_waybill_data.get("fromAddr1"), "Test Address - 5")
 
     @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_ship_to_gstin_for_unregistered_bill_to_and_ship_to(self):

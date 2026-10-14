@@ -1649,13 +1649,19 @@ class EWaybillData(GSTTransactionData):
                     self.ship_to.gstin != self.bill_to.gstin or self.ship_to.gstin == "URP"
                 )
 
+        if has_different_from_address:
+            self.ship_from = self.get_address_details(address.ship_from)
+
+            # if same gstin then regular transaction, Dispatch From GSTIN would equal fromGstin. ERROR CODE: 617
+            has_different_from_address = (
+                self.ship_from.gstin != self.bill_from.gstin or self.ship_from.gstin == "URP"
+            )
+
         if has_different_to_address and has_different_from_address:
             transaction_type = 4
-            self.ship_from = self.get_address_details(address.ship_from)
 
         elif has_different_from_address:
             transaction_type = 3
-            self.ship_from = self.get_address_details(address.ship_from)
 
         elif has_different_to_address:
             transaction_type = 2
@@ -1845,10 +1851,7 @@ class EWaybillData(GSTTransactionData):
                 }
             )
 
-        if (
-            is_ship_to_gstin_applicable(self.settings)
-            and self.transaction_details.transaction_type in DISPATCH_FROM_TRANSACTION_TYPES
-        ):
+        if self.transaction_details.transaction_type in DISPATCH_FROM_TRANSACTION_TYPES:
             data.update(
                 {
                     "dispatchFromGSTIN": self.ship_from.gstin,
