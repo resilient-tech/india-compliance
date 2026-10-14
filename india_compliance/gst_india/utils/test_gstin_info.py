@@ -93,6 +93,8 @@ class TestGstinInfo(unittest.TestCase):
             {
                 "gstin": "24AAUPV7468F1ZW",
                 "business_name": "Shalibhadra Metal Corporation",
+                "legal_name": "NALIN VORA",
+                "trade_name": "SHALIBHADRA METAL CORPORATION",
                 "gst_category": "Registered Regular",
                 "status": "Active",
                 "all_addresses": [
@@ -177,6 +179,8 @@ class TestGstinInfo(unittest.TestCase):
             {
                 "gstin": "29AABCF8078M1C8",
                 "business_name": "Flipkart India Private Limited",
+                "legal_name": "FLIPKART INDIA PRIVATE LIMITED",
+                "trade_name": "FLIPKART INDIA PRIVATE LIMITED",
                 "gst_category": "Tax Collector",
                 "status": "Active",
                 "all_addresses": [
@@ -235,6 +239,8 @@ class TestGstinInfo(unittest.TestCase):
             {
                 "gstin": "9917SGP29001OST",
                 "business_name": "Google Asia Pacific Pte LTD",
+                "legal_name": "GOOGLE ASIA PACIFIC PTE LTD",
+                "trade_name": "",
                 "gst_category": "Overseas",
                 "status": "Active",
             },
