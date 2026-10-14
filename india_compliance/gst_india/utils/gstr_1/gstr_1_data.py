@@ -525,6 +525,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         return query.run(as_dict=True)
 
     def get_invoices_for_hsn_wise_summary(self):
+<<<<<<< HEAD
         query = self.get_base_query()
 
         query = (
@@ -549,8 +550,35 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             )
             .orderby(query.posting_date, query.invoice_no, query.item_code, order=Order.desc)
         )
+=======
+        invoices = self.get_invoices_for_item_wise_summary()
+        self.settle_amounts(invoices)
 
-        return query.run(as_dict=True)
+        group_by = ("invoice_no", "gst_hsn_code", "gst_rate", "gst_treatment", "uom")
+        summed = (
+            "qty",
+            "taxable_value",
+            "cgst_amount",
+            "sgst_amount",
+            "igst_amount",
+            "total_cess_amount",
+            "total_tax",
+            "total_amount",
+        )
+
+        grouped = {}
+        for invoice in invoices:
+            key = tuple(invoice.get(column) for column in group_by)
+            if key not in grouped:
+                grouped[key] = invoice
+                continue
+
+            row = grouped[key]
+            for column in summed:
+                row[column] = flt((row.get(column) or 0) + (invoice.get(column) or 0), 9)
+>>>>>>> e54e3da (fix: settle item rows before grouping in sales register HSN view)
+
+        return list(grouped.values())
 
     def get_filtered_invoices(self, invoices, invoice_category=None, invoice_sub_category=None):
         filtered_invoices = []
