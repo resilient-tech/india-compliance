@@ -528,7 +528,8 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         return query.run(as_dict=True)
 
     def get_invoices_for_hsn_wise_summary(self):
-        base = self.get_base_query()
+        invoices = self.get_invoices_for_item_wise_summary()
+        self.settle_amounts(invoices)
 
         group_by = ("invoice_no", "gst_hsn_code", "gst_rate", "gst_treatment", "uom")
         summed = (
@@ -541,51 +542,19 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             "total_tax",
             "total_amount",
         )
-        wrapped = (
-            "item_code",
-            "billing_address_gstin",
-            "company_gstin",
-            "customer_name",
-            "posting_date",
-            "place_of_supply",
-            "is_reverse_charge",
-            "ecommerce_gstin",
-            "is_return",
-            "is_debit_note",
-            "return_against",
-            "is_export_with_gst",
-            "shipping_port_code",
-            "shipping_bill_number",
-            "shipping_bill_date",
-            "gst_category",
-            "cess_amount",
-            "cess_non_advol_amount",
-            "invoice_total",
-            "returned_invoice_total",
-            *self.additional_si_columns,
-            *self.additional_si_item_columns,
-        )
 
-        def field(column):
-            return getattr(base, column)
+        grouped = {}
+        for invoice in invoices:
+            key = tuple(invoice.get(column) for column in group_by)
+            if key not in grouped:
+                grouped[key] = invoice
+                continue
 
-        query = (
-            frappe.qb.from_(base)
-            .select(
-                *(field(col) for col in group_by),
-                *(Sum(field(col)).as_(col) for col in summed),
-                *(Max(field(col)).as_(col) for col in wrapped),
-            )
-            .groupby(*(field(col) for col in group_by))
-            .orderby(
-                Max(field("posting_date")),
-                field("invoice_no"),
-                Max(field("item_code")),
-                order=Order.desc,
-            )
-        )
+            row = grouped[key]
+            for column in summed:
+                row[column] = flt((row.get(column) or 0) + (invoice.get(column) or 0), 9)
 
-        return query.run(as_dict=True)
+        return list(grouped.values())
 
     def get_filtered_invoices(self, invoices, invoice_category=None, invoice_sub_category=None):
         filtered_invoices = []
