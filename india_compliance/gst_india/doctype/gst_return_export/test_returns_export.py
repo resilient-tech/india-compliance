@@ -323,6 +323,24 @@ class TestRawReturnDataRoundTrip(IntegrationTestCase):
         summary = frappe.parse_json(frappe.db.get_value("GST Return Log", log_name, "section_summary"))
         self.assertEqual(summary["totals"]["documents"], 2)
 
+    def test_sync_says_synced_only_once_its_data_is_saved(self):
+        with patch.object(GSTR2BAdapter, "download"), patch("frappe.publish_realtime") as publish:
+            controller._sync_return_data(GSTIN, ReturnType.GSTR2B.value, ["102024"])
+
+        publish.assert_called_once_with(
+            controller.SYNC_COMPLETE_EVENT, user=frappe.session.user, after_commit=True
+        )
+
+    def test_failed_sync_never_says_synced(self):
+        with (
+            patch.object(GSTR2BAdapter, "download", side_effect=Exception("portal down")),
+            patch("frappe.publish_realtime") as publish,
+            self.assertRaises(Exception),
+        ):
+            controller._sync_return_data(GSTIN, ReturnType.GSTR2B.value, ["102024"])
+
+        self.assertNotIn(controller.SYNC_COMPLETE_EVENT, [call.args[0] for call in publish.call_args_list])
+
 
 class TestGSTReturnExportController(IntegrationTestCase):
     @classmethod
