@@ -49,6 +49,7 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
 EXPORT_READY_EVENT = "gst_return_export_ready"
+SYNC_COMPLETE_EVENT = "gst_return_export_synced"
 DOCTYPE = "GST Return Export"
 EXPORT_MARKER = "gst_return_export"
 BELL_AFTER = 60
@@ -174,6 +175,8 @@ def _sync_return_data(company_gstin, return_type, periods):
             user=frappe.session.user,
         )
         raise e
+
+    frappe.publish_realtime(SYNC_COMPLETE_EVENT, user=frappe.session.user, after_commit=True)
 
 
 @frappe.whitelist()
