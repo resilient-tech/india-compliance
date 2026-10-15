@@ -1553,7 +1553,7 @@ class TestEWaybill(IntegrationTestCase):
         self.assertTrue(e_waybill_data.get("shipToGSTIN"))
         self.assertTrue(e_waybill_data.get("shipToTradeName"))
         self.assertEqual(e_waybill_data.get("dispatchFromGSTIN"), "24AAQCA8719H2ZB")
-        self.assertEqual(e_waybill_data.get("dispatchFromTradeName"), "_Test ISD Distribution")
+        self.assertEqual(e_waybill_data.get("dispatchFromTradeName"), "Test ISD Distribution")
 
     @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_for_same_bill_to_and_ship_to_gstin(self):
@@ -1612,7 +1612,7 @@ class TestEWaybill(IntegrationTestCase):
         self.assertNotIn("shipToGSTIN", e_waybill_data)
         self.assertNotIn("shipToTradeName", e_waybill_data)
         self.assertEqual(e_waybill_data.get("dispatchFromGSTIN"), "24AAQCA8719H2ZB")
-        self.assertEqual(e_waybill_data.get("dispatchFromTradeName"), "_Test ISD Distribution")
+        self.assertEqual(e_waybill_data.get("dispatchFromTradeName"), "Test ISD Distribution")
 
     @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_for_same_bill_from_and_dispatch_from_gstin(self):
