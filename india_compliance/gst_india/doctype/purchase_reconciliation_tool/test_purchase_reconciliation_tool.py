@@ -21,7 +21,7 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
     BuildExcel,
 )
-from india_compliance.gst_india.utils.gstr_2 import save_gstr_2b
+from india_compliance.gst_india.utils.gstr_2 import save_gstr_2a, save_gstr_2b, save_ims_invoices
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     format_period,
@@ -1231,6 +1231,196 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertEqual(row.purchase_doctype, "Bill of Entry")
         self.assertEqual(row.match_status, "Manual Match")
         self.assertIn("COMPANY_GSTIN", row.differences.split(", "))
+
+    def test_invoice_missing_in_its_month_2b_is_unreconciled(self):
+        company_gstin, other_gstin, supplier_gstin = "24AAQCA8719H1ZC", "29AAQCA8719H1Z2", "24AABCR6898M1ZN"
+        quantities = {
+            "GSTR2B-KEEP": 21,
+            "GSTR2B-DROP": 22,
+            "GSTR2B-IMS": 23,
+            "GSTR2B-OLD": 24,
+            "GSTR2B-REJ": 25,
+            "GSTR2B-OTHER": 26,
+        }
+        pinvs = {
+            bill_no: create_purchase_invoice(
+                bill_no=bill_no, bill_date="2024-03-11", posting_date="2024-03-11", qty=quantities[bill_no]
+            ).name
+            for bill_no in ("GSTR2B-KEEP", "GSTR2B-DROP", "GSTR2B-IMS")
+        }
+
+        def amounts(bill_no):
+            taxable_value = quantities[bill_no] * 1000
+            return taxable_value, taxable_value * 0.09
+
+        def save_2a(gstin, period, bill_nos):
+            invoices = []
+            for bill_no in bill_nos:
+                taxable_value, tax = amounts(bill_no)
+                invoices.append(
+                    {
+                        "inum": bill_no,
+                        "idt": "11-03-2024",
+                        "val": taxable_value + 2 * tax,
+                        "pos": "24",
+                        "rchrg": "N",
+                        "inv_typ": "R",
+                        "itms": [
+                            {
+                                "num": 1,
+                                "itm_det": {"rt": 18, "txval": taxable_value, "camt": tax, "samt": tax},
+                            }
+                        ],
+                    }
+                )
+
+            supplier = {
+                "ctin": supplier_gstin,
+                "cfs": "Y",
+                "cfs3b": "Y",
+                "fldtr1": "11-04-2024",
+                "flprdr1": datetime.datetime.strptime(period, "%m%Y").strftime("%b-%y"),
+                "inv": invoices,
+            }
+            save_gstr_2a(gstin, period, frappe._dict({"gstin": gstin, "fp": period, "b2b": [supplier]}))
+
+        def b2b_2b(bill_nos):
+            invoices = []
+            for bill_no in bill_nos:
+                taxable_value, tax = amounts(bill_no)
+                invoices.append(
+                    {
+                        "inum": bill_no,
+                        "typ": "R",
+                        "dt": "11-03-2024",
+                        "val": taxable_value + 2 * tax,
+                        "pos": "24",
+                        "rev": "N",
+                        "itcavl": "Y",
+                        "txval": taxable_value,
+                        "cgst": tax,
+                        "sgst": tax,
+                        "items": [{"num": 1, "rt": 18, "txval": taxable_value, "cgst": tax, "sgst": tax}],
+                    }
+                )
+
+            return [
+                {
+                    "ctin": supplier_gstin,
+                    "trdnm": "_Test Registered Supplier",
+                    "supfildt": "11-04-2024",
+                    "supprd": "032024",
+                    "inv": invoices,
+                }
+            ]
+
+        def save_2b(period, bill_nos, rejected=()):
+            data = frappe._dict(gstin=company_gstin, gendt="14-04-2024", docdata={"b2b": b2b_2b(bill_nos)})
+            if rejected:
+                data.docRejdata = {"b2b": b2b_2b(rejected)}
+
+            save_gstr_2b(company_gstin, period, frappe._dict(data=data), store_raw=False)
+
+        def ims_invoice(bill_no, action):
+            taxable_value, tax = amounts(bill_no)
+            return {
+                "stin": supplier_gstin,
+                "inum": bill_no,
+                "inv_typ": "R",
+                "action": action,
+                "ispendactblocked": "N",
+                "srcform": "R1",
+                "rtnprd": "032024",
+                "srcfilstatus": "Filed",
+                "idt": "11-03-2024",
+                "val": taxable_value + 2 * tax,
+                "pos": "24",
+                "txval": taxable_value,
+                "iamt": 0,
+                "camt": tax,
+                "samt": tax,
+                "cess": 0,
+            }
+
+        def inward_supply(bill_no, gstin=company_gstin):
+            return frappe.db.get_value(
+                "GST Inward Supply",
+                {"company_gstin": gstin, "bill_no": bill_no},
+                ["name", "link_name", "return_period_2b", "is_downloaded_from_2b"],
+                as_dict=True,
+            )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+
+        def reconcile(gst_return, from_date, to_date):
+            prt.update(
+                {
+                    "company": "_Test Indian Registered Company",
+                    "company_gstin": company_gstin,
+                    "period": "Custom",
+                    "from_date": from_date,
+                    "to_date": to_date,
+                    "gst_return": gst_return,
+                }
+            )
+            return {row.purchase_invoice_name: row for row in prt.reconcile_and_generate_data()}
+
+        save_2a(company_gstin, "032024", ("GSTR2B-KEEP", "GSTR2B-DROP"))
+        save_2a(company_gstin, "022024", ("GSTR2B-OLD",))
+        save_2a(other_gstin, "032024", ("GSTR2B-OTHER",))
+        reconcile("Both GSTR 2A & 2B", "2024-03-01", "2024-03-31")
+
+        for bill_no in ("GSTR2B-KEEP", "GSTR2B-DROP"):
+            self.assertEqual(inward_supply(bill_no).link_name, pinvs[bill_no])
+
+        save_2b("032024", ("GSTR2B-KEEP", "GSTR2B-IMS"))
+
+        self.assertEqual(inward_supply("GSTR2B-KEEP").link_name, pinvs["GSTR2B-KEEP"])
+        self.assertIsNone(inward_supply("GSTR2B-DROP"))
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinvs["GSTR2B-DROP"], "reconciliation_status"),
+            "Unreconciled",
+        )
+        self.assertIsNotNone(inward_supply("GSTR2B-OLD"))
+        self.assertIsNotNone(inward_supply("GSTR2B-OTHER", gstin=other_gstin))
+
+        save_ims_invoices(
+            company_gstin,
+            "ALL",
+            frappe._dict(b2b=[ims_invoice("GSTR2B-IMS", "A"), ims_invoice("GSTR2B-REJ", "R")]),
+        )
+        rows = reconcile("GSTR 2B", "2024-03-01", "2024-03-31")
+
+        self.assertEqual(rows[pinvs["GSTR2B-DROP"]].match_status, "Only in Books")
+        self.assertEqual(inward_supply("GSTR2B-IMS").link_name, pinvs["GSTR2B-IMS"])
+
+        save_2a(company_gstin, "032024", ("GSTR2B-KEEP", "GSTR2B-DROP"))
+        reconcile("Both GSTR 2A & 2B", "2024-03-01", "2024-03-31")
+        self.assertEqual(inward_supply("GSTR2B-DROP").link_name, pinvs["GSTR2B-DROP"])
+
+        save_2b("032024", ("GSTR2B-KEEP",))
+
+        self.assertIsNone(inward_supply("GSTR2B-DROP"))
+        self.assertEqual(
+            inward_supply("GSTR2B-IMS"),
+            {
+                "name": inward_supply("GSTR2B-IMS").name,
+                "link_name": pinvs["GSTR2B-IMS"],
+                "return_period_2b": "",
+                "is_downloaded_from_2b": 0,
+            },
+        )
+
+        save_2b("042024", ("GSTR2B-DROP",), rejected=("GSTR2B-REJ",))
+
+        self.assertIsNone(inward_supply("GSTR2B-REJ"))
+        self.assertEqual(inward_supply("GSTR2B-DROP").return_period_2b, "042024")
+
+        reconcile("GSTR 2B", "2024-04-01", "2024-04-30")
+        self.assertEqual(inward_supply("GSTR2B-DROP").link_name, pinvs["GSTR2B-DROP"])
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", pinvs["GSTR2B-DROP"], "itc_claim_period"), "042024"
+        )
 
     # ------------------------------------------------------------------ ISD Recipient Invoice
     COMPANY_ADDRESS = "_Test Indian Registered Company-Billing"
