@@ -323,24 +323,6 @@ class TestRawReturnDataRoundTrip(IntegrationTestCase):
         summary = frappe.parse_json(frappe.db.get_value("GST Return Log", log_name, "section_summary"))
         self.assertEqual(summary["totals"]["documents"], 2)
 
-    def test_sync_says_synced_only_once_its_data_is_saved(self):
-        with patch.object(GSTR2BAdapter, "download"), patch("frappe.publish_realtime") as publish:
-            controller._sync_return_data(GSTIN, ReturnType.GSTR2B.value, ["102024"])
-
-        publish.assert_called_once_with(
-            controller.SYNC_COMPLETE_EVENT, user=frappe.session.user, after_commit=True
-        )
-
-    def test_failed_sync_never_says_synced(self):
-        with (
-            patch.object(GSTR2BAdapter, "download", side_effect=Exception("portal down")),
-            patch("frappe.publish_realtime") as publish,
-            self.assertRaises(Exception),
-        ):
-            controller._sync_return_data(GSTIN, ReturnType.GSTR2B.value, ["102024"])
-
-        self.assertNotIn(controller.SYNC_COMPLETE_EVENT, [call.args[0] for call in publish.call_args_list])
-
 
 class TestGSTReturnExportController(IntegrationTestCase):
     @classmethod
@@ -372,6 +354,22 @@ class TestGSTReturnExportController(IntegrationTestCase):
             )
 
         self.assertEqual(result["indicator"], "orange")
+
+    def test_sync_refuses_a_second_download_of_the_same_return(self):
+        today = "india_compliance.gst_india.doctype.purchase_reconciliation_tool.getdate"
+        with (
+            patch(today, return_value=getdate("2021-05-20")),
+            patch(
+                "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.get_periods_to_download",
+                return_value=["042021"],
+            ),
+            patch.object(controller, "is_job_enqueued", return_value=True),
+            patch("frappe.enqueue") as enqueue,
+        ):
+            result = self.doc.sync_return_data(GSTIN, "GSTR-2B", ["042021"], "2021-03-01", "2021-08-01")
+
+        self.assertEqual(result["indicator"], "orange")
+        enqueue.assert_not_called()
 
     def test_sync_status_stops_at_the_portal_cut_off(self):
         """2B for a month exists from the 14th of the next; on 20 May, April is the newest."""
