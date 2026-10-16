@@ -9,8 +9,8 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import get
 from india_compliance.gst_india.utils import get_data_file_path, get_party_for_gstin, merge_dicts
 from india_compliance.gst_india.utils.gstr_2 import (
     GSTRCategory,
+    download_gstr_2a,
     download_gstr_2b,
-    save_gstr,
     save_gstr_2b,
 )
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
@@ -601,16 +601,63 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         )
 
 
-class TestEmptyPeriodProgress(IntegrationTestCase):
-    def test_month_with_nothing_to_save_still_reports_done(self):
-        """No save event means the sync progress never closes on screen."""
-        with patch("frappe.publish_realtime") as publish:
-            save_gstr("01AABCE2207R1Z5", ReturnType.GSTR2B, "032020", {"b2b": []})
+class TestDownloadComplete(IntegrationTestCase):
+    GSTIN = "01AABCE2207R1Z5"
+    COMPLETE = "gstr_2a_2b_download_complete"
 
-        publish.assert_called_once()
-        event, message = publish.call_args.args[:2]
-        self.assertEqual(event, "update_2a_2b_transactions_progress")
-        self.assertEqual(message, {"current_progress": 100, "return_period": "032020"})
+    def test_2a_and_2b_say_complete_once_committed(self):
+        for download, api, return_type in (
+            (download_gstr_2a, "india_compliance.gst_india.utils.gstr_2.GSTR2aAPI", "GSTR2a"),
+            (download_gstr_2b, "india_compliance.gst_india.utils.gstr_2.GSTR2bAPI", "GSTR2b"),
+        ):
+            with (
+                self.subTest(download=download.__name__),
+                patch(api) as api_class,
+                patch("frappe.publish_realtime") as publish,
+            ):
+                api_class.return_value.get_data.return_value = frappe._dict(error_type="no_docs_found")
+                download(self.GSTIN, ["032020"])
+
+            publish.assert_any_call(
+                self.COMPLETE,
+                {"gstin": self.GSTIN, "return_type": return_type},
+                user=frappe.session.user,
+                after_commit=True,
+            )
+            fetch = [
+                call.args[1] for call in publish.call_args_list if call.args[0] == "update_2a_2b_api_progress"
+            ]
+            self.assertTrue(fetch)
+            self.assertTrue(all(message["gstin"] == self.GSTIN for message in fetch))
+
+    def test_failed_download_never_says_complete(self):
+        with (
+            patch("india_compliance.gst_india.utils.gstr_2.GSTR2bAPI") as api_class,
+            patch("frappe.publish_realtime") as publish,
+            self.assertRaises(Exception),
+        ):
+            api_class.return_value.get_data.side_effect = Exception("portal down")
+            download_gstr_2b(self.GSTIN, ["032020"])
+
+        self.assertNotIn(self.COMPLETE, [call.args[0] for call in publish.call_args_list])
+
+
+class TestSaveProgress(IntegrationTestCase):
+    def test_save_progress_is_sent_once_per_percent(self):
+        transactions = [frappe._dict(unique_key=str(i)) for i in range(250)]
+        with (
+            patch.object(GSTR2b, "get_all_transactions", return_value=transactions),
+            patch.object(GSTR2b, "get_existing_transaction", return_value={}),
+            patch.object(GSTR2b, "update_gstins"),
+            patch.object(GSTR2b, "handle_missing_transactions"),
+            patch("india_compliance.gst_india.utils.gstr_2.gstr.create_inward_supply"),
+            patch("frappe.publish_realtime") as publish,
+        ):
+            GSTR2b(None, "01AABCE2207R1Z5", "032020", "B2B").create_transactions([{}], None)
+
+        self.assertEqual(
+            [call.args[1]["current_progress"] for call in publish.call_args_list], list(range(101))
+        )
 
 
 class TestGetUniqueKey(IntegrationTestCase):

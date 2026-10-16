@@ -6,7 +6,8 @@ const SAVE_PROGRESS = "update_2a_2b_transactions_progress";
 const DOWNLOAD_MESSAGE = "gstr_2a_2b_download_message";
 const REGENERATE_2B = "regenerate_gstr_2b";
 const EXPORT_READY = "gst_return_export_ready";
-const SYNC_COMPLETE = "gst_return_export_synced";
+const DOWNLOAD_COMPLETE = "gstr_2a_2b_download_complete";
+const RETURN_TYPES = { "GSTR-2A": "GSTR2a", "GSTR-2B": "GSTR2b" };
 const EXPORT_MODULE = "india_compliance.gst_india.doctype.gst_return_export.gst_return_export";
 const TAX_FIELDS = ["igst", "cgst", "sgst", "cess"];
 const GROUP_BY_LABELS = {
@@ -100,6 +101,10 @@ function set_realtime_listeners(frm) {
     frappe.realtime.on(SAVE_PROGRESS, (data) => get_view(frm).update_progress?.(data, false));
 
     frappe.realtime.on(DOWNLOAD_MESSAGE, (message) => {
+        if (message.gstin) {
+            if (!is_syncing(frm, message)) return;
+            frm._syncing = null;
+        }
         frm.dashboard.hide();
         frappe.msgprint(message);
     });
@@ -112,8 +117,17 @@ function set_realtime_listeners(frm) {
         });
     });
 
-    frappe.realtime.on(SYNC_COMPLETE, () => get_view(frm).on_sync_complete?.());
+    frappe.realtime.on(DOWNLOAD_COMPLETE, (data) => {
+        if (!is_syncing(frm, data)) return;
+        frm._syncing = null;
+        get_view(frm).on_sync_complete?.();
+    });
     frappe.realtime.on(EXPORT_READY, on_export_ready);
+}
+
+function is_syncing(frm, { gstin, return_type }) {
+    const syncing = frm._syncing;
+    return syncing?.gstin === gstin && (!return_type || syncing.return_type === return_type);
 }
 
 function on_export_ready({ file_name, request, created, error }) {
@@ -361,13 +375,22 @@ class GSTR2View extends ReturnExportView {
                 }
 
                 dialog.hide();
-                this.update_progress({ current_progress: 0 }, true);
+                const filters = this.get_filters();
+                frm._syncing = {
+                    gstin: filters.company_gstin,
+                    return_type: RETURN_TYPES[filters.return_type],
+                };
+                this.update_progress({ current_progress: 0, gstin: filters.company_gstin }, true);
 
-                const { message } = await frm.taxpayer_api_call("sync_return_data", {
-                    ...this.get_filters(),
-                    periods: selected,
-                });
+                const { message } = await frm
+                    .taxpayer_api_call("sync_return_data", { ...filters, periods: selected })
+                    .catch((error) => {
+                        frm._syncing = null;
+                        frm.dashboard.hide();
+                        throw error;
+                    });
                 if (message?.message) {
+                    frm._syncing = null;
                     frm.dashboard.hide();
                     frappe.show_alert({ message: message.message, indicator: message.indicator || "blue" });
                 }
@@ -391,9 +414,12 @@ class GSTR2View extends ReturnExportView {
 
     show_progress(percent, message) {
         this.frm.dashboard.show_progress(__("Sync Progress"), percent, message);
+        this.frm.dashboard.show();
     }
 
-    update_progress({ current_progress, return_period }, is_fetch_phase) {
+    update_progress({ current_progress, return_period, gstin }, is_fetch_phase) {
+        if (!is_syncing(this.frm, { gstin })) return;
+
         if (is_fetch_phase) this.progress = current_progress;
         const message = is_fetch_phase
             ? __("Fetching data from the GST Portal")
