@@ -15,6 +15,7 @@ Needs a site (rounding reads site settings) but no test records:
 import math
 import unittest
 from typing import ClassVar
+from unittest.mock import Mock, patch
 
 import frappe
 from frappe.utils import cint, flt
@@ -80,6 +81,24 @@ class TestSettleAmounts(unittest.TestCase):
         )
 
         self.assertEqual(flt(by_invoice_and_rate, 2), flt(by_hsn, 2))
+
+    def test_the_hsn_view_is_the_item_view_added_up_by_hsn(self):
+        def items():
+            return [
+                row("A", 18, "1001", taxable_value=100.333),
+                row("A", 18, "2002", taxable_value=100.333),
+                row("A", 18, "1001", taxable_value=100.334),
+            ]
+
+        settled, _ = settle(items())
+        item_view = {}
+        for item in settled:
+            item_view[item.gst_hsn_code] = flt(item_view.get(item.gst_hsn_code, 0) + item.taxable_value, 2)
+
+        with patch.object(GSTR1Invoices, "get_base_query", return_value=Mock(run=Mock(return_value=items()))):
+            hsn_rows = GSTR1Invoices({}).get_invoices_for_hsn_wise_summary()
+
+        self.assertEqual({hsn_row.gst_hsn_code: hsn_row.taxable_value for hsn_row in hsn_rows}, item_view)
 
     def test_nil_buckets_still_add_up_settled_as_one_pool(self):
         """Nil-rated, exempted and non-GST all sit at rate zero and settle together.
