@@ -28,7 +28,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     get_b2c_limit,
 )
 from india_compliance.gst_india.utils.gstr_1.sections import cdnur, exports, nil_rated
-from india_compliance.gst_india.utils.gstr_1.sections._shared import split
+from india_compliance.gst_india.utils.gstr_1.sections._shared import money, split
 
 CATEGORY_CONDITIONS = {
     Category.ECOM_RCM.value: {
@@ -466,8 +466,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 identified_uom[uom] = gst_uom
                 invoice["uom"] = gst_uom
 
-        self.rounding_difference = self.settle_amounts(invoices)
-
     def settle_amounts(self, invoices):
         """Round the amounts once, here, so every report reads the same figures.
 
@@ -524,16 +522,16 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
     def get_invoices_for_item_wise_summary(self):
         query = self.get_base_query()
+        invoices = query.run(as_dict=True)
+        self.rounding_difference = self.settle_amounts(invoices)
 
-        return query.run(as_dict=True)
+        return invoices
 
     def get_invoices_for_hsn_wise_summary(self):
         invoices = self.get_invoices_for_item_wise_summary()
-        self.settle_amounts(invoices)
 
         group_by = ("invoice_no", "gst_hsn_code", "gst_rate", "gst_treatment", "uom")
         summed = (
-            "qty",
             "taxable_value",
             "cgst_amount",
             "sgst_amount",
@@ -551,8 +549,9 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 continue
 
             row = grouped[key]
+            row["qty"] = flt((row.get("qty") or 0) + (invoice.get("qty") or 0), 9)
             for column in summed:
-                row[column] = flt((row.get(column) or 0) + (invoice.get(column) or 0), 9)
+                row[column] = money((row.get(column) or 0) + (invoice.get(column) or 0))
 
         return list(grouped.values())
 
