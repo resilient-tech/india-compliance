@@ -237,7 +237,7 @@ export default {
             const style = getComputedStyle(document.body);
             const primaryColor = style.getPropertyValue("--primary");
             const cardBg = style.getPropertyValue("--card-bg");
-            const theme = document.documentElement.getAttribute("data-theme-mode") || "light";
+            const theme = frappe.ui.get_current_theme() || "light";
 
             const dropConfig = {
                 components: ["card", "netbanking", "app", "upi"],
