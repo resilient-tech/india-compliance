@@ -15,7 +15,7 @@ Needs a site (rounding reads site settings) but no test records:
 import math
 import unittest
 from typing import ClassVar
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import frappe
 from frappe.utils import cint, flt
@@ -97,7 +97,7 @@ class TestSettleAmounts(unittest.TestCase):
         for item in settled:
             item_view[item.gst_hsn_code] = flt(item_view.get(item.gst_hsn_code, 0) + item.taxable_value, 2)
 
-        with patch.object(GSTR1Invoices, "get_invoices_for_item_wise_summary", return_value=items()):
+        with patch.object(GSTR1Invoices, "get_base_query", return_value=Mock(run=Mock(return_value=items()))):
             hsn_rows = GSTR1Invoices({}).get_invoices_for_hsn_wise_summary()
 
         self.assertEqual({hsn_row.gst_hsn_code: hsn_row.taxable_value for hsn_row in hsn_rows}, item_view)
