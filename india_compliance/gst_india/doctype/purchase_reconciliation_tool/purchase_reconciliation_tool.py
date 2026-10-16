@@ -60,6 +60,8 @@ from india_compliance.gst_india.utils.gstr_2 import (
     ReturnType,
     download_gstr_2a,
     download_gstr_2b,
+    download_job_id,
+    publish_download_complete,
     save_gstr_2a,
     save_gstr_2b,
 )
@@ -143,7 +145,7 @@ class PurchaseReconciliationTool(Document):
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        job_id = f"purchase_reconciliation_tool:{company_gstin}:{return_type}"
+        job_id = download_job_id(company_gstin, return_type)
 
         if is_job_enqueued(job_id):
             return {
@@ -442,6 +444,7 @@ def download_gstr(
         periods = get_periods_to_download(company_gstin, return_type, periods, download_all=force)
 
     if not periods:
+        publish_download_complete(company_gstin, return_type.value)
         return
 
     latest_period = max(periods, key=period_sort_key)
@@ -462,6 +465,8 @@ def download_gstr(
                 "title": _("2A/2B Download Failed"),
                 "message": str(e),
                 "indicator": "red",
+                "gstin": company_gstin,
+                "return_type": return_type.value,
             },
             user=frappe.session.user,
         )

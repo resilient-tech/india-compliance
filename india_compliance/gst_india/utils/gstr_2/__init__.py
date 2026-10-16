@@ -70,10 +70,7 @@ def download_gstr_2a(gstin, return_periods):
     return_type = ReturnType.GSTR2A
     api = GSTR2aAPI(gstin)
     for return_period in return_periods:
-        is_last_period = return_periods[-1] == return_period
-
         json_data = frappe._dict({"gstin": gstin, "fp": return_period})
-        has_data = False
         for action, category in GSTR_2A_ACTIONS.items():
             requests_made += 1
 
@@ -82,7 +79,7 @@ def download_gstr_2a(gstin, return_periods):
                 {
                     "current_progress": requests_made * 100 / total_expected_requests,
                     "return_period": return_period,
-                    "is_last_period": is_last_period,
+                    "gstin": gstin,
                 },
                 user=frappe.session.user,
             )
@@ -126,15 +123,13 @@ def download_gstr_2a(gstin, return_periods):
 
             # making consistent with GSTR2a upload
             json_data[action.lower()] = data
-            has_data = True
 
         save_gstr_2a(gstin, return_period, json_data)
 
     if queued_message:
         publish_2a_2b_queued_message()
 
-    if not has_data:
-        end_transaction_progress(return_period)
+    publish_download_complete(gstin, return_type.value)
 
 
 def download_gstr_2b(gstin, return_periods):
@@ -145,15 +140,13 @@ def download_gstr_2b(gstin, return_periods):
 
     api = GSTR2bAPI(gstin)
     for return_period in return_periods:
-        has_data = False
-        is_last_period = return_periods[-1] == return_period
         requests_made += 1
         frappe.publish_realtime(
             "update_2a_2b_api_progress",
             {
                 "current_progress": requests_made * 100 / total_expected_requests,
                 "return_period": return_period,
-                "is_last_period": is_last_period,
+                "gstin": gstin,
             },
             user=frappe.session.user,
         )
@@ -194,8 +187,6 @@ def download_gstr_2b(gstin, return_periods):
         if response.error_type:
             continue
 
-        has_data = True
-
         # Handle multiple files for GSTR2B
         if response.data and (file_count := response.data.get("fc")):
             combined = {}
@@ -210,9 +201,6 @@ def download_gstr_2b(gstin, return_periods):
     if queued_message:
         publish_2a_2b_queued_message()
 
-    if not has_data:
-        end_transaction_progress(return_period)
-
     if regeneration_period:
         frappe.publish_realtime(
             "regenerate_gstr_2b",
@@ -222,6 +210,8 @@ def download_gstr_2b(gstin, return_periods):
             },
             user=frappe.session.user,
         )
+
+    publish_download_complete(gstin, ReturnType.GSTR2B.value)
 
 
 def download_ims_invoices(gstin, for_upload=False):
@@ -344,25 +334,14 @@ def save_gstr(
         rejected_data = {}
 
     company = get_party_for_gstin(gstin, "Company")
-    created = 0
     for category in GSTRCategory:
         gstr = get_data_handler(return_type.value, category.value)
         if not gstr:
             continue
 
-        created += (
-            gstr(company, gstin, return_period, category.value, gen_date_2b).create_transactions(
-                json_data.get(category.value.lower()),
-                rejected_data.get(category.value.lower()),
-            )
-            or 0
-        )
-
-    if return_period and not created:
-        frappe.publish_realtime(
-            "update_2a_2b_transactions_progress",
-            {"current_progress": 100, "return_period": return_period},
-            user=frappe.session.user,
+        gstr(company, gstin, return_period, category.value, gen_date_2b).create_transactions(
+            json_data.get(category.value.lower()),
+            rejected_data.get(category.value.lower()),
         )
 
 
@@ -426,6 +405,19 @@ def publish_2a_2b_queued_message():
     )
 
 
+def download_job_id(gstin, return_type):
+    return f"gstr_2a_2b_download:{gstin}:{return_type}"
+
+
+def publish_download_complete(gstin, return_type):
+    frappe.publish_realtime(
+        "gstr_2a_2b_download_complete",
+        {"gstin": gstin, "return_type": return_type},
+        user=frappe.session.user,
+        after_commit=True,
+    )
+
+
 def publish_ims_queued_message(for_upload):
     message = _(
         "Some categories are queued for download at GSTN as there may be large data."
@@ -441,23 +433,6 @@ def publish_ims_queued_message(for_upload):
     frappe.publish_realtime(
         "ims_download_queued",
         message={"message": message},
-        user=frappe.session.user,
-    )
-
-
-def end_transaction_progress(return_period):
-    """
-    For last period, set progress to 100% if no data is found
-    This will update the progress bar to 100% in the frontend
-    """
-
-    frappe.publish_realtime(
-        "update_2a_2b_transactions_progress",
-        {
-            "current_progress": 100,
-            "return_period": return_period,
-            "is_last_period": True,
-        },
         user=frappe.session.user,
     )
 
