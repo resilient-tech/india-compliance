@@ -872,9 +872,10 @@ class TestIneligibleITC(IntegrationTestCase):
 
         doc = create_transaction(**transaction_details)
 
-        # ERPNext refuses an asset return while the draft assets it created still exist
+        # ERPNext refuses an asset return while the draft assets it created still exist.
+        # force: on v16 a reused asset name keeps a stale Asset Activity (frappe/erpnext#60020)
         for asset in frappe.get_all("Asset", filters={"purchase_invoice": doc.name}, pluck="name"):
-            frappe.delete_doc("Asset", asset)
+            frappe.delete_doc("Asset", asset, force=True)
 
         doc = make_return_doc("Purchase Invoice", doc.name)
         doc.save()
@@ -956,9 +957,10 @@ class TestIneligibleITC(IntegrationTestCase):
 
         doc = create_transaction(**transaction_details)
 
-        # ERPNext refuses an asset return while the draft assets it created still exist
+        # ERPNext refuses an asset return while the draft assets it created still exist.
+        # force: on v16 a reused asset name keeps a stale Asset Activity (frappe/erpnext#60020)
         for asset in frappe.get_all("Asset", filters={"purchase_receipt": doc.name}, pluck="name"):
-            frappe.delete_doc("Asset", asset)
+            frappe.delete_doc("Asset", asset, force=True)
 
         doc = make_return_doc("Purchase Receipt", doc.name)
         doc.submit()
