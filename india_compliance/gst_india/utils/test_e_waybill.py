@@ -382,25 +382,26 @@ class TestEWaybill(IntegrationTestCase):
         doc = load_doc("Sales Invoice", si.name, "cancel")
 
         # Validate if e-waybill can be cancelled
-        doc.get_onload().get("e_waybill_info", {})["created_on"] = add_to_date(
-            get_datetime(),
-            days=-3,
-            as_datetime=True,
+        old_si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        mark_e_waybill_as_generated(
+            old_si.doctype,
+            old_si.name,
+            values={
+                "ewaybill": "351002721247",
+                "e_waybill_date": str(add_to_date(get_datetime(), days=-3)),
+                "valid_upto": str(add_to_date(get_datetime(), days=-2)),
+            },
         )
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(e-Waybill can be cancelled only within 24.*)$"),
-            EWaybillData(doc).validate_if_ewaybill_can_be_cancelled,
+            EWaybillData(
+                load_doc("Sales Invoice", old_si.name, "cancel")
+            ).validate_if_ewaybill_can_be_cancelled,
         )
 
         # assert if get_cancel_data dict equals to request data given in test records
-        doc.get_onload().get("e_waybill_info", {}).update(
-            {
-                "created_on": get_datetime(),
-            }
-        )
-
         e_waybill_cancel_data = self.e_waybill_test_data.get("cancel_e_waybill")
 
         self.assertDictEqual(

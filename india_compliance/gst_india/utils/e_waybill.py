@@ -66,6 +66,7 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.e_waybill_actions import (
     is_e_waybill_auto_cancellable,
     is_e_waybill_cancellable,
+    is_e_waybill_extendable,
     is_e_waybill_extendable_now,
     is_e_waybill_info_enabled,
     is_e_waybill_updatable,
@@ -668,6 +669,13 @@ def validate_data_before_schedule(doc, values):
     e_waybill_data = EWaybillData(doc)
 
     e_waybill_data.validate_if_e_waybill_is_set()
+
+    # this works because we do run_onload in load_doc above
+    if not is_e_waybill_extendable(doc.get_onload().get("e_waybill_info", {})):
+        frappe.throw(
+            _("e-Waybill can no longer be extended, as more than 8 hours have passed since it expired.")
+        )
+
     e_waybill_data.validate_mode_of_transport()
     e_waybill_data.validate_transit_type(values)
     e_waybill_data.validate_remaining_distance(values)

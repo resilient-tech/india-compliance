@@ -1,4 +1,7 @@
+import datetime
+
 import frappe
+import time_machine
 from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order import (
     make_subcontracting_receipt,
 )
@@ -18,6 +21,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     log_and_process_e_waybill_cancellation,
     log_and_process_e_waybill_generation,
     mark_e_waybill_as_generated,
+    validate_data_before_schedule,
 )
 from india_compliance.gst_india.utils.e_waybill_actions import is_e_waybill_auto_cancellable
 from india_compliance.gst_india.utils.tests import (
@@ -155,15 +159,29 @@ class TestEWaybillApplicability(IntegrationTestCase):
         pi = create_purchase_invoice(bill_no="EWB-APPL-5")
         self.mark_generated(pi, "351002721241", now_datetime())
 
-        self.assertTrue(pi.get_onload().e_waybill_info.cancellable)
+        EWaybillData(pi).validate_if_ewaybill_can_be_cancelled()
         self.assertIsNone(pi.get_onload().get("e_waybill_applicability"))
+
+        with time_machine.travel(now_datetime(), tick=False) as traveller:
+            traveller.shift(datetime.timedelta(hours=25))
+
+            self.assertRaisesRegex(
+                frappe.ValidationError,
+                "cancelled only within 24 Hours",
+                EWaybillData(pi).validate_if_ewaybill_can_be_cancelled,
+            )
 
     @change_settings("GST Settings", {"auto_cancel_e_waybill": 1})
     def test_e_waybill_older_than_a_day_is_not_cancellable(self):
         pi = create_purchase_invoice(bill_no="EWB-APPL-6")
         self.mark_generated(pi, "351002721242", add_to_date(now_datetime(), days=-2))
 
-        self.assertFalse(pi.get_onload().e_waybill_info.cancellable)
+        self.assertLess(pi.get_onload().e_waybill_info.cancel_upto, now_datetime())
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "cancelled only within 24 Hours",
+            EWaybillData(pi).validate_if_ewaybill_can_be_cancelled,
+        )
         self.assertFalse(is_e_waybill_auto_cancellable(pi))
 
     @change_settings("GST Settings", {"auto_cancel_e_waybill": 1, "enable_api": 0})
@@ -187,7 +205,27 @@ class TestEWaybillApplicability(IntegrationTestCase):
             },
         )
 
-        self.assertTrue(pi.get_onload().e_waybill_info.get("cancellable"))
+        self.assertGreater(pi.get_onload().e_waybill_info.cancel_upto, now_datetime())
+
+        part_a_only = create_purchase_invoice(bill_no="EWB-APPL-8A")
+        run_onload(part_a_only)
+        log_and_process_e_waybill_generation(
+            part_a_only,
+            {
+                "ewayBillNo": "351002721246",
+                "ewayBillDate": str(now_datetime()),
+                "e_waybill_status": "Manually Generated",
+            },
+        )
+
+        e_waybill_info = part_a_only.get_onload().e_waybill_info
+        self.assertEqual((e_waybill_info.extend_after, e_waybill_info.extend_before), (None, None))
+        EWaybillData(part_a_only).check_e_waybill_validity()
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "can be extended between",
+            EWaybillData(part_a_only).validate_if_e_waybill_can_be_extend,
+        )
 
     def test_generatable_right_after_cancellation(self):
         pi = create_purchase_invoice(bill_no="EWB-APPL-9")
@@ -203,11 +241,11 @@ class TestEWaybillApplicability(IntegrationTestCase):
         self.assertTrue(pi.get_onload().e_waybill_applicability.generatable)
 
     def test_e_waybill_validity_window(self):
-        for i, (hours, updatable, extendable, extendable_now) in enumerate(
+        for i, (hours, updatable, extendable_now) in enumerate(
             (
-                (10, True, True, False),
-                (-1, False, True, True),
-                (-9, False, False, False),
+                (10, True, False),
+                (-1, False, True),
+                (-9, False, False),
             )
         ):
             pi = create_purchase_invoice(bill_no=f"EWB-APPL-1{i}")
@@ -216,10 +254,34 @@ class TestEWaybillApplicability(IntegrationTestCase):
 
             e_waybill_info = pi.get_onload().e_waybill_info
             self.assertEqual(
-                (e_waybill_info.updatable, e_waybill_info.extendable, e_waybill_info.extendable_now),
-                (updatable, extendable, extendable_now),
-                f"valid upto {hours} hours from now",
+                (e_waybill_info.extend_after, e_waybill_info.extend_before),
+                (
+                    add_to_date(e_waybill_info.valid_upto, hours=-8),
+                    add_to_date(e_waybill_info.valid_upto, hours=8),
+                ),
             )
+
+            e_waybill_data = EWaybillData(pi)
+            for check, allowed, message in (
+                (e_waybill_data.check_e_waybill_validity, updatable, "cannot be modified after its validity"),
+                (
+                    e_waybill_data.validate_if_e_waybill_can_be_extend,
+                    extendable_now,
+                    "can be extended between",
+                ),
+            ):
+                if allowed:
+                    check()
+                else:
+                    self.assertRaisesRegex(frappe.ValidationError, message, check)
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "no longer be extended",
+            validate_data_before_schedule,
+            pi,
+            frappe._dict(),
+        )
 
     def test_purchase_receipt(self):
         self.assertApplicability(

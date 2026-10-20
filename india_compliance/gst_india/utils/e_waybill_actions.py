@@ -1,9 +1,7 @@
 """e-Waybill state for the form, and what can still be done with a generated e-Waybill."""
 
-from datetime import timedelta
-
 import frappe
-from frappe.utils import add_days, get_datetime
+from frappe.utils import add_days, add_to_date, get_datetime
 
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill_applicability import get_e_waybill_applicability
@@ -16,12 +14,6 @@ def set_e_waybill_onload(doc, method=None):
     # applicability only matters until the e-Waybill is generated
     if doc.get("ewaybill"):
         if is_e_waybill_info_enabled() and (e_waybill_info := get_e_waybill_info(doc)):
-            e_waybill_info.update(
-                cancellable=is_e_waybill_cancellable(e_waybill_info),
-                updatable=is_e_waybill_updatable(e_waybill_info),
-                extendable=is_e_waybill_extendable(e_waybill_info),
-                extendable_now=is_e_waybill_extendable_now(e_waybill_info),
-            )
             doc.set_onload("e_waybill_info", e_waybill_info)
 
         return
@@ -54,9 +46,8 @@ def is_e_waybill_auto_cancellable(doc, e_waybill_info=None):
 
 
 def is_e_waybill_cancellable(e_waybill_info):
-    # the portal allows cancelling for 24 hours after generation
-    generated_on = e_waybill_info.get("created_on")
-    return bool(generated_on) and add_days(generated_on, 1) >= get_datetime()
+    cancel_upto = e_waybill_info.get("cancel_upto")
+    return bool(cancel_upto) and get_datetime(cancel_upto) >= get_datetime()
 
 
 def is_e_waybill_updatable(e_waybill_info):
@@ -67,18 +58,19 @@ def is_e_waybill_updatable(e_waybill_info):
 
 def is_e_waybill_extendable(e_waybill_info):
     # extendable until 8 hours after expiry; before that window it can be scheduled
-    valid_upto = e_waybill_info.get("valid_upto")
-    return bool(valid_upto) and get_datetime() - get_datetime(valid_upto) <= timedelta(hours=8)
+    extend_before = e_waybill_info.get("extend_before")
+    return bool(extend_before) and get_datetime(extend_before) >= get_datetime()
 
 
 def is_e_waybill_extendable_now(e_waybill_info):
-    # the portal extends only within 8 hours either side of expiry
-    valid_upto = e_waybill_info.get("valid_upto")
-    return bool(valid_upto) and abs(get_datetime() - get_datetime(valid_upto)) <= timedelta(hours=8)
+    extend_after = e_waybill_info.get("extend_after")
+    return bool(extend_after) and get_datetime(extend_after) <= get_datetime() <= get_datetime(
+        e_waybill_info.get("extend_before")
+    )
 
 
 def get_e_waybill_info(doc):
-    return frappe.db.get_value(
+    e_waybill_info = frappe.db.get_value(
         "e-Waybill Log",
         doc.ewaybill,
         (
@@ -89,3 +81,17 @@ def get_e_waybill_info(doc):
         ),
         as_dict=True,
     )
+
+    if not e_waybill_info:
+        return
+
+    created_on, valid_upto = e_waybill_info.created_on, e_waybill_info.valid_upto
+    e_waybill_info.update(
+        # the portal allows cancelling for 24 hours after generation
+        cancel_upto=created_on and add_days(created_on, 1),
+        # the portal extends only within 8 hours either side of expiry
+        extend_after=valid_upto and add_to_date(valid_upto, hours=-8),
+        extend_before=valid_upto and add_to_date(valid_upto, hours=8),
+    )
+
+    return e_waybill_info
