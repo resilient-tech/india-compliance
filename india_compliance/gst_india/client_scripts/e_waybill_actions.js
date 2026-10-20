@@ -1,13 +1,3 @@
-const E_WAYBILL_CLASS = {
-    "Sales Invoice": SalesInvoiceEwaybill,
-    "Purchase Invoice": PurchaseInvoiceEwaybill,
-    "Delivery Note": DeliveryNoteEwaybill,
-    "Purchase Receipt": PurchaseReceiptEwaybill,
-    "Stock Entry": StockEntryEwaybill,
-    "Subcontracting Receipt": SubcontractingReceiptEwaybill,
-    "Asset Movement": AssetMovementEwaybill,
-};
-
 const E_WAYBILL_TRANSPORTER_FIELDS = ["transporter", "gst_transporter_id"];
 const E_WAYBILL_VEHICLE_FIELDS = ["vehicle_no", "mode_of_transport", "gst_vehicle_type", "lr_no", "lr_date"];
 
@@ -50,6 +40,9 @@ function setup_e_waybill_actions(doctype) {
             });
         },
         refresh(frm) {
+            if (gst_settings.enable_api && india_compliance.is_e_waybill_enabled_for(frm.doctype))
+                show_sandbox_mode_indicator();
+
             toggle_transport_fields(frm);
 
             if (frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode)
@@ -69,15 +62,19 @@ function setup_e_waybill_actions(doctype) {
                 india_compliance.make_text_red("e-Waybill", "Mark as Cancelled");
             }
 
-            if (!is_e_waybill_api_enabled(frm) || frm.is_dirty()) return;
+            if (frm.is_dirty()) return;
 
             // portal cancel is open for 24h, doc cancelled or not
             if (frm.doc.docstatus === 2) {
                 // with an IRN the e-Waybill goes with it: cancel from the e-Invoice side
                 if (!frm.doc.irn && can_cancel_e_waybill(frm)) {
-                    india_compliance.show_cancel_headline(
+                    india_compliance.show_headline_action(
                         frm,
-                        __("e-Waybill is still active and cancellable."),
+                        __("e-Waybill is still active and cancellable until {0}.", [
+                            frappe.datetime.str_to_user(frm.doc.__onload.e_waybill_info.cancel_upto),
+                        ]),
+                        __("Cancel"),
+                        "red",
                         () => show_cancel_e_waybill_dialog(frm),
                     );
 
@@ -87,28 +84,24 @@ function setup_e_waybill_actions(doctype) {
                 return;
             }
 
-            const is_ewb_generatable = is_e_waybill_generatable(frm, true);
+            if (!frm.doc.ewaybill) {
+                if (!is_e_waybill_api_enabled(frm)) return;
 
-            if (
-                frm.doc.docstatus === 0 ||
-                !is_ewb_generatable ||
-                frm.doc.e_waybill_status === "Not Applicable"
-            ) {
-                if (frm.doc.e_waybill_status === "Not Applicable" && is_ewb_generatable) {
-                    frm._ewb_message_list = [
-                        __("To generate e-Waybill, change e-Waybill Status to Pending."),
-                    ];
+                const is_ewb_generatable = is_e_waybill_generatable(frm);
+
+                if (
+                    frm.doc.docstatus === 0 ||
+                    !is_ewb_generatable ||
+                    frm.doc.e_waybill_status === "Not Applicable"
+                ) {
+                    frm.add_custom_button(
+                        __("Applicability Status"),
+                        () => show_e_waybill_generatable_status(frm, is_ewb_generatable),
+                        "e-Waybill",
+                    );
+                    return;
                 }
 
-                frm.add_custom_button(
-                    __("Applicability Status"),
-                    () => show_e_waybill_generatable_status(frm, is_ewb_generatable),
-                    "e-Waybill",
-                );
-                return;
-            }
-
-            if (!frm.doc.ewaybill) {
                 if (frm.doc.e_waybill_status === "Pending") {
                     frm.dashboard.add_comment(
                         __("e-Waybill is applicable for this invoice, but not yet generated or updated."),
@@ -171,7 +164,7 @@ function setup_e_waybill_actions(doctype) {
 
             if (
                 frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) &&
-                !has_extend_validity_expired(frm)
+                is_e_waybill_extendable(frm)
             ) {
                 frm.add_custom_button(
                     __("Extend Validity"),
@@ -200,7 +193,8 @@ function setup_e_waybill_actions(doctype) {
                 frm.add_custom_button(
                     __("Fetch Latest Data"),
                     () =>
-                        fetch_e_waybill_data(frm, { force: true }, () => {
+                        fetch_e_waybill_data(frm, { force: true }, async () => {
+                            await frm.reload_doc();
                             frappe.show_alert(__("Latest e-Waybill data fetched successfully"));
                         }),
                     "e-Waybill",
@@ -716,7 +710,7 @@ function confirm_portal_cancellation(frm) {
 }
 
 function confirm_e_waybill_cancellation(frm) {
-    if (!is_e_waybill_api_enabled(frm) || !is_e_waybill_cancellable(frm))
+    if (!is_e_waybill_cancellable(frm))
         return india_compliance.warn(
             __("Cannot Cancel e-Waybill"),
             __(
@@ -746,6 +740,12 @@ function cancel_on_portal(frm, method, args, btn) {
 
 // true: e-Waybill cancelled or skipped, false: backed out
 function show_cancel_e_waybill_dialog(frm, { before_doc_cancel = false } = {}) {
+    if (!before_doc_cancel && !is_e_waybill_cancellable(frm)) {
+        frappe.msgprint(__("e-Waybill can be cancelled only within 24 Hours of its generation"));
+        frm.refresh();
+        return Promise.resolve(false);
+    }
+
     return new Promise((resolve) => {
         const d = new frappe.ui.Dialog({
             title: __("Cancel e-Waybill"),
@@ -844,6 +844,11 @@ function get_cancel_e_waybill_dialog_fields(frm) {
 
 // one dialog for vehicle and/or transporter; both at once become two pages
 async function show_update_e_waybill_dialog(frm, { vehicle = false, transporter = false }) {
+    if (!is_e_waybill_updatable(frm)) {
+        frappe.msgprint(__("e-Waybill cannot be modified after its validity is over"));
+        return frm.refresh();
+    }
+
     const both = vehicle && transporter;
     const steps = { vehicle, transporter };
     const page = (name) => (both ? `eval: doc.page == '${name}'` : "");
@@ -1059,11 +1064,20 @@ async function update_e_waybill(frm, values, steps) {
 }
 
 async function show_extend_validity_dialog(frm) {
-    const { valid_upto, extension_scheduled } = frm.doc.__onload?.e_waybill_info || {};
+    const { valid_upto, extend_after, extend_before, extension_scheduled } =
+        frm.doc.__onload?.e_waybill_info || {};
     if (!valid_upto) return;
 
-    const scheduled_time = get_hours(valid_upto, 1, "DD-MM-YYYY HH:mm A");
-    const can_extend_now = can_extend_e_waybill_now(valid_upto);
+    if (!is_e_waybill_extendable(frm)) {
+        frappe.msgprint(
+            __("e-Waybill can no longer be extended, as more than 8 hours have passed since it expired."),
+        );
+        return frm.refresh();
+    }
+
+    const extendable_now = !is_in_future(extend_after) && is_in_future(extend_before);
+
+    const scheduled_time = frappe.datetime.str_to_user(get_hours(valid_upto, 1));
     const destination_address = await get_source_destination_address(frm, "destination_address");
     const is_in_movement = "eval: doc.consignment_status === 'In Movement'";
     const is_in_transit = "eval: doc.consignment_status === 'In Transit'";
@@ -1233,10 +1247,10 @@ async function show_extend_validity_dialog(frm) {
                 },
                 callback: () => frm.refresh(),
             });
-            if (can_extend_now) d.hide();
+            if (extendable_now) d.hide();
         },
     });
-    if (!can_extend_now) {
+    if (!extendable_now) {
         d.get_primary_btn().addClass("disabled");
         d.set_secondary_action(() => schedule_e_waybill_extension(frm, d, scheduled_time));
         d.set_secondary_action_label(__("Schedule"));
@@ -1283,92 +1297,37 @@ function prefill_data_from_e_waybill_log(frm, dialog) {
     });
 }
 
-function is_e_waybill_valid(frm) {
-    const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
-    return (
-        e_waybill_info &&
-        (!e_waybill_info.valid_upto ||
-            frappe.datetime.convert_to_user_tz(e_waybill_info.valid_upto, false).diff() > 0)
-    );
+function is_in_future(datetime) {
+    return Boolean(datetime) && frappe.datetime.convert_to_user_tz(datetime, false).diff() > 0;
 }
 
-async function has_e_waybill_threshold_met(frm) {
-    const threshold = await get_e_waybill_threshold(frm);
-    if (threshold != null && Math.abs(frm.doc.base_grand_total) >= threshold) {
-        return true;
-    }
-
-    return false;
+function is_e_waybill_updatable(frm) {
+    const e_waybill_info = frm.doc.__onload?.e_waybill_info;
+    return Boolean(e_waybill_info) && (!e_waybill_info.valid_upto || is_in_future(e_waybill_info.valid_upto));
 }
 
-async function get_e_waybill_threshold(frm) {
-    const { message } = await frappe.call(
-        "india_compliance.gst_india.utils.e_waybill.get_e_waybill_threshold",
-        { doctype: frm.doctype, docname: frm.doc.name },
-    );
-
-    if (message === undefined) {
-        return Infinity;
-    }
-
-    return message;
-}
-
-function is_e_waybill_applicable(frm, show_message) {
-    /**
-     * Defines supported conditions where e-Waybill is applicable
-     * and it's generation is supported.
-     */
-    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_applicable(show_message);
+function is_e_waybill_extendable(frm) {
+    return is_in_future(frm.doc.__onload?.e_waybill_info?.extend_before);
 }
 
 function is_e_waybill_api_enabled(frm) {
-    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_api_enabled();
+    return Boolean(frm.doc.__onload?.e_waybill_applicability?.api_enabled);
 }
 
-function is_e_waybill_generatable(frm, show_message) {
-    /**
-     * Checks if all information required to generate e-Waybill is available.
-     */
-    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable(show_message);
+function is_e_waybill_generatable(frm) {
+    return Boolean(frm.doc.__onload?.e_waybill_applicability?.generatable);
+}
+
+function is_e_waybill_cancellable(frm) {
+    return is_in_future(frm.doc.__onload?.e_waybill_info?.cancel_upto);
 }
 
 function get_hours(date, hours, date_time_format = frappe.defaultDatetimeFormat) {
     return moment(date).add(hours, "hours").format(date_time_format);
 }
 
-function can_extend_e_waybill_now(valid_upto) {
-    const extend_after = get_hours(valid_upto, -8);
-    const extend_before = get_hours(valid_upto, 8);
-    const now = frappe.datetime.now_datetime();
-
-    if (extend_after < now && now < extend_before) return true;
-    return false;
-}
-
-function has_extend_validity_expired(frm) {
-    const valid_upto = frm.doc.__onload?.e_waybill_info?.valid_upto;
-    const extend_before = get_hours(valid_upto, 8);
-    const now = frappe.datetime.now_datetime();
-
-    if (now > extend_before) return true;
-    return false;
-}
-
-function is_e_waybill_cancellable(frm) {
-    const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
-    return (
-        e_waybill_info &&
-        frappe.datetime.convert_to_user_tz(e_waybill_info.created_on, false).add("days", 1).diff() > 0
-    );
-}
-
 function can_cancel_e_waybill(frm) {
-    return (
-        frm.doc.ewaybill &&
-        is_e_waybill_cancellable(frm) &&
-        frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
-    );
+    return is_e_waybill_cancellable(frm) && frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name);
 }
 
 async function update_gst_tranporter_id(dialog) {
@@ -1451,13 +1410,19 @@ function get_transit_type(dialog) {
 }
 
 function show_e_waybill_generatable_status(frm, is_ewb_generatable) {
+    let message;
+
     if (frm.doc.docstatus === 0 && is_ewb_generatable) {
-        frm._ewb_message_list = [__("Please submit the doc to generate e-Waybill.")];
+        message = [__("Please submit the doc to generate e-Waybill.")];
+    } else if (frm.doc.e_waybill_status === "Not Applicable" && is_ewb_generatable) {
+        message = [__("To generate e-Waybill, change e-Waybill Status to Pending.")];
+    } else {
+        message = frm.doc.__onload?.e_waybill_applicability?.reasons || [];
     }
 
     frappe.msgprint({
         title: is_ewb_generatable ? __("e-Waybill can be generated") : __("e-Waybill cannot be generated"),
-        message: frm._ewb_message_list,
+        message,
         as_list: true,
         indicator: is_ewb_generatable ? "green" : "red",
     });
@@ -1495,8 +1460,8 @@ async function get_source_destination_address(frm, address_type) {
 
 function can_update_e_waybill(frm) {
     return (
-        is_e_waybill_api_enabled(frm) &&
-        is_e_waybill_valid(frm) &&
+        india_compliance.is_api_enabled() &&
+        is_e_waybill_updatable(frm) &&
         frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
     );
 }

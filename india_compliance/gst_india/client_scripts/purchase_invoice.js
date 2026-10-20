@@ -34,28 +34,8 @@ frappe.ui.form.on(DOCTYPE, {
         india_compliance.update_itc_claim_period(frm);
     },
 
-    async after_save(frm) {
-        if (
-            frm.doc.supplier_address ||
-            !(frm.doc.gst_category == "Unregistered" || frm.doc.is_return) ||
-            !is_e_waybill_applicable(frm) ||
-            !(await has_e_waybill_threshold_met(frm))
-        )
-            return;
-
-        frappe.show_alert(
-            {
-                message: __("Supplier Address is required to create e-Waybill"),
-                indicator: "yellow",
-            },
-            10,
-        );
-    },
-
     refresh(frm) {
         india_compliance.set_reconciliation_status(frm, "bill_no");
-        if (gst_settings.enable_e_waybill && gst_settings.enable_e_waybill_from_pi)
-            show_sandbox_mode_indicator();
 
         if (frm.doc.docstatus === 1 && frm.doc.is_boe_applicable && frm.doc.__onload?.has_pending_boe_qty) {
             frm.add_custom_button(

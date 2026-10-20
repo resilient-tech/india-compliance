@@ -34,21 +34,6 @@ frappe.ui.form.on(DOCTYPE, {
         ["bill_from_address_display", "bill_to_address_display"].forEach((field) => {
             frm.get_field(field)?.$wrapper.find(".ql-editor").css("white-space", "normal");
         });
-
-        if (!india_compliance.is_e_waybill_applicable_for_asset_movement(frm.doc)) return;
-
-        show_sandbox_mode_indicator();
-    },
-
-    after_save(frm) {
-        if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm))
-            frappe.show_alert(
-                {
-                    message: __("Party Address is required to create e-Waybill"),
-                    indicator: "yellow",
-                },
-                10,
-            );
     },
 
     company(frm) {
@@ -67,10 +52,10 @@ frappe.ui.form.on(DOCTYPE, {
 
 function set_address_labels(frm) {
     // company is billed to on a Receipt, and bills from otherwise
-    const [company_field, company_label, party_field, party_label] =
-        frm.doc.purpose === "Receipt"
-            ? ["bill_to_address", __("Bill To (Company)"), "bill_from_address", __("Bill From")]
-            : ["bill_from_address", __("Bill From (Company)"), "bill_to_address", __("Bill To")];
+    const is_inward = india_compliance.is_inward_transaction(frm.doc);
+    const [company_field, company_label, party_field, party_label] = is_inward
+        ? ["bill_to_address", __("Bill To (Company)"), "bill_from_address", __("Bill From")]
+        : ["bill_from_address", __("Bill From (Company)"), "bill_to_address", __("Bill To")];
 
     frm.set_df_property(company_field, "label", company_label);
     frm.set_df_property(party_field, "label", party_label);
@@ -82,7 +67,9 @@ function set_company_address(frm) {
     frm.set_value("bill_from_address", null);
     frm.set_value("bill_to_address", null);
 
-    const company_field = frm.doc.purpose === "Receipt" ? "bill_to_address" : "bill_from_address";
+    const company_field = india_compliance.is_inward_transaction(frm.doc)
+        ? "bill_to_address"
+        : "bill_from_address";
 
     frappe.call({
         method: "frappe.contacts.doctype.address.address.get_default_address",

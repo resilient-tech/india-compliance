@@ -15,6 +15,7 @@ from frappe.utils.data import format_date
 from frappe.www.printview import get_html_and_style
 from responses import matchers
 
+from india_compliance.exceptions import NotApplicableError
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.constants import (
     SERVICE_HSN_PREFIX,
@@ -23,7 +24,6 @@ from india_compliance.gst_india.constants import (
 from india_compliance.gst_india.constants.e_waybill import SUB_SUPPLY_TYPES
 from india_compliance.gst_india.overrides.sales_invoice import (
     cancel_e_waybill_e_invoice,
-    is_e_waybill_applicable,
 )
 from india_compliance.gst_india.overrides.test_asset_movement import (
     create_asset_movement,
@@ -40,7 +40,6 @@ from india_compliance.gst_india.utils.e_invoice import (
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
     _generate_e_waybill,
-    _get_e_waybill_threshold,
     auto_cancel_e_waybill_for_doc,
     cancel_e_waybill,
     fetch_e_waybill_data,
@@ -53,6 +52,10 @@ from india_compliance.gst_india.utils.e_waybill import (
     update_transaction,
     update_transporter,
     update_vehicle_info,
+)
+from india_compliance.gst_india.utils.e_waybill_applicability import (
+    get_e_waybill_applicability,
+    get_e_waybill_threshold,
 )
 from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_FINISHED_ITEM_TG,
@@ -379,25 +382,26 @@ class TestEWaybill(IntegrationTestCase):
         doc = load_doc("Sales Invoice", si.name, "cancel")
 
         # Validate if e-waybill can be cancelled
-        doc.get_onload().get("e_waybill_info", {})["created_on"] = add_to_date(
-            get_datetime(),
-            days=-3,
-            as_datetime=True,
+        old_si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        mark_e_waybill_as_generated(
+            old_si.doctype,
+            old_si.name,
+            values={
+                "ewaybill": "351002721247",
+                "e_waybill_date": str(add_to_date(get_datetime(), days=-3)),
+                "valid_upto": str(add_to_date(get_datetime(), days=-2)),
+            },
         )
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(e-Waybill can be cancelled only within 24.*)$"),
-            EWaybillData(doc).validate_if_ewaybill_can_be_cancelled,
+            EWaybillData(
+                load_doc("Sales Invoice", old_si.name, "cancel")
+            ).validate_if_ewaybill_can_be_cancelled,
         )
 
         # assert if get_cancel_data dict equals to request data given in test records
-        doc.get_onload().get("e_waybill_info", {}).update(
-            {
-                "created_on": get_datetime(),
-            }
-        )
-
         e_waybill_cancel_data = self.e_waybill_test_data.get("cancel_e_waybill")
 
         self.assertDictEqual(
@@ -969,16 +973,7 @@ class TestEWaybill(IntegrationTestCase):
         si = create_sales_invoice(**args, do_not_submit=True)
 
         self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(.*is required to generate e-Waybill)$"),
-            EWaybillData(si).validate_applicability,
-        )
-
-        si.customer_address = "_Test Registered Customer-Billing"
-        si.company_address = "Test Address - 1"
-
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
+            NotApplicableError,
             re.compile(r"^(e-Waybill cannot be generated because all items have.*)$"),
             EWaybillData(si).validate_applicability,
         )
@@ -987,6 +982,15 @@ class TestEWaybill(IntegrationTestCase):
             si,
             frappe._dict({"item_code": "_Test Trading Goods 1", "gst_hsn_code": "61149090"}),
         )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.MandatoryError,
+            re.compile(r"^(.*is required to generate e-Waybill)$"),
+            EWaybillData(si).validate_applicability,
+        )
+
+        si.customer_address = "_Test Registered Customer-Billing"
+        si.company_address = "Test Address - 1"
         si.update({"gst_transporter_id": "", "mode_of_transport": ""})
 
         self.assertRaisesRegex(
@@ -1279,7 +1283,7 @@ class TestEWaybill(IntegrationTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(Bill No is mandatory.*)$"),
-            EWaybillData(purchase_invoice).validate_bill_no_for_purchase,
+            EWaybillData(purchase_invoice).validate_applicability,
         )
 
         purchase_invoice.bill_no = "1234"
@@ -2169,7 +2173,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
         )
 
         gst_settings = frappe.get_cached_doc("GST Settings")
-        threshold = _get_e_waybill_threshold(si, gst_settings)
+        threshold = get_e_waybill_threshold(si, gst_settings)
         self.assertEqual(threshold, gst_settings.e_waybill_threshold)
 
     @with_intrastate_config([])
@@ -2183,7 +2187,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
         )
 
         gst_settings = frappe.get_cached_doc("GST Settings")
-        threshold = _get_e_waybill_threshold(si, gst_settings)
+        threshold = get_e_waybill_threshold(si, gst_settings)
         self.assertEqual(threshold, gst_settings.e_waybill_threshold)
 
     @with_intrastate_config(
@@ -2204,7 +2208,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             do_not_submit=True,
         )
 
-        threshold = _get_e_waybill_threshold(si)
+        threshold = get_e_waybill_threshold(si)
         self.assertEqual(threshold, 100000)
 
     @with_intrastate_config(
@@ -2225,7 +2229,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             do_not_submit=True,
         )
 
-        threshold = _get_e_waybill_threshold(si)
+        threshold = get_e_waybill_threshold(si)
         self.assertIsNone(threshold)
 
     @with_intrastate_config(
@@ -2245,7 +2249,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
         )
 
-        self.assertTrue(is_e_waybill_applicable(si))
+        self.assertTrue(get_e_waybill_applicability(si).is_required())
 
     @with_intrastate_config(
         [
@@ -2264,7 +2268,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
         )
 
-        self.assertFalse(is_e_waybill_applicable(si))
+        self.assertFalse(get_e_waybill_applicability(si).is_required())
 
     @with_intrastate_config(
         [
@@ -2283,7 +2287,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
         )
 
-        self.assertFalse(is_e_waybill_applicable(si))
+        self.assertFalse(get_e_waybill_applicability(si).is_required())
 
     @with_intrastate_config([])
     def test_is_e_waybill_applicable_inter_state_threshold_met(self):
@@ -2296,7 +2300,7 @@ class TestEWaybillThreshold(IntegrationTestCase):
             company_address="_Test Indian Registered Company-Billing",
         )
 
-        self.assertTrue(is_e_waybill_applicable(si))
+        self.assertTrue(get_e_waybill_applicability(si).is_required())
 
 
 class TestSubcontractingInwardEWaybill(IntegrationTestCase):

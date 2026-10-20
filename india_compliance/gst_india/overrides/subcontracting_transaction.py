@@ -218,20 +218,11 @@ def get_dashboard_data(data):
     return SubcontractingReceiptController.get_dashboard_data(data)
 
 
-def onload(doc, method=None):
-    SubcontractingReceiptController(doc).set_e_waybill_info()
-
-
 class SubcontractingController(CustomEwaybillController):
     """Shared by every doctype behind the "e-Waybill for Subcontracting" switch.
 
     Stock Entry subclasses this too, from `overrides/stock_entry.py`.
     """
-
-    def is_e_waybill_applicable(self):
-        return super().is_e_waybill_applicable() and bool(
-            frappe.get_cached_doc("GST Settings").enable_e_waybill_for_sc
-        )
 
 
 class SubcontractingOrderController(SubcontractingController):
@@ -250,10 +241,6 @@ def get_transaction_controller(doc):
         return SubcontractingReceiptController(doc)
 
     return SubcontractingOrderController(doc)
-
-
-def is_e_waybill_applicable(doc):
-    return get_transaction_controller(doc).is_e_waybill_applicable()
 
 
 def validate(doc, method=None):

@@ -1,5 +1,7 @@
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
+        if (gst_settings.enable_api && gst_settings.enable_e_invoice) show_sandbox_mode_indicator();
+
         if (frm.doc.__onload?.e_invoice_info?.is_generated_in_sandbox_mode)
             frm.get_field("irn").set_description("Generated in Sandbox Mode");
 
@@ -22,8 +24,12 @@ frappe.ui.form.on("Sales Invoice", {
         // portal cancel is open for 24h, invoice cancelled or not
         if (frm.doc.docstatus === 2) {
             if (can_cancel_irn(frm)) {
-                india_compliance.show_cancel_headline(frm, __("IRN is still active and cancellable."), () =>
-                    show_cancel_e_invoice_dialog(frm),
+                india_compliance.show_headline_action(
+                    frm,
+                    __("IRN is still active and cancellable."),
+                    __("Cancel"),
+                    "red",
+                    () => show_cancel_e_invoice_dialog(frm),
                 );
             }
 

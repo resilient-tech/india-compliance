@@ -8,7 +8,7 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
 
     if (!frappe.perm.has_perm(DOCTYPE, 0, "submit")) return;
 
-    if (gst_settings.enable_e_waybill) {
+    if (india_compliance.is_e_waybill_enabled_for(DOCTYPE)) {
         add_bulk_action_for_invoices(list_view, __("Generate e-Waybill JSON"), generate_e_waybill_json);
 
         add_bulk_action_for_invoices(
@@ -18,11 +18,12 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
             [0, 1],
         );
 
-        add_bulk_action_for_invoices(
-            list_view,
-            __("Enqueue Bulk e-Waybill Generation"),
-            enqueue_bulk_e_waybill_generation,
-        );
+        if (india_compliance.is_api_enabled())
+            add_bulk_action_for_invoices(
+                list_view,
+                __("Enqueue Bulk e-Waybill Generation"),
+                enqueue_bulk_e_waybill_generation,
+            );
     }
 
     if (frappe.model.can_print("e-Waybill Log")) {
