@@ -68,7 +68,9 @@ Object.assign(india_compliance, {
     INWARD_PURPOSES: frappe.boot.inward_purposes,
 
     is_e_waybill_enabled_for(doctype) {
-        return frappe.boot.e_waybill_enabled_doctypes.includes(doctype);
+        return Boolean(
+            gst_settings.enable_e_waybill && gst_settings[frappe.boot.e_waybill_switches[doctype]],
+        );
     },
 
     is_subcontracting_inward_entry(doc) {

@@ -32,6 +32,9 @@ def set_bootinfo(bootinfo):
     bootinfo["e_waybill_stock_entry_purposes"] = E_WAYBILL_STOCK_ENTRY_PURPOSES
     bootinfo["same_gstin_purposes"] = SAME_GSTIN_PURPOSES
     bootinfo["inward_purposes"] = INWARD_PURPOSES
+    bootinfo["e_waybill_switches"] = {
+        doctype: applicability.SWITCH for doctype, applicability in E_WAYBILL_APPLICABILITY.items()
+    }
 
     gst_settings = frappe.get_cached_doc("GST Settings").as_dict()
     gst_settings.api_secret = "***" if gst_settings.api_secret else ""
@@ -44,11 +47,6 @@ def set_bootinfo(bootinfo):
         gst_settings.pop(key, None)
 
     bootinfo["gst_settings"] = gst_settings
-    bootinfo["e_waybill_enabled_doctypes"] = [
-        doctype
-        for doctype, applicability in E_WAYBILL_APPLICABILITY.items()
-        if gst_settings.enable_e_waybill and gst_settings.get(applicability.SWITCH)
-    ]
     bootinfo["india_state_options"] = list(INDIAN_STATES)
     bootinfo["gst_state_by_number"] = {number: state for state, number in INDIAN_STATES.items()}
     bootinfo["ic_api_enabled_from_conf"] = bool(frappe.conf.ic_api_secret)
