@@ -639,6 +639,7 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
                 "doctype": "Stock Entry",
                 "purpose": "Material Transfer",
                 "stock_entry_type": "Material Transfer",
+                "add_to_transit": 1,
                 "company": "_Test Indian Registered Company",
                 "bill_from_address": "_Test Indian Registered Company-Billing",
                 "bill_from_gstin": "24AAQCA8719H1ZC",
@@ -651,7 +652,7 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
                         "qty": 1,
                         "gst_hsn_code": "61149090",
                         "s_warehouse": "Stores - _TIRC",
-                        "t_warehouse": "Finished Goods - _TIRC",
+                        "t_warehouse": "Goods In Transit - _TIRC",
                     }
                 ],
             }
