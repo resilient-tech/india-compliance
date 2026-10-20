@@ -824,7 +824,7 @@ class LedgerNetMixin:
         )
 
         # 11A Advances Received: full advance base, reported net of GST
-        self._assert_advance_row(books.prepare_advances_recevied_data(), payment_doc.name, received)
+        self._assert_advance_row(books.prepare_advances_received_data(), payment_doc.name, received)
         # 11B Advances Adjusted: net adjusted base, reported negative
         self._assert_advance_row(books.prepare_advances_adjusted_data(), payment_doc.name, adjusted)
 

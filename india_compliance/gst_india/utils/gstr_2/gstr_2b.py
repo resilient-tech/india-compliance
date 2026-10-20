@@ -38,7 +38,7 @@ class GSTR2b(GSTR):
         return details
 
     def get_items(self, document):
-        return [take(line, ITEM_KEYS) for line in document.get(raw2b.ITEMS, [])]
+        return [take(line, ITEM_KEYS) for line in document.get(raw2b.ITEMS) or []]
 
     def get_transaction(self, details, items=None):
         return super().get_transaction(details, [] if items is None else items)
@@ -74,6 +74,7 @@ class GSTR2b(GSTR):
         # delete rejected transactions
         for transaction in rejected_transactions:
             filters = {
+                "company_gstin": self.gstin,
                 "bill_no": transaction.bill_no,
                 "bill_date": transaction.bill_date,
                 "classification": transaction.classification,

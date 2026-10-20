@@ -313,9 +313,6 @@ doc_events = {
         "after_insert": ("india_compliance.gst_india.overrides.party.create_primary_address"),
     },
     "Tax Category": {"validate": "india_compliance.gst_india.overrides.tax_category.validate"},
-    "Tax Withholding Category": {
-        "on_change": "india_compliance.income_tax_india.overrides.tax_withholding_category.on_change",
-    },
     "Unreconcile Payment": {
         "before_submit": "india_compliance.gst_india.overrides.unreconcile_payment.before_submit",
     },
@@ -517,6 +514,9 @@ scheduler_events = {
             "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_reconcile",
         ],
         "0 1 * * *": ["india_compliance.gst_india.utils.e_waybill.extend_scheduled_e_waybills"],
+        "0 3 * * *": [
+            "india_compliance.gst_india.doctype.gst_return_export.gst_return_export.delete_export_files",
+        ],
     }
 }
 

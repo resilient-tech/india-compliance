@@ -541,7 +541,7 @@ class AggregateInvoices:
 
         aggregated_invoice = invoices[0].copy()
         aggregated_invoice.update(
-            {key: sum([invoice.get(key, 0) for invoice in invoices]) for key in value_keys}
+            {key: sum([invoice.get(key) or 0 for invoice in invoices]) for key in value_keys}
         )
 
         return aggregated_invoice

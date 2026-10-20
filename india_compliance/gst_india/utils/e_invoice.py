@@ -660,7 +660,10 @@ class EInvoiceData(GSTTransactionData):
                 )
 
         if self.generate_nil_exempt_as_taxable():
-            self.transaction_details.total_taxable_value += self.transaction_details.total_non_taxable_value
+            self.transaction_details.total_taxable_value = self.rounded(
+                self.transaction_details.total_taxable_value
+                + self.transaction_details.total_non_taxable_value
+            )
             self.transaction_details.total_non_taxable_value = 0
 
         self.transaction_details.update(
@@ -841,7 +844,7 @@ class EInvoiceData(GSTTransactionData):
                 "CgstVal": self.transaction_details.total_cgst_amount,
                 "SgstVal": self.transaction_details.total_sgst_amount,
                 "IgstVal": self.transaction_details.total_igst_amount,
-                "CesVal": (
+                "CesVal": self.rounded(
                     self.transaction_details.total_cess_amount
                     + self.transaction_details.total_cess_non_advol_amount
                 ),

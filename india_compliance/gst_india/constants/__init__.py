@@ -51,10 +51,7 @@ E_WAYBILL_STOCK_ENTRY_PURPOSES = (*SAME_GSTIN_PURPOSES["Stock Entry"], *SUBCONTR
 # Transporter fields that stay editable after submit until an e-Waybill is generated.
 TRANSPORTER_FIELDS = (
     "transporter",
-    "transporter_name",
     "gst_transporter_id",
-    "driver",
-    "driver_name",
     "lr_no",
     "lr_date",
     "vehicle_no",

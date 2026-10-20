@@ -19,10 +19,10 @@ def execute(filters=None):
 
 
 def get_data(filters):
-    _class = GSTR3BInwardInvoices(filters)
+    inward_invoices = GSTR3BInwardInvoices(filters)
     invoices = []
 
     for doctype in ("Purchase Invoice", "Bill of Entry"):
-        invoices.extend(_class.get_data(doctype))
+        invoices.extend(inward_invoices.get_data(doctype))
 
     return process_hsn_data(invoices)

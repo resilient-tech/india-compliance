@@ -45,6 +45,12 @@ def get_property_setters(*, include_defaults=False):
             "value": "gstin, country, state",
         },
         {
+            "doctype": "Item",
+            "fieldname": "is_sales_item",
+            "property": "allow_in_quick_entry",
+            "value": "1",
+        },
+        {
             "doctype": "Accounts Settings",
             "fieldname": "determine_address_tax_category_from",
             "property": "read_only",
@@ -121,7 +127,7 @@ ALLOW_ON_SUBMIT_PROPERTY = {
 EWAYBILL_READ_ONLY_PROPERTY = {
     "property": "read_only_depends_on",
     "property_type": "Code",
-    "value": "eval: doc.ewaybill",
+    "value": "",
 }
 
 FETCH_IF_EMPTY_PROPERTY = {

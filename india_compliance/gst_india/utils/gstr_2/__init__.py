@@ -202,12 +202,8 @@ def download_gstr_2b(gstin, return_periods):
             for file_num in range(1, file_count + 1):
                 r = api.get_data(return_period, file_num=file_num)
                 merge_dicts(combined, r.data or {})
-                save_gstr_2b(gstin, return_period, r, store_raw=False)
 
-            if combined:
-                store_raw_return_data(gstin, ReturnType.GSTR2B.value, return_period, combined)
-
-            continue  # skip first response if file_count is greater than 1
+            response = frappe._dict(data=frappe._dict(combined))
 
         save_gstr_2b(gstin, return_period, response)
 
@@ -300,7 +296,7 @@ def save_gstr_2a(gstin, return_period, json_data):
     save_gstr(gstin, return_type, return_period, json_data)
 
 
-def save_gstr_2b(gstin, return_period, json_data, *, store_raw=True):
+def save_gstr_2b(gstin, return_period, json_data):
     json_data = json_data.data
     return_type = ReturnType.GSTR2B
     if not json_data or json_data.get("gstin") != gstin:
@@ -312,8 +308,7 @@ def save_gstr_2b(gstin, return_period, json_data, *, store_raw=True):
             title=_("Invalid Response Received."),
         )
 
-    if store_raw:
-        store_raw_return_data(gstin, return_type.value, return_period, dict(json_data))
+    store_raw_return_data(gstin, return_type.value, return_period, dict(json_data))
 
     create_import_log(gstin, return_type.value, return_period)
     save_gstr(
@@ -349,14 +344,25 @@ def save_gstr(
         rejected_data = {}
 
     company = get_party_for_gstin(gstin, "Company")
+    created = 0
     for category in GSTRCategory:
         gstr = get_data_handler(return_type.value, category.value)
         if not gstr:
             continue
 
-        gstr(company, gstin, return_period, category.value, gen_date_2b).create_transactions(
-            json_data.get(category.value.lower()),
-            rejected_data.get(category.value.lower()),
+        created += (
+            gstr(company, gstin, return_period, category.value, gen_date_2b).create_transactions(
+                json_data.get(category.value.lower()),
+                rejected_data.get(category.value.lower()),
+            )
+            or 0
+        )
+
+    if return_period and not created:
+        frappe.publish_realtime(
+            "update_2a_2b_transactions_progress",
+            {"current_progress": 100, "return_period": return_period},
+            user=frappe.session.user,
         )
 
 

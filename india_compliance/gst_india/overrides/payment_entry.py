@@ -320,7 +320,10 @@ def get_proportionate_tax(amount, base_allocated_amount, base_amount):
     if not base_amount:
         return 0
 
-    return flt(amount * base_allocated_amount / base_amount, 2)
+    return flt(
+        amount * base_allocated_amount / base_amount,
+        get_field_precision(frappe.get_meta("Advance Taxes and Charges").get_field("base_tax_amount")),
+    )
 
 
 def get_proportionate_taxes_for_row(payment_entry, reference_row, taxes):
