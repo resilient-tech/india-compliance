@@ -1,4 +1,5 @@
 import copy
+import time
 from base64 import b64decode
 from typing import ClassVar
 from urllib.parse import quote, urljoin
@@ -14,7 +15,15 @@ from india_compliance.exceptions import (
     GSPLimitExceededError,
     GSPServerError,
 )
-from india_compliance.gst_india.utils import is_api_enabled
+from india_compliance.gst_india.utils import (
+    SLOW_RESPONSE_SECONDS,
+    is_api_enabled,
+    is_server_down,
+    mark_portal_slow,
+    mark_server_down,
+    throw_server_down,
+    track_inflight,
+)
 from india_compliance.gst_india.utils.api import enqueue_integration_request
 
 BASE_URL = "https://asp.resilient.tech"
@@ -25,6 +34,13 @@ class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
     PLACEHOLDER = "*****"
+
+    # (connect, read) secs. no read limit, downloads can be slow.
+    REQUEST_TIMEOUT = (10, None)
+
+    # skip request if server was down in the last 2 mins
+    FAIL_FAST_IF_SERVER_DOWN = False
+
     DEFAULT_MASK_MAP: ClassVar[dict] = {
         "headers": [
             "x-api-key",
@@ -130,6 +146,8 @@ class BaseAPI:
         if method not in ("GET", "POST", "PUT"):
             frappe.throw(_("Invalid method {0}").format(method))
 
+        self.check_server_status()
+
         request_args = frappe._dict(
             url=self.get_url(endpoint),
             params=params,
@@ -165,7 +183,20 @@ class BaseAPI:
         try:
             self.before_request(request_args)
 
-            response = requests.request(method, **request_args)
+            # raise known errors, so auto-retry kicks in
+            started = time.monotonic()
+            with track_inflight(self.FAIL_FAST_IF_SERVER_DOWN):
+                try:
+                    response = requests.request(method, timeout=self.REQUEST_TIMEOUT, **request_args)
+                except requests.exceptions.Timeout as e:
+                    raise GatewayTimeoutError(str(e)) from e
+                except requests.exceptions.ConnectionError as e:
+                    raise GSPServerError(str(e)) from e
+
+            # slow reply: send the next submits to the queue
+            if self.tracks_portal_health and time.monotonic() - started > SLOW_RESPONSE_SECONDS:
+                mark_portal_slow()
+
             if api_request_id := response.headers.get("x-amzn-RequestId"):
                 self.request_id = api_request_id
                 log.request_id = api_request_id
@@ -198,6 +229,11 @@ class BaseAPI:
 
         except Exception as e:
             log.error = str(e)
+
+            # let the next requests fail fast
+            if self.is_outage(e):
+                mark_server_down(self.API_NAME)
+
             raise e
 
         finally:
@@ -270,6 +306,25 @@ class BaseAPI:
                         title=exception.title,
                     )
 
+    def check_server_status(self):
+        if not (self.FAIL_FAST_IF_SERVER_DOWN and is_server_down(self.API_NAME)):
+            return
+
+        throw_server_down()
+
+    @property
+    def tracks_portal_health(self):
+        # the flags are bench-wide, so keep flaky sandbox out of them
+        return self.FAIL_FAST_IF_SERVER_DOWN and (not self.sandbox_mode or frappe.flags.in_test)
+
+    def is_outage(self, exception):
+        """Server error the next request would hit too. Account limits are not outages."""
+        return (
+            self.tracks_portal_health
+            and isinstance(exception, GSPServerError)
+            and not isinstance(exception, GSPLimitExceededError)
+        )
+
     def is_ignored_error(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw
         pass
@@ -298,6 +353,10 @@ class BaseAPI:
                 _("Your India Compliance API key is invalid"),
                 title=_("Invalid API Key"),
             )
+
+        # upstream down, next request would hit it too
+        if status_code in (502, 503):
+            raise GSPServerError(f"HTTP {status_code}")
 
         if status_code == 504:
             raise GatewayTimeoutError
