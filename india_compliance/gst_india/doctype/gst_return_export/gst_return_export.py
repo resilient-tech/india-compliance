@@ -20,6 +20,7 @@ from frappe.utils import (
     now_datetime,
     time_diff_in_seconds,
 )
+from frappe.utils.background_jobs import is_job_enqueued
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -46,6 +47,7 @@ from india_compliance.gst_india.utils import (
     get_periods_between_dates,
     validate_gstin_permission,
 )
+from india_compliance.gst_india.utils.gstr_2 import download_job_id
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
 EXPORT_READY_EVENT = "gst_return_export_ready"
@@ -88,6 +90,15 @@ class GSTReturnExport(Document):
                 "indicator": "orange",
             }
 
+        job_id = download_job_id(company_gstin, return_type)
+        if is_job_enqueued(job_id):
+            return {
+                "message": _(
+                    "A download job is already in progress for the GSTIN - {0} and Return Type - {1}"
+                ).format(company_gstin, return_type),
+                "indicator": "orange",
+            }
+
         # ask OTP now, not inside the job
         TaxpayerBaseAPI(company_gstin).validate_auth_token()
 
@@ -98,6 +109,8 @@ class GSTReturnExport(Document):
             return_type=return_type,
             periods=periods,
             queue="long",
+            job_id=job_id,
+            deduplicate=True,
             now=frappe.flags.in_test,
             timeout=1800,
             enqueue_after_commit=True,

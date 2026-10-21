@@ -355,6 +355,22 @@ class TestGSTReturnExportController(IntegrationTestCase):
 
         self.assertEqual(result["indicator"], "orange")
 
+    def test_sync_refuses_a_second_download_of_the_same_return(self):
+        today = "india_compliance.gst_india.doctype.purchase_reconciliation_tool.getdate"
+        with (
+            patch(today, return_value=getdate("2021-05-20")),
+            patch(
+                "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.get_periods_to_download",
+                return_value=["042021"],
+            ),
+            patch.object(controller, "is_job_enqueued", return_value=True),
+            patch("frappe.enqueue") as enqueue,
+        ):
+            result = self.doc.sync_return_data(GSTIN, "GSTR-2B", ["042021"], "2021-03-01", "2021-08-01")
+
+        self.assertEqual(result["indicator"], "orange")
+        enqueue.assert_not_called()
+
     def test_sync_status_stops_at_the_portal_cut_off(self):
         """2B for a month exists from the 14th of the next; on 20 May, April is the newest."""
         today = "india_compliance.gst_india.doctype.purchase_reconciliation_tool.getdate"
