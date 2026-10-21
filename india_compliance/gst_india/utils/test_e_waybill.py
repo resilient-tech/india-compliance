@@ -1,21 +1,29 @@
+import base64
 import copy
 import datetime
+import json
 import random
 import re
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import frappe
 import pytz
 import responses
 import time_machine
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_to_date, get_datetime, now_datetime, today
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+from frappe.utils import add_to_date, flt, get_datetime, getdate, now_datetime, today
+>>>>>>> f0c6bec (fix: Add request timeout handling and auto-retry logic for e-Invoice/e-Waybill (#4545))
 from frappe.utils.data import format_date
 from frappe.www.printview import get_html_and_style
 from responses import matchers
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+from india_compliance.gst_india.api_classes.nic.e_waybill import EWaybillAPI, StandardEWaybillAPI
 from india_compliance.gst_india.constants import (
     SERVICE_HSN_PREFIX,
     SHIP_TO_GSTIN_APPLICABLE_DATE,
@@ -27,7 +35,15 @@ from india_compliance.gst_india.overrides.sales_invoice import (
 from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
     create_subcontracting_data,
 )
-from india_compliance.gst_india.utils import load_doc, parse_datetime, run_or_report_failure
+from india_compliance.gst_india.utils import (
+    clear_portal_slow,
+    clear_server_down,
+    is_server_down,
+    load_doc,
+    mark_server_down,
+    parse_datetime,
+    run_or_report_failure,
+)
 from india_compliance.gst_india.utils.e_invoice import (
     auto_cancel_e_invoice_e_waybill,
     retry_e_invoice_e_waybill_generation,
@@ -42,6 +58,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     generate_e_waybill,
     get_e_waybills_to_extend,
     get_source_destination_address,
+    link_matching_e_waybill,
     mark_e_waybill_as_cancelled,
     mark_e_waybill_as_generated,
     schedule_ewaybill_for_extension,
@@ -90,6 +107,12 @@ class TestEWaybill(FrappeTestCase):
         )
 
         update_dates_for_test_data(cls.e_waybill_test_data)
+
+    def setUp(self):
+        super().setUp()
+        # a flag left by one test shouldn't reroute or fail fast the next
+        clear_server_down("e-Invoice", "e-Waybill")
+        clear_portal_slow()
 
     def test_get_data(self):
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
@@ -1061,7 +1084,7 @@ class TestEWaybill(FrappeTestCase):
     @responses.activate
     def test_schedule_e_waybill_for_extension(self):
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
-        self._generate_e_waybill(si.name, force=True)
+        self._generate_e_waybill(si.name)
         doc = load_doc("Sales Invoice", si.name, "submit")
 
         valid_upto = frappe.db.get_value("e-Waybill Log", doc.ewaybill, "valid_upto")
@@ -1245,6 +1268,8 @@ class TestEWaybill(FrappeTestCase):
             frappe.get_cached_value("GST Settings", "GST Settings", "is_retry_einv_ewb_generation_pending"),
             1,
         )
+        # next requests fail fast, till the retry run probes again
+        self.assertTrue(is_server_down("e-Waybill"))
 
         retry_ewb_test_date = self.e_waybill_test_data.goods_item_with_ewaybill
 
@@ -1260,6 +1285,7 @@ class TestEWaybill(FrappeTestCase):
         retry_e_invoice_e_waybill_generation()
         si = load_doc("Sales Invoice", si.name, "submit")
 
+        self.assertFalse(is_server_down("e-Waybill"))
         self.assertEqual(si.e_waybill_status, "Generated")
         self.assertEqual(
             si.ewaybill,
@@ -1348,6 +1374,44 @@ class TestEWaybill(FrappeTestCase):
         with self.assertRaises(frappe.exceptions.ValidationError) as cm:
             doc = load_doc("Sales Invoice", si.name, "submit")
             _generate_e_waybill(doc)
+
+        self.assertIn("GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception))
+
+    @responses.activate
+    @change_settings("GST Settings", {"use_fallback_for_nic": 1, "enable_e_invoice": 1})
+    def test_generate_e_waybill_with_irn_ignores_e_waybill_outage(self):
+        """e-Waybill with Irn goes to the e-Invoice portal, so an e-Waybill outage shouldn't stop it"""
+
+        test_data = self.e_waybill_test_data.get("ewaybill_gstin_error_3029")
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            qty=1000,
+            transporter="_Test Common Supplier",
+            distance=10,
+            mode_of_transport="Road",
+            irn="12345678901234567",
+        )
+
+        responses.add(
+            responses.POST,
+            BASE_URL + "/test/ei/api/ewaybill",
+            json=test_data.get("error_response_enriched"),
+            status=200,
+        )
+
+        responses.add(
+            responses.GET,
+            BASE_URL + "/test/ei/api/master/syncgstin",
+            match=[matchers.query_param_matcher({"gstin": "29AAACI1195H2ZH"})],
+            json=test_data.get("sync_gstin_response_inactive"),
+            status=200,
+        )
+
+        mark_server_down("e-Waybill")
+
+        # error is from the portal, so the request was sent
+        with self.assertRaises(frappe.exceptions.ValidationError) as cm:
+            _generate_e_waybill(load_doc("Sales Invoice", si.name, "submit"))
 
         self.assertIn("GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception))
 
@@ -1759,7 +1823,7 @@ class TestEWaybill(FrappeTestCase):
         self.assertEqual(e_waybill_data.get("actToStateCode"), 24)
 
     # helper functions
-    def _generate_e_waybill(self, docname=None, doctype="Sales Invoice", test_data=None, force=False):
+    def _generate_e_waybill(self, docname=None, doctype="Sales Invoice", test_data=None):
         """
         Mocks response for generate_e_waybill and get_e_waybill.
         Calls generate_e_waybill function.
@@ -1796,7 +1860,7 @@ class TestEWaybill(FrappeTestCase):
 
         values = frappe._dict(test_data.get("values")) if test_data.get("values") else None
 
-        generate_e_waybill(doctype=doctype, docname=docname, values=values, force=force)
+        generate_e_waybill(doctype=doctype, docname=docname, values=values)
 
     def _mock_e_waybill_response(self, data, match_list, method="POST", api=None, replace=False):
         """
@@ -2209,3 +2273,315 @@ class TestEWaybillThreshold(FrappeTestCase):
         )
 
         self.assertTrue(is_e_waybill_applicable(si))
+<<<<<<< HEAD
+=======
+
+
+class TestSubcontractingInwardEWaybill(IntegrationTestCase):
+    """e-Waybill data for Subcontracting Delivery and Return Raw Material to Customer.
+
+    Both are outward movements (company to customer) on a Delivery Challan with
+    sub supply type "Others" plus a description, and the taxable value includes
+    the customer-provided material value.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        frappe.db.set_single_value(
+            "GST Settings",
+            {"enable_api": 1, "enable_e_waybill": 1, "enable_e_waybill_for_sc": 1},
+        )
+
+    def setUp(self):
+        super().setUp()
+        clear_server_down("e-Invoice", "e-Waybill")
+
+    @staticmethod
+    def _set_transport_details(stock_entry, sub_supply_desc):
+        update_transaction(
+            stock_entry,
+            frappe._dict(
+                {
+                    "transporter": None,
+                    "gst_transporter_id": None,
+                    "vehicle_no": "GJ07DL9009",
+                    "distance": 10,
+                    "lr_no": None,
+                    "lr_date": None,
+                    "mode_of_transport": "Road",
+                    "gst_vehicle_type": "Regular",
+                    "sub_supply_type": "Others",
+                    "sub_supply_desc": sub_supply_desc,
+                }
+            ),
+        )
+        stock_entry.reload()
+        # onload populates the virtual company_gstin / supplier_gstin fields the
+        # e-Waybill data builder reads (mirrors the form-load context).
+        stock_entry.run_method("onload")
+
+    def _assert_outward_to_customer(self, data, sub_supply_desc, stock_entry):
+        # Outward Delivery Challan with sub supply type "Others" + description.
+        self.assertEqual(data["supplyType"], "O")
+        self.assertEqual(data["subSupplyType"], SUB_SUPPLY_TYPES["Others"])
+        self.assertEqual(data["subSupplyDesc"], sub_supply_desc)
+        self.assertEqual(data["docType"], "CHL")
+        # Two distinct parties (job worker -> principal). The company -> customer
+        # address direction with real GSTINs is asserted in
+        # test_subcontracting_transaction; sandbox mode here rewrites GSTINs by
+        # position, so only their distinctness is meaningful.
+        self.assertTrue(data["fromGstin"])
+        self.assertTrue(data["toGstin"])
+        self.assertNotEqual(data["fromGstin"], data["toGstin"])
+        # Trade names are not rewritten in sandbox: consignor is the company
+        # (job worker), consignee is the customer (principal).
+        customer_name = frappe.db.get_value(
+            "Subcontracting Inward Order", stock_entry.subcontracting_inward_order, "customer_name"
+        )
+        self.assertEqual(data["fromTrdName"], stock_entry.company)
+        self.assertEqual(data["toTrdName"], customer_name)
+
+    def test_e_waybill_data_for_subcontracting_delivery(self):
+        delivery = make_subcontracting_inward_delivery()
+        self._set_transport_details(delivery, "Job Work Delivery")
+
+        data = EWaybillData(delivery).get_data()
+
+        self._assert_outward_to_customer(data, "Job Work Delivery", delivery)
+
+        # Taxable value carries the customer-provided material value, so the
+        # e-Waybill total exceeds the bare Stock Entry amount.
+        ewb_taxable = sum(flt(item["taxableAmount"]) for item in data["itemList"])
+        se_amount = sum(flt(item.amount) for item in delivery.items)
+        self.assertGreater(ewb_taxable, se_amount)
+        self.assertEqual(
+            ewb_taxable,
+            sum(flt(item.taxable_value) for item in delivery.items),
+        )
+
+    def test_e_waybill_data_for_return_raw_material(self):
+        rm_return = make_subcontracting_inward_rm_return()
+        self._set_transport_details(rm_return, "Return Raw Material")
+
+        data = EWaybillData(rm_return).get_data()
+
+        self._assert_outward_to_customer(data, "Return Raw Material", rm_return)
+
+        # e-Waybill value equals the customer's declared material value.
+        ewb_taxable = sum(flt(item["taxableAmount"]) for item in data["itemList"])
+        self.assertEqual(
+            ewb_taxable,
+            sum(flt(item.taxable_value) for item in rm_return.items),
+        )
+
+
+class TestEWaybillLookup(IntegrationTestCase):
+    """link_matching_e_waybill: pick this doc's live e-Waybill out of a day's list"""
+
+    def lookup(self, portal_rows, docname="SINV-TEST", doctype="Sales Invoice", **fields):
+        doc = frappe._dict(doctype=doctype, name=docname, **fields)
+
+        with (
+            patch.object(EWaybillAPI, "create") as create,
+            patch(
+                "india_compliance.gst_india.utils.e_waybill.log_and_process_e_waybill_generation"
+            ) as log_generation,
+        ):
+            create.return_value.get_e_waybills_by_date.return_value = portal_rows
+            linked = link_matching_e_waybill(doc, "2026-01-05")
+            date_sent = create.return_value.get_e_waybills_by_date.call_args.args[0]
+
+        return linked, log_generation, date_sent
+
+    def test_links_the_row_for_this_doc(self):
+        linked, log_generation, date_sent = self.lookup(
+            [
+                {
+                    "docNo": "OTHER-DOC",
+                    "status": "ACT",
+                    "ewbNo": 999,
+                    "ewbDate": "05/01/2026",
+                    "docDate": "05/01/2026",
+                },
+                {
+                    "docNo": "SINV-TEST",
+                    "status": "ACT",
+                    "ewbNo": 123,
+                    "ewbDate": "05/01/2026",
+                    "docDate": "05/01/2026",
+                },
+            ]
+        )
+
+        self.assertTrue(linked)
+        self.assertEqual(date_sent, "05/01/2026")  # the portal wants dd/mm/yyyy
+
+        result = log_generation.call_args.args[1]
+        self.assertEqual(result["ewayBillNo"], 123)
+        self.assertEqual(result["ewayBillDate"], "05/01/2026")
+
+    def test_ignores_a_cancelled_e_waybill(self):
+        linked, log_generation, _ = self.lookup(
+            [
+                {
+                    "docNo": "SINV-TEST",
+                    "status": "CNL",
+                    "ewbNo": 123,
+                    "ewbDate": "05/01/2026",
+                    "docDate": "05/01/2026",
+                }
+            ]
+        )
+
+        self.assertFalse(linked)
+        log_generation.assert_not_called()
+
+    def test_ignores_another_docs_e_waybill(self):
+        linked, log_generation, _ = self.lookup(
+            [
+                {
+                    "docNo": "OTHER-DOC",
+                    "status": "ACT",
+                    "ewbNo": 999,
+                    "ewbDate": "05/01/2026",
+                    "docDate": "05/01/2026",
+                }
+            ]
+        )
+
+        self.assertFalse(linked)
+        log_generation.assert_not_called()
+
+    def test_nothing_on_the_portal_that_day(self):
+        linked, log_generation, _ = self.lookup([])
+
+        self.assertFalse(linked)
+        log_generation.assert_not_called()
+
+    def test_purchase_invoice_matches_on_bill_no(self):
+        # a purchase goes out under the supplier's bill no
+        linked, log_generation, _ = self.lookup(
+            [{"docNo": "SUP/778", "status": "ACT", "ewbNo": 123, "ewbDate": "05/01/2026"}],
+            docname="PINV-TEST",
+            doctype="Purchase Invoice",
+            bill_no="SUP/778",
+        )
+
+        self.assertTrue(linked)
+        self.assertEqual(log_generation.call_args.args[1]["ewayBillNo"], 123)
+
+    def test_purchase_return_matches_on_our_name(self):
+        # a return goes out under our name
+        linked, _, _ = self.lookup(
+            [{"docNo": "PINV-RET", "status": "ACT", "ewbNo": 456, "ewbDate": "05/01/2026"}],
+            docname="PINV-RET",
+            doctype="Purchase Invoice",
+            bill_no="SUP/778",
+            is_return=1,
+        )
+
+        self.assertTrue(linked)
+
+    def test_empty_day_is_an_empty_list(self):
+        # portal errors on a day with none, callers should just see []
+        with patch.object(EWaybillAPI, "__init__", return_value=None):
+            api = EWaybillAPI()
+
+        def portal_says(message):
+            return lambda *args, **kwargs: api.process_response(frappe._dict(success=False, message=message))
+
+        rows = [{"docNo": "SINV-TEST", "status": "ACT"}]
+        with patch.object(api, "get", return_value=rows):
+            self.assertEqual(api.get_e_waybills_by_date("05/01/2026"), rows)
+
+        frappe.clear_messages()
+        with patch.object(api, "get", side_effect=portal_says("No record found")):
+            self.assertEqual(api.get_e_waybills_by_date("05/01/2026"), [])
+
+        self.assertFalse(frappe.get_message_log())
+
+        with patch.object(api, "get", side_effect=portal_says("Invalid date format")):
+            self.assertRaises(frappe.ValidationError, api.get_e_waybills_by_date, "05/01/2026")
+
+    def test_empty_day_on_standard_api(self):
+        # standard api sends code 418 instead of the message
+        with patch.object(StandardEWaybillAPI, "__init__", return_value=None):
+            api = StandardEWaybillAPI()
+
+        def portal_says(code):
+            error = base64.b64encode(json.dumps({"errorCodes": code}).encode()).decode()
+            return lambda *args, **kwargs: api.process_response(frappe._dict(status=0, error=error))
+
+        with patch.object(api, "get", side_effect=portal_says("418")):
+            self.assertEqual(api.get_e_waybills_by_date("05/01/2026"), [])
+
+        with patch.object(api, "get", side_effect=portal_says("105")):
+            self.assertRaises(frappe.ValidationError, api.get_e_waybills_by_date, "05/01/2026")
+
+
+class TestEWaybill604Recovery(IntegrationTestCase):
+    """604 means the portal already made it, most likely a generate that timed out"""
+
+    MODULE = "india_compliance.gst_india.utils.e_waybill"
+
+    def generate(self, linked=False, throw=True, posting_date="2026-01-05"):
+        """run _generate_e_waybill against a portal that answers 604"""
+        doc = frappe._dict(doctype="Sales Invoice", name="SINV-TEST", ewaybill="", posting_date=posting_date)
+        portal = MagicMock()
+        portal.generate_e_waybill.return_value = frappe._dict(
+            error_code="604", error_message="E-way bill(s) are already generated"
+        )
+
+        with (
+            patch(f"{self.MODULE}.EWaybillData"),
+            patch.object(EWaybillAPI, "create", return_value=portal),
+            patch(f"{self.MODULE}.link_matching_e_waybill", return_value=linked) as link,
+            patch(f"{self.MODULE}.notify_user") as notify,
+            patch(f"{self.MODULE}.rollback_and_set_ewaybill_status") as set_failed,
+            patch("frappe.log_error") as log_error,
+        ):
+            raised = None
+            try:
+                _generate_e_waybill(doc, throw=throw)
+            except frappe.ValidationError as e:
+                raised = e
+
+            return frappe._dict(
+                link=link, notify=notify, set_failed=set_failed, log_error=log_error, raised=raised
+            )
+
+    def test_linked_e_waybill_is_reported_as_success(self):
+        run = self.generate(linked=True)
+
+        self.assertIsNone(run.raised)
+        run.set_failed.assert_not_called()
+        run.log_error.assert_not_called()
+        self.assertIn("already generated", run.notify.call_args.args[0])
+        self.assertEqual(run.notify.call_args.kwargs["indicator"], "green")
+
+    def test_searches_the_doc_date_and_today(self):
+        # a delayed retry may run on a later day than the generate that timed out
+        run = self.generate(linked=False)
+
+        searched = {call.args[1] for call in run.link.call_args_list}
+        self.assertIn(getdate("2026-01-05"), searched)
+        self.assertIn(getdate(), searched)
+
+    def test_no_match_is_logged_and_raised(self):
+        run = self.generate(linked=False)
+
+        self.assertIn("already generated", str(run.raised))
+        run.set_failed.assert_called_once()
+
+        # deferred, so the log survives the rollback on the failure path
+        self.assertTrue(run.log_error.call_args.kwargs["defer_insert"])
+        self.assertEqual(run.log_error.call_args.kwargs["reference_name"], "SINV-TEST")
+
+    def test_no_match_is_swallowed_on_the_auto_retry_path(self):
+        run = self.generate(linked=False, throw=False)
+
+        self.assertIsNone(run.raised)
+        # still logged, so an orphan at the portal is never silent
+        run.log_error.assert_called_once()
+>>>>>>> f0c6bec (fix: Add request timeout handling and auto-retry logic for e-Invoice/e-Waybill (#4545))
