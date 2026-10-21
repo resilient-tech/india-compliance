@@ -467,9 +467,9 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         this.dialog.$wrapper.find(".btn.btn-secondary.not-grey").removeClass("btn-secondary");
         this.dialog.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
 
-        const $copy_btn = this.dialog.$wrapper.find(".modal-footer .copy-btn");
-        if ($copy_btn.length)
-            frappe.ui.tooltip($copy_btn, { text: __("Copy the values reported in 2A/2B to your books") });
+        this.dialog.$wrapper
+            .find(".modal-footer .copy-btn")
+            .attr("title", __("Copy the values reported in 2A/2B to your books"));
     }
 
     _get_custom_actions() {

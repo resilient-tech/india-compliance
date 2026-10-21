@@ -5,11 +5,18 @@ import frappe
 from frappe import parse_json, read_file
 from frappe.tests.utils import FrappeTestCase
 
+from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import get_raw_return_data
 from india_compliance.gst_india.utils import get_data_file_path, get_party_for_gstin, merge_dicts
-from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, download_gstr_2b, save_gstr_2b
+from india_compliance.gst_india.utils.gstr_2 import (
+    GSTRCategory,
+    download_gstr_2b,
+    save_gstr,
+    save_gstr_2b,
+)
 from india_compliance.gst_india.utils.gstr_2.gstr import get_unique_key
-from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2bISD
+from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
+from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
 
 class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
@@ -340,8 +347,10 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
         supplier_isd_credit_note = {**supplier, "doclist": [supplier["doclist"][1]]}  # doctype ISDC, cgst 30
         period = "042020"
 
-        GSTR2bISD(self.company, self.gstin, period, None).create_transactions([supplier_isd], None)
-        GSTR2bISD(self.company, self.gstin, period, None).create_transactions(
+        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
+            [supplier_isd], None
+        )
+        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
             [supplier_isd_credit_note], None
         )
 
@@ -381,7 +390,7 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
             ]
 
         # what save_gstr does
-        GSTR2bISD(self.company, self.gstin, period, None).create_transactions(
+        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
             [{**supplier, "doclist": doclist("Y", "N")}], None
         )
 
@@ -395,7 +404,7 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
         self.assertEqual(eligible.return_period_2b, period)
         self.assertEqual(ineligible.return_period_2b, period)
 
-        GSTR2bISD(self.company, self.gstin, period, None).create_transactions(
+        GSTR2b(self.company, self.gstin, period, GSTRCategory.ISD.value).create_transactions(
             [{**supplier, "doclist": doclist("Y")}], None
         )
 
@@ -585,6 +594,24 @@ class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
             {"MULTI-FILE-1": period, "MULTI-FILE-2": period},
         )
 
+        raw = get_raw_return_data(self.gstin, ReturnType.GSTR2B.value, period)
+        self.assertEqual(
+            [invoice["inum"] for supplier in raw["docdata"]["b2b"] for invoice in supplier["inv"]],
+            ["MULTI-FILE-1", "MULTI-FILE-2"],
+        )
+
+
+class TestEmptyPeriodProgress(FrappeTestCase):
+    def test_month_with_nothing_to_save_still_reports_done(self):
+        """No save event means the sync progress never closes on screen."""
+        with patch("frappe.publish_realtime") as publish:
+            save_gstr("01AABCE2207R1Z5", ReturnType.GSTR2B, "032020", {"b2b": []})
+
+        publish.assert_called_once()
+        event, message = publish.call_args.args[:2]
+        self.assertEqual(event, "update_2a_2b_transactions_progress")
+        self.assertEqual(message, {"current_progress": 100, "return_period": "032020"})
+
 
 class TestGetUniqueKey(FrappeTestCase):
     def test_null_gstin_matches_empty_gstin(self):
@@ -600,13 +627,13 @@ class TestGetUniqueKey(FrappeTestCase):
 
 
 class TestMultiFileRawMerge(FrappeTestCase):
-    def test_docs_concat_summary_not_doubled(self):
+    def test_docs_concat_summary_comes_with_the_first_file(self):
         combined = {}
         file1 = {"itcsumm": {"itcavl": 100}, "docdata": {"b2b": [{"inum": "1"}]}}
-        file2 = {"itcsumm": {"itcavl": 150}, "docdata": {"b2b": [{"inum": "2"}], "cdnr": [{"nt": "9"}]}}
+        file2 = {"docdata": {"b2b": [{"inum": "2"}], "cdnr": [{"nt": "9"}]}}
         merge_dicts(combined, file1)
         merge_dicts(combined, file2)
 
         self.assertEqual(combined["docdata"]["b2b"], [{"inum": "1"}, {"inum": "2"}])
         self.assertEqual(combined["docdata"]["cdnr"], [{"nt": "9"}])
-        self.assertEqual(combined["itcsumm"]["itcavl"], 150)
+        self.assertEqual(combined["itcsumm"]["itcavl"], 100)
