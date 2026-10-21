@@ -12,7 +12,15 @@ from india_compliance.gst_india.constants import DISTANCE_REGEX
 
 class EInvoiceAPI(BaseAPI):
     API_NAME = "e-Invoice"
+<<<<<<< HEAD
     SENSITIVE_INFO: ClassVar[tuple] = (*BaseAPI.SENSITIVE_INFO, "password", "Password", "AppKey")
+=======
+
+    # fail fast, slow govt servers shouldn't block workers
+    REQUEST_TIMEOUT = (10, 30)
+    FAIL_FAST_IF_SERVER_DOWN = True
+
+>>>>>>> f0c6bec (fix: Add request timeout handling and auto-retry logic for e-Invoice/e-Waybill (#4545))
     IGNORED_ERROR_CODES: ClassVar[dict] = {
         "1005": "Invalid Token",
         # Generate IRN errors

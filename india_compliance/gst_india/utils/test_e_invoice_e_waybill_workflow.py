@@ -10,7 +10,7 @@ from india_compliance.exceptions import (
     GSPServerError,
     NotApplicableError,
 )
-from india_compliance.gst_india.utils import run_or_report_failure
+from india_compliance.gst_india.utils import clear_server_down, mark_server_down, run_or_report_failure
 from india_compliance.gst_india.utils.e_invoice import (
     generate_e_invoice,
     generate_e_invoices,
@@ -48,6 +48,16 @@ GST_SETTINGS = {
     "e_invoice_applicable_from": "2021-01-01",
     "is_retry_einv_ewb_generation_pending": 0,
 }
+
+
+def gsp_error(api_name):
+    """Fail the way the API layer does: mark the portal down, then raise."""
+
+    def raise_error(*args, **kwargs):
+        mark_server_down(api_name)
+        raise GSPServerError
+
+    return raise_error
 
 
 def _parse_server_messages(response):
@@ -115,6 +125,7 @@ class WorkflowTestBase(FrappeAPITestCase):
     def setUp(self):
         super().setUp()
 
+        clear_server_down("e-Invoice", "e-Waybill")
         self.si = self._create_si()
         frappe.db.commit()  # nosemgrep # Ensure SI is visible to WSGI thread
 
@@ -132,7 +143,7 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
     Tests for e-Invoice generation workflow and error handling.
     """
 
-    def _post_e_invoice(self, docname, throw=True, force=False):
+    def _post_e_invoice(self, docname, throw=True):
         """Make a real HTTP POST to the generate_e_invoice API endpoint.
 
         Commits pending DB changes before the POST so the WSGI thread
@@ -141,10 +152,18 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         """
         sid = self.sid
         frappe.db.commit()  # nosemgrep
+<<<<<<< HEAD
         response = self.post(
             self.method(E_INVOICE_API),
             {"docname": docname, "throw": throw, "force": force, "sid": sid},
         )
+=======
+        with suppress_stdout():
+            response = self.post(
+                self.method(E_INVOICE_API),
+                {"docname": docname, "throw": throw, "sid": sid},
+            )
+>>>>>>> f0c6bec (fix: Add request timeout handling and auto-retry logic for e-Invoice/e-Waybill (#4545))
         frappe.db.rollback()  # Fresh transaction to see WSGI-committed changes
         return response
 
@@ -349,19 +368,18 @@ class TestEWaybillWorkflow(WorkflowTestBase):
     Mirrors the e-Invoice tests for `_generate_e_waybill` / `generate_e_waybill`.
 
     Key differences from e-Invoice:
-    - `generate_e_waybill(*, doctype, docname, values=None, force=False)` is
-      keyword-only.
+    - `generate_e_waybill(*, doctype, docname, values=None)` is keyword-only.
     - `throw` is determined by `values`: True when values provided (UI Manual),
       False when no values (auto-generation).
     - Status field is `e_waybill_status` (only set for Sales Invoice).
     - Already-generated check uses `doc.ewaybill` instead of `doc.irn`.
     """
 
-    def _post_e_waybill(self, doctype, docname, values=None, force=False):
+    def _post_e_waybill(self, doctype, docname, values=None):
         """Make a real HTTP POST to the generate_e_waybill API endpoint."""
         sid = self.sid
         frappe.db.commit()  # nosemgrep
-        data = {"doctype": doctype, "docname": docname, "force": force, "sid": sid}
+        data = {"doctype": doctype, "docname": docname, "sid": sid}
         if values is not None:
             data["values"] = frappe.as_json(values)
         response = self.post(self.method(E_WAYBILL_API), data)
@@ -506,6 +524,7 @@ class TestBulkGeneration(WorkflowTestBase):
     """
 
     def setUp(self):
+        clear_server_down("e-Invoice", "e-Waybill")
         self.si1 = self._create_si()
         self.si2 = self._create_si()
 
@@ -561,9 +580,10 @@ class TestBulkGeneration(WorkflowTestBase):
     def test_einvoice_bulk_gsp_error_continues(self):
         """Bulk e-Invoice: GSPServerError for one doc doesn't stop others."""
         with patch(E_INVOICE_IRN_GENERATION_API) as mock_gen:
-            mock_gen.side_effect = [GSPServerError, None]
+            mock_gen.side_effect = gsp_error("e-Invoice")
             generate_e_invoices([self.si1.name, self.si2.name])
 
+        # portal is down, second invoice is not sent
         self.assertEqual(mock_gen.call_count, 1)
         frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
         frappe.db.commit()  # nosemgrep
@@ -625,12 +645,10 @@ class TestBulkGeneration(WorkflowTestBase):
             mock_data.return_value = None
 
             with patch(E_WAYBILL_GENERATE_API) as mock_gen:
-                mock_gen.side_effect = [
-                    GSPServerError,
-                    GSPServerError,
-                ]
+                mock_gen.side_effect = gsp_error("e-Waybill")
                 generate_e_waybills("Sales Invoice", [self.si1.name, self.si2.name])
 
+        # portal is down, second e-Waybill is not sent
         self.assertEqual(mock_gen.call_count, 1)
 
     @check_error_logged_for_doc("Sales Invoice", "Unexpected")
