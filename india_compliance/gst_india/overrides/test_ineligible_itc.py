@@ -871,6 +871,12 @@ class TestIneligibleITC(IntegrationTestCase):
         }
 
         doc = create_transaction(**transaction_details)
+
+        # ERPNext refuses an asset return while the draft assets it created still exist.
+        # force: on v16 a reused asset name keeps a stale Asset Activity (frappe/erpnext#60020)
+        for asset in frappe.get_all("Asset", filters={"purchase_invoice": doc.name}, pluck="name"):
+            frappe.delete_doc("Asset", asset, force=True)
+
         doc = make_return_doc("Purchase Invoice", doc.name)
         doc.save()
         doc.submit()
@@ -950,6 +956,12 @@ class TestIneligibleITC(IntegrationTestCase):
         }
 
         doc = create_transaction(**transaction_details)
+
+        # ERPNext refuses an asset return while the draft assets it created still exist.
+        # force: on v16 a reused asset name keeps a stale Asset Activity (frappe/erpnext#60020)
+        for asset in frappe.get_all("Asset", filters={"purchase_receipt": doc.name}, pluck="name"):
+            frappe.delete_doc("Asset", asset, force=True)
+
         doc = make_return_doc("Purchase Receipt", doc.name)
         doc.submit()
 
@@ -1274,6 +1286,35 @@ class TestIneligibleITC(IntegrationTestCase):
                     "credit": 5610.0,
                     "debit_in_transaction_currency": 0.0,
                     "credit_in_transaction_currency": 5610.0,
+                },
+                # Reversal of the provisional entries booked by the Purchase Receipt
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 0.0,
+                    "credit": 1500.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
+                {
+                    "account": "Unsecured Loans - _TIRC",
+                    "debit": 1500.0,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 0.0,
+                    "credit": 998.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
+                {
+                    "account": "Unsecured Loans - _TIRC",
+                    "debit": 998.0,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
                 },
             ],
         )
