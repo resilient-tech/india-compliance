@@ -40,6 +40,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     BUYING_DOCTYPES,
     CANCEL_REASON_CODES,
     CONSIGNMENT_STATUS,
+    DISPATCH_FROM_TRANSACTION_TYPES,
     EXTEND_VALIDITY_REASON_CODES,
     ITEM_LIMIT,
     PERMITTED_DOCTYPES,
@@ -1698,13 +1699,19 @@ class EWaybillData(GSTTransactionData):
                     self.ship_to.gstin != self.bill_to.gstin or self.ship_to.gstin == "URP"
                 )
 
+        if has_different_from_address:
+            self.ship_from = self.get_address_details(address.ship_from)
+
+            # if same gstin then regular transaction, Dispatch From GSTIN would equal fromGstin. ERROR CODE: 617
+            has_different_from_address = (
+                self.ship_from.gstin != self.bill_from.gstin or self.ship_from.gstin == "URP"
+            )
+
         if has_different_to_address and has_different_from_address:
             transaction_type = 4
-            self.ship_from = self.get_address_details(address.ship_from)
 
         elif has_different_from_address:
             transaction_type = 3
-            self.ship_from = self.get_address_details(address.ship_from)
 
         elif has_different_to_address:
             transaction_type = 2
@@ -1727,6 +1734,12 @@ class EWaybillData(GSTTransactionData):
             self.bill_to.legal_name
             if self.ship_to.gstin == self.bill_to.gstin
             else self.ship_to.address_title
+        )
+
+        self.ship_from.legal_name = (
+            self.bill_from.legal_name
+            if self.ship_from.gstin == self.bill_from.gstin
+            else self.ship_from.address_title
         )
 
     def get_address_details(self, *args, **kwargs):
@@ -1885,6 +1898,14 @@ class EWaybillData(GSTTransactionData):
                 {
                     "shipToGSTIN": self.ship_to.gstin,
                     "shipToTradeName": self.ship_to.legal_name,
+                }
+            )
+
+        if self.transaction_details.transaction_type in DISPATCH_FROM_TRANSACTION_TYPES:
+            data.update(
+                {
+                    "dispatchFromGSTIN": self.ship_from.gstin,
+                    "dispatchFromTradeName": self.ship_from.legal_name,
                 }
             )
 
