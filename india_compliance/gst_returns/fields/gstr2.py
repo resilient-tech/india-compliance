@@ -170,6 +170,13 @@ class RawField2b:
     DOC_REJECTED = "docRejdata"
     ITC_SUMMARY = "itcsumm"
     ITC_REVERSAL = "itcrev"
+    ITC_AVAILABLE = "itcavl"
+    ITC_NOT_AVAILABLE = "itcunavl"
+    NON_REVERSE_CHARGE_SUPPLIES = "nonrevsup"
+    ISD_SUPPLIES = "isdsup"
+    REVERSE_CHARGE_SUPPLIES = "revsup"
+    IMPORTS = "imports"
+    CREDIT_NOTES = "othersup"
 
     # supplier
     SUPPLIER_GSTIN = "ctin"
