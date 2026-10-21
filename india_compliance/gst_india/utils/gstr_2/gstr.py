@@ -81,24 +81,19 @@ class GSTR:
 
         total_transactions = len(transactions)
         current_transaction = 0
-        reported_progress = None
 
         for transaction in transactions:
             create_inward_supply(transaction)
 
             current_transaction += 1
-            current_progress = current_transaction * 100 // total_transactions
-            if current_progress != reported_progress:
-                reported_progress = current_progress
-                frappe.publish_realtime(
-                    "update_2a_2b_transactions_progress",
-                    {
-                        "current_progress": current_progress,
-                        "return_period": self.return_period,
-                        "gstin": self.gstin,
-                    },
-                    user=frappe.session.user,
-                )
+            frappe.publish_realtime(
+                "update_2a_2b_transactions_progress",
+                {
+                    "current_progress": current_transaction * 100 / total_transactions,
+                    "return_period": self.return_period,
+                },
+                user=frappe.session.user,
+            )
 
             if transaction.get("unique_key") in self.existing_transaction:
                 self.existing_transaction.pop(transaction.get("unique_key"))
