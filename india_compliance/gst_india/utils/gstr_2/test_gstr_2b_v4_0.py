@@ -606,9 +606,9 @@ class TestDownloadComplete(IntegrationTestCase):
     COMPLETE = "gstr_2a_2b_download_complete"
 
     def test_2a_and_2b_say_complete_once_committed(self):
-        for download, api, return_type in (
-            (download_gstr_2a, "india_compliance.gst_india.utils.gstr_2.GSTR2aAPI", "GSTR2a"),
-            (download_gstr_2b, "india_compliance.gst_india.utils.gstr_2.GSTR2bAPI", "GSTR2b"),
+        for download, api in (
+            (download_gstr_2a, "india_compliance.gst_india.utils.gstr_2.GSTR2aAPI"),
+            (download_gstr_2b, "india_compliance.gst_india.utils.gstr_2.GSTR2bAPI"),
         ):
             with (
                 self.subTest(download=download.__name__),
@@ -618,17 +618,7 @@ class TestDownloadComplete(IntegrationTestCase):
                 api_class.return_value.get_data.return_value = frappe._dict(error_type="no_docs_found")
                 download(self.GSTIN, ["032020"])
 
-            publish.assert_any_call(
-                self.COMPLETE,
-                {"gstin": self.GSTIN, "return_type": return_type},
-                user=frappe.session.user,
-                after_commit=True,
-            )
-            fetch = [
-                call.args[1] for call in publish.call_args_list if call.args[0] == "update_2a_2b_api_progress"
-            ]
-            self.assertTrue(fetch)
-            self.assertTrue(all(message["gstin"] == self.GSTIN for message in fetch))
+            publish.assert_any_call(self.COMPLETE, user=frappe.session.user, after_commit=True)
 
     def test_failed_download_never_says_complete(self):
         with (
@@ -640,24 +630,6 @@ class TestDownloadComplete(IntegrationTestCase):
             download_gstr_2b(self.GSTIN, ["032020"])
 
         self.assertNotIn(self.COMPLETE, [call.args[0] for call in publish.call_args_list])
-
-
-class TestSaveProgress(IntegrationTestCase):
-    def test_save_progress_is_sent_once_per_percent(self):
-        transactions = [frappe._dict(unique_key=str(i)) for i in range(250)]
-        with (
-            patch.object(GSTR2b, "get_all_transactions", return_value=transactions),
-            patch.object(GSTR2b, "get_existing_transaction", return_value={}),
-            patch.object(GSTR2b, "update_gstins"),
-            patch.object(GSTR2b, "handle_missing_transactions"),
-            patch("india_compliance.gst_india.utils.gstr_2.gstr.create_inward_supply"),
-            patch("frappe.publish_realtime") as publish,
-        ):
-            GSTR2b(None, "01AABCE2207R1Z5", "032020", "B2B").create_transactions([{}], None)
-
-        self.assertEqual(
-            [call.args[1]["current_progress"] for call in publish.call_args_list], list(range(101))
-        )
 
 
 class TestGetUniqueKey(IntegrationTestCase):

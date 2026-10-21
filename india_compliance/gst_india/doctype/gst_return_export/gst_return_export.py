@@ -183,13 +183,7 @@ def _sync_return_data(company_gstin, return_type, periods):
     except Exception as e:
         frappe.publish_realtime(
             "gstr_2a_2b_download_message",
-            {
-                "title": _("Sync Failed"),
-                "message": str(e),
-                "indicator": "red",
-                "gstin": company_gstin,
-                "return_type": return_type,
-            },
+            {"title": _("Sync Failed"), "message": str(e), "indicator": "red"},
             user=frappe.session.user,
         )
         raise e

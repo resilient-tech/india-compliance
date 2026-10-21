@@ -1664,26 +1664,8 @@ class TestDownloadJobEnds(IntegrationTestCase):
             reco.download_gstr(self.GSTIN, self.DATE_RANGE, "GSTR2b")
 
         publish.assert_called_once_with(
-            "gstr_2a_2b_download_complete",
-            {"gstin": self.GSTIN, "return_type": "GSTR2b"},
-            user=frappe.session.user,
-            after_commit=True,
+            "gstr_2a_2b_download_complete", user=frappe.session.user, after_commit=True
         )
-
-    def test_failed_download_names_its_import(self):
-        with (
-            patch.object(reco.BaseUtil, "get_periods", return_value=["032020"]),
-            patch.object(reco, "get_periods_to_download", return_value=["032020"]),
-            patch.object(reco, "_check_gstr3b_status"),
-            patch.object(reco, "download_gstr_2b", side_effect=Exception("portal down")),
-            patch("frappe.log_error"),
-            patch("frappe.publish_realtime") as publish,
-        ):
-            reco.download_gstr(self.GSTIN, self.DATE_RANGE, "GSTR2b")
-
-        event, message = publish.call_args.args[:2]
-        self.assertEqual(event, "gstr_2a_2b_download_message")
-        self.assertEqual((message["gstin"], message["return_type"]), (self.GSTIN, "GSTR2b"))
 
 
 def create_boe(**kwargs):

@@ -444,7 +444,7 @@ def download_gstr(
         periods = get_periods_to_download(company_gstin, return_type, periods, download_all=force)
 
     if not periods:
-        publish_download_complete(company_gstin, return_type.value)
+        publish_download_complete()
         return
 
     latest_period = max(periods, key=period_sort_key)
@@ -465,8 +465,6 @@ def download_gstr(
                 "title": _("2A/2B Download Failed"),
                 "message": str(e),
                 "indicator": "red",
-                "gstin": company_gstin,
-                "return_type": return_type.value,
             },
             user=frappe.session.user,
         )

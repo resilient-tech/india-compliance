@@ -79,7 +79,6 @@ def download_gstr_2a(gstin, return_periods):
                 {
                     "current_progress": requests_made * 100 / total_expected_requests,
                     "return_period": return_period,
-                    "gstin": gstin,
                 },
                 user=frappe.session.user,
             )
@@ -129,7 +128,7 @@ def download_gstr_2a(gstin, return_periods):
     if queued_message:
         publish_2a_2b_queued_message()
 
-    publish_download_complete(gstin, return_type.value)
+    publish_download_complete()
 
 
 def download_gstr_2b(gstin, return_periods):
@@ -146,7 +145,6 @@ def download_gstr_2b(gstin, return_periods):
             {
                 "current_progress": requests_made * 100 / total_expected_requests,
                 "return_period": return_period,
-                "gstin": gstin,
             },
             user=frappe.session.user,
         )
@@ -211,7 +209,7 @@ def download_gstr_2b(gstin, return_periods):
             user=frappe.session.user,
         )
 
-    publish_download_complete(gstin, ReturnType.GSTR2B.value)
+    publish_download_complete()
 
 
 def download_ims_invoices(gstin, for_upload=False):
@@ -409,13 +407,8 @@ def download_job_id(gstin, return_type):
     return f"gstr_2a_2b_download:{gstin}:{return_type}"
 
 
-def publish_download_complete(gstin, return_type):
-    frappe.publish_realtime(
-        "gstr_2a_2b_download_complete",
-        {"gstin": gstin, "return_type": return_type},
-        user=frappe.session.user,
-        after_commit=True,
-    )
+def publish_download_complete():
+    frappe.publish_realtime("gstr_2a_2b_download_complete", user=frappe.session.user, after_commit=True)
 
 
 def publish_ims_queued_message(for_upload):
