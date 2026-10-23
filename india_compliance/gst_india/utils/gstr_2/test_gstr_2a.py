@@ -295,6 +295,30 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
 
         self.assertTrue(frappe.db.exists(self.doctype, doc.name))
 
+    @patch("india_compliance.gst_india.utils.gstr_2.GSTR2aAPI")
+    def test_failed_category_keeps_unfiled_documents(self, gstr_2a_api):
+        period = "092020"
+        supplier = {
+            "ctin": "01AAAAP1208Q1ZS",
+            "flprdr1": "Sep-20",
+            "inv": [{"inum": "UNFILED-2", "idt": "24-09-2020", "val": 100}],
+        }
+
+        responses = {"B2B": frappe._dict(b2b=[supplier]), "ECOM": frappe._dict(error_type="not_applicable")}
+        gstr_2a_api.return_value.get_data.side_effect = lambda action, return_period: responses.get(
+            action, frappe._dict(error_type="no_docs_found")
+        )
+
+        download_gstr_2a(self.gstin, [period])
+        doc = self.get_doc(GSTRCategory.B2B, bill_no="UNFILED-2")
+        self.addCleanup(frappe.delete_doc, self.doctype, doc.name, ignore_permissions=True)
+
+        responses["B2B"] = frappe._dict(error_type="queued")
+        with self.assertRaises(frappe.ValidationError):
+            download_gstr_2a(self.gstin, [period])
+
+        self.assertTrue(frappe.db.exists(self.doctype, doc.name))
+
     def test_gstr2a_isd(self):
         doc = self.get_doc(GSTRCategory.ISD)
         self.assertImportLog(GSTRCategory.ISD)
