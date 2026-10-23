@@ -581,7 +581,20 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         )
 
         download_gstr_2b(self.gstin, [period])
+        self.assert_every_file_kept(period)
 
+        gstr_2b_api.return_value.get_data.side_effect = lambda return_period, file_num=None: (
+            frappe._dict(error_type="queued")
+            if file_num == 2
+            else frappe._dict(data=files[file_num] if file_num else frappe._dict(fc=2))
+        )
+
+        with self.assertRaises(frappe.ValidationError):
+            download_gstr_2b(self.gstin, [period])
+
+        self.assert_every_file_kept(period)
+
+    def assert_every_file_kept(self, period):
         self.assertEqual(
             dict(
                 frappe.get_all(

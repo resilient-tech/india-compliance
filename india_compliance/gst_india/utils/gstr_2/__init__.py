@@ -112,8 +112,15 @@ def download_gstr_2a(gstin, return_periods):
                 queued_message = True
                 continue
 
-            if response.error_type:
+            if response.error_type == "not_applicable":
                 continue
+
+            if response.error_type:
+                frappe.throw(
+                    _(
+                        "Could not download {0} for return period {1} from the GST Portal. Please try again."
+                    ).format(action, return_period)
+                )
 
             if not (data := response.get(action.lower())):
                 frappe.throw(
@@ -201,7 +208,14 @@ def download_gstr_2b(gstin, return_periods):
             combined = {}
             for file_num in range(1, file_count + 1):
                 r = api.get_data(return_period, file_num=file_num)
-                merge_dicts(combined, r.data or {})
+                if not r.data:
+                    frappe.throw(
+                        _(
+                            "Could not download file {0} of {1} for return period {2} from the GST Portal."
+                            " Please try again."
+                        ).format(file_num, file_count, return_period)
+                    )
+                merge_dicts(combined, r.data)
 
             response = frappe._dict(data=frappe._dict(combined))
 
