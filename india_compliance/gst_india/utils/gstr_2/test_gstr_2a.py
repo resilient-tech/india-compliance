@@ -316,7 +316,7 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
         b2b = self.get_doc(GSTRCategory.B2B, bill_no="UNFILED-3")
         tcs = self.get_doc(GSTRCategory.TCS, sup_return_period=period)
 
-        responses["B2B"] = frappe._dict(token="B2B-TOKEN", est=1)
+        responses["B2B"] = frappe._dict(token=frappe.generate_hash(length=10), est=1)
         download_gstr_2a(self.gstin, [period])
         self.assertTrue(frappe.db.exists(self.doctype, b2b.name))
         self.assertIn("b2b", get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period))
