@@ -13,6 +13,7 @@ from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import (
     GSTRCategory,
     ReturnType,
+    _download_gstr_2a,
     download_gstr_2a,
     save_gstr_2a,
 )
@@ -69,7 +70,7 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
             else:
                 return frappe._dict(error_type="no_docs_found")
 
-        def mock_save_gstr_func(gstin, return_type, return_period, json_data):
+        def mock_save_gstr_func(gstin, return_type, return_period, json_data, skip=()):
             self.assertEqual(gstin, self.gstin)
             self.assertEqual(return_period, self.return_period)
             self.assertTrue("cdnr" in json_data)
@@ -294,6 +295,37 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
         )
 
         self.assertTrue(frappe.db.exists(self.doctype, doc.name))
+
+    @patch("india_compliance.gst_india.utils.gstr_2.GSTR2aAPI")
+    def test_queued_category_keeps_other_categories(self, gstr_2a_api):
+        period = "102020"
+        supplier = {
+            "ctin": "01AAAAP1208Q1ZS",
+            "flprdr1": "Oct-20",
+            "inv": [{"inum": "UNFILED-3", "idt": "24-10-2020", "val": 100}],
+        }
+        self.addCleanup(
+            frappe.db.delete, self.doctype, {"company_gstin": self.gstin, "sup_return_period": period}
+        )
+
+        responses = {"B2B": frappe._dict(b2b=[supplier]), "TCS": frappe._dict(tcs=self.test_data.tcs)}
+        gstr_2a_api.return_value.get_data.side_effect = lambda action, return_period: responses.get(
+            action, frappe._dict(error_type="no_docs_found")
+        )
+        download_gstr_2a(self.gstin, [period])
+        b2b = self.get_doc(GSTRCategory.B2B, bill_no="UNFILED-3")
+        tcs = self.get_doc(GSTRCategory.TCS, sup_return_period=period)
+
+        responses["B2B"] = frappe._dict(token="B2B-TOKEN", est=1)
+        download_gstr_2a(self.gstin, [period])
+        self.assertTrue(frappe.db.exists(self.doctype, b2b.name))
+        self.assertIn("b2b", get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period))
+
+        _download_gstr_2a(self.gstin, period, frappe._dict(b2b=[supplier]))
+        self.assertTrue(frappe.db.exists(self.doctype, tcs.name))
+        self.assertLessEqual(
+            {"b2b", "tcs"}, set(get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period))
+        )
 
     def test_gstr2a_isd(self):
         doc = self.get_doc(GSTRCategory.ISD)
