@@ -18,7 +18,7 @@ from india_compliance.gst_india.overrides.test_transaction import (
     create_cess_accounts,
     create_refund_transaction,
 )
-from india_compliance.gst_india.utils import load_doc
+from india_compliance.gst_india.utils import clear_server_down, load_doc
 from india_compliance.gst_india.utils.e_invoice import (
     EInvoiceData,
     cancel_e_invoice,
@@ -62,6 +62,11 @@ class TestEInvoice(IntegrationTestCase):
             )
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
+
+    def setUp(self):
+        super().setUp()
+        # server error in one test shouldn't fail fast the next
+        clear_server_down("e-Invoice", "e-Waybill")
 
     def test_request_data_for_different_shipping_dispatch_address(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill
