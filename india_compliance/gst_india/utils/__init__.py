@@ -1263,11 +1263,7 @@ def is_server_down(api_name):
         return False
 
     # always read redis, a bulk job must see it change
-    return bool(
-        frappe.cache.get_value(
-            get_server_down_key(api_name), expires=True, shared=True, use_local_cache=False
-        )
-    )
+    return bool(frappe.cache.get_value(get_server_down_key(api_name), expires=True, shared=True))
 
 
 def mark_server_down(api_name):
@@ -1281,9 +1277,7 @@ def clear_server_down(*api_names):
 
 
 def is_portal_slow():
-    return bool(
-        frappe.cache.get_value(PORTAL_SLOW_CACHE_KEY, expires=True, shared=True, use_local_cache=False)
-    )
+    return bool(frappe.cache.get_value(PORTAL_SLOW_CACHE_KEY, expires=True, shared=True))
 
 
 def mark_portal_slow():
