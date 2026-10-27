@@ -433,40 +433,6 @@ override_doctype_class = {
 }
 
 
-<<<<<<< HEAD
-_CLASS_EXTENSION_MAP = {
-    "india_compliance.gst_india.overrides.virtual_fields.GSTBreakupExt": (
-        "Quotation",
-        "Sales Order",
-        "Delivery Note",
-        "Sales Invoice",
-        "POS Invoice",
-        "Supplier Quotation",
-        "Purchase Order",
-        "Purchase Receipt",
-        "Purchase Invoice",
-    ),
-    "india_compliance.gst_india.overrides.virtual_fields.EcommerceSupplyTypeExt": (
-        "Sales Order",
-        "Delivery Note",
-        "Sales Invoice",
-    ),
-    "india_compliance.gst_india.overrides.virtual_fields.AddressDisplayExt": ("Stock Entry",),
-    "india_compliance.gst_india.overrides.virtual_fields.IneligibilityReasonExt": ("Purchase Receipt",),
-}
-
-extend_doctype_class = {}
-for _extension_class, _doctypes in _CLASS_EXTENSION_MAP.items():
-    for _doctype in _doctypes:
-        extend_doctype_class.setdefault(_doctype, []).append(_extension_class)
-
-doc_events[tuple(extend_doctype_class)] = {
-    "before_print": "india_compliance.gst_india.overrides.virtual_fields.before_print",
-}
-
-
-=======
->>>>>>> 836d2c9 (refactor: enhance address display handling and streamline virtual field extensions)
 # DocTypes to be ignored while clearing transactions of a Company
 company_data_to_be_ignored = ["GST Account", "GST Credential"]
 

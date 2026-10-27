@@ -2097,12 +2097,6 @@ def get_ecommerce_supply_type(doc):
         return
 
     if doc.is_reverse_charge:
-<<<<<<< HEAD
-        doc.ecommerce_supply_type = SubCategory.SUPECOM_9_5.value
-    else:
-        doc.ecommerce_supply_type = SubCategory.SUPECOM_52.value
-=======
-        return SUPECOM.US_9_5.value
+        return SubCategory.SUPECOM_9_5.value
 
-    return SUPECOM.US_52.value
->>>>>>> 71324c6 (fix: resolve virtual fields using property instead of handling them manually using onload)
+    return SubCategory.SUPECOM_52.value
