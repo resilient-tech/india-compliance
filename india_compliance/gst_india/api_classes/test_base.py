@@ -4,7 +4,7 @@ from unittest.mock import patch
 import frappe
 import requests
 import responses
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.exceptions import GatewayTimeoutError, GSPLimitExceededError, GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL, BaseAPI
@@ -40,7 +40,7 @@ class DownloadAPI(BaseAPI):
     BASE_PATH = "test"
 
 
-class TestRequestTimeout(IntegrationTestCase):
+class TestRequestTimeout(FrappeTestCase):
     def setUp(self):
         super().setUp()
         self.clear_portal_state()

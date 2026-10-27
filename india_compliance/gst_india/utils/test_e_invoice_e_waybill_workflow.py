@@ -152,18 +152,10 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         """
         sid = self.sid
         frappe.db.commit()  # nosemgrep
-<<<<<<< HEAD
         response = self.post(
             self.method(E_INVOICE_API),
-            {"docname": docname, "throw": throw, "force": force, "sid": sid},
+            {"docname": docname, "throw": throw, "sid": sid},
         )
-=======
-        with suppress_stdout():
-            response = self.post(
-                self.method(E_INVOICE_API),
-                {"docname": docname, "throw": throw, "sid": sid},
-            )
->>>>>>> f0c6bec (fix: Add request timeout handling and auto-retry logic for e-Invoice/e-Waybill (#4545))
         frappe.db.rollback()  # Fresh transaction to see WSGI-committed changes
         return response
 

@@ -136,7 +136,7 @@ def in_web_request():
     )
 
 
-class TestPortalBusy(IntegrationTestCase):
+class TestPortalBusy(FrappeTestCase):
     """portal_is_busy: only sheds where shedding frees a web worker"""
 
     def setUp(self):
@@ -178,7 +178,7 @@ class TestPortalBusy(IntegrationTestCase):
             self.assertFalse(self.busy(slow_inflight=True))
 
 
-class TestPortalRouting(IntegrationTestCase):
+class TestPortalRouting(FrappeTestCase):
     """web worker only while the portal is healthy"""
 
     def setUp(self):
@@ -261,7 +261,7 @@ class TestPortalRouting(IntegrationTestCase):
         self.assertFalse(frappe.message_log)
 
 
-class TestServerErrorFeedback(IntegrationTestCase):
+class TestServerErrorFeedback(FrappeTestCase):
     """handle_server_errors: every doctype hears about an outage, not just Sales Invoice"""
 
     def setUp(self):

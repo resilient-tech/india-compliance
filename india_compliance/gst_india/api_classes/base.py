@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-=======
-import copy
 import time
->>>>>>> f0c6bec (fix: Add request timeout handling and auto-retry logic for e-Invoice/e-Waybill (#4545))
 from base64 import b64decode
 from typing import ClassVar
 from urllib.parse import urljoin
@@ -35,39 +31,13 @@ BASE_URL = "https://asp.resilient.tech"
 class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
-<<<<<<< HEAD
     SENSITIVE_INFO = ("x-api-key",)
-=======
-    PLACEHOLDER = "*****"
 
     # (connect, read) secs. no read limit, downloads can be slow.
     REQUEST_TIMEOUT = (10, None)
 
     # skip request if server was down in the last 2 mins
     FAIL_FAST_IF_SERVER_DOWN = False
-
-    DEFAULT_MASK_MAP: ClassVar[dict] = {
-        "headers": [
-            "x-api-key",
-            "auth-token",
-            "auth_token",
-            "AuthToken",
-            "password",
-            "Password",
-        ],
-        "output": [
-            "auth-token",
-            "auth_token",
-            "AuthToken",
-            "sek",
-            "Sek",
-            "rek",
-            "Rek",
-        ],
-        "data": ["app_key", "AppKey", "password", "Password"],
-        "body": ["app_key", "AppKey", "password", "Password"],
-    }
->>>>>>> f0c6bec (fix: Add request timeout handling and auto-retry logic for e-Invoice/e-Waybill (#4545))
 
     def __init__(self, *args, **kwargs):
         self.settings = frappe.get_cached_doc("GST Settings")

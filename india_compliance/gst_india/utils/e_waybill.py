@@ -55,21 +55,13 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.utils import (
     commit,
-<<<<<<< HEAD
-=======
     enqueue_portal_action,
-    get_items,
->>>>>>> f0c6bec (fix: Add request timeout handling and auto-retry logic for e-Invoice/e-Waybill (#4545))
     handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
     is_outward_stock_entry,
     is_response_pending,
-<<<<<<< HEAD
-=======
-    is_same_gstin_allowed,
     is_server_down,
->>>>>>> f0c6bec (fix: Add request timeout handling and auto-retry logic for e-Invoice/e-Waybill (#4545))
     is_ship_to_gstin_applicable,
     load_doc,
     notify_user,
