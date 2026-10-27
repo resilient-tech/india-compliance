@@ -2,7 +2,7 @@ import frappe
 from erpnext.accounts.party import get_address_tax_category
 from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
 from frappe import _
-from frappe.contacts.doctype.address.address import get_address_display, get_default_address
+from frappe.contacts.doctype.address.address import get_default_address
 from frappe.utils import flt
 from pypika import Order
 
@@ -92,8 +92,6 @@ def update_address_fields(doc, source_doc):
     doc.ship_from_address = address_map.ship_from
     doc.ship_to_address = address_map.ship_to
 
-    set_address_display(doc)
-
 
 def set_address_for_subcontracting_inward(doc, source_doc):
     """Set company (bill_from) -> customer (bill_to) addresses for Subcontracting Inward Stock Entries."""
@@ -102,8 +100,6 @@ def set_address_for_subcontracting_inward(doc, source_doc):
 
     if not doc.bill_to_address:
         doc.bill_to_address = get_default_address("Customer", source_doc.customer)
-
-    set_address_display(doc)
 
 
 def get_mapped_address(doc, source_doc):
@@ -286,19 +282,6 @@ def validate_doc_references(doc, method=None):
         frappe.throw(error_msg, title=_("Mandatory Field"))
     else:
         frappe.msgprint(error_msg, alert=True, indicator="yellow")
-
-
-def set_address_display(doc):
-    adddress_fields = (
-        "bill_from_address",
-        "bill_to_address",
-        "ship_from_address",
-        "ship_to_address",
-    )
-
-    for address in adddress_fields:
-        if doc.get(address):
-            setattr(doc, address + "_display", get_address_display(doc.get(address)))
 
 
 @frappe.whitelist()

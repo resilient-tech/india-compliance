@@ -21,6 +21,7 @@ from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     update_regional_gl_entries,
 )
+from frappe.desk.form.load import run_onload
 from frappe.model.mapper import get_mapped_doc
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_days, add_to_date, flt, getdate, now_datetime, today
@@ -755,6 +756,38 @@ class TestTransaction(IntegrationTestCase):
                 r"^(Invalid E-commerce GSTIN! The check digit validation has failed. Please ensure you've typed the E-commerce GSTIN correctly.*)$"
             ),
             doc.save,
+        )
+
+    def test_gst_breakup_table_in_print(self):
+        if self.doctype != "Sales Invoice":
+            return
+
+        doc = create_transaction(**self.transaction_details)
+        self.assertIsNone(frappe.get_doc(doc.doctype, doc.name).as_dict().get("gst_breakup_table"))
+
+        run_onload(doc)
+        gst_breakup_table = doc.get_onload()["ic_virtual_fields"]["gst_breakup_table"]
+        html = frappe.get_print(doc.doctype, doc.name, print_format="GST Tax Invoice", doc=doc)
+
+        self.assertIn(gst_breakup_table, html)
+
+    def test_ecommerce_supply_type_virtual_field(self):
+        if self.doctype != "Sales Invoice":
+            return
+
+        doc = create_transaction(
+            **self.transaction_details, ecommerce_gstin="29AABCF8078M1C8", do_not_submit=True
+        )
+        run_onload(doc)
+        self.assertEqual(
+            doc.get_onload()["ic_virtual_fields"]["ecommerce_supply_type"],
+            "Liable to collect tax u/s 52(TCS)",
+        )
+
+        doc.is_reverse_charge = 1
+        run_onload(doc)
+        self.assertEqual(
+            doc.get_onload()["ic_virtual_fields"]["ecommerce_supply_type"], "Liable to pay tax u/s 9(5)"
         )
 
     def test_taxable_value_with_charges(self):
