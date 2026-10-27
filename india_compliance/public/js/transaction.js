@@ -47,6 +47,10 @@ for (const doctype of ["Sales Invoice", "Sales Order", "Delivery Note"]) {
     set_e_commerce_ecommerce_supply_type(doctype);
 }
 
+for (const doctype of [...TRANSACTION_DOCTYPES, "POS Invoice", "Stock Entry"]) {
+    set_virtual_fields(doctype);
+}
+
 function fetch_gst_details(doctype) {
     const event_fields = ["tax_category", "company_gstin", "place_of_supply", "is_reverse_charge"];
 
@@ -336,6 +340,20 @@ function is_invoice_no_validation_required(transaction_type) {
         (transaction_type === "Delivery Note" && gst_settings.enable_e_waybill_from_dn) ||
         (transaction_type === "Purchase Receipt" && gst_settings.enable_e_waybill_from_pr)
     );
+}
+
+function set_virtual_fields(doctype) {
+    frappe.ui.form.on(doctype, {
+        refresh(frm) {
+            const values = frm.doc.__onload?.ic_virtual_fields;
+            if (!values) return;
+
+            for (const [fieldname, value] of Object.entries(values)) {
+                frm.doc[fieldname] = value;
+                frm.refresh_field(fieldname);
+            }
+        },
+    });
 }
 
 function set_e_commerce_ecommerce_supply_type(doctype) {

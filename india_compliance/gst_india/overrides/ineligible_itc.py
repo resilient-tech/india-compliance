@@ -11,6 +11,7 @@ from frappe import _
 from frappe.utils import flt, get_link_to_form
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.overrides.purchase_invoice import get_ineligibility_reason
 from india_compliance.gst_india.overrides.transaction import (
     is_indian_registered_company,
 )
@@ -90,8 +91,10 @@ class IneligibleITC:
         if not self.tax_account_dict:
             return
 
+        is_restricted_due_to_pos = self.is_eligibility_restricted_due_to_pos()
+
         for item in self.doc.items:
-            if not self.is_eligibility_restricted_due_to_pos() and not item.is_ineligible_for_itc:
+            if not is_restricted_due_to_pos and not item.is_ineligible_for_itc:
                 continue
 
             self.update_ineligible_taxes(item)
@@ -342,9 +345,8 @@ class IneligibleITC:
 
 
 class PurchaseReceipt(IneligibleITC):
-    def __init__(self, doc):
-        doc.run_method("onload")
-        super().__init__(doc)
+    def is_eligibility_restricted_due_to_pos(self):
+        return get_ineligibility_reason(self.doc) == "ITC restricted due to PoS rules"
 
     def update_valuation_rate(self):
         for item in self.doc.items:

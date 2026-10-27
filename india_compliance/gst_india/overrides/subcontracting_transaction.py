@@ -2,7 +2,6 @@ import frappe
 from erpnext.accounts.party import get_address_tax_category
 from erpnext.stock.get_item_details import get_item_tax_template
 from frappe import _, bold
-from frappe.contacts.doctype.address.address import get_address_display
 from frappe.utils import flt
 from pypika import Order
 
@@ -109,8 +108,6 @@ def update_address_fields(doc, source_doc):
     doc.bill_to_gstin = address_map.bill_to_gstin
     doc.ship_from_address = address_map.ship_from
     doc.ship_to_address = address_map.ship_to
-
-    set_address_display(doc)
 
 
 def get_mapped_address(doc, source_doc):
@@ -233,8 +230,6 @@ def get_dashboard_data(data):
 
 def onload(doc, method=None):
     if doc.doctype == "Stock Entry":
-        set_address_display(doc)
-
         # For e-Waybill data mapping
         doc.company_gstin = doc.bill_from_gstin
         doc.supplier_gstin = doc.bill_to_gstin
@@ -449,19 +444,6 @@ class SubcontractingGSTAccounts(GSTAccounts):
         for row in self.gst_tax_rows:
             # validating charge type "On Item Quantity" and non_cess_advol_account
             self.validate_charge_type_for_cess_non_advol_accounts(row)
-
-
-def set_address_display(doc):
-    adddress_fields = (
-        "bill_from_address",
-        "bill_to_address",
-        "ship_from_address",
-        "ship_to_address",
-    )
-
-    for address in adddress_fields:
-        if doc.get(address):
-            setattr(doc, address + "_display", get_address_display(doc.get(address)))
 
 
 @frappe.whitelist()
