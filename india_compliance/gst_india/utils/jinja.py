@@ -219,16 +219,11 @@ class GSTBreakup:
         if not self.doc.items:
             return False
 
-<<<<<<< HEAD
-        return any(
-            any(getattr(item, f"{scrub(tax_type)}_amount", 0) != 0 for tax_type in self.CESS_HEADERS)
-            for item in self.doc.items
-        )
-=======
         cess_amount_fields = [f"{scrub(tax_type)}_amount" for tax_type in self.CESS_HEADERS]
 
-        return any(any(getattr(item, field, 0) != 0 for field in cess_amount_fields) for item in self._items)
->>>>>>> 00c7193 (perf: render each address once and trim GST breakup loop)
+        return any(
+            any(getattr(item, field, 0) != 0 for field in cess_amount_fields) for item in self.doc.items
+        )
 
     def get_default_item_tax_row(self, item):
         if self.needs_hsn_wise_breakup:

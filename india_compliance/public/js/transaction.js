@@ -28,13 +28,10 @@ for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
     validate_overseas_gst_category(doctype);
     set_and_validate_gstin_status(doctype);
-<<<<<<< HEAD
 }
 
 for (const doctype of HSN_CODE_DOCTYPES) {
     set_hsn_code_autocomplete(doctype);
-=======
->>>>>>> 71324c6 (fix: resolve virtual fields using property instead of handling them manually using onload)
 }
 
 for (const doctype of SUBCONTRACTING_DOCTYPES) {
@@ -50,7 +47,7 @@ for (const doctype of ["Sales Invoice", "Sales Order", "Delivery Note"]) {
     set_e_commerce_ecommerce_supply_type(doctype);
 }
 
-for (const doctype of [...TRANSACTION_DOCTYPES, "POS Invoice", "Stock Entry", "Asset Movement"]) {
+for (const doctype of [...TRANSACTION_DOCTYPES, "POS Invoice", "Stock Entry"]) {
     set_virtual_fields(doctype);
 }
 
@@ -219,7 +216,6 @@ function ignore_port_code_validation(doctype) {
     });
 }
 
-<<<<<<< HEAD
 function set_hsn_code_autocomplete(doctype) {
     frappe.ui.form.on(doctype, {
         setup(frm) {
@@ -228,8 +224,6 @@ function set_hsn_code_autocomplete(doctype) {
     });
 }
 
-=======
->>>>>>> 71324c6 (fix: resolve virtual fields using property instead of handling them manually using onload)
 function is_foreign_transaction(frm) {
     return frm.doc.gst_category === "Overseas" && frm.doc.place_of_supply === "96-Other Countries";
 }
