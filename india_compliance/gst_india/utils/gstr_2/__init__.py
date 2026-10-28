@@ -416,6 +416,11 @@ def _download_gstr_2a(gstin, return_period, json_data):
     save_gstr_2a(gstin, return_period, json_data, skip)
 
 
+def clear_gstr_2a_category(gstin, return_period, classification):
+    skip = [category for category in GSTR_2A_ACTIONS.values() if category.value != classification]
+    save_gstr_2a(gstin, return_period, frappe._dict(gstin=gstin, fp=return_period), skip)
+
+
 def publish_2a_2b_queued_message():
     frappe.publish_realtime(
         "gstr_2a_2b_download_message",

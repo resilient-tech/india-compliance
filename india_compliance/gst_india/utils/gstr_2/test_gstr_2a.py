@@ -13,10 +13,10 @@ from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import (
     GSTRCategory,
     ReturnType,
-    _download_gstr_2a,
     download_gstr_2a,
     save_gstr_2a,
 )
+from india_compliance.gst_india.utils.gstr_utils import _download_queued_request
 
 
 class TestGSTRMixin:
@@ -321,11 +321,36 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
         self.assertTrue(frappe.db.exists(self.doctype, b2b.name))
         self.assertIn("b2b", get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period))
 
-        _download_gstr_2a(self.gstin, period, frappe._dict(b2b=[supplier]))
+        self.retry_queued_b2b(period, frappe._dict(b2b=[supplier]))
         self.assertTrue(frappe.db.exists(self.doctype, tcs.name))
         self.assertLessEqual(
             {"b2b", "tcs"}, set(get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period))
         )
+
+        download_gstr_2a(self.gstin, [period])
+        log = self.retry_queued_b2b(period, frappe._dict(error_type="no_docs_found"))
+        raw = get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period)
+        self.assertFalse(frappe.db.exists(self.doctype, b2b.name))
+        self.assertTrue(frappe.db.exists(self.doctype, tcs.name))
+        self.assertNotIn("b2b", raw)
+        self.assertIn("tcs", raw)
+        self.assertFalse(log.request_id)
+
+    def retry_queued_b2b(self, period, response):
+        log = frappe.get_last_doc(
+            self.log_doctype,
+            filters={
+                "gstin": self.gstin,
+                "return_type": ReturnType.GSTR2A.value,
+                "return_period": period,
+                "classification": GSTRCategory.B2B.value,
+            },
+        )
+        with patch("india_compliance.gst_india.utils.gstr_utils.ReturnsAPI") as api:
+            api.return_value.download_files.return_value = response
+            _download_queued_request(log)
+
+        return log.reload()
 
     def test_gstr2a_isd(self):
         doc = self.get_doc(GSTRCategory.ISD)
