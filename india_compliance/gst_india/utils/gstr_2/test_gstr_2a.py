@@ -319,6 +319,25 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
 
         self.assertTrue(frappe.db.exists(self.doctype, doc.name))
 
+    @patch("india_compliance.gst_india.utils.gstr_2.GSTR2aAPI")
+    def test_failed_category_leaves_the_month_to_download(self, gstr_2a_api):
+        period = "112020"
+        logs = {"gstin": self.gstin, "return_type": ReturnType.GSTR2A.value, "return_period": period}
+        self.addCleanup(frappe.db.delete, self.log_doctype, logs)
+
+        responses = {
+            "B2BA": frappe._dict(token=frappe.generate_hash(length=10), est=1),
+            "CDN": frappe._dict(error_type="queued"),
+        }
+        gstr_2a_api.return_value.get_data.side_effect = lambda action, return_period: responses.get(
+            action, frappe._dict(error_type="no_docs_found")
+        )
+
+        with self.assertRaises(frappe.ValidationError):
+            download_gstr_2a(self.gstin, [period])
+
+        self.assertFalse(frappe.db.exists(self.log_doctype, logs))
+
     def test_gstr2a_isd(self):
         doc = self.get_doc(GSTRCategory.ISD)
         self.assertImportLog(GSTRCategory.ISD)
