@@ -74,6 +74,7 @@ def download_gstr_2a(gstin, return_periods):
 
         json_data = frappe._dict({"gstin": gstin, "fp": return_period})
         has_data = False
+        logs = []
         for action, category in GSTR_2A_ACTIONS.items():
             requests_made += 1
 
@@ -90,24 +91,17 @@ def download_gstr_2a(gstin, return_periods):
             response = api.get_data(action, return_period)
 
             if response.error_type == "no_docs_found":
-                create_import_log(
-                    gstin,
-                    return_type.value,
-                    return_period,
-                    classification=category.value,
-                    data_not_found=True,
-                )
+                logs.append({"classification": category.value, "data_not_found": True})
                 continue
 
             # Queued
             if response.token:
-                create_import_log(
-                    gstin,
-                    return_type.value,
-                    return_period,
-                    classification=category.value,
-                    request_id=response.token,
-                    retry_after_mins=cint(response.est),
+                logs.append(
+                    {
+                        "classification": category.value,
+                        "request_id": response.token,
+                        "retry_after_mins": cint(response.est),
+                    }
                 )
                 queued_message = True
                 continue
@@ -134,6 +128,9 @@ def download_gstr_2a(gstin, return_periods):
             # making consistent with GSTR2a upload
             json_data[action.lower()] = data
             has_data = True
+
+        for log in logs:
+            create_import_log(gstin, return_type.value, return_period, **log)
 
         save_gstr_2a(gstin, return_period, json_data)
 
