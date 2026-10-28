@@ -135,7 +135,7 @@ def get_itc_period_options(company_gstin: str | None = None, posting_date: str |
 
     filed = _get_filed_periods(company_gstin)
 
-    filed_badge = f'<span class="es-badge" data-theme="amber">{_("Filed")}</span>'
+    filed_badge = f'<span class="indicator-pill no-indicator-dot yellow">{_("Filed")}</span>'
 
     periods = [{"value": ITC_CLAIM_PERIOD_DEFERRED, "label": ITC_CLAIM_PERIOD_DEFERRED}]
     current = end_date
