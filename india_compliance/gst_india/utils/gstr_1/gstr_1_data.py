@@ -1,7 +1,6 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 import re
-from itertools import combinations
 from typing import ClassVar
 
 import frappe
@@ -705,25 +704,13 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             unique_invoices.update(row["unique_records"])
 
         # Get Overlaping Invoices
-        invoice_sets = [
-            sub_category_summary[nil_exempt]["unique_records"],
-            {
-                *sub_category_summary[supecom_52]["unique_records"],
-                *sub_category_summary[supecom_9_5]["unique_records"],
-            },
-            unique_invoices,
-        ]
-
-        overlaping_invoices = []
-
-        for set1, set2 in combinations(invoice_sets, 2):
-            overlaping_invoices.extend(set1.intersection(set2))
+        overlaping_invoices = sub_category_summary[nil_exempt]["unique_records"] & unique_invoices
 
         # Update Summary
         if overlaping_invoices:
             final_summary.append(
                 {
-                    "description": "Overlaping Invoices in Nil-Rated/Exempt/Non-GST and E-commerce Sales",
+                    "description": "Overlaping Invoices in Nil-Rated/Exempt/Non-GST and Taxable Sales",
                     "no_of_records": -len(overlaping_invoices),
                 }
             )
