@@ -1237,6 +1237,16 @@ CUSTOM_FIELDS = {
             "depends_on": 'eval:in_list(["Registered Regular", "Overseas", "Unregistered"], doc.gst_category)',
         },
     ],
+    "Bank Account": [
+        {
+            "fieldname": "ifsc_code",
+            "label": "IFSC Code",
+            "fieldtype": "Data",
+            "insert_after": "branch_code",
+            "in_global_search": 1,
+            "translatable": 0,
+        },
+    ],
     "Address": [
         {
             "fieldname": "tax_details_section",

@@ -1472,6 +1472,7 @@ GSTIN_FORMATS = {
 
 PAN_NUMBER = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$")
 PINCODE_FORMAT = re.compile(r"^[1-9][0-9]{5}$")
+IFSC_CODE = re.compile(r"^[A-Z]{4}0[A-Z0-9]{6}$")
 
 # Maximum length must be 16 characters. First character must be alphanumeric.
 # Subsequent characters can be alphanumeric, hyphens or slashes.
