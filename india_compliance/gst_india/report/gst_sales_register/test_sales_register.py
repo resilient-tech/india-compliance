@@ -703,6 +703,9 @@ class TestSalesRegister(IntegrationTestCase):
             FILTERS["summary_by"] = "Summary by Item"
             item_rows = [row for row in execute(FILTERS)[1] if row.invoice_no == si.name]
 
+        self.assertEqual(len(item_rows), 3)
+        self.assertEqual(set(hsn_view), {"61149090", "999900"})
+
         for gst_hsn_code, hsn_row in hsn_view.items():
             for field in ("taxable_value", "cgst_amount", "sgst_amount", "total_tax", "total_amount"):
                 self.assertEqual(
