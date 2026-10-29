@@ -1,5 +1,5 @@
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import getdate
+from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.report.gst_sales_register_beta.gst_sales_register_beta import (
     execute,
@@ -667,6 +667,38 @@ class TestSalesRegisterBeta(FrappeTestCase):
 
         for index, invoice in enumerate(report_data[1]):
             self.assertPartialDict(EXPECTED_SUMMARY_BY_HSN[index], invoice)
+
+        with change_settings("System Settings", {"currency_precision": 3}):
+            si = create_sales_invoice(
+                is_in_state=1,
+                items=[
+                    {"item_code": "_Test Trading Goods 1", "qty": 1, "rate": 100.333},
+                    {"item_code": "_Test Service Item", "qty": 1, "rate": 100.333},
+                    {
+                        "item_code": "_Test Ineligible Service Item",
+                        "gst_hsn_code": "61149090",
+                        "qty": 1,
+                        "rate": 100.334,
+                    },
+                ],
+            )
+
+            FILTERS["summary_by"] = "Summary by HSN"
+            hsn_view = {row.gst_hsn_code: row for row in execute(FILTERS)[1] if row.invoice_no == si.name}
+
+            FILTERS["summary_by"] = "Summary by Item"
+            item_rows = [row for row in execute(FILTERS)[1] if row.invoice_no == si.name]
+
+        self.assertEqual(len(item_rows), 3)
+        self.assertEqual(set(hsn_view), {"61149090", "999900"})
+
+        for gst_hsn_code, hsn_row in hsn_view.items():
+            for field in ("taxable_value", "cgst_amount", "sgst_amount", "total_tax", "total_amount"):
+                self.assertEqual(
+                    hsn_row[field],
+                    flt(sum(row[field] for row in item_rows if row.gst_hsn_code == gst_hsn_code), 2),
+                    f"{gst_hsn_code} {field}",
+                )
 
     def test_overview(self):
         FILTERS["summary_by"] = "Overview"

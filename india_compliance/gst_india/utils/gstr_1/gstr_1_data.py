@@ -23,7 +23,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     SubCategory,
     get_b2c_limit,
 )
-from india_compliance.gst_india.utils.gstr_1.sections._shared import split
+from india_compliance.gst_india.utils.gstr_1.sections._shared import money, split
 
 CATEGORY_CONDITIONS = {
     Category.ECOM_RCM.value: {
@@ -463,8 +463,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 identified_uom[uom] = gst_uom
                 invoice["uom"] = gst_uom
 
-        self.rounding_difference = self.settle_amounts(invoices)
-
     def settle_amounts(self, invoices):
         """Round the amounts once, here, so every report reads the same figures.
 
@@ -521,36 +519,38 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
     def get_invoices_for_item_wise_summary(self):
         query = self.get_base_query()
+        invoices = query.run(as_dict=True)
+        self.rounding_difference = self.settle_amounts(invoices)
 
-        return query.run(as_dict=True)
+        return invoices
 
     def get_invoices_for_hsn_wise_summary(self):
-        query = self.get_base_query()
+        invoices = self.get_invoices_for_item_wise_summary()
 
-        query = (
-            frappe.qb.from_(query)
-            .select(
-                "*",
-                Sum(query.qty).as_("qty"),
-                Sum(query.taxable_value).as_("taxable_value"),
-                Sum(query.cgst_amount).as_("cgst_amount"),
-                Sum(query.sgst_amount).as_("sgst_amount"),
-                Sum(query.igst_amount).as_("igst_amount"),
-                Sum(query.total_cess_amount).as_("total_cess_amount"),
-                Sum(query.total_tax).as_("total_tax"),
-                Sum(query.total_amount).as_("total_amount"),
-            )
-            .groupby(
-                query.invoice_no,
-                query.gst_hsn_code,
-                query.gst_rate,
-                query.gst_treatment,
-                query.uom,
-            )
-            .orderby(query.posting_date, query.invoice_no, query.item_code, order=Order.desc)
+        group_by = ("invoice_no", "gst_hsn_code", "gst_rate", "gst_treatment", "uom")
+        summed = (
+            "taxable_value",
+            "cgst_amount",
+            "sgst_amount",
+            "igst_amount",
+            "total_cess_amount",
+            "total_tax",
+            "total_amount",
         )
 
-        return query.run(as_dict=True)
+        grouped = {}
+        for invoice in invoices:
+            key = tuple(invoice.get(column) for column in group_by)
+            if key not in grouped:
+                grouped[key] = invoice
+                continue
+
+            row = grouped[key]
+            row["qty"] = flt((row.get("qty") or 0) + (invoice.get("qty") or 0), 9)
+            for column in summed:
+                row[column] = money((row.get(column) or 0) + (invoice.get(column) or 0))
+
+        return list(grouped.values())
 
     def get_filtered_invoices(self, invoices, invoice_category=None, invoice_sub_category=None):
         filtered_invoices = []
