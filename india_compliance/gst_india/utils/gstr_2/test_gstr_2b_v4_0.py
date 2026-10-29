@@ -624,7 +624,7 @@ class TestDownloadComplete(IntegrationTestCase):
         with (
             patch("india_compliance.gst_india.utils.gstr_2.GSTR2bAPI") as api_class,
             patch("frappe.publish_realtime") as publish,
-            self.assertRaises(Exception),
+            self.assertRaisesRegex(Exception, "portal down"),
         ):
             api_class.return_value.get_data.side_effect = Exception("portal down")
             download_gstr_2b(self.GSTIN, ["032020"])

@@ -1667,6 +1667,21 @@ class TestDownloadJobEnds(IntegrationTestCase):
             "gstr_2a_2b_download_complete", user=frappe.session.user, after_commit=True
         )
 
+    def test_failed_download_still_ends_the_import(self):
+        with (
+            patch.object(reco.BaseUtil, "get_periods", return_value=["032020"]),
+            patch.object(reco, "get_periods_to_download", return_value=["032020"]),
+            patch.object(reco, "_check_gstr3b_status"),
+            patch.object(reco, "download_gstr_2b", side_effect=Exception("portal down")),
+            patch("frappe.log_error"),
+            patch("frappe.publish_realtime") as publish,
+        ):
+            reco.download_gstr(self.GSTIN, self.DATE_RANGE, "GSTR2b")
+
+        event, message = publish.call_args.args[:2]
+        self.assertEqual(event, "gstr_2a_2b_download_message")
+        self.assertTrue(message["failed"])
+
 
 def create_boe(**kwargs):
     kwargs.update(BILL_OF_ENTRY_DEFAULT_ARGS)

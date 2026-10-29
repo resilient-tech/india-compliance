@@ -465,6 +465,7 @@ def download_gstr(
                 "title": _("2A/2B Download Failed"),
                 "message": str(e),
                 "indicator": "red",
+                "failed": True,
             },
             user=frappe.session.user,
         )
