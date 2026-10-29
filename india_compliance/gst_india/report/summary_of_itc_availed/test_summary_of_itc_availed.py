@@ -14,7 +14,7 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
 from india_compliance.gst_india.report.summary_of_itc_availed.summary_of_itc_availed import (
     execute,
 )
-from india_compliance.gst_india.utils.tests import create_purchase_invoice
+from india_compliance.gst_india.utils.tests import append_item, create_purchase_invoice
 
 COMPANY = "_Test Indian Registered Company"
 COMPANY_GSTIN = "24AAQCA8719H1ZC"
@@ -167,3 +167,28 @@ class TestSummaryOfITCAvailed(IntegrationTestCase):
             for row in data
             if row.get("indent") == 1 and row.get("details") in ("Inputs", "Input Services")
         )
+
+    def test_service_line_on_sez_import_of_goods_counted_under_inputs(self):
+        pi = create_purchase_invoice(
+            supplier="_Test Registered Supplier",
+            supplier_address="_Test Registered Supplier-Billing-2",
+            is_out_state=True,
+            do_not_save=True,
+        )
+        append_item(pi, frappe._dict(item_code="_Test Service Item"))
+        pi.insert()
+        pi.submit()
+
+        self.assertEqual(pi.itc_classification, "Import Of Goods")
+        self.assertEqual(pi.is_boe_applicable, 0)
+
+        _, data = execute(_filters(getdate()))
+
+        import_goods_row = next(
+            row
+            for row in data
+            if row.get("indent") == 0
+            and "Import Of Goods (including supplies from SEZ)" in row.get("details", "")
+        )
+
+        self.assertEqual(import_goods_row["igst_amount"], 36.0)
