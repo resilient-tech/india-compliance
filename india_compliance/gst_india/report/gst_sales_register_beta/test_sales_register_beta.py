@@ -1,5 +1,5 @@
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import getdate
+from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.report.gst_sales_register_beta.gst_sales_register_beta import (
     execute,
@@ -668,19 +668,6 @@ class TestSalesRegisterBeta(FrappeTestCase):
         for index, invoice in enumerate(report_data[1]):
             self.assertPartialDict(EXPECTED_SUMMARY_BY_HSN[index], invoice)
 
-<<<<<<< HEAD:india_compliance/gst_india/report/gst_sales_register_beta/test_sales_register_beta.py
-=======
-        FILTERS["summary_by"] = "Summary by Item"
-        itemwise_data = execute(FILTERS)[1]
-        self.assertTrue(itemwise_data)
-
-        for field in ("taxable_value", "total_tax", "total_amount"):
-            self.assertAlmostEqual(
-                sum(flt(row[field]) for row in report_data[1]),
-                sum(flt(row[field]) for row in itemwise_data),
-                places=2,
-            )
-
         with change_settings("System Settings", {"currency_precision": 3}):
             si = create_sales_invoice(
                 is_in_state=1,
@@ -713,7 +700,6 @@ class TestSalesRegisterBeta(FrappeTestCase):
                     f"{gst_hsn_code} {field}",
                 )
 
->>>>>>> 293c522 (test: review changes):india_compliance/gst_india/report/gst_sales_register/test_sales_register.py
     def test_overview(self):
         FILTERS["summary_by"] = "Overview"
         report_data = execute(FILTERS)
