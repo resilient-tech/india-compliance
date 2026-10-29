@@ -10,6 +10,7 @@ from india_compliance.gst_india.api_classes.taxpayer_base import FilesAPI
 from india_compliance.gst_india.api_classes.taxpayer_returns import ReturnsAPI
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     get_raw_return_data,
+    store_raw_return_data,
 )
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import (
@@ -331,12 +332,15 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
                 "sup_return_period": period,
             }
         ).insert(ignore_permissions=True)
+        store_raw_return_data(
+            self.gstin, ReturnType.GSTR2A.value, period, {"isda": self.test_data.isd}, overwrite=False
+        )
 
         log = self.retry_queued_b2b(period, frappe._dict(urls=[]), frappe._dict(b2b=[supplier]))
         self.assertTrue(frappe.db.exists(self.doctype, tcs.name))
         self.assertTrue(frappe.db.exists(self.doctype, isda.name))
         self.assertLessEqual(
-            {"b2b", "tcs"}, set(get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period))
+            {"b2b", "tcs", "isda"}, set(get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period))
         )
 
         log.db_set("request_id", frappe.generate_hash(length=10))
@@ -346,7 +350,7 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
         self.assertTrue(frappe.db.exists(self.doctype, tcs.name))
         self.assertTrue(frappe.db.exists(self.doctype, isda.name))
         self.assertNotIn("b2b", raw)
-        self.assertIn("tcs", raw)
+        self.assertLessEqual({"tcs", "isda"}, set(raw))
         self.assertFalse(log.request_id)
 
     def retry_queued_b2b(self, period, portal_response, files=None):

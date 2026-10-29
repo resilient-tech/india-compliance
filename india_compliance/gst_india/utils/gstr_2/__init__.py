@@ -284,7 +284,8 @@ def save_gstr_2a(gstin, return_period, json_data, skip=()):
         )
 
     raw_data = dict(json_data)
-    keep = [action.lower() for action, category in GSTR_2A_ACTIONS.items() if category in skip]
+    raw_keys = {category: action.lower() for action, category in GSTR_2A_ACTIONS.items()}
+    keep = [raw_keys.get(category, category.value.lower()) for category in skip]
 
     for action, category in GSTR_2A_ACTIONS.items():
         if action.lower() not in json_data:
