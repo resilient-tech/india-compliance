@@ -670,6 +670,15 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertEqual(target_se.ship_from_address, source_se.ship_from_address)
         self.assertEqual(target_se.ship_to_address, source_se.ship_to_address)
 
+    def test_sco_to_se_place_of_supply_follows_bill_to(self):
+        sco = make_sco()
+        sco.db_set("place_of_supply", "33-Tamil Nadu")
+
+        se = make_rm_stock_entry(sco.name, get_rm_items(sco.supplied_items))
+
+        self.assertEqual(se.bill_to_gstin, sco.supplier_gstin)
+        self.assertEqual(se.place_of_supply, "24-Gujarat")
+
 
 def _make_taxes_controller_doc(items=None, taxes=None, doctype="Subcontracting Order", assets=None):
     """Build a client-style _dict doc as produced by json.loads(..., object_hook=_dict)."""

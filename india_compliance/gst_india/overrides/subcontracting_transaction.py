@@ -18,6 +18,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_items,
+    get_place_of_supply,
 )
 from india_compliance.gst_india.utils.custom_transaction_controller import CustomEwaybillController
 
@@ -77,6 +78,9 @@ def after_mapping_stock_entry(doc, method, source_doc):
         set_address_for_subcontracting_inward(doc, source_doc)
     else:
         update_address_fields(doc, source_doc)
+
+    if place_of_supply := get_place_of_supply(doc, doc.doctype):
+        doc.place_of_supply = place_of_supply
 
 
 def update_address_fields(doc, source_doc):
