@@ -381,6 +381,28 @@ class TestPurchaseInvoice(IntegrationTestCase):
 
             self.assertNotIn("GSTR-3B is filed for", frappe.as_json(frappe.message_log))
 
+    def test_cancel_warns_if_itc_claim_period_is_filed(self):
+        """Cancelling an invoice whose ITC is in a filed GSTR-3B must warn."""
+        pinv = create_purchase_invoice()
+        posting_date = getdate(pinv.posting_date)
+
+        with _gstr3b_filed(pinv.company_gstin, posting_date):
+            frappe.local.message_log = []
+            pinv.cancel()
+
+            self.assertIn(
+                f"GSTR-3B is filed for {formatdate(posting_date, 'MMM YYYY')}",
+                frappe.as_json(frappe.message_log),
+            )
+
+        self.assertEqual(pinv.docstatus, 2)
+
+        unfiled_pinv = create_purchase_invoice()
+        frappe.local.message_log = []
+        unfiled_pinv.cancel()
+
+        self.assertNotIn("GSTR-3B is filed for", frappe.as_json(frappe.message_log))
+
     def test_submit_warns_if_draft_period_gets_filed_before_submit(self):
         """Submitting a draft must warn, not fail, if its claim period gets filed meanwhile."""
         pinv = create_purchase_invoice(do_not_submit=True)

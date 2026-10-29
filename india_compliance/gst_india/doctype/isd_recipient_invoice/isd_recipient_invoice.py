@@ -12,6 +12,7 @@ from india_compliance.gst_india.utils.itc_claim import (
     _is_gstr3b_filed,
     set_or_validate_itc_claim_period,
     validate_itc_claim_period_on_update_after_submit,
+    warn_if_gstr3b_filed,
 )
 
 
@@ -56,6 +57,7 @@ class ISDRecipientInvoice(ISDController):
     # on_trash (deleting the GL entries) is inherited from ISDController
     def on_cancel(self):
         super().on_cancel()
+        warn_if_gstr3b_filed(self)
 
         # a cancelled invoice must not keep holding on to its 2A/2B match
         frappe.db.set_value(
