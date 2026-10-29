@@ -12,3 +12,11 @@ india_compliance/docs/current
 # JS
 dist/
 node_modules
+
+# UI tests
+test-results/
+.pytest_cache/
+.auth/
+
+# Local env — .env.example is the tracked template
+.env
