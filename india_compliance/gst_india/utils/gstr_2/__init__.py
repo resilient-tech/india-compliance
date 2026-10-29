@@ -412,12 +412,13 @@ def update_import_history(gstin, return_periods):
 def _download_gstr_2a(gstin, return_period, json_data):
     json_data.gstin = gstin
     json_data.fp = return_period
-    skip = [category for action, category in GSTR_2A_ACTIONS.items() if action.lower() not in json_data]
+    received = [category for action, category in GSTR_2A_ACTIONS.items() if action.lower() in json_data]
+    skip = [category for category in GSTRCategory if category not in received]
     save_gstr_2a(gstin, return_period, json_data, skip)
 
 
 def clear_gstr_2a_category(gstin, return_period, classification):
-    skip = [category for category in GSTR_2A_ACTIONS.values() if category.value != classification]
+    skip = [category for category in GSTRCategory if category.value != classification]
     save_gstr_2a(gstin, return_period, frappe._dict(gstin=gstin, fp=return_period), skip)
 
 
