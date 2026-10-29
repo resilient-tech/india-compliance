@@ -435,22 +435,22 @@ def download_gstr(
     return_period=None,
     force=False,
 ):
-    return_type = ReturnType(return_type)
-
-    if return_period:
-        periods = [return_period]
-    else:
-        periods = BaseUtil.get_periods(date_range, return_type, company_gstin)
-        periods = get_periods_to_download(company_gstin, return_type, periods, download_all=force)
-
-    if not periods:
-        publish_download_complete()
-        return
-
-    latest_period = max(periods, key=period_sort_key)
-    _check_gstr3b_status(company_gstin, latest_period)
-
     try:
+        return_type = ReturnType(return_type)
+
+        if return_period:
+            periods = [return_period]
+        else:
+            periods = BaseUtil.get_periods(date_range, return_type, company_gstin)
+            periods = get_periods_to_download(company_gstin, return_type, periods, download_all=force)
+
+        if not periods:
+            publish_download_complete()
+            return
+
+        latest_period = max(periods, key=period_sort_key)
+        _check_gstr3b_status(company_gstin, latest_period)
+
         if return_type == ReturnType.GSTR2A:
             return download_gstr_2a(company_gstin, periods)
 
