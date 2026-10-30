@@ -3,6 +3,7 @@
 
 import datetime
 import json
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
@@ -17,6 +18,9 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
     make_isd_pi,
     make_source_item,
     setup_isd_fixtures,
+)
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
+    purchase_reconciliation_tool as reco,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
     BuildExcel,
@@ -1645,6 +1649,40 @@ def create_gst_inward_supply(**kwargs):
         )
 
     return gst_inward_supply.insert()
+
+
+class TestDownloadJobEnds(IntegrationTestCase):
+    GSTIN = "24AAQCA8719H1ZC"
+    DATE_RANGE = ("2020-03-01", "2020-03-31")
+
+    def test_nothing_to_download_still_ends_the_import(self):
+        with (
+            patch.object(reco.BaseUtil, "get_periods", return_value=["032020"]),
+            patch.object(reco, "get_periods_to_download", return_value=[]),
+            patch("frappe.publish_realtime") as publish,
+        ):
+            reco.download_gstr(self.GSTIN, self.DATE_RANGE, "GSTR2b")
+
+        publish.assert_called_once_with(
+            "gstr_2a_2b_download_complete", user=frappe.session.user, after_commit=True
+        )
+
+    def test_failed_download_still_ends_the_import(self):
+        for failing in ("get_periods_to_download", "download_gstr_2b"):
+            with (
+                self.subTest(failing=failing),
+                patch.object(reco.BaseUtil, "get_periods", return_value=["032020"]),
+                patch.object(reco, "get_periods_to_download", return_value=["032020"]),
+                patch.object(reco, "_check_gstr3b_status"),
+                patch.object(reco, failing, side_effect=Exception("portal down")),
+                patch("frappe.log_error"),
+                patch("frappe.publish_realtime") as publish,
+            ):
+                reco.download_gstr(self.GSTIN, self.DATE_RANGE, "GSTR2b")
+
+            event, message = publish.call_args.args[:2]
+            self.assertEqual(event, "gstr_2a_2b_download_message")
+            self.assertTrue(message["failed"])
 
 
 def create_boe(**kwargs):
