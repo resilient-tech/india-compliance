@@ -29,6 +29,7 @@ from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.itc_claim import (
     set_or_validate_itc_claim_period,
     validate_itc_claim_period_on_update_after_submit,
+    warn_if_gstr3b_filed,
 )
 
 
@@ -87,6 +88,7 @@ def before_update_after_submit(doc, method=None):
 
 
 def on_cancel(doc, method=None):
+    warn_if_gstr3b_filed(doc)
     frappe.db.set_value(
         "GST Inward Supply",
         {"link_doctype": "Purchase Invoice", "link_name": doc.name},

@@ -27,6 +27,7 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import (
     set_or_validate_itc_claim_period,
     validate_itc_claim_period_on_update_after_submit,
+    warn_if_gstr3b_filed,
 )
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -81,6 +82,7 @@ class BillofEntry(Document):
         validate_itc_claim_period_on_update_after_submit(self)
 
     def on_cancel(self):
+        warn_if_gstr3b_filed(self)
         self.ignore_linked_doctypes = ("GL Entry",)
         make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
         self.update_pending_boe_qty()
