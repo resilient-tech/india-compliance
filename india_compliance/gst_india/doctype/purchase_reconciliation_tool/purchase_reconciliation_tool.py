@@ -680,6 +680,7 @@ class AutoReconcile:
                     now=frappe.flags.in_test,
                     timeout=1800,
                     deduplicate=True,
+                    enqueue_after_commit=True,
                 )
 
     def get_gstins_with_valid_credentials(self):
