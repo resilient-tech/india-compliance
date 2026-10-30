@@ -458,6 +458,13 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                     taxable_value_difference: 0,
                 };
             }
+            if (!new_row.supplier && row.supplier) {
+                Object.assign(new_row, {
+                    supplier_name_gstin: this.get_supplier_name_gstin(row),
+                    supplier: row.supplier,
+                    supplier_name: row.supplier_name,
+                });
+            }
             if (row.inward_supply_name) new_row.inward_supply_count += 1;
             if (row.purchase_invoice_name) new_row.purchase_count += 1;
             if (row.action != "No Action") new_row.action_taken_count += 1;
