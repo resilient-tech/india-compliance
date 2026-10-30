@@ -119,11 +119,23 @@ class PurchaseReconciliationTool(Document):
         return self.ReconciledData.get()
 
     @frappe.whitelist()
-    def upload_gstr(self, return_type: str, period: str, file_path: str):
+    def upload_gstr(self, return_type: str, file_path: str, period: str | None = None):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         return_type = ReturnType(return_type)
         json_data = get_json_from_file(file_path)
+
+        # return period is always taken from the file, as `period` received from the client
+        # may be the Inward Supply Period of the tool (eg. "Custom")
+        period = get_return_period_from_json(return_type, json_data)
+        if not period or not re.fullmatch(r"(0[1-9]|1[0-2])\d{4}", period):
+            frappe.throw(
+                _(
+                    "Could not fetch a valid return period from the file. Please upload the {0} file downloaded from the GST Portal."
+                ).format(return_type.value),
+                title=_("Invalid File"),
+            )
+
         if return_type == ReturnType.GSTR2A:
             return save_gstr_2a(self.company_gstin, period, json_data)
 
@@ -223,14 +235,8 @@ class PurchaseReconciliationTool(Document):
         if not file_path:
             return
 
-        return_type = ReturnType(return_type)
         try:
-            json_data = get_json_from_file(file_path)
-            if return_type == ReturnType.GSTR2A:
-                return json_data.get("fp")
-
-            if return_type == ReturnType.GSTR2B:
-                return json_data.get("data").get("rtnprd")
+            return get_return_period_from_json(ReturnType(return_type), get_json_from_file(file_path))
 
         except Exception:
             pass
@@ -424,6 +430,14 @@ class PurchaseReconciliationTool(Document):
             query = query.where(ISD.name.notin(ISDInvoice.query_match_isd_invoices()))
 
         return get_formatted_options(query.run(as_dict=True))
+
+
+def get_return_period_from_json(return_type: ReturnType, json_data):
+    if return_type == ReturnType.GSTR2A:
+        return json_data.get("fp")
+
+    if return_type == ReturnType.GSTR2B:
+        return (json_data.get("data") or {}).get("rtnprd")
 
 
 def download_gstr(
