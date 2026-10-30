@@ -403,8 +403,8 @@ def publish_2a_2b_queued_message():
     )
 
 
-def download_job_id(gstin, return_type):
-    return f"gstr_2a_2b_download:{gstin}:{return_type}"
+def download_job_id(gstin):
+    return f"gstr_2a_2b_download:{gstin}"
 
 
 def publish_download_complete():

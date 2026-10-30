@@ -145,13 +145,13 @@ class PurchaseReconciliationTool(Document):
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        job_id = download_job_id(company_gstin, return_type)
+        job_id = download_job_id(company_gstin)
 
         if is_job_enqueued(job_id):
             return {
-                "message": _(
-                    "A download job is already in progress for the GSTIN - {0} and Return Type - {1}"
-                ).format(company_gstin, return_type),
+                "message": _("A download job is already in progress for the GSTIN - {0}").format(
+                    company_gstin
+                ),
             }
 
         TaxpayerBaseAPI(company_gstin).validate_auth_token()
