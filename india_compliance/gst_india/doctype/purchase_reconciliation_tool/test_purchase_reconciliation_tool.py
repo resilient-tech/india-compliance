@@ -1685,13 +1685,18 @@ class TestDownloadJobEnds(IntegrationTestCase):
             self.assertEqual(event, "gstr_2a_2b_download_message")
             self.assertTrue(message["failed"])
 
-    def test_scheduled_download_skips_a_return_already_downloading(self):
-        running = reco.download_job_id(self.GSTIN, "GSTR2b")
+    def test_scheduled_download_skips_a_gstin_already_downloading(self):
+        idle_gstin = "24AAQCA8719H2ZB"
+        running = reco.download_job_id(self.GSTIN)
         started = Mock(**{"get_status.return_value": JobStatus.STARTED})
 
         with (
             patch.object(reco.AutoReconcile, "is_reconciliation_enabled", return_value=True),
-            patch.object(reco.AutoReconcile, "get_gstins_with_valid_credentials", return_value={self.GSTIN}),
+            patch.object(
+                reco.AutoReconcile,
+                "get_gstins_with_valid_credentials",
+                return_value={self.GSTIN, idle_gstin},
+            ),
             patch(
                 "frappe.utils.background_jobs.get_job",
                 side_effect=lambda job_id: started if job_id == running else None,
@@ -1700,7 +1705,10 @@ class TestDownloadJobEnds(IntegrationTestCase):
         ):
             reco.auto_download_gstr()
 
-        self.assertEqual([call.kwargs["return_type"] for call in download.call_args_list], ["GSTR2a"])
+        self.assertEqual(
+            [(call.args[0], call.args[2]) for call in download.call_args_list],
+            [(idle_gstin, "GSTR2a"), (idle_gstin, "GSTR2b")],
+        )
 
 
 def create_boe(**kwargs):

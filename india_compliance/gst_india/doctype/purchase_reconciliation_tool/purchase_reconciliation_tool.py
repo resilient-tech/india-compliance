@@ -666,22 +666,20 @@ class AutoReconcile:
         gstins = self.get_gstins_with_valid_credentials()
 
         for gstin in gstins:
-            for return_type in (ReturnType.GSTR2A, ReturnType.GSTR2B):
-                frappe.enqueue(
-                    download_gstr,
-                    date_range=[
-                        self.inward_supply_from_date.strftime("%Y-%m-%d"),
-                        self.today.strftime("%Y-%m-%d"),
-                    ],
-                    company_gstin=gstin,
-                    return_type=return_type.value,
-                    queue="long",
-                    job_id=download_job_id(gstin, return_type.value),
-                    now=frappe.flags.in_test,
-                    timeout=1800,
-                    deduplicate=True,
-                    enqueue_after_commit=True,
-                )
+            frappe.enqueue(
+                download_2a_and_2b,
+                company_gstin=gstin,
+                date_range=[
+                    self.inward_supply_from_date.strftime("%Y-%m-%d"),
+                    self.today.strftime("%Y-%m-%d"),
+                ],
+                queue="long",
+                job_id=download_job_id(gstin),
+                now=frappe.flags.in_test,
+                timeout=3600,
+                deduplicate=True,
+                enqueue_after_commit=True,
+            )
 
     def get_gstins_with_valid_credentials(self):
         valid_gstins = set()
@@ -749,6 +747,11 @@ class AutoReconcile:
 def auto_download_gstr():
     """Auto download GSTR 2A and 2B"""
     AutoReconcile().download_gst_returns()
+
+
+def download_2a_and_2b(company_gstin, date_range):
+    for return_type in (ReturnType.GSTR2A, ReturnType.GSTR2B):
+        download_gstr(company_gstin, date_range, return_type.value)
 
 
 def auto_reconcile():
