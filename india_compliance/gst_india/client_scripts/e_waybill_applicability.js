@@ -81,7 +81,7 @@ class EwaybillApplicability {
 
 class SalesInvoiceEwaybill extends EwaybillApplicability {
     is_e_waybill_generatable(show_message = false) {
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
         if (!this.frm.doc.customer_address) {
@@ -108,7 +108,7 @@ class PurchaseInvoiceEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_generatable(show_message = false) {
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
         if (!this.frm.doc.supplier_address) {
@@ -139,7 +139,7 @@ class PurchaseReceiptEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_generatable(show_message = false) {
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
         if (!this.frm.doc.supplier_address) {
@@ -170,7 +170,7 @@ class DeliveryNoteEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_generatable(show_message = false) {
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
         if (!this.frm.doc.customer_address) {
@@ -241,7 +241,7 @@ class StockEntryEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_generatable(show_message = false) {
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
 
@@ -305,7 +305,7 @@ class AssetMovementEwaybill extends EwaybillApplicability {
 
     is_e_waybill_generatable(show_message = false) {
         // Do we have everything needed to generate e-Waybill for asset movement
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
         const [party_field, party_label] = this.is_inward()
@@ -335,7 +335,7 @@ class SubcontractingReceiptEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_generatable(show_message = false) {
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
 
