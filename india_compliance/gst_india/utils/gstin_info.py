@@ -191,19 +191,23 @@ def _extract_address_lines(address):
     else:
         address_line1 = ", ".join(part for part in (address_line1, street) if part)
 
+    address_parts = {
+        part.strip().lower() for part in f"{address_line1}, {street}, {address_line2}".split(",")
+    }
+
     for key in ("landMark", "locality"):
-        value = titlecase(address.get(key))
-        address_parts = {
-            part.strip().lower() for part in ", ".join((address_line1, *line2, address_line2)).split(",")
-        }
+        new_parts = []
+        for part in titlecase(address.get(key)).split(","):
+            part = part.strip()
+            if part and part.lower() not in address_parts:
+                new_parts.append(part)
+
+        value = ", ".join(new_parts)
         line2_with_value = ", ".join(part for part in (*line2, value, address_line2) if part)
 
-        if (
-            value
-            and value.lower() not in address_parts
-            and len(line2_with_value) <= E_INVOICE_ADDRESS_LINE_LENGTH
-        ):
+        if value and len(line2_with_value) <= E_INVOICE_ADDRESS_LINE_LENGTH:
             line2.append(value)
+            address_parts.update(part.lower() for part in new_parts)
 
     address_line2 = ", ".join(part for part in (*line2, address_line2) if part)
 
