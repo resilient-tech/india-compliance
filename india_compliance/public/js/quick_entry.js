@@ -437,10 +437,15 @@ function setup_pincode_field(dialog, gstin_info) {
     let last_index = null;
 
     pincode_field.set_data(
-        all_addresses.map((address, index) => ({
-            label: `${address.pincode}<br>${address.address_line1}, ${address.address_line2}, ${address.city}, ${address.state}`,
-            value: `${index}:${address.pincode}`,
-        })),
+        all_addresses.map((address, index) => {
+            const { address_line1, address_line2, city, state } = address;
+            const address_text = [address_line1, address_line2, city, state].filter(Boolean).join(", ");
+
+            return {
+                label: `${address.pincode}<br>${address_text}`,
+                value: `${index}:${address.pincode}`,
+            };
+        }),
     );
 
     pincode_field.format_for_input = (value) => {

@@ -42,8 +42,8 @@ GST_CATEGORIES = {
 TRADE_NAME_BUSINESS_TYPES = frozenset(("Proprietorship", "Hindu Undivided Family"))
 
 # order of address keys is important
-KEYS_TO_SANITIZE = ("dst", "stcd", "pncd", "bno", "flno", "bnm", "st", "loc", "city")
-KEYS_TO_FILTER_DUPLICATES = frozenset(("dst", "bnm", "st", "loc", "city"))
+KEYS_TO_SANITIZE = ("dst", "stcd", "pncd", "bno", "flno", "bnm", "st", "loc", "city", "landMark", "locality")
+KEYS_TO_FILTER_DUPLICATES = frozenset(("dst", "bnm", "st", "loc", "city", "landMark", "locality"))
 CHARACTERS_TO_STRIP = f"{whitespace},"
 
 
@@ -104,7 +104,7 @@ def _get_gstin_info(gstin, *, doc=None, throw_error=True):
 
     if permanent_address := response.get("pradr"):
         # permanent address will be at the first position
-        all_addresses = [permanent_address, *response.get("adadr", [])]
+        all_addresses = [permanent_address, *(response.get("adadr") or [])]
         gstin_info.all_addresses = list(map(_get_address, all_addresses))
         gstin_info.permanent_address = gstin_info.all_addresses[0]
 
@@ -147,7 +147,7 @@ def get_archived_gstin_info(gstin):
 def _get_address(address):
     """:param address: dict of address with a key of 'addr' and 'ntr'"""
 
-    address = address.get("addr", {})
+    address = address.get("addr") or {}
     address_lines = _extract_address_lines(address)
     return {
         "address_line1": address_lines[0],
@@ -164,7 +164,7 @@ def _extract_address_lines(address):
     unique_values = set()
 
     for key in KEYS_TO_SANITIZE:
-        value = address.get(key, "").strip(CHARACTERS_TO_STRIP)
+        value = (address.get(key) or "").strip(CHARACTERS_TO_STRIP)
 
         if key not in KEYS_TO_FILTER_DUPLICATES:
             address[key] = value
@@ -183,14 +183,24 @@ def _extract_address_lines(address):
 
     address_line2 = ", ".join(titlecase(value) for key in ("loc", "city") if (value := address.get(key)))
 
-    if not (street := address.get("st")):
-        return address_line1, address_line2
+    line2_length = cint(frappe.get_meta("Address").get_field("address_line2").length) or frappe.db.VARCHAR_LEN
 
-    street = titlecase(street)
+    street = titlecase(address.get("st"))
+    line2 = []
     if len(address_line1) > len(address_line2):
-        address_line2 = f"{street}, {address_line2}"
+        line2.append(street)
     else:
-        address_line1 = f"{address_line1}, {street}"
+        address_line1 = ", ".join(part for part in (address_line1, street) if part)
+
+    for key in ("landMark", "locality"):
+        value = titlecase(address.get(key))
+        address_text = ", ".join((address_line1, *line2, address_line2)).lower()
+        line2_with_value = ", ".join(part for part in (*line2, value, address_line2) if part)
+
+        if value and value.lower() not in address_text and len(line2_with_value) <= line2_length:
+            line2.append(value)
+
+    address_line2 = ", ".join(part for part in (*line2, address_line2) if part)
 
     return address_line1, address_line2
 
