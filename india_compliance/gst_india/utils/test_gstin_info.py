@@ -98,7 +98,7 @@ class TestGstinInfo(IntegrationTestCase):
                         "loc": "Gandhidham Industrial Area",
                         "locality": "Ganesh Nagar",
                         "pncd": "370201",
-                        "st": "Sector 8",
+                        "st": "Ganesh Nagar Road",
                         "stcd": "Gujarat",
                     },
                     "ntr": "Office / Sale Office",
@@ -207,8 +207,7 @@ class TestGstinInfo(IntegrationTestCase):
                     {
                         "address_line1": "Shop No. 4",
                         "address_line2": (
-                            "Beside Phonewale and Poojara Telecom Shops, Dilbahar Water Tank to Industrial Jewel Circle,"
-                            " Opp. Victoria Park"
+                            "Beside Phonewale and Poojara Telecom Shops, Dilbahar Water Tank to Industrial Jewel Circle"
                         ),
                         "city": "Bhavnagar",
                         "state": "Gujarat",
@@ -224,7 +223,7 @@ class TestGstinInfo(IntegrationTestCase):
                         "country": "India",
                     },
                     {
-                        "address_line1": "12, Sector 8",
+                        "address_line1": "12, Ganesh Nagar Road",
                         "address_line2": "Near Bus Stand, Ganesh Nagar, Gandhidham Industrial Area",
                         "city": "Kachchh",
                         "state": "Gujarat",
