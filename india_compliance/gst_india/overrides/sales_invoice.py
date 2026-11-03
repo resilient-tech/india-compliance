@@ -308,6 +308,8 @@ def set_and_validate_advances_with_gst(doc):
 
     taxes = get_taxes_summary(doc.company, doc.advances)
 
+    # advances, their GST share and the outstanding are all in the party account currency
+    precision = doc.precision("outstanding_amount")
     allocated_amount_with_taxes = 0
     tax_amount = 0
 
@@ -317,13 +319,9 @@ def set_and_validate_advances_with_gst(doc):
 
         tax_row = taxes.get(advance.reference_name, frappe._dict(taxable_amount=1, tax_amount=0))
 
-        # proportion off net base so inclusive (paid_amount = gross) reverses like exclusive;
-        # the share is in the party account currency, like allocated_amount
+        # proportion off net base so inclusive (paid_amount = gross) reverses like exclusive
         _tax_amount = get_proportionate_tax(
-            tax_row.tax_amount,
-            advance.allocated_amount,
-            tax_row.taxable_amount,
-            doc.precision("outstanding_amount"),
+            tax_row.tax_amount, advance.allocated_amount, tax_row.taxable_amount, precision
         )
         tax_amount += _tax_amount
         allocated_amount_with_taxes += _tax_amount
@@ -337,13 +335,12 @@ def set_and_validate_advances_with_gst(doc):
     else:
         total = doc.get("rounded_total") or doc.grand_total
 
-    precision = doc.precision("grand_total")
     excess_allocation = flt(flt(allocated_amount_with_taxes, precision) - total, precision)
     if excess_allocation > 0:
         message = _(
             "Allocated amount with taxes (GST) in advances table cannot be greater than"
             " outstanding amount of the document. Allocated amount with taxes is greater by {0}."
-        ).format(bold(fmt_money(excess_allocation, currency=doc.currency)))
+        ).format(bold(fmt_money(excess_allocation, currency=doc.party_account_currency)))
 
         if excess_allocation < 1:
             message += (
