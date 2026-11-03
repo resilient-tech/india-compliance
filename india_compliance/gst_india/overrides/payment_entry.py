@@ -190,7 +190,11 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row, via_reconcili
 
     exchange_rate = flt(payment_entry.get_exchange_rate()) or 1
     total_amount_in_account_currency = flt(
-        total_amount / exchange_rate, reference_row.precision("allocated_amount")
+        total_amount / exchange_rate,
+        get_field_precision(
+            frappe.get_meta("Payment Entry Reference").get_field("allocated_amount"),
+            currency=payment_entry.party_account_currency,
+        ),
     )
 
     args = {
