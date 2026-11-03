@@ -23,7 +23,7 @@ from india_compliance.gst_india.overrides.transaction import (
     GSTAccounts,
     set_gst_tax_type,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import get_all_gst_accounts, get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import (
     set_or_validate_itc_claim_period,
     validate_itc_claim_period_on_update_after_submit,
@@ -196,9 +196,11 @@ class BillofEntry(Document):
 
     def validate_taxes(self):
         input_accounts = get_gst_accounts_by_type(self.company, "Input", throw=True)
+        gst_accounts = get_all_gst_accounts(self.company)
 
         for tax in self.taxes:
-            if not tax.tax_amount:
+            # non-GST charges like penalties are paid to customs but stay out of GST
+            if not tax.tax_amount or tax.account_head not in gst_accounts:
                 continue
 
             if tax.account_head not in (
@@ -313,14 +315,20 @@ class BillofEntry(Document):
                 )
             )
 
+        default_cost_center = frappe.get_cached_value("Company", self.company, "cost_center")
+
         for tax in self.taxes:
+            tax_cost_center = self.cost_center
+            if not tax_cost_center and not tax.gst_tax_type:
+                tax_cost_center = default_cost_center
+
             gl_entries.append(
                 self.get_gl_dict(
                     {
                         "account": tax.account_head,
                         "debit": tax.tax_amount,
                         "credit": 0,
-                        "cost_center": self.cost_center,
+                        "cost_center": tax_cost_center,
                         "remarks": remarks,
                     },
                 )
