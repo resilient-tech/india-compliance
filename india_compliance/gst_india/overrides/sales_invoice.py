@@ -345,7 +345,7 @@ def set_and_validate_advances_with_gst(doc):
 
         # proportion off net base so inclusive (paid_amount = gross) reverses like exclusive
         _tax_amount = get_proportionate_tax(
-            tax_row.tax_amount, advance.allocated_amount, tax_row.taxable_amount
+            tax_row.tax_amount, advance.allocated_amount, tax_row.taxable_amount, doc
         )
         tax_amount += _tax_amount
         allocated_amount_with_taxes += _tax_amount

@@ -51,6 +51,7 @@ from india_compliance.gst_india.utils.e_waybill import (
 )
 from india_compliance.gst_india.utils.jinja import get_gst_breakup
 from india_compliance.gst_india.utils.tests import (
+    THREE_DECIMAL_NUMBER_FORMAT,
     TRANSPORTER_DETAILS,
     _append_taxes,
     append_item,
@@ -1186,6 +1187,16 @@ class TestTransaction(FrappeTestCase):
 
         self.assertDocumentEqual({"taxable_value": 62.51, "cgst_amount": 5.63}, doc.items[0])
 
+        with change_settings("System Settings", THREE_DECIMAL_NUMBER_FORMAT):
+            doc = create_transaction(
+                **self.transaction_details, rate=10.01, is_in_state=True, do_not_save=True
+            )
+            append_item(doc, frappe._dict(rate=10.01))
+            append_item(doc, frappe._dict(rate=10.01))
+            doc.save()
+
+        self.assertEqual([item.cgst_amount for item in doc.items], [0.9, 0.9, 0.9])
+
     def test_rounding_gst_details_across_many_items(self):
         """
         Rounding loss of each item must be diffused across items. It used to accumulate
@@ -1201,7 +1212,11 @@ class TestTransaction(FrappeTestCase):
 
         doc.save().reload()
 
+<<<<<<< HEAD
         precision = doc.items[0].precision("cgst_amount")
+=======
+        precision = ItemGSTDetails.get_tax_amount_precisions(self.doctype, doc.company).get("cgst_amount")
+>>>>>>> fbcb2b0 (fix: round GST amounts at the company currency precision)
         allowed_difference = 10**-precision
 
         for tax_row in doc.taxes:
