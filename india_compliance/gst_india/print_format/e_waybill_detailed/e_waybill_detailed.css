@@ -4,6 +4,8 @@
 
 .print-format {
     padding: 0.25in;
+    margin-top: 10mm; /* read by Frappe as the PDF page margin */
+    margin-bottom: 10mm;
     color: black;
 }
 
@@ -57,8 +59,20 @@ td {
 @media print {
     .print-format {
         padding: 0;
-        margin-top: 10mm;
-        margin-bottom: 10mm;
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    .print-format .page-layout > :last-child,
+    .print-format .page-layout .section-separator {
+        margin-bottom: 0;
+    }
+}
+
+@media screen {
+    .print-format {
+        margin-top: auto;
+        margin-bottom: auto;
     }
 }
 
