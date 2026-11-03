@@ -64,6 +64,10 @@
                 {
                     "conversion_factor": 1,
                     "uom": "Box"
+                },
+                {
+                    "conversion_factor": 1,
+                    "uom": "Litre"
                 }
             ],
             "item_defaults": [
