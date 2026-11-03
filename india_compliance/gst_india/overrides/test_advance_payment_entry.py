@@ -1154,6 +1154,36 @@ class TestMultiCurrencyReconciliation(LedgerNetMixin, IntegrationTestCase):
             invoice_doc.submit,
         )
 
+        # the GST share keeps the third decimal of a three-decimal party account currency
+        usd_format = frappe.db.get_value("Currency", "USD", "number_format")
+        frappe.db.set_value("Currency", "USD", "number_format", "#,###.###")
+        self.addCleanup(frappe.db.set_value, "Currency", "USD", "number_format", usd_format)
+
+        # names are reused after earlier rollbacks; forget the INR currency cached against them
+        frappe.local.field_currency = frappe._dict()
+
+        with change_settings("System Settings", THREE_DECIMAL_NUMBER_FORMAT):
+            payment_doc = self._fx_payment()
+            invoice_doc = create_transaction(
+                doctype="Sales Invoice",
+                customer=self._usd_customer(),
+                currency="USD",
+                conversion_rate=FX_RATE,
+                debit_to=self._usd_debtors(),
+                is_in_state=1,
+                rate=1.234,
+                do_not_save=True,
+            )
+            invoice_doc.save()
+            invoice_doc.set_advances()
+            for row in invoice_doc.advances:
+                row.allocated_amount = invoice_doc.net_total if row.reference_name == payment_doc.name else 0
+
+            invoice_doc.submit()
+
+        # 1.234 USD + 90 INR GST * 1.234 / 500 INR = 1.234 + 0.222
+        self.assertEqual(flt(invoice_doc.total_advance, 3), 1.456)
+
     def test_fx_invoice_booked_at_a_different_rate(self):
         """An advance received at one rate, adjusted against an invoice raised at another.
         erpnext books the exchange difference onto the reference row, and once it does it stops
