@@ -22,7 +22,7 @@ from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.utils.gstr_1 import DocField as doc
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
-from india_compliance.gst_india.utils.tests import create_transaction
+from india_compliance.gst_india.utils.tests import THREE_DECIMAL_NUMBER_FORMAT, create_transaction
 from india_compliance.tests.erpnext_test_utils import create_account
 
 
@@ -401,6 +401,31 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         self.assertEqual(net["Output Tax CGST - _TIRC"], 0.0)
         self.assertEqual(net["Output Tax SGST - _TIRC"], 0.0)
 
+        with change_settings("System Settings", THREE_DECIMAL_NUMBER_FORMAT):
+            payment_doc = self._create_payment_entry()
+            invoice_doc = create_transaction(doctype="Sales Invoice", is_in_state=1, rate=1000)
+
+            make_payment_reconciliation(payment_doc, invoice_doc, 23.61)
+            make_payment_reconciliation(payment_doc, invoice_doc, 25.36)
+            make_payment_reconciliation(payment_doc, invoice_doc, 541.03)
+
+            payment_doc.reload()
+            net = {}
+            for row in frappe.get_all(
+                "GL Entry",
+                filters={"voucher_no": payment_doc.name, "is_cancelled": 0},
+                fields=["account", "debit", "credit"],
+            ):
+                net[row.account] = flt(net.get(row.account, 0) + row.debit - row.credit, 2)
+
+        self.assertEqual(flt(payment_doc.unallocated_amount, 2), 0.0)
+        self.assertEqual(
+            [flt(row.allocated_amount, 2) for row in payment_doc.references], [20.01, 21.49, 458.5]
+        )
+        self.assertEqual(net["Debtors - _TIRC"], -590.0)
+        self.assertEqual(net["Output Tax CGST - _TIRC"], 0.0)
+        self.assertEqual(net["Output Tax SGST - _TIRC"], 0.0)
+
     def test_payment_entry_allocation_with_inclusive_tax_invoice(self):
         """
         Reconcile an advance payment (with GST) against a tax-inclusive
@@ -668,6 +693,35 @@ class TestRegionalOverrides(TestAdvancePaymentEntry):
         )
 
         self.assertEqual([row.amount for row in payment_entries], [118.0, 472.0])
+
+        with change_settings("System Settings", THREE_DECIMAL_NUMBER_FORMAT):
+            sales_order = create_transaction(doctype="Sales Order", is_in_state=1)
+            payment_doc = self._create_payment_entry(do_not_submit=True)
+            payment_doc.append(
+                "references",
+                {
+                    "reference_doctype": sales_order.doctype,
+                    "reference_name": sales_order.name,
+                    "total_amount": sales_order.grand_total,
+                    "outstanding_amount": sales_order.grand_total,
+                    "allocated_amount": 33.33,
+                },
+            )
+            payment_doc.save()
+            payment_doc.submit()
+
+            payment_entries = get_advance_payment_entries_for_regional(
+                party_type="Customer",
+                party=payment_doc.party,
+                party_account=[payment_doc.paid_from],
+                order_list=[],
+                order_doctype="Sales Order",
+                include_unallocated=True,
+                against_all_orders=True,
+                condition=frappe._dict({"company": payment_doc.company, "name": payment_doc.name}),
+            )
+
+        self.assertEqual([flt(row.amount, 3) for row in payment_entries], [39.33, 550.67])
 
     def test_adjust_allocations_for_taxes(self):
         payment_doc = self._create_payment_entry()

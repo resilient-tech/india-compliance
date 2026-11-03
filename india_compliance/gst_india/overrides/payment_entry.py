@@ -315,22 +315,19 @@ def get_taxable_base_amount(payment_entry):
     return flt(payment_entry.base_paid_amount) - flt(payment_entry.get_included_taxes())
 
 
-def get_proportionate_tax(amount, base_allocated_amount, base_amount):
+def get_proportionate_tax(amount, base_allocated_amount, base_amount, doc):
     # base_amount is 0 only when paid amount is fully tax (no taxable base) -> nothing to reverse
     if not base_amount:
         return 0
 
-    return flt(
-        amount * base_allocated_amount / base_amount,
-        get_field_precision(frappe.get_meta("Advance Taxes and Charges").get_field("base_tax_amount")),
-    )
+    return flt(amount * base_allocated_amount / base_amount, doc.precision("base_tax_amount", "taxes"))
 
 
 def get_proportionate_taxes_for_row(payment_entry, reference_row, taxes):
     base_allocated_amount = payment_entry.calculate_base_allocated_amount_for_reference(reference_row)
     base_amount = get_taxable_base_amount(payment_entry)
     for account, amount in taxes.items():
-        taxes[account] = get_proportionate_tax(amount, base_allocated_amount, base_amount)
+        taxes[account] = get_proportionate_tax(amount, base_allocated_amount, base_amount, payment_entry)
 
     return taxes
 
@@ -346,6 +343,7 @@ def balance_taxes(payment_entry, reference_row, taxes):
                 amount,
                 payment_entry.calculate_base_allocated_amount_for_reference(allocation_row),
                 base_amount,
+                payment_entry,
             )
 
     return taxes
@@ -390,8 +388,6 @@ def get_advance_payment_entries_for_regional(
     if not taxes:
         return payment_entries
 
-    precision = get_field_precision(frappe.get_meta("Sales Invoice").get_field("outstanding_amount"))
-
     rows_of_payment = {}
     for pe in payment_entries:
         rows_of_payment.setdefault(pe.reference_name, []).append(pe)
@@ -402,6 +398,10 @@ def get_advance_payment_entries_for_regional(
 
         if not tax_row or not total_amount:
             continue
+
+        precision = get_field_precision(
+            frappe.get_meta("Sales Invoice").get_field("outstanding_amount"), currency=rows[0].currency
+        )
 
         # pending GST is company currency, row.amount is the party account currency
         pending_taxes = flt(
