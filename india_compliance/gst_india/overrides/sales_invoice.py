@@ -318,9 +318,13 @@ def set_and_validate_advances_with_gst(doc):
 
         tax_row = taxes.get(advance.reference_name, frappe._dict(taxable_amount=1, tax_amount=0))
 
-        # proportion off net base so inclusive (paid_amount = gross) reverses like exclusive
+        # proportion off net base so inclusive (paid_amount = gross) reverses like exclusive;
+        # the share is in the party account currency, like allocated_amount
         _tax_amount = get_proportionate_tax(
-            tax_row.tax_amount, advance.allocated_amount, tax_row.taxable_amount, doc
+            tax_row.tax_amount,
+            advance.allocated_amount,
+            tax_row.taxable_amount,
+            doc.precision("outstanding_amount"),
         )
         tax_amount += _tax_amount
         allocated_amount_with_taxes += _tax_amount
