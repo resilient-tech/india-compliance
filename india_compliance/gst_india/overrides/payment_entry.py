@@ -315,12 +315,12 @@ def get_taxable_base_amount(payment_entry):
     return flt(payment_entry.base_paid_amount) - flt(payment_entry.get_included_taxes())
 
 
-def get_proportionate_tax(amount, base_allocated_amount, base_amount, precision):
+def get_proportionate_tax(amount, allocated_amount, base_amount, precision):
     # base_amount is 0 only when paid amount is fully tax (no taxable base) -> nothing to reverse
     if not base_amount:
         return 0
 
-    return flt(amount * base_allocated_amount / base_amount, precision)
+    return flt(amount * allocated_amount / base_amount, precision)
 
 
 def get_proportionate_taxes_for_row(payment_entry, reference_row, taxes):
