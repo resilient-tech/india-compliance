@@ -112,6 +112,58 @@ class TestBillofEntry(FrappeTestCase):
             lcv,
         )
 
+    def test_non_gst_charge_in_boe(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.items[0].customs_duty = 100
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Miscellaneous Expenses - _TIRC",
+                "description": "Late Filing Penalty",
+                "tax_amount": 500,
+            },
+        )
+        boe.save()
+        boe.submit()
+
+        self.assertDocumentEqual(
+            {"total_taxes": 536, "total_amount_payable": 636},
+            boe,
+        )
+        self.assertEqual(boe.items[0].igst_amount, 36)
+
+        penalty_gle = frappe.db.get_value(
+            "GL Entry",
+            {
+                "voucher_type": "Bill of Entry",
+                "voucher_no": boe.name,
+                "account": "Miscellaneous Expenses - _TIRC",
+            },
+            ["debit", "cost_center"],
+            as_dict=True,
+        )
+        self.assertEqual(penalty_gle.debit, 500)
+        self.assertEqual(penalty_gle.cost_center, "Main - _TIRC")
+
+    def test_non_input_gst_account_in_boe(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.taxes[0].account_head = "Output Tax IGST - _TIRC"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"Only Input IGST and CESS accounts are allowed"),
+            boe.save,
+        )
+
     def test_gst_details_in_boe(self):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
 
