@@ -1,6 +1,7 @@
 import frappe
 from frappe import _, bold
 from frappe.desk.form.load import run_onload
+from frappe.model.meta import get_field_precision
 from frappe.utils import flt, fmt_money
 
 from india_compliance.gst_india.constants import VALID_HSN_LENGTHS
@@ -308,8 +309,11 @@ def set_and_validate_advances_with_gst(doc):
 
     taxes = get_taxes_summary(doc.company, doc.advances)
 
-    # advances, their GST share and the outstanding are all in the party account currency
-    precision = doc.precision("outstanding_amount")
+    # advances, their GST share and the outstanding are all in the party account currency;
+    # doc.precision may have cached this field before that currency was set
+    precision = get_field_precision(
+        frappe.get_meta("Sales Invoice").get_field("outstanding_amount"), currency=doc.party_account_currency
+    )
     allocated_amount_with_taxes = 0
     tax_amount = 0
 
