@@ -144,7 +144,7 @@ def update_taxable_values(doc):
 
         applicable_charges = flt(
             proportionate_value * (total_charges / total_value),
-            item.precision("taxable_value"),
+            doc.precision("taxable_value", "items"),
         )
 
         item.taxable_value += applicable_charges

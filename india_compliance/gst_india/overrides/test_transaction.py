@@ -813,6 +813,25 @@ class TestTransaction(IntegrationTestCase):
 
         self.assertDocumentEqual({"taxable_value": 120}, doc.items[0])  # 100 + 20
 
+        with change_settings("System Settings", THREE_DECIMAL_NUMBER_FORMAT):
+            doc = create_transaction(**self.transaction_details, do_not_save=True)
+            append_item(doc)
+            append_item(doc)
+            doc.append(
+                "taxes",
+                {
+                    "charge_type": "Actual",
+                    "account_head": "Freight and Forwarding Charges - _TIRC",
+                    "description": "Freight",
+                    "tax_amount": 10,
+                    "cost_center": "Main - _TIRC",
+                },
+            )
+            _append_taxes(doc, ("CGST", "SGST"), charge_type="On Previous Row Total", row_id=1)
+            doc.insert()
+
+        self.assertEqual([flt(item.taxable_value, 3) for item in doc.items], [103.33, 103.33, 103.34])
+
     def test_taxable_value_with_charges_after_tax(self):
         if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
             return
