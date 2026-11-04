@@ -366,7 +366,7 @@ def set_and_validate_advances_with_gst(doc):
         message = _(
             "Allocated amount with taxes (GST) in advances table cannot be greater than"
             " outstanding amount of the document. Allocated amount with taxes is greater by {0}."
-        ).format(bold(fmt_money(excess_allocation, currency=doc.party_account_currency)))
+        ).format(bold(fmt_money(excess_allocation, precision=precision, currency=doc.party_account_currency)))
 
         if excess_allocation < 1:
             message += (

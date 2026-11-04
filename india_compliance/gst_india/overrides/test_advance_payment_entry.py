@@ -1153,7 +1153,11 @@ class TestMultiCurrencyReconciliation(LedgerNetMixin, FrappeTestCase):
         # names are reused after earlier rollbacks; forget the INR currency cached against them
         frappe.local.field_currency = frappe._dict()
 
-        with change_settings("System Settings", THREE_DECIMAL_NUMBER_FORMAT):
+        # the site stays at two decimals, so only the party account currency can give the third
+        with change_settings(
+            "System Settings",
+            {"currency_precision": "", "number_format": "#,###.##", "use_number_format_from_currency": 1},
+        ):
             payment_doc = self._fx_payment()
             invoice_doc = create_transaction(
                 doctype="Sales Invoice",
