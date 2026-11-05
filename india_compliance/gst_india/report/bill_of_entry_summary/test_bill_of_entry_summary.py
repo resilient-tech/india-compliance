@@ -75,7 +75,20 @@ class TestBillOfEntrySummary(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_single_invoice(self):
-        boe, invoices = self.create_bill_of_entry()
+        for account_name in ("bank fee", "Unused Fee"):
+            create_account(
+                account_name=account_name,
+                parent_account="Indirect Expenses - _TIRC",
+                company=COMPANY,
+            )
+
+        boe, invoices = self.create_bill_of_entry(
+            charges={
+                "Miscellaneous Expenses - _TIRC": 500,
+                "bank fee - _TIRC": 50,
+                "Unused Fee - _TIRC": 0,
+            }
+        )
 
         data = self.run_report()
 
@@ -92,10 +105,9 @@ class TestBillOfEntrySummary(IntegrationTestCase):
 
         columns, _data = execute(frappe._dict(company=COMPANY, from_date="2023-08-01", to_date="2023-08-31"))
         labels = [column["label"] for column in columns]
-        customs_duty_index = labels.index("Total Customs Duty")
         self.assertEqual(
-            labels[customs_duty_index + 1 : customs_duty_index + 4],
-            ["Input Tax IGST - _TIRC", "Miscellaneous Expenses - _TIRC", "Total Taxes and Charges"],
+            labels[labels.index("Total Customs Duty") + 1 : labels.index("Total Taxes and Charges")],
+            ["Input Tax IGST - _TIRC", "bank fee - _TIRC", "Miscellaneous Expenses - _TIRC"],
         )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})

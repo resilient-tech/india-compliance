@@ -119,7 +119,7 @@ def set_tax_amounts(data):
         row[detail.account_head] = flt(row.get(detail.account_head)) + detail.tax_amount
         (gst_accounts if detail.gst_tax_type else other_accounts).add(detail.account_head)
 
-    return [*sorted(gst_accounts), *sorted(other_accounts - gst_accounts)]
+    return [*sorted(gst_accounts, key=str.lower), *sorted(other_accounts - gst_accounts, key=str.lower)]
 
 
 def get_columns(filters, tax_accounts):
