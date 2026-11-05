@@ -5,7 +5,7 @@ import json
 
 import frappe
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
-from erpnext.controllers.accounts_controller import AccountsController
+from erpnext.controllers.accounts_controller import AccountsController, validate_account_head
 from erpnext.stock.get_item_details import ItemDetailsCtx, _get_item_tax_template
 from frappe import _
 from frappe.model.document import Document
@@ -196,10 +196,16 @@ class BillofEntry(Document):
 
     def validate_taxes(self):
         input_accounts = get_gst_accounts_by_type(self.company, "Input", throw=True)
+        if not input_accounts.igst_account:
+            frappe.throw(
+                _("Please set the Input IGST account for Company {0} in GST Settings").format(self.company)
+            )
+
         gst_accounts = get_all_gst_accounts(self.company)
 
         for tax in self.taxes:
-            # non-GST charges like penalties are paid to customs but stay out of GST
+            validate_account_head(tax.idx, tax.account_head, self.company, _("Taxes and Charges"))
+
             if not tax.tax_amount or tax.account_head not in gst_accounts:
                 continue
 
@@ -256,6 +262,11 @@ class BillofEntry(Document):
                         " is incorrect. Try setting the Charge Type to {2}."
                     ).format(tax.idx, tax.tax_amount, column)
                 )
+
+        if input_accounts.igst_account not in {tax.account_head for tax in self.taxes}:
+            frappe.throw(
+                _("Input IGST account {0} is required in Bill of Entry").format(input_accounts.igst_account)
+            )
 
     def validate_item_tax_template(self):
         for item in self.items:
