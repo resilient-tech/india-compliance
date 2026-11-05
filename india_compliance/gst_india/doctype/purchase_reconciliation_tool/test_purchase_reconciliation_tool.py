@@ -1707,3 +1707,26 @@ class TestUploadGSTR(IntegrationTestCase):
                     self.upload_gstr,
                     {"data": frappe._dict(gstin=self.gstin, rtnprd=rtnprd, docdata={})},
                 )
+
+    def test_missing_2b_documents_for_custom_period(self):
+        doc = frappe.get_doc("Purchase Reconciliation Tool")
+        doc.update(
+            {
+                "company_gstin": self.gstin,
+                "period": "Custom",
+                "from_date": "2026-04-01",
+                "to_date": "2026-04-30",
+            }
+        )
+
+        doc.get_date_range_and_check_missing_documents("Custom")
+        self.assertTrue(doc.get_onload().has_missing_2b_documents)
+
+        self.upload_gstr(
+            {"data": frappe._dict(gstin=self.gstin, rtnprd="042026", gendt="14-05-2026", docdata={})}
+        )
+
+        self.assertEqual(
+            doc.get_date_range_and_check_missing_documents("Custom"), ["2026-04-01", "2026-04-30"]
+        )
+        self.assertFalse(doc.get_onload().has_missing_2b_documents)

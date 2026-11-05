@@ -253,9 +253,10 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def get_date_range_and_check_missing_documents(self, period: str):
-        date_range = self.get_date_range(period)
+        # for Custom, check the date range set on the tool
+        date_range = self.get_date_range(period) or [self.from_date, self.to_date]
 
-        if not date_range:
+        if not all(date_range):
             return
 
         self.set_onload(

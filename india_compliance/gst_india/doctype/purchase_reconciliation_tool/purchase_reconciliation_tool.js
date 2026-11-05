@@ -107,6 +107,10 @@ frappe.ui.form.on(DOCTYPE, {
         add_gstr2b_alert(frm);
     },
 
+    from_date: check_custom_date_range,
+
+    to_date: check_custom_date_range,
+
     gst_return: render_empty_state,
 
     include_ignored: render_empty_state,
@@ -1188,11 +1192,18 @@ class EmailDialog {
     }
 }
 
+function check_custom_date_range(frm) {
+    if (frm.doc.period === "Custom") frm.trigger("period");
+}
+
 async function fetch_date_range(frm, method) {
     const { period } = frm.doc;
-    if (!period || period == "Custom") return;
+    if (!period || (period == "Custom" && !method)) return;
 
     const { message } = await frm._call(method || "get_date_range", { period });
+
+    // custom date range is set by the user
+    if (!message || period == "Custom") return;
 
     frm.set_value("from_date", message[0]);
     frm.set_value("to_date", message[1]);
