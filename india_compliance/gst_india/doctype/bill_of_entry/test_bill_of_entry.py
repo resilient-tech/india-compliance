@@ -752,6 +752,13 @@ class TestBillofEntry(FrappeTestCase):
             boe.total_taxable_value,
         )
 
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"only on a draft"),
+            boe.get_items_from_purchase_invoice,
+            [pi4.name],
+        )
+
         boe = make_bill_of_entry(pi4.name)
         boe.items[0].customs_duty = 40
         boe.get_items_from_purchase_invoice([pi5.name])

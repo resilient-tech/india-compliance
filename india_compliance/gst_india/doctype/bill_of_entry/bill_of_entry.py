@@ -394,6 +394,9 @@ class BillofEntry(Document):
 
     @frappe.whitelist()
     def get_items_from_purchase_invoice(self, purchase_invoices: list[str]):
+        if self.docstatus != 0:
+            frappe.throw(_("Items can be fetched only on a draft Bill of Entry"))
+
         if not purchase_invoices:
             frappe.msgprint(_("No Purchase Invoices selected"))
             return
