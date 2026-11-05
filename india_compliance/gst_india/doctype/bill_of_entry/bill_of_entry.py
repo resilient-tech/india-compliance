@@ -5,13 +5,8 @@ import json
 
 import frappe
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
-<<<<<<< HEAD
-from erpnext.controllers.accounts_controller import AccountsController
-from erpnext.stock.get_item_details import _get_item_tax_template
-=======
 from erpnext.controllers.accounts_controller import AccountsController, validate_account_head
-from erpnext.stock.get_item_details import ItemDetailsCtx, _get_item_tax_template
->>>>>>> 0da88bf (fix: require Input IGST row in Bill of Entry taxes)
+from erpnext.stock.get_item_details import _get_item_tax_template
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc

@@ -3,12 +3,9 @@
 
 import frappe
 from frappe import _
-<<<<<<< HEAD
 from frappe.query_builder.custom import GROUP_CONCAT
-=======
-from frappe.query_builder.functions import GroupConcat, Max, Sum
+from frappe.query_builder.functions import Sum
 from frappe.utils import flt
->>>>>>> f6528cc (fix: show each tax account in Bill of Entry Summary)
 
 
 def execute(filters=None):

@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase, change_settings
+from frappe.tests.utils import FrappeTestCase, change_settings
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -18,7 +18,7 @@ COMPANY = "_Test Indian Registered Company"
 POSTING_DATE = "2023-08-11"
 
 
-class TestBillOfEntrySummary(IntegrationTestCase):
+class TestBillOfEntrySummary(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -112,7 +112,6 @@ class TestBillOfEntrySummary(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_multiple_invoices_stay_one_row(self):
-        """GROUP_CONCAT on MariaDB and STRING_AGG on postgres must both list every invoice."""
         boe, invoices = self.create_bill_of_entry(invoice_count=2)
 
         data = self.run_report()
