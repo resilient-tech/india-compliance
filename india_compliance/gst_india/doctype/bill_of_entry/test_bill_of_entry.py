@@ -782,3 +782,37 @@ class TestBillofEntry(IntegrationTestCase):
             boe.items[0].customs_duty = customs_duty
             boe.get_items_from_purchase_invoice([pi4.name])
             self.assertEqual(boe.items[0].customs_duty, expected_duty)
+
+        company = frappe.get_cached_doc("Company", boe.company)
+        self.assertEqual(boe.customs_expense_account, company.default_customs_expense_account)
+        self.assertEqual(boe.customs_payable_account, company.default_customs_payable_account)
+
+        expense_account = frappe.db.get_value(
+            "Account",
+            {
+                "company": boe.company,
+                "root_type": "Expense",
+                "is_group": 0,
+                "account_currency": "INR",
+                "name": ["!=", boe.customs_expense_account],
+            },
+        )
+        payable_account = frappe.db.get_value(
+            "Account",
+            {
+                "company": boe.company,
+                "root_type": "Liability",
+                "account_type": ["!=", "Payable"],
+                "is_group": 0,
+                "account_currency": "INR",
+                "name": ["!=", boe.customs_payable_account],
+            },
+        )
+        boe.customs_expense_account = expense_account
+        boe.customs_payable_account = payable_account
+        boe.get_items_from_purchase_invoice([pi5.name])
+        boe.save()
+        boe.reload()
+
+        self.assertEqual(boe.customs_expense_account, expense_account)
+        self.assertEqual(boe.customs_payable_account, payable_account)
