@@ -11,7 +11,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import IfNull, Sum
-from frappe.utils import today
+from frappe.utils import flt, today
 
 from india_compliance.gst_india.constants import IMPORT_GST_CATEGORIES
 from india_compliance.gst_india.overrides.ineligible_itc import (
@@ -110,8 +110,10 @@ class BillofEntry(Document):
     def set_item_defaults(self):
         """These defaults are needed for taxes and totals to get calculated"""
         for item in self.items:
-            item.name = frappe.generate_hash(length=10)
-            item.customs_duty = 0
+            if not item.name:
+                item.name = frappe.generate_hash(length=10)
+
+            item.customs_duty = flt(item.customs_duty)
 
     def set_default_accounts(self):
         company = frappe.get_cached_doc("Company", self.company)
