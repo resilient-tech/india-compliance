@@ -215,7 +215,7 @@
   {
    "fieldname": "total_taxes",
    "fieldtype": "Currency",
-   "label": "Total Taxes",
+   "label": "Total Taxes and Charges",
    "options": "Company:company:default_currency",
    "read_only": 1
   },
@@ -319,7 +319,7 @@
    "link_fieldname": "link_name"
   }
  ],
- "modified": "2026-06-22 13:35:29.615063",
+ "modified": "2026-11-05 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",
