@@ -11,7 +11,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import IfNull, Sum
-from frappe.utils import today
+from frappe.utils import flt, today
 
 from india_compliance.gst_india.constants import IMPORT_GST_CATEGORIES
 from india_compliance.gst_india.overrides.ineligible_itc import (
@@ -44,17 +44,25 @@ class BillofEntry(Document):
         if self.docstatus != 1:
             return
 
-        self.set_onload(
-            "journal_entry_exists",
-            frappe.db.exists(
-                "Journal Entry Account",
-                {
-                    "reference_type": "Bill of Entry",
-                    "reference_name": self.name,
-                    "docstatus": 1,
-                },
-            ),
-        )
+        self.set_onload("outstanding_amount", self.outstanding_amount)
+
+    @property
+    def outstanding_amount(self):
+        journal_entry_account = frappe.qb.DocType("Journal Entry Account")
+        paid_amount = (
+            frappe.qb.from_(journal_entry_account)
+            .select(
+                Sum(journal_entry_account.debit_in_account_currency)
+                - Sum(journal_entry_account.credit_in_account_currency)
+            )
+            .where(journal_entry_account.reference_type == self.doctype)
+            .where(journal_entry_account.reference_name == self.name)
+            .where(journal_entry_account.account == self.customs_payable_account)
+            .where(journal_entry_account.docstatus == 1)
+        ).run()[0][0]
+
+        precision = self.precision("total_amount_payable")
+        return max(flt(flt(self.total_amount_payable, precision) - flt(paid_amount), precision), 0)
 
     def before_validate(self):
         self.set_taxes_and_totals()
@@ -548,11 +556,12 @@ def make_journal_entry_for_payment(source_name: str, target_doc: str | None = No
         target.user_remark = f"Payment against Bill of Entry {source.name}"
 
         company = frappe.get_cached_doc("Company", source.company)
+        outstanding_amount = source.outstanding_amount
         target.append(
             "accounts",
             {
                 "account": source.customs_payable_account,
-                "debit_in_account_currency": source.total_amount_payable,
+                "debit_in_account_currency": outstanding_amount,
                 "reference_type": "Bill of Entry",
                 "reference_name": source.name,
                 "cost_center": company.cost_center,
@@ -563,7 +572,7 @@ def make_journal_entry_for_payment(source_name: str, target_doc: str | None = No
             "accounts",
             {
                 "account": company.default_bank_account or company.default_cash_account,
-                "credit_in_account_currency": source.total_amount_payable,
+                "credit_in_account_currency": outstanding_amount,
                 "cost_center": company.cost_center,
             },
         )

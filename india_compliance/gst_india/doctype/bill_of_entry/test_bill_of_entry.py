@@ -6,8 +6,11 @@ import re
 from unittest.mock import patch
 
 import frappe
+from erpnext.accounts.doctype.journal_entry.mapper import make_reverse_journal_entry
+from frappe.desk.form.load import run_onload
+from frappe.exceptions import LinkExistsError
 from frappe.tests import IntegrationTestCase
-from frappe.utils import today
+from frappe.utils import flt, today
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     fetch_pending_boe_invoices,
@@ -93,6 +96,7 @@ class TestBillofEntry(IntegrationTestCase):
             je.accounts[0],
         )
         self.assertEqual(je.total_debit, boe.total_amount_payable)
+        self.assertOutstandingAmount(boe, 0)
 
         # Create Landed Cost Voucher
         lcv = make_landed_cost_voucher(boe.name)
@@ -469,6 +473,167 @@ class TestBillofEntry(IntegrationTestCase):
             pi.items[0],
         )
 
+    def test_pay_bill_of_entry_in_parts(self):
+        boe = self.create_bill_of_entry()
+        self.assertEqual(boe.total_amount_payable, 136)
+
+        first = create_payment_journal_entry(boe, 100)
+        first.submit()
+        self.assertOutstandingAmount(boe, 36)
+
+        draft = create_payment_journal_entry(boe, 30)
+        self.assertOutstandingAmount(boe, 36)
+
+        draft.submit()
+        self.assertOutstandingAmount(boe, 6)
+
+        last = create_payment_journal_entry(boe)
+        self.assertEqual(last.total_debit, 6)
+        last.submit()
+        self.assertOutstandingAmount(boe, 0)
+
+        # cancelled amount is unpaid again
+        draft.cancel()
+        self.assertOutstandingAmount(boe, 30)
+
+        reversal = make_reverse_journal_entry(last.name)
+        reversal.posting_date = today()
+        reversal.save()
+        reversal.submit()
+        self.assertOutstandingAmount(boe, 36)
+
+        # only the customs payable account holds what is owed
+        expense_row = make_journal_entry_for_payment(boe.name)
+        expense_row.cheque_no = "123"
+        expense_row.accounts[0].account = boe.customs_expense_account
+        expense_row.save()
+        expense_row.submit()
+        self.assertOutstandingAmount(boe, 36)
+
+        bank_row = make_journal_entry_for_payment(boe.name)
+        bank_row.cheque_no = "123"
+        bank_row.accounts[0].reference_type = ""
+        bank_row.accounts[0].reference_name = ""
+        bank_row.accounts[1].reference_type = boe.doctype
+        bank_row.accounts[1].reference_name = boe.name
+        bank_row.save()
+        bank_row.submit()
+        self.assertOutstandingAmount(boe, 36)
+
+        # overpaying is allowed and never fills a negative amount
+        create_payment_journal_entry(boe, 50).submit()
+        self.assertOutstandingAmount(boe, 0)
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(r"Both Debit and Credit values cannot be zero"),
+            create_payment_journal_entry,
+            boe,
+        )
+
+    def test_rounding_leaves_nothing_to_pay(self):
+        boe = self.create_bill_of_entry(customs_duty=33.335, rate=33.33, qty=1)
+        self.assertNotEqual(boe.total_amount_payable, flt(boe.total_amount_payable, 2))
+
+        create_payment_journal_entry(boe, 20).submit()
+        self.assertOutstandingAmount(boe, flt(boe.total_amount_payable - 20, 2))
+
+        last = create_payment_journal_entry(boe)
+        last.submit()
+        self.assertEqual(last.total_debit, flt(boe.total_amount_payable - 20, 2))
+        self.assertOutstandingAmount(boe, 0)
+
+        # half a paisa: the ledger books the rounded payable
+        boe = self.create_bill_of_entry(customs_duty=64.025, igst_rate=0, rate=100, qty=1)
+        self.assertOutstandingAmount(boe, 64.02)
+        create_payment_journal_entry(boe).submit()
+        self.assertOutstandingAmount(boe, 0)
+
+        boe = self.create_bill_of_entry(customs_duty=1.375, igst_rate=0, rate=100, qty=1)
+        create_payment_journal_entry(boe, 0.69).submit()
+        self.assertOutstandingAmount(boe, 0.69)
+        create_payment_journal_entry(boe).submit()
+        self.assertOutstandingAmount(boe, 0)
+
+        # 0.3 - 0.1 is 0.19999999999999998 in floats
+        boe = self.create_bill_of_entry(customs_duty=0.3, igst_rate=0, rate=100, qty=1)
+        create_payment_journal_entry(boe, 0.1).submit()
+        self.assertOutstandingAmount(boe, 0.2)
+
+    def test_pay_interest_after_customs_duty(self):
+        boe = self.create_bill_of_entry(charge=306)
+        self.assertEqual(boe.total_amount_payable, 442)
+
+        create_payment_journal_entry(boe, 136).submit()
+        self.assertOutstandingAmount(boe, 306)
+
+        create_payment_journal_entry(boe).submit()
+        self.assertOutstandingAmount(boe, 0)
+
+    def test_nothing_payable(self):
+        boe = self.create_bill_of_entry(customs_duty=0, igst_rate=0)
+
+        self.assertEqual(boe.total_amount_payable, 0)
+        self.assertOutstandingAmount(boe, 0)
+
+    def test_cancel_and_amend_paid_bill_of_entry(self):
+        boe = self.create_bill_of_entry()
+
+        je = create_payment_journal_entry(boe, 100)
+        je.submit()
+
+        frappe.db.savepoint("before_cancel")
+        self.assertRaises(LinkExistsError, frappe.get_doc(boe.doctype, boe.name).cancel)
+        frappe.db.rollback(save_point="before_cancel")
+
+        je.cancel()
+        boe.cancel()
+
+        run_onload(boe)
+        self.assertNotIn("outstanding_amount", boe.get_onload())
+        self.assertRaises(frappe.ValidationError, make_journal_entry_for_payment, boe.name)
+
+        amended = frappe.copy_doc(boe)
+        amended.amended_from = boe.name
+        amended.docstatus = 0
+        amended.save()
+        amended.submit()
+        self.assertOutstandingAmount(amended, 136)
+
+        create_payment_journal_entry(amended, 100).submit()
+        self.assertOutstandingAmount(amended, 36)
+
+    def create_bill_of_entry(self, customs_duty=100, igst_rate=18, charge=0, **invoice_args):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1, **invoice_args)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.items[0].customs_duty = customs_duty
+        boe.taxes[0].rate = igst_rate
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+
+        if charge:
+            boe.append(
+                "taxes",
+                {
+                    "charge_type": "Actual",
+                    "account_head": "Miscellaneous Expenses - _TIRC",
+                    "tax_amount": charge,
+                },
+            )
+
+        boe.save()
+        boe.submit()
+
+        return boe
+
+    def assertOutstandingAmount(self, boe, amount):
+        je = make_journal_entry_for_payment(boe.name)
+        self.assertEqual(je.accounts[0].debit_in_account_currency, amount)
+        self.assertEqual(je.accounts[1].credit_in_account_currency, amount)
+
+        run_onload(boe)
+        self.assertEqual(boe.get_onload("outstanding_amount"), amount)
+
     def test_project_in_gl_entries(self):
         """Test that project from Purchase Invoice is auto-copied to Bill of Entry and passed to GL Entry"""
         project = make_project(
@@ -697,3 +862,14 @@ class TestBillofEntry(IntegrationTestCase):
         )
 
         self.assertNotIn(pi.name, [invoice.name for invoice in pending_invoices])
+
+
+def create_payment_journal_entry(boe, amount=None):
+    je = make_journal_entry_for_payment(boe.name)
+    je.cheque_no = "123"
+
+    if amount:
+        je.accounts[0].debit_in_account_currency = amount
+        je.accounts[1].credit_in_account_currency = amount
+
+    return je.save()
