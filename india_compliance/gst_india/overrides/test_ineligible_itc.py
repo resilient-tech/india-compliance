@@ -16,6 +16,7 @@ from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
     make_landed_cost_voucher,
 )
+from india_compliance.gst_india.overrides.ineligible_itc import PurchaseInvoice
 from india_compliance.gst_india.utils.tests import create_transaction
 
 SAMPLE_ITEM_LIST = [
@@ -1551,6 +1552,39 @@ class TestIneligibleITC(IntegrationTestCase):
                     },
                 ],
             )
+
+    def test_net_entries_fall_back_when_input_tax_cannot_be_netted(self):
+        with post_net_ineligible_itc_entries():
+            doc = create_transaction(
+                doctype="Purchase Invoice",
+                bill_no="BILL-NET-06",
+                items=[{"item_code": "Test Ineligible Service Item", "qty": 1, "rate": 1000}],
+                is_in_state=1,
+                do_not_submit=1,
+            )
+
+            ineligible_itc = PurchaseInvoice(doc)
+            ineligible_itc.update_item_ineligibility()
+
+            sgst_debit = doc.get_gl_dict({"account": "Input Tax SGST - _TIRC", "debit": 90.0})
+            ineligible_itc.gl_entries = [sgst_debit]
+
+            item = doc.items[0]
+            ineligible_itc.update_item_gl_entries(item)
+
+        self.assertEqual(sgst_debit.debit, 90.0)
+        self.assertEqual(
+            sorted((row.account, row.debit, row.credit) for row in ineligible_itc.gl_entries[1:]),
+            sorted(
+                [
+                    ("GST Expense - _TIRC", 0.0, 180.0),
+                    ("GST Expense - _TIRC", 180.0, 0.0),
+                    (item.expense_account, 180.0, 0.0),
+                    ("Input Tax SGST - _TIRC", 0.0, 90.0),
+                    ("Input Tax CGST - _TIRC", 0.0, 90.0),
+                ]
+            ),
+        )
 
     def assertGLEntry(self, docname, expected_gl_entry):
         gl_entries = frappe.get_all(
