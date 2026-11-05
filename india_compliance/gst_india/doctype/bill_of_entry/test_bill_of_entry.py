@@ -138,18 +138,37 @@ class TestBillofEntry(IntegrationTestCase):
             {
                 "charge_type": "Actual",
                 "account_head": "Miscellaneous Expenses - _TIRC",
-                "description": "Late Filing Penalty",
                 "tax_amount": 500,
+            },
+        )
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Round Off - _TIRC",
+                "tax_amount": -0.3,
             },
         )
         boe.save()
         boe.submit()
 
         self.assertDocumentEqual(
-            {"total_taxes": 536, "total_amount_payable": 636},
+            {"total_taxes": 535.7, "total_amount_payable": 635.7},
             boe,
         )
         self.assertEqual(boe.items[0].igst_amount, 36)
+
+        round_off_gle = frappe.db.get_value(
+            "GL Entry",
+            {"voucher_type": "Bill of Entry", "voucher_no": boe.name, "account": "Round Off - _TIRC"},
+            ["debit", "credit"],
+            as_dict=True,
+        )
+        self.assertEqual(round_off_gle.debit, 0)
+        self.assertEqual(round_off_gle.credit, 0.3)
+
+        lcv = make_landed_cost_voucher(boe.name)
+        self.assertEqual([tax.amount for tax in lcv.taxes], [100])
 
         penalty_gle = frappe.db.get_value(
             "GL Entry",
@@ -223,6 +242,12 @@ class TestBillofEntry(IntegrationTestCase):
         boe.save()
         self.assertEqual(boe.taxes[1].tax_amount, 2)
         self.assertEqual(boe.items[0].igst_amount, 18)
+
+        exempt_boe = make_bill_of_entry(pi.name)
+        exempt_boe.taxes[0].rate = 0
+        exempt_boe.get_items_from_purchase_invoice([pi.name])
+        self.assertEqual(len(exempt_boe.taxes), 1)
+        self.assertEqual(exempt_boe.taxes[0].rate, 0)
 
     def test_gst_details_in_boe(self):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
