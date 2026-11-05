@@ -61,14 +61,7 @@ def get_data(filters):
 
     query = update_journal_entry_for_payment(query)
     query = update_purchase_invoice_query(query)
-    data = query.run(as_dict=1)
-
-    for row in data:
-        for fieldname in ("payment_journal_entry", "purchase_invoice"):
-            if row[fieldname]:
-                row[fieldname] = ",".join(sorted(row[fieldname].split(",")))
-
-    return data
+    return query.run(as_dict=1)
 
 
 def update_journal_entry_for_payment(query):

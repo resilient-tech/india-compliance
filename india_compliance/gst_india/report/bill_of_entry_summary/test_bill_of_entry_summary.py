@@ -6,6 +6,7 @@ from frappe.tests import IntegrationTestCase, change_settings
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
+    make_journal_entry_for_payment,
 )
 from india_compliance.gst_india.doctype.bill_of_entry.test_bill_of_entry import (
     create_payment_journal_entry,
@@ -188,3 +189,19 @@ class TestBillOfEntrySummary(IntegrationTestCase):
 
         journal_entry.cancel()
         self.assertEqual(self.run_report()[0].payment_journal_entry, second_payment.name)
+
+        # a naming series can carry a field value, and that value can contain a comma
+        comma_payment = make_journal_entry_for_payment(boe.name)
+        comma_payment.update(
+            {
+                "naming_series": "ACC-JV-.user_remark.-.####",
+                "user_remark": "Zeta, Alpha",
+                "cheque_no": "123",
+            }
+        )
+        comma_payment.save().submit()
+        self.assertIn(", ", comma_payment.name)
+        self.assertEqual(
+            self.run_report()[0].payment_journal_entry,
+            ",".join(sorted([second_payment.name, comma_payment.name])),
+        )
