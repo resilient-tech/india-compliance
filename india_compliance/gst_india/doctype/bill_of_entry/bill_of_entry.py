@@ -403,7 +403,7 @@ class BillofEntry(Document):
             frappe.msgprint(_("No Purchase Invoices selected"))
             return
 
-        frappe.has_permission("Bill Of Entry", "write", throw=True)
+        frappe.has_permission("Bill of Entry", "write", throw=True)
         frappe.has_permission("Purchase Invoice", "read", throw=True)
 
         existing_items = [item.pi_detail for item in self.get("items") if item.pi_detail]
