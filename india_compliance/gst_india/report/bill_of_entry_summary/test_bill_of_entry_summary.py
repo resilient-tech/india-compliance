@@ -12,6 +12,7 @@ from india_compliance.gst_india.report.bill_of_entry_summary.bill_of_entry_summa
     execute,
 )
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
+from india_compliance.tests.erpnext_test_utils import create_account
 
 COMPANY = "_Test Indian Registered Company"
 POSTING_DATE = "2023-08-11"
@@ -33,7 +34,7 @@ class TestBillOfEntrySummary(IntegrationTestCase):
     def setUp(self):
         frappe.db.delete("Bill of Entry", filters={"company": COMPANY})
 
-    def create_bill_of_entry(self, invoice_count=1):
+    def create_bill_of_entry(self, invoice_count=1, charges=None):
         invoices = [
             create_purchase_invoice(
                 bill_no=f"BOE-SUMMARY-{index}",
@@ -61,14 +62,9 @@ class TestBillOfEntrySummary(IntegrationTestCase):
                 "posting_date": POSTING_DATE,
             }
         )
-        boe.append(
-            "taxes",
-            {
-                "charge_type": "Actual",
-                "account_head": "Miscellaneous Expenses - _TIRC",
-                "tax_amount": 500,
-            },
-        )
+        for account, amount in (charges or {"Miscellaneous Expenses - _TIRC": 500}).items():
+            boe.append("taxes", {"charge_type": "Actual", "account_head": account, "tax_amount": amount})
+
         boe.save(ignore_permissions=True).submit()
 
         return boe, invoices
@@ -91,8 +87,8 @@ class TestBillOfEntrySummary(IntegrationTestCase):
         self.assertEqual(row.purchase_invoice, invoices[0].name)
         self.assertEqual(row.total_taxes, boe.total_taxes)
         self.assertEqual(row.total_amount_payable, boe.total_amount_payable)
-        self.assertEqual(row[frappe.scrub("Input Tax IGST - _TIRC")], boe.taxes[0].tax_amount)
-        self.assertEqual(row[frappe.scrub("Miscellaneous Expenses - _TIRC")], 500)
+        self.assertEqual(row["Input Tax IGST - _TIRC"], boe.taxes[0].tax_amount)
+        self.assertEqual(row["Miscellaneous Expenses - _TIRC"], 500)
 
         columns, _data = execute(frappe._dict(company=COMPANY, from_date="2023-08-01", to_date="2023-08-31"))
         labels = [column["label"] for column in columns]
@@ -117,7 +113,25 @@ class TestBillOfEntrySummary(IntegrationTestCase):
             sorted(row.purchase_invoice.split(",")),
             sorted(invoice.name for invoice in invoices),
         )
-        self.assertEqual(row[frappe.scrub("Miscellaneous Expenses - _TIRC")], 500)
+        self.assertEqual(row["Miscellaneous Expenses - _TIRC"], 500)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_similar_account_names_keep_their_own_amounts(self):
+        """Both names scrub to late_fee___tirc, so a scrubbed column key would add the amounts together."""
+        for account_name in ("Late Fee", "Late-Fee"):
+            create_account(
+                account_name=account_name,
+                parent_account="Indirect Expenses - _TIRC",
+                company=COMPANY,
+            )
+
+        self.create_bill_of_entry(charges={"Late Fee - _TIRC": 100, "Late-Fee - _TIRC": 50})
+
+        columns, data = execute(frappe._dict(company=COMPANY, from_date="2023-08-01", to_date="2023-08-31"))
+        fieldnames = [column["fieldname"] for column in columns]
+        self.assertEqual(data[0]["Late Fee - _TIRC"], 100)
+        self.assertEqual(data[0]["Late-Fee - _TIRC"], 50)
+        self.assertEqual(len(fieldnames), len(set(fieldnames)))
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_payment_journal_entry_is_reported(self):

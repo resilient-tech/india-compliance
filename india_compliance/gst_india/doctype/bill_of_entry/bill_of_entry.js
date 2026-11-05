@@ -206,6 +206,7 @@ class BillOfEntryController {
         row.rate = 0;
         row.tax_amount = 0;
         row.item_wise_tax_rates = "{}";
+        if (is_gst_account) await this.frm.taxes_controller.set_item_wise_tax_rates(null, cdn);
         this.frm.taxes_controller.update_tax_amount();
     }
 
