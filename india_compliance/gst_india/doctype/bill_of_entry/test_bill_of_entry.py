@@ -125,6 +125,7 @@ class TestBillofEntry(FrappeTestCase):
             {
                 "charge_type": "Actual",
                 "account_head": "Miscellaneous Expenses - _TIRC",
+                "rate": 5,
                 "tax_amount": 500,
             },
         )
@@ -144,6 +145,7 @@ class TestBillofEntry(FrappeTestCase):
             boe,
         )
         self.assertEqual(boe.items[0].igst_amount, 36)
+        self.assertEqual(boe.taxes[1].rate, 0)
 
         round_off_gle = frappe.db.get_value(
             "GL Entry",
