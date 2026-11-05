@@ -3,6 +3,7 @@
 
 import json
 import re
+from unittest.mock import patch
 
 import frappe
 from erpnext.projects.doctype.project.test_project import make_project
@@ -111,6 +112,138 @@ class TestBillofEntry(FrappeTestCase):
             },
             lcv,
         )
+
+    def test_non_gst_charge_in_boe(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.items[0].customs_duty = 100
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Miscellaneous Expenses - _TIRC",
+                "rate": 5,
+                "tax_amount": 500,
+            },
+        )
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Round Off - _TIRC",
+                "tax_amount": -0.3,
+            },
+        )
+        boe.save()
+        boe.submit()
+
+        self.assertDocumentEqual(
+            {"total_taxes": 535.7, "total_amount_payable": 635.7},
+            boe,
+        )
+        self.assertEqual(boe.items[0].igst_amount, 36)
+        self.assertEqual(boe.taxes[1].rate, 0)
+
+        round_off_gle = frappe.db.get_value(
+            "GL Entry",
+            {"voucher_type": "Bill of Entry", "voucher_no": boe.name, "account": "Round Off - _TIRC"},
+            ["debit", "credit"],
+            as_dict=True,
+        )
+        self.assertEqual(round_off_gle.debit, 0)
+        self.assertEqual(round_off_gle.credit, 0.3)
+
+        lcv = make_landed_cost_voucher(boe.name)
+        self.assertEqual([tax.amount for tax in lcv.taxes], [100])
+
+        penalty_gle = frappe.db.get_value(
+            "GL Entry",
+            {
+                "voucher_type": "Bill of Entry",
+                "voucher_no": boe.name,
+                "account": "Miscellaneous Expenses - _TIRC",
+            },
+            ["debit", "cost_center"],
+            as_dict=True,
+        )
+        self.assertEqual(penalty_gle.debit, 500)
+        self.assertEqual(penalty_gle.cost_center, "Main - _TIRC")
+
+        igst_cost_center = frappe.db.get_value(
+            "GL Entry",
+            {"voucher_type": "Bill of Entry", "voucher_no": boe.name, "account": "Input Tax IGST - _TIRC"},
+            "cost_center",
+        )
+        self.assertFalse(igst_cost_center)
+
+    def test_non_input_gst_account_in_boe(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.taxes[0].account_head = "Output Tax IGST - _TIRC"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"Only Input IGST and CESS accounts are allowed"),
+            boe.save,
+        )
+
+        boe.taxes[0].account_head = "Miscellaneous Expenses - _TIRC"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"Input IGST account .* is required"),
+            boe.save,
+        )
+
+        boe.taxes[0].account_head = frappe.db.get_value(
+            "Account", {"company": ("!=", boe.company), "is_group": 0}
+        )
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"does not belong"),
+            boe.save,
+        )
+
+        boe.taxes[0].account_head = "Indirect Expenses - _TIRC"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"is a Group Account"),
+            boe.save,
+        )
+
+        boe.taxes[0].account_head = "Input Tax IGST - _TIRC"
+        with patch(
+            "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.get_gst_accounts_by_type",
+            return_value=frappe._dict(igst_account=None),
+        ):
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"Please set the Input IGST account"),
+                boe.save,
+            )
+
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "On Net Total",
+                "account_head": "Miscellaneous Expenses - _TIRC",
+                "rate": 2,
+            },
+        )
+        boe.save()
+        self.assertEqual(boe.taxes[1].tax_amount, 2)
+        self.assertEqual(boe.items[0].igst_amount, 18)
+
+        exempt_boe = make_bill_of_entry(pi.name)
+        exempt_boe.taxes[0].rate = 0
+        exempt_boe.get_items_from_purchase_invoice([pi.name])
+        self.assertEqual(len(exempt_boe.taxes), 1)
+        self.assertEqual(exempt_boe.taxes[0].rate, 0)
 
     def test_gst_details_in_boe(self):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)

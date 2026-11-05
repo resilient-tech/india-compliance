@@ -5,7 +5,7 @@ import json
 
 import frappe
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
-from erpnext.controllers.accounts_controller import AccountsController
+from erpnext.controllers.accounts_controller import AccountsController, validate_account_head
 from erpnext.stock.get_item_details import _get_item_tax_template
 from frappe import _
 from frappe.model.document import Document
@@ -23,7 +23,7 @@ from india_compliance.gst_india.overrides.transaction import (
     GSTAccounts,
     set_gst_tax_type,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import get_all_gst_accounts, get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import (
     set_or_validate_itc_claim_period,
     validate_itc_claim_period_on_update_after_submit,
@@ -196,9 +196,17 @@ class BillofEntry(Document):
 
     def validate_taxes(self):
         input_accounts = get_gst_accounts_by_type(self.company, "Input", throw=True)
+        if not input_accounts.igst_account:
+            frappe.throw(
+                _("Please set the Input IGST account for Company {0} in GST Settings").format(self.company)
+            )
+
+        gst_accounts = get_all_gst_accounts(self.company)
 
         for tax in self.taxes:
-            if not tax.tax_amount:
+            validate_account_head(tax.idx, tax.account_head, self.company, _("Taxes and Charges"))
+
+            if not tax.tax_amount or tax.account_head not in gst_accounts:
                 continue
 
             if tax.account_head not in (
@@ -254,6 +262,11 @@ class BillofEntry(Document):
                         " is incorrect. Try setting the Charge Type to {2}."
                     ).format(tax.idx, tax.tax_amount, column)
                 )
+
+        if input_accounts.igst_account not in {tax.account_head for tax in self.taxes}:
+            frappe.throw(
+                _("Input IGST account {0} is required in Bill of Entry").format(input_accounts.igst_account)
+            )
 
     def validate_item_tax_template(self):
         for item in self.items:
@@ -311,14 +324,20 @@ class BillofEntry(Document):
                 )
             )
 
+        default_cost_center = frappe.get_cached_value("Company", self.company, "cost_center")
+
         for tax in self.taxes:
+            tax_cost_center = self.cost_center
+            if not tax_cost_center and not tax.gst_tax_type:
+                tax_cost_center = default_cost_center
+
             gl_entries.append(
                 self.get_gl_dict(
                     {
                         "account": tax.account_head,
                         "debit": tax.tax_amount,
                         "credit": 0,
-                        "cost_center": self.cost_center,
+                        "cost_center": tax_cost_center,
                         "remarks": remarks,
                     },
                 )
@@ -446,27 +465,21 @@ def set_missing_values(source, target=None):
     if not input_igst_account:
         return
 
-    rate = (
-        frappe.db.get_value(
-            "Purchase Taxes and Charges",
-            {
-                "parenttype": "Purchase Taxes and Charges Template",
-                "account_head": input_igst_account,
-            },
-            "rate",
-        )
-        or 0
-    )
-
-    has_igst_tax = any(
-        tax.charge_type == "On Net Total"
-        and tax.account_head == input_igst_account
-        and tax.rate == rate
-        and tax.gst_tax_type == "igst"
-        for tax in source.taxes
-    )
+    has_igst_tax = any(tax.account_head == input_igst_account for tax in target.taxes)
 
     if not has_igst_tax:
+        rate = (
+            frappe.db.get_value(
+                "Purchase Taxes and Charges",
+                {
+                    "parenttype": "Purchase Taxes and Charges Template",
+                    "account_head": input_igst_account,
+                },
+                "rate",
+            )
+            or 0
+        )
+
         valid_tax_row = {tax_row.account_head for tax_row in target.taxes if tax_row.account_head}
         if not valid_tax_row:
             target.taxes = []

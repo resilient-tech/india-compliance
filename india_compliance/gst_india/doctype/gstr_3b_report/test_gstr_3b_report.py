@@ -260,6 +260,14 @@ class TestGSTR3BReport(FrappeTestCase):
         boe.items[0].customs_duty = 100
         boe.bill_of_entry_no = frappe.generate_hash(length=5)
         boe.bill_of_entry_date = getdate()
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Miscellaneous Expenses - _TIRC",
+                "tax_amount": 500,
+            },
+        )
         boe.save()
         boe.submit()
 
