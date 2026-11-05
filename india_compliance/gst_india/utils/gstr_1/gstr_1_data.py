@@ -28,7 +28,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     get_b2c_limit,
 )
 from india_compliance.gst_india.utils.gstr_1.sections import cdnur, exports, nil_rated
-from india_compliance.gst_india.utils.gstr_1.sections._shared import split
+from india_compliance.gst_india.utils.gstr_1.sections._shared import money, split
 
 CATEGORY_CONDITIONS = {
     Category.ECOM_RCM.value: {
@@ -466,8 +466,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 identified_uom[uom] = gst_uom
                 invoice["uom"] = gst_uom
 
-        self.rounding_difference = self.settle_amounts(invoices)
-
     def settle_amounts(self, invoices):
         """Round the amounts once, here, so every report reads the same figures.
 
@@ -524,15 +522,16 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
     def get_invoices_for_item_wise_summary(self):
         query = self.get_base_query()
+        invoices = query.run(as_dict=True)
+        self.rounding_difference = self.settle_amounts(invoices)
 
-        return query.run(as_dict=True)
+        return invoices
 
     def get_invoices_for_hsn_wise_summary(self):
-        base = self.get_base_query()
+        invoices = self.get_invoices_for_item_wise_summary()
 
         group_by = ("invoice_no", "gst_hsn_code", "gst_rate", "gst_treatment", "uom")
         summed = (
-            "qty",
             "taxable_value",
             "cgst_amount",
             "sgst_amount",
@@ -541,51 +540,20 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             "total_tax",
             "total_amount",
         )
-        wrapped = (
-            "item_code",
-            "billing_address_gstin",
-            "company_gstin",
-            "customer_name",
-            "posting_date",
-            "place_of_supply",
-            "is_reverse_charge",
-            "ecommerce_gstin",
-            "is_return",
-            "is_debit_note",
-            "return_against",
-            "is_export_with_gst",
-            "shipping_port_code",
-            "shipping_bill_number",
-            "shipping_bill_date",
-            "gst_category",
-            "cess_amount",
-            "cess_non_advol_amount",
-            "invoice_total",
-            "returned_invoice_total",
-            *self.additional_si_columns,
-            *self.additional_si_item_columns,
-        )
 
-        def field(column):
-            return getattr(base, column)
+        grouped = {}
+        for invoice in invoices:
+            key = tuple(invoice.get(column) for column in group_by)
+            if key not in grouped:
+                grouped[key] = invoice
+                continue
 
-        query = (
-            frappe.qb.from_(base)
-            .select(
-                *(field(col) for col in group_by),
-                *(Sum(field(col)).as_(col) for col in summed),
-                *(Max(field(col)).as_(col) for col in wrapped),
-            )
-            .groupby(*(field(col) for col in group_by))
-            .orderby(
-                Max(field("posting_date")),
-                field("invoice_no"),
-                Max(field("item_code")),
-                order=Order.desc,
-            )
-        )
+            row = grouped[key]
+            row["qty"] = flt((row.get("qty") or 0) + (invoice.get("qty") or 0), 9)
+            for column in summed:
+                row[column] = money((row.get(column) or 0) + (invoice.get(column) or 0))
 
-        return query.run(as_dict=True)
+        return list(grouped.values())
 
     def get_filtered_invoices(self, invoices, invoice_category=None, invoice_sub_category=None):
         filtered_invoices = []
@@ -1029,14 +997,6 @@ class GSTR11A11BData:
         self.gl_entry = frappe.qb.DocType("GL Entry")
         self.gst_accounts = gst_accounts
 
-    def get_data(self):
-        if self.filters.get("type_of_business") == "Advances":
-            records = self.get_11A_query().run(as_dict=True)
-        elif self.filters.get("type_of_business") == "Adjustment":
-            records = self.get_11B_query().run(as_dict=True)
-
-        return self.process_data(records)
-
     def get_11A_query(self):
         # For tax-inclusive payments the GST is embedded in paid_amount, exclusive -> 0.
         from india_compliance.gst_india.overrides.payment_entry import (
@@ -1133,16 +1093,3 @@ class GSTR11A11BData:
             conditions.append(self.gl_entry.company_gstin == self.filters.get("company_gstin"))
 
         return conditions
-
-    def process_data(self, records):
-        data = {}
-        for entry in records:
-            taxable_value = flt(entry.taxable_value, 2)
-            tax_rate = round((entry.tax_amount / taxable_value) * 100) if taxable_value else 0
-
-            data.setdefault((entry.place_of_supply, tax_rate), [0.0, 0.0])
-
-            data[(entry.place_of_supply, tax_rate)][0] += taxable_value
-            data[(entry.place_of_supply, tax_rate)][1] += flt(entry.cess_amount, 2)
-
-        return data

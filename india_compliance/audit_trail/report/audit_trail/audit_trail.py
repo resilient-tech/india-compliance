@@ -61,8 +61,8 @@ FIELDS = {
 
 
 def execute(filters=None):
-    _class = REPORT_MAP[filters.pop("report")](filters)
-    return _class.get_columns(), _class.get_data()
+    report = REPORT_MAP[filters.pop("report")](filters)
+    return report.get_columns(), report.get_data()
 
 
 class BaseAuditTrail:
@@ -104,7 +104,7 @@ class BaseAuditTrail:
             return ["in", users]
 
     def get_doctypes(self):
-        doctypes = list(get_relevant_doctypes())
+        doctypes = list(get_reportable_doctypes())
         return doctypes
 
     def update_count(self):
@@ -406,7 +406,7 @@ class UserReport(BaseAuditTrail):
 
 
 @frappe.whitelist()
-def get_relevant_doctypes():
+def get_reportable_doctypes():
     doctypes = get_audit_trail_doctypes()
     doctypes.remove("Accounts Settings")
 

@@ -279,8 +279,6 @@ class TestSubcontractingTransaction(IntegrationTestCase):
     def test_create_and_update_stock_entry(self):
         stock_entry = make_subcontracting_stock_entry(do_not_submit=True)
 
-        # Update the subcontracting transaction
-        stock_entry.run_method("onload")  # update virtual fields
         stock_entry.select_print_heading = "Credit Note"
         stock_entry.save()
 
@@ -641,6 +639,7 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
                 "doctype": "Stock Entry",
                 "purpose": "Material Transfer",
                 "stock_entry_type": "Material Transfer",
+                "add_to_transit": 1,
                 "company": "_Test Indian Registered Company",
                 "bill_from_address": "_Test Indian Registered Company-Billing",
                 "bill_from_gstin": "24AAQCA8719H1ZC",
@@ -653,7 +652,7 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
                         "qty": 1,
                         "gst_hsn_code": "61149090",
                         "s_warehouse": "Stores - _TIRC",
-                        "t_warehouse": "Finished Goods - _TIRC",
+                        "t_warehouse": "Goods In Transit - _TIRC",
                     }
                 ],
             }

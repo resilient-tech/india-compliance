@@ -4,7 +4,6 @@ from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
 from frappe import _
 from frappe.utils import flt
 
-from india_compliance.gst_india.overrides.subcontracting_transaction import set_address_display
 from india_compliance.gst_india.utils.custom_transaction_controller import (
     CustomEwaybillController,
     set_gstin_fields_for_e_waybill,
@@ -81,8 +80,6 @@ def before_save(doc, method=None):
 
 
 def onload(doc, method=None):
-    set_address_display(doc)
-
     # e-Waybill data generation reads these; they are only set here, so they are
     # available after run_onload (load_doc) and not on a bare frappe.get_doc.
     set_gstin_fields_for_e_waybill(doc)

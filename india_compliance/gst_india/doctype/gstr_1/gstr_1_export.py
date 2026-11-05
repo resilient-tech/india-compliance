@@ -2013,14 +2013,14 @@ class ReconcileExcel:
         sgst_key = DocField.SGST
         cess_key = DocField.CESS
 
-        row_dict["taxable_value_difference"] = (row_dict.get("books_" + taxable_value_key, 0)) - (
-            row_dict.get("gstr_1_" + taxable_value_key, 0)
+        row_dict["taxable_value_difference"] = (row_dict.get("books_" + taxable_value_key) or 0) - (
+            row_dict.get("gstr_1_" + taxable_value_key) or 0
         )
 
         row_dict["tax_difference"] = 0
         for tax_key in [igst_key, cgst_key, sgst_key, cess_key]:
-            row_dict["tax_difference"] += row_dict.get("books_" + tax_key, 0) - (
-                row_dict.get("gstr_1_" + tax_key, 0)
+            row_dict["tax_difference"] += (row_dict.get("books_" + tax_key) or 0) - (
+                row_dict.get("gstr_1_" + tax_key) or 0
             )
 
     # COMMON COLUMNS

@@ -28,7 +28,6 @@ for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
     validate_overseas_gst_category(doctype);
     set_and_validate_gstin_status(doctype);
-    set_gst_tax_breakup_on_load(doctype);
 }
 
 for (const doctype of HSN_CODE_DOCTYPES) {
@@ -48,6 +47,10 @@ for (const doctype of ["Sales Invoice", "Delivery Note"]) {
 
 for (const doctype of ["Sales Invoice", "Sales Order", "Delivery Note"]) {
     set_e_commerce_ecommerce_supply_type(doctype);
+}
+
+for (const doctype of [...TRANSACTION_DOCTYPES, "POS Invoice", "Stock Entry", "Asset Movement"]) {
+    set_virtual_fields(doctype);
 }
 
 function fetch_gst_details(doctype) {
@@ -235,15 +238,6 @@ function ignore_port_code_validation(doctype) {
     });
 }
 
-function set_gst_tax_breakup_on_load(doctype) {
-    frappe.ui.form.on(doctype, {
-        refresh(frm) {
-            frm.doc.gst_breakup_table = frm.doc.__onload?._gst_breakup_table;
-            frm.refresh_field("gst_breakup_table");
-        },
-    });
-}
-
 function set_hsn_code_autocomplete(doctype) {
     frappe.ui.form.on(doctype, {
         setup(frm) {
@@ -368,6 +362,20 @@ function is_invoice_no_validation_required(transaction_type) {
         (transaction_type === "Delivery Note" && gst_settings.enable_e_waybill_from_dn) ||
         (transaction_type === "Purchase Receipt" && gst_settings.enable_e_waybill_from_pr)
     );
+}
+
+function set_virtual_fields(doctype) {
+    frappe.ui.form.on(doctype, {
+        refresh(frm) {
+            const values = frm.doc.__onload?.ic_virtual_fields;
+            if (!values) return;
+
+            for (const [fieldname, value] of Object.entries(values)) {
+                frm.doc[fieldname] = value;
+                frm.refresh_field(fieldname);
+            }
+        },
+    });
 }
 
 function set_e_commerce_ecommerce_supply_type(doctype) {

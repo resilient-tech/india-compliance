@@ -45,17 +45,22 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
 from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
 from india_compliance.gst_india.utils import (
     are_goods_supplied,
+    clear_server_down,
     commit,
+    enqueue_portal_action,
     handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
     is_overseas_doc,
+    is_server_down,
     is_ship_to_gstin_applicable,
     load_doc,
     notify_user,
     parse_datetime,
+    portal_is_busy,
     rollback_and_set_einvoice_status,
     run_or_report_failure,
+    throw_server_down,
     update_onload,
 )
 from india_compliance.gst_india.utils.e_waybill import (
@@ -91,7 +96,7 @@ def enqueue_bulk_e_invoice_generation(docnames: str):
     return rq_job.id
 
 
-def generate_e_invoices(docnames, force=False):
+def generate_e_invoices(docnames):
     """
     Bulk generate e-Invoices for the given Sales Invoices.
     Permission checks are done in the `generate_e_invoice` function.
@@ -106,12 +111,11 @@ def generate_e_invoices(docnames, force=False):
             docname,
             _("e-Invoice generation failed"),
             docname=docname,
-            force=force,
         )
 
 
 @frappe.whitelist()
-def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
+def generate_e_invoice(docname: str, throw: bool = True):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc("Sales Invoice", docname, "submit")
 
@@ -124,13 +128,6 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
                 exc=AlreadyGeneratedError,
             )
 
-        if (
-            not force
-            and settings.enable_retry_einv_ewb_generation
-            and settings.is_retry_einv_ewb_generation_pending
-        ):
-            raise GSPServerError
-
         if settings.e_invoice_reporting_time_limit_days and getdate() > add_to_date(
             doc.posting_date, days=settings.e_invoice_reporting_time_limit_days
         ):
@@ -141,6 +138,20 @@ def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
             )
 
         data = EInvoiceData(doc).get_data()
+
+        # after the real checks, so an outage doesn't mask a genuine error
+        if is_server_down("e-Invoice"):
+            throw_server_down()
+
+        if portal_is_busy():
+            return enqueue_portal_action(
+                generate_e_invoice,
+                doc,
+                _("e-Invoice generation failed"),
+                docname=docname,
+                throw=False,
+            )
+
         api = EInvoiceAPI.create(doc)
         result = api.generate_irn(data)
 
@@ -556,6 +567,9 @@ def retry_e_invoice_e_waybill_generation():
 
     settings.db_set("is_retry_einv_ewb_generation_pending", 0, update_modified=False)
 
+    # this run is the probe, let requests through
+    clear_server_down("e-Invoice", "e-Waybill")
+
     generate_pending_e_invoices()
 
     generate_pending_e_waybills()
@@ -660,7 +674,10 @@ class EInvoiceData(GSTTransactionData):
                 )
 
         if self.generate_nil_exempt_as_taxable():
-            self.transaction_details.total_taxable_value += self.transaction_details.total_non_taxable_value
+            self.transaction_details.total_taxable_value = self.rounded(
+                self.transaction_details.total_taxable_value
+                + self.transaction_details.total_non_taxable_value
+            )
             self.transaction_details.total_non_taxable_value = 0
 
         self.transaction_details.update(
@@ -841,7 +858,7 @@ class EInvoiceData(GSTTransactionData):
                 "CgstVal": self.transaction_details.total_cgst_amount,
                 "SgstVal": self.transaction_details.total_sgst_amount,
                 "IgstVal": self.transaction_details.total_igst_amount,
-                "CesVal": (
+                "CesVal": self.rounded(
                     self.transaction_details.total_cess_amount
                     + self.transaction_details.total_cess_non_advol_amount
                 ),

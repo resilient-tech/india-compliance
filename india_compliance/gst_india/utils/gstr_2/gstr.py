@@ -128,6 +128,7 @@ class GSTR:
         transactions = (
             frappe.qb.from_(gst_is)
             .select(gst_is.name)
+            .where(gst_is.company_gstin == self.gstin)
             .where(gst_is.classification == self.category)
             .where(self.get_existing_transaction_filter(gst_is))
         ).run(pluck=True)

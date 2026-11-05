@@ -300,7 +300,7 @@ Object.assign(india_compliance, {
         if (
             !this.is_api_enabled() ||
             gst_settings.sandbox_mode ||
-            !gst_settings.validate_gstin_status ||
+            !(gst_settings.autofill_party_info || gst_settings.validate_gstin_status) ||
             field.$wrapper.find(".refresh-gstin").length
         )
             return;

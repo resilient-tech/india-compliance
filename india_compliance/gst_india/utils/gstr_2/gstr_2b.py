@@ -76,7 +76,10 @@ class GSTR2b(GSTR):
 
         # delete rejected transactions
         for transaction in rejected_transactions:
-            name = frappe.db.get_value("GST Inward Supply", get_inward_supply_filters(transaction))
+            name = frappe.db.get_value(
+                "GST Inward Supply",
+                {**get_inward_supply_filters(transaction), "company_gstin": self.gstin},
+            )
             # delete doc allows passing only name
             if name:
                 frappe.delete_doc("GST Inward Supply", name, ignore_permissions=True)

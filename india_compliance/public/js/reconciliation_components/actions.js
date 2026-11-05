@@ -5,16 +5,16 @@ Object.assign(reconciliation, {
 
     // checked rows of the open tab, as invoices. a summary row stands for many
     get_affected_rows(frm) {
-        const _class = frm.reconciliation_tabs;
+        const reconciliation_tabs = frm.reconciliation_tabs;
         const active_tab = frm.get_active_tab()?.df.fieldname;
-        const checked = _class.tabs[active_tab]?.datatable.get_checked_items() || [];
+        const checked = reconciliation_tabs.tabs[active_tab]?.datatable.get_checked_items() || [];
 
         if (active_tab == "invoice_tab") return checked;
 
-        const matches = _class.summary_matchers[active_tab];
+        const matches = reconciliation_tabs.summary_matchers[active_tab];
         if (!matches) return [];
 
-        return _class.filtered_data.filter((row) => checked.some((item) => matches(item, row)));
+        return reconciliation_tabs.filtered_data.filter((row) => checked.some((item) => matches(item, row)));
     },
 
     get_unlinked_docs(selected_rows) {
@@ -28,8 +28,8 @@ Object.assign(reconciliation, {
     },
 
     async unlink_documents(frm, selected_rows) {
-        const _class = frm.reconciliation_tabs;
-        const tab = _class.tabs[frm.get_active_tab()?.df.fieldname];
+        const reconciliation_tabs = frm.reconciliation_tabs;
+        const tab = reconciliation_tabs.tabs[frm.get_active_tab()?.df.fieldname];
         if (!selected_rows) selected_rows = reconciliation.get_affected_rows(frm);
 
         // nothing to unlink where a side is missing
@@ -55,19 +55,19 @@ Object.assign(reconciliation, {
 
         const unlinked_docs = reconciliation.get_unlinked_docs(rows);
 
-        const new_data = _class.data.filter(
+        const new_data = reconciliation_tabs.data.filter(
             (row) =>
                 !(unlinked_docs.has(row.purchase_invoice_name) || unlinked_docs.has(row.inward_supply_name)),
         );
 
         new_data.push(...r);
-        _class.refresh(new_data);
+        reconciliation_tabs.refresh(new_data);
         reconciliation.after_successful_action(tab);
     },
 
     async copy_details(frm, selected_rows, fields) {
-        const _class = frm.reconciliation_tabs;
-        const tab = _class.tabs[frm.get_active_tab()?.df.fieldname];
+        const reconciliation_tabs = frm.reconciliation_tabs;
+        const tab = reconciliation_tabs.tabs[frm.get_active_tab()?.df.fieldname];
         if (!selected_rows) selected_rows = reconciliation.get_affected_rows(frm);
 
         const rows = selected_rows.filter((row) => row.purchase_invoice_name && row.inward_supply_name);
@@ -95,10 +95,10 @@ Object.assign(reconciliation, {
 
         // drop the stale copies before pushing the refreshed ones back, else they double up
         const copied_names = new Set(copied_rows.map((row) => row.inward_supply_name));
-        const new_data = _class.data.filter((row) => !copied_names.has(row.inward_supply_name));
+        const new_data = reconciliation_tabs.data.filter((row) => !copied_names.has(row.inward_supply_name));
 
         new_data.push(...copied_rows);
-        _class.refresh(new_data);
+        reconciliation_tabs.refresh(new_data);
 
         reconciliation.after_successful_action(
             tab,
@@ -190,8 +190,8 @@ Object.assign(reconciliation, {
             link_doctype,
         });
 
-        const _class = frm.reconciliation_tabs;
-        const new_data = _class.data.filter(
+        const reconciliation_tabs = frm.reconciliation_tabs;
+        const new_data = reconciliation_tabs.data.filter(
             (row) =>
                 !(
                     row.purchase_invoice_name == purchase_invoice_name ||
@@ -201,8 +201,8 @@ Object.assign(reconciliation, {
 
         new_data.push(...r);
 
-        _class.refresh(new_data);
-        if (alert) reconciliation.after_successful_action(_class.tabs.invoice_tab);
+        reconciliation_tabs.refresh(new_data);
+        if (alert) reconciliation.after_successful_action(reconciliation_tabs.tabs.invoice_tab);
     },
 
     async create_new_purchase_invoice(row, company, company_gstin, source_doc) {

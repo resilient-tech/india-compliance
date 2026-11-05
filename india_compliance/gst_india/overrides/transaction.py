@@ -53,9 +53,6 @@ from india_compliance.gst_india.utils import (
     validate_gstin,
 )
 from india_compliance.gst_returns.fields.gstr1 import SubCategory
-from india_compliance.income_tax_india.overrides.tax_withholding_category import (
-    get_tax_withholding_accounts,
-)
 
 DOCTYPES_WITH_GST_DETAIL = {
     "Supplier Quotation",
@@ -72,12 +69,15 @@ DOCTYPES_WITH_GST_DETAIL = {
 ALLOWED_TAX_DIFFERENCE = 1  # Allowable difference in tax amount due to rounding off
 
 
-def set_gst_breakup(doc):
+def get_gst_breakup_html(doc):
+    if not doc.place_of_supply or not doc.company_gstin or ignore_gst_validations(doc):
+        return
+
     gst_breakup_html = frappe.render_template("templates/gst_breakup.html", dict(doc=doc))  # nosemgrep
     if not gst_breakup_html:
         return
 
-    doc.gst_breakup_table = gst_breakup_html.replace("\n", "").replace("    ", "")
+    return gst_breakup_html.replace("\n", "").replace("    ", "")
 
 
 def update_taxable_values(doc):
@@ -90,6 +90,7 @@ def update_taxable_values(doc):
     has_no_qty_value = False
 
     if doc.taxes:
+        # only GST rows with an amount are validated for the reference row; zero rows must not decide it
         if any(row for row in doc.taxes if row.tax_amount and row.gst_tax_type in TAX_TYPES):
             reference_row_index = next(
                 (
@@ -100,6 +101,13 @@ def update_taxable_values(doc):
                     and row.gst_tax_type in TAX_TYPES
                 ),
                 None,  # ignore accounts after GST accounts
+            )
+
+        elif gst_rows := [row for row in doc.taxes if row.gst_tax_type in TAX_TYPES]:
+            # nil-rated / exempt: zero GST rows still mark where the charges end
+            reference_row_index = next(
+                (cint(row.row_id) - 1 for row in gst_rows if row.charge_type == "On Previous Row Total"),
+                None,
             )
 
         else:
@@ -168,10 +176,9 @@ def validate_item_wise_tax_detail(doc):
 
 
 def get_tds_amount(doc):
-    tds_accounts = get_tax_withholding_accounts(doc.company)
     tds_amount = 0
     for row in doc.taxes:
-        if row.account_head not in tds_accounts:
+        if not row.get("is_tax_withholding_account"):
             continue
 
         multiplier = -1 if row.get("add_deduct_tax") == "Deduct" else 1
@@ -1086,7 +1093,13 @@ def validate_reverse_charge_transaction(doc):
 
                 base_reverse_charge_booked += tax_amount
 
-    condition = flt(base_gst_tax + base_reverse_charge_booked, 2) == 0
+    condition = (
+        flt(
+            base_gst_tax + base_reverse_charge_booked,
+            doc.precision("base_tax_amount_after_discount_amount", "taxes"),
+        )
+        == 0
+    )
 
     if not condition:
         msg = _("Booked reverse charge is not equal to applied tax amount")
@@ -1731,6 +1744,8 @@ def _update_place_of_supply_and_taxes(doc):
         return
 
     doc.update(gst_details)
+    # ERPNext computed taxes before they were replaced here
+    doc.calculate_taxes_and_totals()
 
     frappe.msgprint(_("Place of Supply and Taxes have been updated due to change in Party Address."))
 
@@ -1824,23 +1839,6 @@ def update_item_gst_treatment(doc, method=None):
         return
 
     ItemGSTTreatment(doc).set()
-
-
-def before_print(doc, method=None, print_settings=None):
-    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
-        return
-
-    set_ecommerce_supply_type(doc)
-    set_gst_breakup(doc)
-
-
-def onload(doc, method=None):
-    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
-        return
-
-    set_ecommerce_supply_type(doc)
-    set_gst_breakup(doc)
-    doc.set_onload("_gst_breakup_table", doc.gst_breakup_table)
 
 
 def validate_ecommerce_gstin(doc):
@@ -2094,17 +2092,11 @@ def sync_gst_details_from_address(doc, changed_address_fields):
             doc.set(category_field, gst_category or "Unregistered")
 
 
-def set_ecommerce_supply_type(doc):
-    """
-    - Set GSTR-1 E-commerce section for virtual field ecommerce_supply_type
-    """
-    if doc.doctype not in ("Sales Order", "Sales Invoice", "Delivery Note"):
-        return
-
-    if not doc.ecommerce_gstin:
+def get_ecommerce_supply_type(doc):
+    if not doc.ecommerce_gstin or not doc.company_gstin or ignore_gst_validations(doc):
         return
 
     if doc.is_reverse_charge:
-        doc.ecommerce_supply_type = SubCategory.SUPECOM_9_5.value
-    else:
-        doc.ecommerce_supply_type = SubCategory.SUPECOM_52.value
+        return SubCategory.SUPECOM_9_5.value
+
+    return SubCategory.SUPECOM_52.value

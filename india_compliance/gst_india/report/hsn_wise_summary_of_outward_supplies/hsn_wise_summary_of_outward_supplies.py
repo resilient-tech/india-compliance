@@ -130,9 +130,9 @@ def get_columns(filters):
 
 
 def get_hsn_data(filters):
-    _class = GSTR1Invoices(filters)
-    invoices = _class.get_invoices_for_item_wise_summary()
-    _class.process_invoices(invoices, filters.get("bifurcate_hsn"))
+    gstr1_invoices = GSTR1Invoices(filters)
+    invoices = gstr1_invoices.get_invoices_for_item_wise_summary()
+    gstr1_invoices.process_invoices(invoices, filters.get("bifurcate_hsn"))
 
     return process_hsn_data(invoices)
 

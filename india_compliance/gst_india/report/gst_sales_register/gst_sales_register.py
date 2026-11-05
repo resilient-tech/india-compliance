@@ -29,22 +29,24 @@ def validate_filters(filters):
 
 
 def get_data(filters):
-    _class = GSTR1Invoices(filters)
+    gstr1_invoices = GSTR1Invoices(filters)
     invoices = []
 
     if filters.summary_by == "Summary by Item":
-        invoices = _class.get_invoices_for_item_wise_summary()
+        invoices = gstr1_invoices.get_invoices_for_item_wise_summary()
 
     if filters.summary_by == "Summary by HSN":
-        invoices = _class.get_invoices_for_hsn_wise_summary()
+        invoices = gstr1_invoices.get_invoices_for_hsn_wise_summary()
 
     if filters.summary_by == "Overview":
-        return _class.get_overview()
+        return gstr1_invoices.get_overview()
 
     if filters.invoice_category:
-        return _class.get_filtered_invoices(invoices, filters.invoice_category, filters.invoice_sub_category)
+        return gstr1_invoices.get_filtered_invoices(
+            invoices, filters.invoice_category, filters.invoice_sub_category
+        )
 
-    _class.process_invoices(invoices)
+    gstr1_invoices.process_invoices(invoices)
 
     return invoices
 
