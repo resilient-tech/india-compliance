@@ -101,6 +101,37 @@ def toggle_provisional_accounting():
         )
 
 
+@contextmanager
+def post_net_ineligible_itc_entries():
+    frappe.db.set_value(
+        "Company",
+        "_Test Indian Registered Company",
+        "post_net_ineligible_itc_entries",
+        1,
+    )
+
+    try:
+        yield
+
+    finally:
+        frappe.db.set_value(
+            "Company",
+            "_Test Indian Registered Company",
+            "post_net_ineligible_itc_entries",
+            0,
+        )
+
+
+def gl_row(account, debit=0.0, credit=0.0, in_transaction_currency=True):
+    return {
+        "account": account,
+        "debit": debit,
+        "credit": credit,
+        "debit_in_transaction_currency": debit if in_transaction_currency else 0.0,
+        "credit_in_transaction_currency": credit if in_transaction_currency else 0.0,
+    }
+
+
 class TestIneligibleITC(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
@@ -1389,6 +1420,96 @@ class TestIneligibleITC(IntegrationTestCase):
                 self.assertEqual(row.amount, 190.08)
             else:
                 self.assertEqual(row.amount, 0.0)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_net_entries_for_ineligible_itc(self):
+        with post_net_ineligible_itc_entries():
+            invoice = create_transaction(
+                doctype="Purchase Invoice",
+                bill_no="BILL-NET-01",
+                update_stock=1,
+                items=SAMPLE_ITEM_LIST,
+                is_in_state=1,
+            )
+
+            self.assertGLEntry(
+                invoice.name,
+                [
+                    gl_row("Round Off - _TIRC", debit=0.28, in_transaction_currency=False),
+                    gl_row("Input Tax SGST - _TIRC", debit=243.0),
+                    gl_row("Input Tax CGST - _TIRC", debit=243.0),
+                    gl_row("Administrative Expenses - _TIRC", debit=2677.64),
+                    gl_row("CWIP Account - _TIRC", debit=2178.82),
+                    gl_row("Stock In Hand - _TIRC", debit=267.26),
+                    gl_row("Creditors - _TIRC", credit=5610.0),
+                ],
+            )
+            self.assertStockValues(invoice.name, {"Test Stock Item": 20, "Test Ineligible Stock Item": 22.42})
+
+            for asset in frappe.get_all("Asset", filters={"purchase_invoice": invoice.name}, pluck="name"):
+                frappe.delete_doc("Asset", asset)
+
+            return_invoice = make_return_doc("Purchase Invoice", invoice.name)
+            return_invoice.save()
+            return_invoice.submit()
+
+            self.assertGLEntry(
+                return_invoice.name,
+                [
+                    gl_row("Round Off - _TIRC", credit=0.28, in_transaction_currency=False),
+                    gl_row("Input Tax SGST - _TIRC", credit=243.0),
+                    gl_row("Input Tax CGST - _TIRC", credit=243.0),
+                    gl_row("CWIP Account - _TIRC", credit=2178.82),
+                    gl_row("Administrative Expenses - _TIRC", credit=2677.64),
+                    gl_row("Stock In Hand - _TIRC", credit=267.26),
+                    gl_row("Creditors - _TIRC", debit=5610.0),
+                ],
+            )
+
+            receipt = create_transaction(
+                doctype="Purchase Receipt",
+                items=SAMPLE_ITEM_LIST,
+                is_in_state=1,
+            )
+            receipt_invoice = make_purchase_invoice(receipt.name)
+            receipt_invoice.bill_no = "BILL-NET-02"
+            receipt_invoice.submit()
+
+            self.assertGLEntry(
+                receipt_invoice.name,
+                [
+                    gl_row("Round Off - _TIRC", debit=0.28, in_transaction_currency=False),
+                    gl_row("GST Expense - _TIRC", debit=190.08),
+                    gl_row("Input Tax SGST - _TIRC", debit=243.0),
+                    gl_row("Input Tax CGST - _TIRC", debit=243.0),
+                    gl_row("Asset Received But Not Billed - _TIRC", debit=1999.0),
+                    gl_row("Administrative Expenses - _TIRC", debit=2677.64),
+                    gl_row("Stock Received But Not Billed - _TIRC", debit=257.0),
+                    gl_row("Creditors - _TIRC", credit=5610.0),
+                ],
+            )
+
+            import_invoice = create_transaction(
+                doctype="Purchase Invoice",
+                supplier="_Test Foreign Supplier",
+                bill_no="BILL-NET-03",
+                update_stock=1,
+                items=SAMPLE_ITEM_LIST,
+            )
+            boe = make_bill_of_entry(import_invoice.name)
+            boe.bill_of_entry_no = "BILL-NET-04"
+            boe.bill_of_entry_date = today()
+            boe.submit()
+
+            self.assertGLEntry(
+                boe.name,
+                [
+                    gl_row("Administrative Expenses - _TIRC", debit=179.64),
+                    gl_row("Customs Duty Payable - _TIRC", credit=855.72),
+                    gl_row("GST Expense - _TIRC", debit=190.08),
+                    gl_row("Input Tax IGST - _TIRC", debit=486.0),
+                ],
+            )
 
     def assertGLEntry(self, docname, expected_gl_entry):
         gl_entries = frappe.get_all(
