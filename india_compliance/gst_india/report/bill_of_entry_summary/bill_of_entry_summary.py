@@ -120,8 +120,7 @@ def set_tax_amounts(data):
             continue
 
         row = rows[detail.parent]
-        fieldname = frappe.scrub(detail.account_head)
-        row[fieldname] = flt(row.get(fieldname)) + detail.tax_amount
+        row[detail.account_head] = flt(row.get(detail.account_head)) + detail.tax_amount
         (gst_accounts if detail.gst_tax_type else other_accounts).add(detail.account_head)
 
     return [*sorted(gst_accounts), *sorted(other_accounts - gst_accounts)]
@@ -194,7 +193,7 @@ def get_columns(filters, tax_accounts):
         },
         *[
             {
-                "fieldname": frappe.scrub(account),
+                "fieldname": account,
                 "label": account,
                 "fieldtype": "Currency",
                 "options": company_currency,
