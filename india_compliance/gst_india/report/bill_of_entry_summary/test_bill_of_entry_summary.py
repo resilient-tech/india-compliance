@@ -61,6 +61,14 @@ class TestBillOfEntrySummary(IntegrationTestCase):
                 "posting_date": POSTING_DATE,
             }
         )
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Miscellaneous Expenses - _TIRC",
+                "tax_amount": 500,
+            },
+        )
         boe.save(ignore_permissions=True).submit()
 
         return boe, invoices
@@ -83,6 +91,16 @@ class TestBillOfEntrySummary(IntegrationTestCase):
         self.assertEqual(row.purchase_invoice, invoices[0].name)
         self.assertEqual(row.total_taxes, boe.total_taxes)
         self.assertEqual(row.total_amount_payable, boe.total_amount_payable)
+        self.assertEqual(row[frappe.scrub("Input Tax IGST - _TIRC")], boe.taxes[0].tax_amount)
+        self.assertEqual(row[frappe.scrub("Miscellaneous Expenses - _TIRC")], 500)
+
+        columns, _data = execute(frappe._dict(company=COMPANY, from_date="2023-08-01", to_date="2023-08-31"))
+        labels = [column["label"] for column in columns]
+        customs_duty_index = labels.index("Total Customs Duty")
+        self.assertEqual(
+            labels[customs_duty_index + 1 : customs_duty_index + 4],
+            ["Input Tax IGST - _TIRC", "Miscellaneous Expenses - _TIRC", "Total Taxes and Charges"],
+        )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_multiple_invoices_stay_one_row(self):
@@ -99,6 +117,7 @@ class TestBillOfEntrySummary(IntegrationTestCase):
             sorted(row.purchase_invoice.split(",")),
             sorted(invoice.name for invoice in invoices),
         )
+        self.assertEqual(row[frappe.scrub("Miscellaneous Expenses - _TIRC")], 500)
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_payment_journal_entry_is_reported(self):
