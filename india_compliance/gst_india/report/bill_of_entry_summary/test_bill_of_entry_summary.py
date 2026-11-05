@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from erpnext.accounts.doctype.account.test_account import create_account
 from frappe.tests.utils import FrappeTestCase, change_settings
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
@@ -12,7 +13,6 @@ from india_compliance.gst_india.report.bill_of_entry_summary.bill_of_entry_summa
     execute,
 )
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
-from india_compliance.tests.erpnext_test_utils import create_account
 
 COMPANY = "_Test Indian Registered Company"
 POSTING_DATE = "2023-08-11"

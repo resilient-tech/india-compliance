@@ -212,7 +212,7 @@ class TestBillofEntry(FrappeTestCase):
         boe.taxes[0].account_head = "Indirect Expenses - _TIRC"
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"account group"),
+            re.compile(r"is a Group Account"),
             boe.save,
         )
 
