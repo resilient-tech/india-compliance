@@ -3,6 +3,7 @@
 
 import json
 import re
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -176,6 +177,52 @@ class TestBillofEntry(IntegrationTestCase):
             re.compile(r"Only Input IGST and CESS accounts are allowed"),
             boe.save,
         )
+
+        boe.taxes[0].account_head = "Miscellaneous Expenses - _TIRC"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"Input IGST account .* is required"),
+            boe.save,
+        )
+
+        boe.taxes[0].account_head = frappe.db.get_value(
+            "Account", {"company": ("!=", boe.company), "is_group": 0}
+        )
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"does not belong"),
+            boe.save,
+        )
+
+        boe.taxes[0].account_head = "Indirect Expenses - _TIRC"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"account group"),
+            boe.save,
+        )
+
+        boe.taxes[0].account_head = "Input Tax IGST - _TIRC"
+        with patch(
+            "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.get_gst_accounts_by_type",
+            return_value=frappe._dict(igst_account=None),
+        ):
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"Please set the Input IGST account"),
+                boe.save,
+            )
+
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "On Net Total",
+                "account_head": "Miscellaneous Expenses - _TIRC",
+                "rate": 2,
+            },
+        )
+        boe.save()
+        self.assertEqual(boe.taxes[1].tax_amount, 2)
+        self.assertEqual(boe.items[0].igst_amount, 18)
 
     def test_gst_details_in_boe(self):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
