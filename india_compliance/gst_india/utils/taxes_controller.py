@@ -137,6 +137,8 @@ class CustomTaxController:
 
         for tax in taxes:
             if tax.charge_type == "Actual":
+                tax.rate = 0
+
                 # User may set item_wise_tax_rates manually for Actual; only default it.
                 if not tax.item_wise_tax_rates:
                     tax.item_wise_tax_rates = "{}"
