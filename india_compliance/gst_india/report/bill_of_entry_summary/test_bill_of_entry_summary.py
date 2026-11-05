@@ -112,7 +112,6 @@ class TestBillOfEntrySummary(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_multiple_invoices_stay_one_row(self):
-        """GROUP_CONCAT on MariaDB and STRING_AGG on postgres must both list every invoice."""
         boe, invoices = self.create_bill_of_entry(invoice_count=2)
 
         data = self.run_report()
