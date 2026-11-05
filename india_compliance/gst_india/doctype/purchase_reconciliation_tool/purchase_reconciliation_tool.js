@@ -984,13 +984,23 @@ class ImportDialog {
         this.dialog.refresh();
     }
 
-    upload_gstr(period, file_path) {
+    async upload_gstr(period, file_path) {
         this.frm.events.show_progress(this.frm, "upload");
-        this.frm._call("upload_gstr", {
-            return_type: this.return_type,
-            period,
-            file_path,
-        });
+
+        // progress reaches 100% before the uploaded data is committed
+        frappe.dom.freeze(__("Updating Inward Supply..."));
+        try {
+            await this.frm._call("upload_gstr", {
+                return_type: this.return_type,
+                period,
+                file_path,
+            });
+        } finally {
+            frappe.dom.unfreeze();
+        }
+
+        // recheck missing GSTR-2B downloads
+        this.frm.trigger("period");
     }
 
     get_gstr_fields() {
