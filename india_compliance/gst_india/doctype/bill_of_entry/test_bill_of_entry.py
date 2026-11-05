@@ -183,6 +183,13 @@ class TestBillofEntry(IntegrationTestCase):
         self.assertEqual(penalty_gle.debit, 500)
         self.assertEqual(penalty_gle.cost_center, "Main - _TIRC")
 
+        igst_cost_center = frappe.db.get_value(
+            "GL Entry",
+            {"voucher_type": "Bill of Entry", "voucher_no": boe.name, "account": "Input Tax IGST - _TIRC"},
+            "cost_center",
+        )
+        self.assertFalse(igst_cost_center)
+
     def test_non_input_gst_account_in_boe(self):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
 
