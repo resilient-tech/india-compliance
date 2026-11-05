@@ -3,7 +3,12 @@
 
 import frappe
 from frappe import _
+<<<<<<< HEAD
 from frappe.query_builder.custom import GROUP_CONCAT
+=======
+from frappe.query_builder.functions import GroupConcat, Max, Sum
+from frappe.utils import flt
+>>>>>>> f6528cc (fix: show each tax account in Bill of Entry Summary)
 
 
 def execute(filters=None):
@@ -11,7 +16,10 @@ def execute(filters=None):
     if not filters:
         filters = {}
 
-    return get_columns(filters), get_data(filters)
+    data = get_data(filters)
+    tax_accounts = set_tax_amounts(data)
+
+    return get_columns(filters, tax_accounts), data
 
 
 def validate_filters(filters=None):
@@ -89,7 +97,37 @@ def update_purchase_invoice_query(query):
     )
 
 
-def get_columns(filters):
+def set_tax_amounts(data):
+    if not data:
+        return []
+
+    taxes = frappe.qb.DocType("India Compliance Taxes and Charges")
+    tax_details = (
+        frappe.qb.from_(taxes)
+        .select(taxes.parent, taxes.account_head, taxes.gst_tax_type, Sum(taxes.tax_amount).as_("tax_amount"))
+        .where(taxes.parenttype == "Bill of Entry")
+        .where(taxes.parent.isin([row.name for row in data]))
+        .groupby(taxes.parent, taxes.account_head, taxes.gst_tax_type)
+        .run(as_dict=True)
+    )
+
+    rows = {row.name: row for row in data}
+    gst_accounts = set()
+    other_accounts = set()
+
+    for detail in tax_details:
+        if not detail.tax_amount:
+            continue
+
+        row = rows[detail.parent]
+        fieldname = frappe.scrub(detail.account_head)
+        row[fieldname] = flt(row.get(fieldname)) + detail.tax_amount
+        (gst_accounts if detail.gst_tax_type else other_accounts).add(detail.account_head)
+
+    return [*sorted(gst_accounts), *sorted(other_accounts - gst_accounts)]
+
+
+def get_columns(filters, tax_accounts):
     company_currency = frappe.get_cached_value("Company", filters.get("company"), "default_currency")
 
     return [
@@ -154,9 +192,19 @@ def get_columns(filters):
             "options": company_currency,
             "width": 110,
         },
+        *[
+            {
+                "fieldname": frappe.scrub(account),
+                "label": account,
+                "fieldtype": "Currency",
+                "options": company_currency,
+                "width": 110,
+            }
+            for account in tax_accounts
+        ],
         {
             "fieldname": "total_taxes",
-            "label": _("Total Taxes"),
+            "label": _("Total Taxes and Charges"),
             "fieldtype": "Currency",
             "options": company_currency,
             "width": 100,
