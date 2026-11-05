@@ -467,27 +467,21 @@ def set_missing_values(source, target=None):
     if not input_igst_account:
         return
 
-    rate = (
-        frappe.db.get_value(
-            "Purchase Taxes and Charges",
-            {
-                "parenttype": "Purchase Taxes and Charges Template",
-                "account_head": input_igst_account,
-            },
-            "rate",
-        )
-        or 0
-    )
-
-    has_igst_tax = any(
-        tax.charge_type == "On Net Total"
-        and tax.account_head == input_igst_account
-        and tax.rate == rate
-        and tax.gst_tax_type == "igst"
-        for tax in source.taxes
-    )
+    has_igst_tax = any(tax.account_head == input_igst_account for tax in target.taxes)
 
     if not has_igst_tax:
+        rate = (
+            frappe.db.get_value(
+                "Purchase Taxes and Charges",
+                {
+                    "parenttype": "Purchase Taxes and Charges Template",
+                    "account_head": input_igst_account,
+                },
+                "rate",
+            )
+            or 0
+        )
+
         valid_tax_row = {tax_row.account_head for tax_row in target.taxes if tax_row.account_head}
         if not valid_tax_row:
             target.taxes = []
