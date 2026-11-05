@@ -173,7 +173,7 @@ class IneligibleITC:
                 for entry in self.gl_entries
                 if entry.get("account") == account
                 and not flt(entry.get("credit"))
-                and flt(entry.get("debit")) * sign > 0
+                and (flt(entry.get("debit")) * sign) > 0
             ]
             candidates.sort(key=lambda entry: entry.get("cost_center") != self.cost_center)
 
@@ -189,11 +189,11 @@ class IneligibleITC:
                 return False
 
         for entry, adjustment in adjustments:
-            adjustment *= sign
-            entry.debit = flt(entry.debit) - adjustment
-            entry.debit_in_account_currency = flt(entry.get("debit_in_account_currency")) - adjustment
-            entry.debit_in_transaction_currency = flt(entry.get("debit_in_transaction_currency")) - flt(
-                adjustment / self.conversion_rate
+            remaining_ratio = 1 - (adjustment / abs(entry.debit))
+            entry.debit = flt(entry.debit) - (adjustment * sign)
+            entry.debit_in_account_currency = flt(entry.get("debit_in_account_currency")) * remaining_ratio
+            entry.debit_in_transaction_currency = (
+                flt(entry.get("debit_in_transaction_currency")) * remaining_ratio
             )
 
         return True

@@ -1422,6 +1422,10 @@ class TestIneligibleITC(IntegrationTestCase):
                 self.assertEqual(row.amount, 0.0)
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    @change_settings(
+        "Accounts Settings",
+        {"allow_multi_currency_invoices_against_single_party_account": 1},
+    )
     def test_net_entries_for_ineligible_itc(self):
         with post_net_ineligible_itc_entries():
             invoice = create_transaction(
@@ -1508,6 +1512,43 @@ class TestIneligibleITC(IntegrationTestCase):
                     gl_row("Customs Duty Payable - _TIRC", credit=855.72),
                     gl_row("GST Expense - _TIRC", debit=190.08),
                     gl_row("Input Tax IGST - _TIRC", debit=486.0),
+                ],
+            )
+
+            foreign_invoice = create_transaction(
+                doctype="Purchase Invoice",
+                bill_no="BILL-NET-05",
+                update_stock=1,
+                currency="USD",
+                conversion_rate=100,
+                items=[
+                    {
+                        "item_code": "Test Ineligible Service Item",
+                        "qty": 1,
+                        "rate": 1000,
+                        "expense_account": "CWIP Account - _TIRC",
+                    }
+                ],
+                is_in_state=1,
+            )
+
+            self.assertGLEntry(
+                foreign_invoice.name,
+                [
+                    {
+                        "account": "CWIP Account - _TIRC",
+                        "debit": 118000.0,
+                        "credit": 0.0,
+                        "debit_in_transaction_currency": 1180.0,
+                        "credit_in_transaction_currency": 0.0,
+                    },
+                    {
+                        "account": "Creditors - _TIRC",
+                        "debit": 0.0,
+                        "credit": 118000.0,
+                        "debit_in_transaction_currency": 0.0,
+                        "credit_in_transaction_currency": 1180.0,
+                    },
                 ],
             )
 
