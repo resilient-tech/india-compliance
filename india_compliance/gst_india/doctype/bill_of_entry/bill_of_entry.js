@@ -153,6 +153,12 @@ frappe.ui.form.on("Bill of Entry Item", {
     },
 });
 
+frappe.ui.form.on("India Compliance Taxes and Charges", {
+    async account_head(frm, cdt, cdn) {
+        await frm.bill_of_entry_controller.set_charge_type_as_actual(cdt, cdn);
+    },
+});
+
 class BillOfEntryController {
     constructor(frm) {
         this.frm = frm;
@@ -183,6 +189,20 @@ class BillOfEntryController {
                 };
             });
         });
+    }
+
+    async set_charge_type_as_actual(cdt, cdn) {
+        const row = locals[cdt][cdn];
+        if (!row.account_head || row.charge_type === "Actual") return;
+
+        const gst_accounts = await india_compliance.get_account_options(this.frm.doc.company);
+        if (!gst_accounts || gst_accounts.includes(row.account_head)) return;
+
+        row.charge_type = "Actual";
+        row.rate = 0;
+        row.tax_amount = 0;
+        row.item_wise_tax_rates = "{}";
+        this.frm.taxes_controller.update_tax_amount();
     }
 
     async update_item_taxable_value(cdt, cdn) {
