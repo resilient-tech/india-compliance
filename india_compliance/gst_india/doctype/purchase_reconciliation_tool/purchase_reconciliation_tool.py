@@ -128,7 +128,7 @@ class PurchaseReconciliationTool(Document):
         # return period is always taken from the file, as `period` received from the client
         # may be the Inward Supply Period of the tool (eg. "Custom")
         period = get_return_period_from_json(return_type, json_data)
-        if not period or not re.fullmatch(r"(0[1-9]|1[0-2])\d{4}", period):
+        if not isinstance(period, str) or not re.fullmatch(r"(0[1-9]|1[0-2])\d{4}", period):
             frappe.throw(
                 _(
                     "Could not fetch a valid return period from the file. Please upload the {0} file downloaded from the GST Portal."
@@ -257,6 +257,7 @@ class PurchaseReconciliationTool(Document):
         date_range = self.get_date_range(period) or [self.from_date, self.to_date]
 
         if not all(date_range):
+            self.set_onload("has_missing_2b_documents", False)
             return
 
         self.set_onload(
@@ -438,7 +439,8 @@ def get_return_period_from_json(return_type: ReturnType, json_data):
         return json_data.get("fp")
 
     if return_type == ReturnType.GSTR2B:
-        return (json_data.get("data") or {}).get("rtnprd")
+        data = json_data.get("data")
+        return data.get("rtnprd") if isinstance(data, dict) else None
 
 
 def download_gstr(

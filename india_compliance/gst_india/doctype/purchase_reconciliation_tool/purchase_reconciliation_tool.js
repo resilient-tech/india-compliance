@@ -894,13 +894,10 @@ class ImportDialog {
         } else {
             this.dialog.set_primary_action(__("Upload"), () => {
                 const file_path = this.dialog.get_value("attach_file");
-                const period = this.dialog.get_value("upload_period");
                 if (!file_path) frappe.throw(__("Please select a file first!"));
-                if (!period)
-                    frappe.throw(
-                        __("Could not fetch period from file, make sure you have selected the correct file!"),
-                    );
-                this.upload_gstr(period, file_path);
+
+                // return period is read from the file on the server
+                this.upload_gstr(file_path);
                 this.dialog.hide();
             });
         }
@@ -984,7 +981,7 @@ class ImportDialog {
         this.dialog.refresh();
     }
 
-    async upload_gstr(period, file_path) {
+    async upload_gstr(file_path) {
         this.frm.events.show_progress(this.frm, "upload");
 
         // progress reaches 100% before the uploaded data is committed
@@ -992,7 +989,6 @@ class ImportDialog {
         try {
             await this.frm._call("upload_gstr", {
                 return_type: this.return_type,
-                period,
                 file_path,
             });
         } finally {

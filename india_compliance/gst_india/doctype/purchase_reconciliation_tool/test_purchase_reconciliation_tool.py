@@ -1699,7 +1699,7 @@ class TestUploadGSTR(IntegrationTestCase):
         )
 
     def test_upload_without_valid_return_period_in_file(self):
-        for rtnprd in (None, "Custom", "132026"):
+        for rtnprd in (None, "Custom", "132026", 42026):
             with self.subTest(rtnprd=rtnprd):
                 self.assertRaisesRegex(
                     frappe.ValidationError,
@@ -1707,6 +1707,10 @@ class TestUploadGSTR(IntegrationTestCase):
                     self.upload_gstr,
                     {"data": frappe._dict(gstin=self.gstin, rtnprd=rtnprd, docdata={})},
                 )
+
+        self.assertRaisesRegex(
+            frappe.ValidationError, "Could not fetch a valid return period", self.upload_gstr, {"data": []}
+        )
 
     def test_missing_2b_documents_for_custom_period(self):
         doc = frappe.get_doc("Purchase Reconciliation Tool")
