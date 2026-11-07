@@ -8,6 +8,9 @@ from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
     make_journal_entry_for_payment,
 )
+from india_compliance.gst_india.doctype.bill_of_entry.test_bill_of_entry import (
+    create_payment_journal_entry,
+)
 from india_compliance.gst_india.report.bill_of_entry_summary.bill_of_entry_summary import (
     execute,
 )
@@ -95,6 +98,7 @@ class TestBillOfEntrySummary(IntegrationTestCase):
         self.assertEqual(len(data), 1)
         row = data[0]
         self.assertEqual(row.name, boe.name)
+        self.assertIsNone(row.payment_journal_entry)
         self.assertEqual(row.bill_of_entry_no, "BOE-SUMMARY")
         self.assertEqual(row.supplier, invoices[0].supplier)
         self.assertEqual(row.purchase_invoice, invoices[0].name)
@@ -127,6 +131,22 @@ class TestBillOfEntrySummary(IntegrationTestCase):
         )
         self.assertEqual(row["Miscellaneous Expenses - _TIRC"], 500)
 
+        journal_entries = [create_payment_journal_entry(boe, 100) for _ in range(2)]
+        for journal_entry in journal_entries:
+            journal_entry.submit()
+
+        data = self.run_report()
+
+        self.assertEqual(len(data), 1)
+        row = data[0]
+        self.assertEqual(row.purchase_invoice, ",".join(sorted(invoice.name for invoice in invoices)))
+        self.assertEqual(
+            row.payment_journal_entry,
+            ",".join(sorted(journal_entry.name for journal_entry in journal_entries)),
+        )
+        self.assertEqual(row.total_taxes, boe.total_taxes)
+        self.assertEqual(row.total_amount_payable, boe.total_amount_payable)
+
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_similar_account_names_keep_their_own_amounts(self):
         """Both names scrub to late_fee___tirc, so a scrubbed column key would add the amounts together."""
@@ -149,10 +169,32 @@ class TestBillOfEntrySummary(IntegrationTestCase):
     def test_payment_journal_entry_is_reported(self):
         boe, _invoices = self.create_bill_of_entry()
 
-        journal_entry = make_journal_entry_for_payment(boe.name)
-        journal_entry.cheque_no = "BOE-SUMMARY-PAYMENT"  # mandatory on a Bank Entry
-        journal_entry.save().submit()
+        journal_entry = create_payment_journal_entry(boe, 100)
+        journal_entry.submit()
 
         data = self.run_report()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].payment_journal_entry, journal_entry.name)
+
+        second_payment = create_payment_journal_entry(boe, 100)
+        self.assertEqual(self.run_report()[0].payment_journal_entry, journal_entry.name)
+
+        second_payment.submit()
+        journal_entry.cancel()
+        self.assertEqual(self.run_report()[0].payment_journal_entry, second_payment.name)
+
+        # a naming series can carry a field value, and that value can contain a comma
+        comma_payment = make_journal_entry_for_payment(boe.name)
+        comma_payment.update(
+            {
+                "naming_series": "ACC-JV-.user_remark.-.####",
+                "user_remark": "Zeta, Alpha",
+                "cheque_no": "123",
+            }
+        )
+        comma_payment.save().submit()
+        self.assertIn(", ", comma_payment.name)
+        self.assertEqual(
+            self.run_report()[0].payment_journal_entry,
+            ",".join(sorted([second_payment.name, comma_payment.name])),
+        )
