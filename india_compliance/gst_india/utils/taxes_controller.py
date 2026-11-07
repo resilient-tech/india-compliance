@@ -11,11 +11,7 @@ from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     ItemGSTTreatment,
 )
-<<<<<<< HEAD
 from india_compliance.gst_india.utils import get_all_gst_accounts
-=======
-from india_compliance.gst_india.utils import get_all_gst_accounts, get_items, get_items_fieldname
->>>>>>> 6e91939 (fix: round taxable value at the company currency precision)
 
 
 class CustomItemGSTDetails(ItemGSTDetails):
@@ -116,33 +112,8 @@ class CustomTaxController:
         return taxes
 
     def update_item_taxable_value(self):
-<<<<<<< HEAD
         for item in self.doc.get("items"):
             item.taxable_value = self.get_value("amount", item)
-=======
-        precision = self.doc.precision("taxable_value", get_items_fieldname(self.doc.doctype))
-
-        for item in self._items:
-            # a new row has no value yet, and get() cannot default a key that is set to None
-            taxable_value = flt(self.get_value("amount", item), precision)
-            taxable_value += flt(item.get("additional_taxable_value", 0), precision)
-
-            item.taxable_value = taxable_value
-
-    def set_additional_taxable_value(self):
-        if self.doc.doctype != "Stock Entry" or not self._items:
-            return
-
-        for item in self._items:
-            item.additional_taxable_value = 0
-
-        # Imported lazily: subcontracting_transaction imports this module at load time.
-        from india_compliance.gst_india.overrides.subcontracting_transaction import (
-            set_subcontracting_inward_taxable_value,
-        )
-
-        set_subcontracting_inward_taxable_value(self.doc)
->>>>>>> 6e91939 (fix: round taxable value at the company currency precision)
 
     def update_tax_amount(self):
         total_taxes = 0

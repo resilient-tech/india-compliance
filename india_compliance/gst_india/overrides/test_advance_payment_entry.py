@@ -23,12 +23,7 @@ from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.utils.gstr_1 import DocField as doc
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
-<<<<<<< HEAD
-from india_compliance.gst_india.utils.tests import create_transaction
-=======
 from india_compliance.gst_india.utils.tests import THREE_DECIMAL_NUMBER_FORMAT, create_transaction
-from india_compliance.tests.erpnext_test_utils import create_account
->>>>>>> fbcb2b0 (fix: round GST amounts at the company currency precision)
 
 
 @contextmanager

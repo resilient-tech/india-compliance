@@ -1231,11 +1231,7 @@ class TestTransaction(FrappeTestCase):
 
         doc.save().reload()
 
-<<<<<<< HEAD
         precision = doc.items[0].precision("cgst_amount")
-=======
-        precision = ItemGSTDetails.get_tax_amount_precisions(self.doctype, doc.company).get("cgst_amount")
->>>>>>> fbcb2b0 (fix: round GST amounts at the company currency precision)
         allowed_difference = 10**-precision
 
         for tax_row in doc.taxes:

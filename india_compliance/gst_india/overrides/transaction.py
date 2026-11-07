@@ -1311,21 +1311,10 @@ class ItemGSTDetails:
         Return Item GST Details for a list of documents
         """
         self.get_item_defaults()
-        self.set_tax_amount_precisions(doctype)
+        self.set_tax_amount_precisions(doctype, company)
 
         response = frappe._dict()
 
-<<<<<<< HEAD
-=======
-        docs = list(docs)
-
-        if not docs:
-            return response
-
-        self = cls(docs[0])
-        self.precision = cls.get_tax_amount_precisions(doctype, company)
-
->>>>>>> fbcb2b0 (fix: round GST amounts at the company currency precision)
         for doc in docs:
             self.doc = doc
             if not doc.get("items") or not doc.get("taxes"):
@@ -1352,8 +1341,7 @@ class ItemGSTDetails:
         if ignore_gst_validations(doc):
             return
 
-<<<<<<< HEAD
-        self.set_tax_amount_precisions(doc.doctype)
+        self.set_tax_amount_precisions(doc.doctype, doc.company)
 
         # To Deprecate
         if self.dont_recompute_tax_is_set():
@@ -1362,10 +1350,6 @@ class ItemGSTDetails:
 
         else:
             self.set_item_name_wise_tax_details()
-=======
-        self.precision = self.get_tax_amount_precisions(self.doc.doctype, self.doc.company)
-        self.set_temp_item_wise_tax_detail_object()
->>>>>>> fbcb2b0 (fix: round GST amounts at the company currency precision)
 
         self.validate_item_gst_details()
 
@@ -1612,14 +1596,8 @@ class ItemGSTDetails:
                 title=_("Incorrect Item GST Details"),
             )
 
-<<<<<<< HEAD
-    def set_tax_amount_precisions(self, doctype):
+    def set_tax_amount_precisions(self, doctype, company):
         item_doctype = frappe.get_meta(doctype).get_field("items").options
-=======
-    @classmethod
-    def get_tax_amount_precisions(cls, doctype, company):
-        item_doctype = frappe.get_meta(doctype).get_field(get_items_fieldname(doctype)).options
->>>>>>> fbcb2b0 (fix: round GST amounts at the company currency precision)
 
         meta = frappe.get_meta(item_doctype)
 
@@ -1633,11 +1611,7 @@ class ItemGSTDetails:
             if not field:
                 continue
 
-<<<<<<< HEAD
-            self.precision[fieldname] = get_field_precision(field) or default_precision
-=======
-            precisions[fieldname] = get_field_precision(field, currency=currency) or default_precision
->>>>>>> fbcb2b0 (fix: round GST amounts at the company currency precision)
+            self.precision[fieldname] = get_field_precision(field, currency=currency) or default_precision
 
     def dont_recompute_tax_is_set(self):
         for row in self.doc.taxes:
