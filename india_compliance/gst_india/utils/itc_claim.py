@@ -334,7 +334,10 @@ def _calculate_itc_claim_period(
 def validate_itc_claim_period(doc) -> None:
     validate_mandatory_fields(doc, "itc_claim_period")
     _validate_period_format(doc.itc_claim_period)
+    warn_if_gstr3b_filed(doc)
 
+
+def warn_if_gstr3b_filed(doc) -> None:
     if not _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
         return
 
