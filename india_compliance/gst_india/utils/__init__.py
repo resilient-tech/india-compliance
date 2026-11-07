@@ -1520,7 +1520,9 @@ def is_same_gstin_allowed(doc):
     return bool(is_outward_stock_entry(doc)) or doc.get("doctype") == "Asset Movement"
 
 
-def create_notification(message_content, document_type, document_name=None, request_id=None, link=None):
+def create_notification(
+    message_content, document_type, document_name=None, request_id=None, link=None, for_user=None
+):
     # request_id shows failure response
     if request_id and (doc_name := frappe.db.get_value("Integration Request", {"request_id": request_id})):
         document_type = "Integration Request"
@@ -1529,7 +1531,7 @@ def create_notification(message_content, document_type, document_name=None, requ
     notification = frappe.get_doc(
         {
             "doctype": "Notification Log",
-            "for_user": frappe.session.user,
+            "for_user": for_user or frappe.session.user,
             "type": "Alert",
             "document_type": document_type,
             "document_name": document_name or document_type,

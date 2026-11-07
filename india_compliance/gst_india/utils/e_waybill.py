@@ -17,6 +17,7 @@ from frappe.utils import (
     get_link_to_form,
     getdate,
     random_string,
+    sanitize_html,
 )
 from frappe.utils.file_manager import save_file
 
@@ -55,6 +56,7 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.utils import (
     commit,
+    create_notification,
     enqueue_portal_action,
     get_items,
     handle_server_errors,
@@ -632,6 +634,9 @@ def extend_validity(
     data = EWaybillData(doc).get_extend_validity_data(values)
     result = EWaybillAPI.create(doc).extend_validity(data)
 
+    if result.error_code:
+        frappe.throw(result.error_message, title=_("Could not extend e-Waybill"))
+
     doc.db_set("distance", cint(values.remaining_distance))
     doc.save_version()
 
@@ -664,6 +669,7 @@ def get_e_waybills_to_extend():
             e_waybill.e_waybill_number,
             e_waybill.extension_data,
             e_waybill.name,
+            e_waybill.modified_by,
         )
         .run(as_dict=True)
     )
@@ -677,9 +683,11 @@ def extend_scheduled_e_waybills():
 
     for e_waybill_data in e_waybills_to_extend:
         frappe.db.set_value("e-Waybill Log", e_waybill_data.name, "extension_scheduled", 0)
+        scheduled_by = e_waybill_data.modified_by
 
         try:
             extension_data = json.loads(e_waybill_data.extension_data)
+            scheduled_by = extension_data.get("scheduled_by") or scheduled_by
 
             extend_validity(
                 doctype=e_waybill_data.reference_doctype,
@@ -688,13 +696,38 @@ def extend_scheduled_e_waybills():
                 scheduled=True,
             )
 
-        except Exception:
+        except Exception as e:
             frappe.log_error(
                 title=_("Failed to Extend Validity of Scheduled e-Waybill #{ewb_no}").format(
                     ewb_no=e_waybill_data.e_waybill_number
                 ),
                 message=frappe.get_traceback(),
             )
+
+            document_owner = frappe.db.get_value(
+                e_waybill_data.reference_doctype, e_waybill_data.reference_name, "owner"
+            )
+            for_user = next(
+                (
+                    user
+                    for user in (scheduled_by, document_owner)
+                    if user and frappe.db.get_value("User", user, "enabled")
+                ),
+                None,
+            )
+
+            if for_user:
+                create_notification(
+                    {
+                        "subject": _(
+                            "Could not extend e-Waybill {0} as scheduled. Please extend it manually."
+                        ).format(e_waybill_data.e_waybill_number),
+                        "body": sanitize_html(getattr(e, "message", None) or str(e)),
+                    },
+                    e_waybill_data.reference_doctype,
+                    e_waybill_data.reference_name,
+                    for_user=for_user,
+                )
 
 
 def validate_data_before_schedule(doc, values):
@@ -730,6 +763,8 @@ def schedule_ewaybill_for_extension(
     doc.save_version()
 
     validate_data_before_schedule(doc, values)
+
+    values.scheduled_by = frappe.session.user
 
     update_e_waybill_log_for_extention(
         values=values,
