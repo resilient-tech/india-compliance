@@ -20,7 +20,10 @@ from india_compliance.gst_india.utils.gstr_1 import (
 from india_compliance.gst_india.utils.gstr_1.gstr_1_books_map import (
     GSTR1BooksData,
 )
-from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
+from india_compliance.gst_india.utils.gstr_1.gstr_1_data import (
+    GSTR1DocumentIssuedSummary,
+    GSTR1Invoices,
+)
 from india_compliance.gst_india.utils.gstr_1.sections import supecom
 from india_compliance.gst_india.utils.gstr_1.sections._shared import BOOKS_COLUMNS
 from india_compliance.gst_india.utils.tests import (
@@ -1368,6 +1371,58 @@ class TestGSTR1BooksData(IntegrationTestCase):
             self.assertEqual(GSTR1BooksData(frappe._dict()).hsn_descriptions({}), {})
 
         get_all.assert_not_called()
+
+    def test_document_issued_keeps_renamed_amendment_in_its_range(self):
+        def row(name, amended_from=None, docstatus=1):
+            return frappe._dict(name=name, amended_from=amended_from, docstatus=docstatus)
+
+        data = [
+            row("001"),
+            row("002", amended_from="902"),
+            row("003"),
+            row("902", docstatus=2),
+            row("CAN-INV-001-1", amended_from="INV-001", docstatus=2),
+            row("CAN-U1-URCM-2026-102", docstatus=2),
+            row("INV-001", docstatus=2),
+            row("INV-001-1", amended_from="CAN-INV-001-1"),
+            row("INV-001-100"),
+            row("INV-001-101", amended_from="OLD-001-101"),
+            row("INV-001-102"),
+            row("INV-002"),
+            row("OLD-001-101", docstatus=2),
+            row("U1-URCM-2026-101"),
+            row("U1-URCM-2026-102", amended_from="CAN-U1-URCM-2026-102"),
+            row("U1-URCM-2026-103"),
+            row("U1-URCM-2026-104", docstatus=2),
+            row("U1-URCM-2026-104-1", amended_from="U1-URCM-2026-104"),
+        ]
+
+        summary = GSTR1DocumentIssuedSummary(frappe._dict())
+        names = [doc.name for doc in summary.handle_amended_docs(data)]
+
+        self.assertEqual(
+            names,
+            [
+                "001",
+                "002",
+                "003",
+                "902",
+                "CAN-INV-001-1",
+                "CAN-U1-URCM-2026-102",
+                "INV-001",
+                "INV-001-100",
+                "INV-001-101",
+                "INV-001-102",
+                "INV-002",
+                "OLD-001-101",
+                "U1-URCM-2026-101",
+                "U1-URCM-2026-102",
+                "U1-URCM-2026-103",
+                "U1-URCM-2026-104",
+                "INV-001-1",
+                "U1-URCM-2026-104-1",
+            ],
+        )
 
 
 def setup_cess_account(company="_Test Indian Registered Company"):
