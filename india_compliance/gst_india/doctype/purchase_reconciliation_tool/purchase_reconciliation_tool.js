@@ -68,6 +68,9 @@ frappe.ui.form.on(DOCTYPE, {
 
         frm.events.handle_download_message(frm);
         frm.events.handle_regeneration_and_redownload(frm);
+        frm.events.update_progress(frm, "update_2a_2b_api_progress");
+        frm.events.update_progress(frm, "update_2a_2b_transactions_progress");
+        frappe.realtime.on("gstr_2a_2b_download_complete", () => frm.events.end_import(frm, true));
     },
 
     onload(frm) {
@@ -111,19 +114,10 @@ frappe.ui.form.on(DOCTYPE, {
 
     include_ignored: render_empty_state,
 
-    show_progress(frm, type) {
-        if (type == "download") {
-            frappe.run_serially([
-                () => frm.events.update_progress(frm, "update_2a_2b_api_progress"),
-                () => frm.events.update_progress(frm, "update_2a_2b_transactions_progress"),
-            ]);
-        } else if (type == "upload") {
-            frm.events.update_progress(frm, "update_2a_2b_transactions_progress");
-        }
-    },
-
     update_progress(frm, method) {
         frappe.realtime.on(method, (data) => {
+            if (!frm._pending_imports) return;
+
             const { current_progress } = data;
             const message =
                 method == "update_2a_2b_api_progress"
@@ -131,31 +125,32 @@ frappe.ui.form.on(DOCTYPE, {
                     : __("Updating Inward Supply for Return Period {0}", [data.return_period]);
 
             frm.dashboard.show_progress("Import GSTR Progress", current_progress, message);
-            if (data.is_last_period) {
-                frm.flag_last_return_period = data.return_period;
-            }
-            if (
-                current_progress === 100 &&
-                method != "update_2a_2b_api_progress" &&
-                frm.flag_last_return_period == data.return_period
-            ) {
-                setTimeout(() => {
-                    frm.dashboard.hide();
-                    frm.refresh();
-                    frm.dashboard.set_headline("Successfully Imported");
-                    setTimeout(() => {
-                        frm.dashboard.clear_headline();
-                    }, 2000);
-                    frm.save();
-                }, 1000);
-            }
         });
+    },
+
+    end_import(frm, succeeded) {
+        if (!frm._pending_imports) return;
+
+        frm._import_succeeded ||= succeeded;
+        frm._pending_imports -= 1;
+        if (frm._pending_imports) return;
+
+        frm.dashboard.hide();
+        if (!frm._import_succeeded) return;
+
+        frm.refresh();
+        frm.dashboard.set_headline("Successfully Imported");
+        setTimeout(() => {
+            frm.dashboard.clear_headline();
+        }, 2000);
+        frm.save();
     },
 
     handle_download_message(frm) {
         frappe.realtime.on("gstr_2a_2b_download_message", (message) => {
             frm.dashboard.hide();
             frappe.msgprint(message);
+            if (message.failed) frm.events.end_import(frm, false);
         });
     },
 
@@ -980,13 +975,20 @@ class ImportDialog {
         this.dialog.refresh();
     }
 
-    upload_gstr(period, file_path) {
-        this.frm.events.show_progress(this.frm, "upload");
-        this.frm._call("upload_gstr", {
-            return_type: this.return_type,
-            period,
-            file_path,
-        });
+    async upload_gstr(period, file_path) {
+        this.frm._pending_imports = 1;
+        this.frm._import_succeeded = false;
+        await this.frm
+            ._call("upload_gstr", {
+                return_type: this.return_type,
+                period,
+                file_path,
+            })
+            .catch((error) => {
+                this.frm.events.end_import(this.frm, false);
+                throw error;
+            });
+        this.frm.events.end_import(this.frm, true);
     }
 
     get_gstr_fields() {
@@ -1097,6 +1099,8 @@ async function download_gstr(
     if (company_gstin == "All") company_gstins = await india_compliance.get_gstin_options(frm.doc.company);
     else company_gstins = [company_gstin];
 
+    frm._pending_imports = company_gstins.length;
+    frm._import_succeeded = false;
     company_gstins.forEach(async (gstin) => {
         const args = {
             return_type,
@@ -1105,8 +1109,10 @@ async function download_gstr(
             return_period,
             force: !only_missing,
         };
-        frm.events.show_progress(frm, "download");
-        const { message } = await frm.taxpayer_api_call("download_gstr", args);
+        const { message } = await frm.taxpayer_api_call("download_gstr", args).catch((error) => {
+            frm.events.end_import(frm, false);
+            throw error;
+        });
 
         if (message?.message) {
             frappe.show_alert({

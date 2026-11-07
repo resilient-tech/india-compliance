@@ -60,6 +60,8 @@ from india_compliance.gst_india.utils.gstr_2 import (
     ReturnType,
     download_gstr_2a,
     download_gstr_2b,
+    download_job_id,
+    publish_download_complete,
     save_gstr_2a,
     save_gstr_2b,
 )
@@ -143,13 +145,13 @@ class PurchaseReconciliationTool(Document):
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        job_id = f"purchase_reconciliation_tool:{company_gstin}:{return_type}"
+        job_id = download_job_id(company_gstin)
 
         if is_job_enqueued(job_id):
             return {
-                "message": _(
-                    "A download job is already in progress for the GSTIN - {0} and Return Type - {1}"
-                ).format(company_gstin, return_type),
+                "message": _("A download job is already in progress for the GSTIN - {0}").format(
+                    company_gstin
+                ),
             }
 
         TaxpayerBaseAPI(company_gstin).validate_auth_token()
@@ -433,21 +435,22 @@ def download_gstr(
     return_period=None,
     force=False,
 ):
-    return_type = ReturnType(return_type)
-
-    if return_period:
-        periods = [return_period]
-    else:
-        periods = BaseUtil.get_periods(date_range, return_type, company_gstin)
-        periods = get_periods_to_download(company_gstin, return_type, periods, download_all=force)
-
-    if not periods:
-        return
-
-    latest_period = max(periods, key=period_sort_key)
-    _check_gstr3b_status(company_gstin, latest_period)
-
     try:
+        return_type = ReturnType(return_type)
+
+        if return_period:
+            periods = [return_period]
+        else:
+            periods = BaseUtil.get_periods(date_range, return_type, company_gstin)
+            periods = get_periods_to_download(company_gstin, return_type, periods, download_all=force)
+
+        if not periods:
+            publish_download_complete()
+            return
+
+        latest_period = max(periods, key=period_sort_key)
+        _check_gstr3b_status(company_gstin, latest_period)
+
         if return_type == ReturnType.GSTR2A:
             return download_gstr_2a(company_gstin, periods)
 
@@ -462,6 +465,7 @@ def download_gstr(
                 "title": _("2A/2B Download Failed"),
                 "message": str(e),
                 "indicator": "red",
+                "failed": True,
             },
             user=frappe.session.user,
         )
