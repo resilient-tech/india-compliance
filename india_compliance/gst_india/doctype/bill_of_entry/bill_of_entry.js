@@ -111,7 +111,9 @@ frappe.ui.form.on("Bill of Entry", {
 
                 frm.call("get_items_from_purchase_invoice", {
                     purchase_invoices: selections,
-                }).then(d.dialog.hide());
+                }).then(() => frm.dirty());
+
+                d.dialog.hide();
             },
         });
     },

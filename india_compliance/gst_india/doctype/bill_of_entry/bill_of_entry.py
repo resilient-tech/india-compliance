@@ -118,13 +118,15 @@ class BillofEntry(Document):
     def set_item_defaults(self):
         """These defaults are needed for taxes and totals to get calculated"""
         for item in self.items:
-            item.name = frappe.generate_hash(length=10)
-            item.customs_duty = 0
+            if not item.name:
+                item.name = frappe.generate_hash(length=10)
+
+            item.customs_duty = flt(item.customs_duty)
 
     def set_default_accounts(self):
         company = frappe.get_cached_doc("Company", self.company)
-        self.customs_expense_account = company.default_customs_expense_account
-        self.customs_payable_account = company.default_customs_payable_account
+        self.customs_expense_account = self.customs_expense_account or company.default_customs_expense_account
+        self.customs_payable_account = self.customs_payable_account or company.default_customs_payable_account
 
     def set_taxes_and_totals(self):
         self.validate_item_tax_template()
@@ -402,11 +404,14 @@ class BillofEntry(Document):
 
     @frappe.whitelist()
     def get_items_from_purchase_invoice(self, purchase_invoices: list[str]):
+        if self.docstatus != 0:
+            frappe.throw(_("Items can be fetched only on a draft Bill of Entry"))
+
         if not purchase_invoices:
             frappe.msgprint(_("No Purchase Invoices selected"))
             return
 
-        frappe.has_permission("Bill Of Entry", "write", throw=True)
+        frappe.has_permission("Bill of Entry", "write", throw=True)
         frappe.has_permission("Purchase Invoice", "read", throw=True)
 
         existing_items = [item.pi_detail for item in self.get("items") if item.pi_detail]
