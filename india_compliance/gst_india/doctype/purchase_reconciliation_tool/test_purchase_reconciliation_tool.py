@@ -3,6 +3,7 @@
 
 import datetime
 import json
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
@@ -22,6 +23,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
     BuildExcel,
 )
 from india_compliance.gst_india.utils.gstr_2 import save_gstr_2b
+from india_compliance.gst_india.utils.gstr_utils import ReturnType
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     format_period,
@@ -1662,3 +1664,73 @@ def create_boe(**kwargs):
     )
 
     return boe.save(ignore_permissions=True).submit()
+
+
+class TestUploadGSTR(IntegrationTestCase):
+    gstin = "24AAQCA8719H1ZC"
+
+    def upload_gstr(self, json_data, return_type=ReturnType.GSTR2B, period="Custom"):
+        doc = frappe.get_doc("Purchase Reconciliation Tool")
+        doc.company_gstin = self.gstin
+
+        with patch(
+            "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.get_json_from_file",
+            return_value=frappe._dict(json_data),
+        ):
+            doc.upload_gstr(return_type.value, "gstr.json", period)
+
+    def test_gstr_2b_upload_uses_return_period_from_file(self):
+        self.upload_gstr(
+            {"data": frappe._dict(gstin=self.gstin, rtnprd="042026", gendt="14-05-2026", docdata={})}
+        )
+
+        log_filters = {"gstin": self.gstin, "return_type": ReturnType.GSTR2B.value}
+        self.assertTrue(frappe.db.exists("GSTR Import Log", {**log_filters, "return_period": "042026"}))
+        self.assertFalse(frappe.db.exists("GSTR Import Log", {**log_filters, "return_period": "Custom"}))
+
+    def test_gstr_2a_upload_uses_return_period_from_file(self):
+        self.upload_gstr({"gstin": self.gstin, "fp": "042026", "b2b": []}, ReturnType.GSTR2A)
+
+        self.assertTrue(
+            frappe.db.exists(
+                "GSTR Import Log",
+                {"gstin": self.gstin, "return_type": ReturnType.GSTR2A.value, "return_period": "042026"},
+            )
+        )
+
+    def test_upload_without_valid_return_period_in_file(self):
+        for rtnprd in (None, "Custom", "132026", 42026):
+            with self.subTest(rtnprd=rtnprd):
+                self.assertRaisesRegex(
+                    frappe.ValidationError,
+                    "Could not fetch a valid return period",
+                    self.upload_gstr,
+                    {"data": frappe._dict(gstin=self.gstin, rtnprd=rtnprd, docdata={})},
+                )
+
+        self.assertRaisesRegex(
+            frappe.ValidationError, "Could not fetch a valid return period", self.upload_gstr, {"data": []}
+        )
+
+    def test_missing_2b_documents_for_custom_period(self):
+        doc = frappe.get_doc("Purchase Reconciliation Tool")
+        doc.update(
+            {
+                "company_gstin": self.gstin,
+                "period": "Custom",
+                "from_date": "2026-04-01",
+                "to_date": "2026-04-30",
+            }
+        )
+
+        doc.get_date_range_and_check_missing_documents("Custom")
+        self.assertTrue(doc.get_onload().has_missing_2b_documents)
+
+        self.upload_gstr(
+            {"data": frappe._dict(gstin=self.gstin, rtnprd="042026", gendt="14-05-2026", docdata={})}
+        )
+
+        self.assertEqual(
+            doc.get_date_range_and_check_missing_documents("Custom"), ["2026-04-01", "2026-04-30"]
+        )
+        self.assertFalse(doc.get_onload().has_missing_2b_documents)
