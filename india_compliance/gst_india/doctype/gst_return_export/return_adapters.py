@@ -6,8 +6,9 @@
 from typing import ClassVar
 
 import frappe
-from frappe.utils import cint, flt
+from frappe.utils import flt
 
+from india_compliance.gst_india.doctype.gst_return_export.template_exporter import as_section_dict
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     DOCTYPE as RETURN_LOG,
 )
@@ -35,9 +36,19 @@ SECTION_ORDER = [
     "TDS",
     "TCS",
 ]
+ITC_REVERSAL_SECTION = "ITC Reversal"
 TAX_FIELDS = ("igst", "cgst", "sgst", "cess")
 SECTION_FIELDS = ("documents", "taxable_value", *TAX_FIELDS)
-ITC_BUCKETS = ("available", "not_available", "reversal")
+SUPPLY_PARTS = (raw2b.NON_REVERSE_CHARGE_SUPPLIES, raw2b.ISD_SUPPLIES, raw2b.REVERSE_CHARGE_SUPPLIES)
+ITC_CARDS = {
+    "available": (
+        (1, raw2b.ITC_AVAILABLE, (*SUPPLY_PARTS, raw2b.IMPORTS)),
+        (-1, raw2b.ITC_AVAILABLE, (raw2b.CREDIT_NOTES,)),
+        (-1, raw2b.ITC_NOT_AVAILABLE, (raw2b.CREDIT_NOTES,)),
+    ),
+    "not_available": ((1, raw2b.ITC_NOT_AVAILABLE, SUPPLY_PARTS),),
+    "reversal": ((1, raw2b.ITC_REVERSAL, (raw2b.NON_REVERSE_CHARGE_SUPPLIES,)),),
+}
 
 RETURN_TYPE_MAP = {"GSTR-2A": ReturnType.GSTR2A.value, "GSTR-2B": ReturnType.GSTR2B.value}
 
@@ -51,19 +62,13 @@ def section_rank(section):
     return SECTION_ORDER.index(section) if section in SECTION_ORDER else len(SECTION_ORDER)
 
 
-def sum_summaries(summaries):
-    """Totals and ITC added across month summaries. ITC None when no month has it."""
-    summaries = list(summaries)
-    totals = {k: 0 for k in SECTION_FIELDS}
-    for summary in summaries:
-        for key in totals:
-            totals[key] += flt(summary["totals"][key])
-
-    itc_parts = [s["itc_summary"] for s in summaries if s.get("itc_summary")]
-    itc = None
-    if itc_parts:
-        itc = {bucket: sum(flt(part[bucket]) for part in itc_parts) for bucket in ITC_BUCKETS}
-    return {"totals": totals, "itc_summary": itc}
+def section_totals(section, rows):
+    return {
+        "section": section,
+        "documents": len(rows),
+        "taxable_value": flt(sum(flt(row.get("taxable_value")) for row in rows)),
+        **{t: flt(sum(flt(row.get(t)) for row in rows)) for t in TAX_FIELDS},
+    }
 
 
 class ReturnAdapter:
@@ -98,11 +103,15 @@ class ReturnAdapter:
                 row["months"].append({"period": period, **{f: flt(section[f]) for f in SECTION_FIELDS}})
 
         # overall
-        cumulative = sum_summaries(stored.values())
+        itc_months = [s["itc_summary"] for s in stored.values() if s.get("itc_summary")]
+        itc = (
+            {card: sum(flt(month[card]) for month in itc_months) for card in ITC_CARDS}
+            if itc_months
+            else None
+        )
         return {
             "sections": sorted(sections.values(), key=lambda s: section_rank(s["section"])),
-            "totals": cumulative["totals"],
-            "itc_summary": cumulative["itc_summary"],
+            "itc_summary": itc,
         }
 
     def get_summaries(self, periods):
@@ -152,32 +161,17 @@ class ReturnAdapter:
 
         # per section
         sections = []
-        itc_rows = []
         for category in self.handler_class.SECTIONS:
             groups = docdata.get(category.lower())
             if not groups:
                 continue
 
             rows = self.get_handler(period, category).get_all_transactions(groups)
-            sections.append(
-                {
-                    "section": category,
-                    "documents": len(rows),
-                    "taxable_value": flt(sum(flt(row.get("taxable_value")) for row in rows)),
-                    **{t: flt(sum(flt(row.get(t)) for row in rows)) for t in TAX_FIELDS},
-                }
-            )
-            itc_rows.extend(rows)
+            sections.append(section_totals(category, rows))
 
-        # totals
+        sections.extend(self.extra_sections(period, docdata))
         sections.sort(key=lambda s: section_rank(s["section"]))
-        totals = {
-            field: cint(sum(s[field] for s in sections))
-            if field == "documents"
-            else flt(sum(s[field] for s in sections))
-            for field in SECTION_FIELDS
-        }
-        return {"sections": sections, "totals": totals, "itc_summary": self._itc_summary(itc_rows)}
+        return {"sections": sections, "itc_summary": self._itc_summary(raw)}
 
     @staticmethod
     def raw_sections(raw):
@@ -188,7 +182,10 @@ class ReturnAdapter:
         """The sync's reader for one category."""
         return self.handler_class(None, self.gstin, period, category)
 
-    def _itc_summary(self, rows):
+    def extra_sections(self, period, docdata):
+        return []
+
+    def _itc_summary(self, raw):
         return None
 
     # ---- sync state
@@ -252,11 +249,23 @@ class GSTR2BAdapter(ReturnAdapter):
     def raw_sections(raw):
         return (raw or {}).get(raw2b.DOC_DATA) or {}
 
-    def _itc_summary(self, rows):
-        """Total tax split by ITC availability."""
-        itc = dict.fromkeys(ITC_BUCKETS, 0)
-        buckets = {"Yes": "available", "Temporary": "reversal"}
-        for row in rows:
-            total_tax = sum(flt(row.get(t)) for t in TAX_FIELDS)
-            itc[buckets.get(row.get("itc_availability"), "not_available")] += total_tax
-        return itc
+    def extra_sections(self, period, docdata):
+        reversal = as_section_dict(docdata.get(raw2b.ITC_REVERSAL))
+        rows = [
+            row
+            for category, groups in reversal.items()
+            if category.upper() in self.handler_class.SECTIONS
+            for row in self.get_handler(period, category.upper()).get_all_transactions(groups)
+        ]
+        return [section_totals(ITC_REVERSAL_SECTION, rows)] if rows else []
+
+    def _itc_summary(self, raw):
+        itcsumm = (raw or {}).get(raw2b.ITC_SUMMARY) or {}
+
+        def tax(block, part):
+            return sum(flt(((itcsumm.get(block) or {}).get(part) or {}).get(t)) for t in TAX_FIELDS)
+
+        return {
+            card: flt(sum(sign * tax(block, part) for sign, block, parts in terms for part in parts), 2)
+            for card, terms in ITC_CARDS.items()
+        }
