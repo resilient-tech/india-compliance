@@ -685,3 +685,129 @@ class TestBillofEntry(FrappeTestCase):
         )
 
         self.assertNotIn(pi.name, [invoice.name for invoice in pending_invoices])
+
+    def test_get_items_keeps_existing_rows(self):
+        pi1, pi2, pi3, pi4, pi5 = (
+            create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1) for _ in range(5)
+        )
+
+        boe = make_bill_of_entry(pi1.name)
+        boe.items[0].customs_duty = 77
+        boe.items[0].assessable_value = 150
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.save()
+
+        saved_row = boe.items[0].name
+
+        boe.get_items_from_purchase_invoice([pi2.name])
+
+        self.assertEqual(boe.items[0].name, saved_row)
+        self.assertEqual(boe.items[0].customs_duty, 77)
+        self.assertEqual(boe.items[0].assessable_value, 150)
+        self.assertEqual(boe.items[1].customs_duty, 0)
+        self.assertEqual(boe.total_customs_duty, 77)
+        self.assertEqual(boe.total_taxable_value, 327)
+        self.assertEqual(boe.total_taxes, 58.86)
+        self.assertEqual(boe.total_amount_payable, 135.86)
+
+        boe.save()
+        boe.reload()
+
+        new_row = boe.items[1].name
+        self.assertEqual(
+            [(row.name, row.purchase_invoice, row.customs_duty) for row in boe.items],
+            [(saved_row, pi1.name, 77), (new_row, pi2.name, 0)],
+        )
+        self.assertEqual(boe.total_taxes, 58.86)
+        item_wise_tax_rates = json.loads(boe.taxes[0].item_wise_tax_rates)
+        self.assertEqual(item_wise_tax_rates[saved_row], 18)
+        self.assertEqual(item_wise_tax_rates[new_row], 18)
+
+        boe.items[1].customs_duty = 50
+        boe.get_items_from_purchase_invoice([pi1.name])
+        boe.save()
+        boe.reload()
+
+        self.assertEqual(
+            [(row.name, row.customs_duty) for row in boe.items],
+            [(saved_row, 77), (new_row, 50)],
+        )
+
+        boe.taxes[0].rate = 5
+        boe.save()
+
+        boe.get_items_from_purchase_invoice([pi3.name])
+        boe.save()
+        boe.reload()
+
+        self.assertEqual(len(boe.items), 3)
+        self.assertEqual([tax.rate for tax in boe.taxes], [5])
+        self.assertEqual(boe.total_taxes, 23.85)
+
+        boe.submit()
+
+        self.assertEqual(
+            sum(frappe.get_all("Bill of Entry Item", {"parent": boe.name}, pluck="taxable_value")),
+            boe.total_taxable_value,
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"only on a draft"),
+            boe.get_items_from_purchase_invoice,
+            [pi4.name],
+        )
+
+        boe = make_bill_of_entry(pi4.name)
+        boe.items[0].customs_duty = 40
+        boe.get_items_from_purchase_invoice([pi5.name])
+
+        self.assertEqual([row.customs_duty for row in boe.items], [40, 0])
+
+        boe.bill_of_entry_no = "456"
+        boe.bill_of_entry_date = today()
+        boe.save()
+        boe.reload()
+
+        self.assertEqual([row.customs_duty for row in boe.items], [40, 0])
+        self.assertEqual(boe.total_taxes, 43.2)
+
+        for customs_duty, expected_duty in ((None, 0), ("", 0), ("25", 25), ("abc", 0)):
+            boe.items[0].customs_duty = customs_duty
+            boe.get_items_from_purchase_invoice([pi4.name])
+            self.assertEqual(boe.items[0].customs_duty, expected_duty)
+
+        company = frappe.get_cached_doc("Company", boe.company)
+        self.assertEqual(boe.customs_expense_account, company.default_customs_expense_account)
+        self.assertEqual(boe.customs_payable_account, company.default_customs_payable_account)
+
+        expense_account = frappe.db.get_value(
+            "Account",
+            {
+                "company": boe.company,
+                "root_type": "Expense",
+                "is_group": 0,
+                "account_currency": "INR",
+                "name": ["!=", boe.customs_expense_account],
+            },
+        )
+        payable_account = frappe.db.get_value(
+            "Account",
+            {
+                "company": boe.company,
+                "root_type": "Liability",
+                "account_type": ["!=", "Payable"],
+                "is_group": 0,
+                "account_currency": "INR",
+                "name": ["!=", boe.customs_payable_account],
+            },
+        )
+        boe.customs_expense_account = expense_account
+        boe.customs_payable_account = payable_account
+        boe.get_items_from_purchase_invoice([pi5.name])
+        boe.save()
+        boe.reload()
+
+        self.assertEqual(boe.customs_expense_account, expense_account)
+        self.assertEqual(boe.customs_payable_account, payable_account)
