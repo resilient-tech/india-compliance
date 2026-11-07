@@ -1,3 +1,5 @@
 ---
 exclude_paths:
   - ".github/helper/postgres_compat.py"
+  # bandit's B101 flags every assert; pytest tests are built on them
+  - "ui_tests/**"
