@@ -25,6 +25,7 @@ class IneligibleITC:
         self.is_perpetual = self.company.enable_perpetual_inventory
         self.cost_center = doc.cost_center or self.company.cost_center
         self.conversion_rate = doc.get("conversion_rate") or 1
+        self.post_net_entry = bool(self.company.get("post_net_ineligible_itc_entries"))
 
         self.dr_or_cr = "credit" if doc.get("is_return") else "debit"
         self.cr_or_dr = "debit" if doc.get("is_return") else "credit"
@@ -117,6 +118,22 @@ class IneligibleITC:
             Input CGST Cr 50
             Input SGST Cr 50
         """
+        self.add_gst_expense_debit(item)
+
+        for account, amount in item.get("_ineligible_taxes", {}).items():
+            self.gl_entries.append(
+                self.doc.get_gl_dict(
+                    {
+                        "account": account,
+                        self.cr_or_dr: amount,
+                        f"{self.cr_or_dr}_in_account_currency": amount,
+                        f"{self.cr_or_dr}_in_transaction_currency": flt(amount / self.conversion_rate),
+                        "cost_center": self.cost_center,
+                    }
+                )
+            )
+
+    def add_gst_expense_debit(self, item):
         # Auto handled for returns as -ve amount
         ineligible_item_tax_amount = item.get("_ineligible_tax_amount", 0)
         self.gl_entries.append(
@@ -133,18 +150,53 @@ class IneligibleITC:
             )
         )
 
+    def update_net_item_gl_entries(self, item, is_direct_expense):
+        if not self.net_input_tax_entries(item):
+            return False
+
+        if is_direct_expense:
+            self.add_item_expense_debit(item)
+        else:
+            self.add_gst_expense_debit(item)
+
+        return True
+
+    def net_input_tax_entries(self, item):
+        sign = -1 if self.doc.get("is_return") else 1
+        precision = frappe.get_precision("GL Entry", "debit")
+        adjustments = []
+
         for account, amount in item.get("_ineligible_taxes", {}).items():
-            self.gl_entries.append(
-                self.doc.get_gl_dict(
-                    {
-                        "account": account,
-                        self.cr_or_dr: amount,
-                        f"{self.cr_or_dr}_in_account_currency": amount,
-                        f"{self.cr_or_dr}_in_transaction_currency": flt(amount / self.conversion_rate),
-                        "cost_center": self.cost_center,
-                    }
-                )
+            remaining = flt(amount, precision)
+            candidates = [
+                entry
+                for entry in self.gl_entries
+                if entry.get("account") == account
+                and not flt(entry.get("credit"))
+                and (flt(entry.get("debit")) * sign) > 0
+            ]
+            candidates.sort(key=lambda entry: entry.get("cost_center") != self.cost_center)
+
+            for entry in candidates:
+                if remaining <= 0:
+                    break
+
+                adjustment = min(remaining, flt(abs(entry.debit), precision))
+                adjustments.append((entry, adjustment))
+                remaining = flt(remaining - adjustment, precision)
+
+            if remaining > 0:
+                return False
+
+        for entry, adjustment in adjustments:
+            remaining_ratio = 1 - (adjustment / abs(entry.debit))
+            entry.debit = flt(entry.debit) - (adjustment * sign)
+            entry.debit_in_account_currency = flt(entry.get("debit_in_account_currency")) * remaining_ratio
+            entry.debit_in_transaction_currency = (
+                flt(entry.get("debit_in_transaction_currency")) * remaining_ratio
             )
+
+        return True
 
     def make_gst_expense_entry(self, item):
         """
@@ -169,6 +221,11 @@ class IneligibleITC:
                 }
             )
         )
+
+        self.add_item_expense_debit(item)
+
+    def add_item_expense_debit(self, item):
+        ineligible_item_tax_amount = item.get("_ineligible_tax_amount", 0)
 
         if not self.is_debit_entry_required(item):
             return
@@ -381,7 +438,12 @@ class PurchaseInvoice(IneligibleITC):
         super().update_valuation_rate()
 
     def update_item_gl_entries(self, item):
-        if self.doc.update_stock or self.is_expense_item(item):
+        is_direct_expense = self.doc.update_stock or self.is_expense_item(item)
+
+        if self.post_net_entry and self.update_net_item_gl_entries(item, is_direct_expense):
+            return
+
+        if is_direct_expense:
             self.make_gst_expense_entry(item)
 
         self.reverse_input_taxes_entry(item)
@@ -445,7 +507,12 @@ class BillOfEntry(IneligibleITC):
         return
 
     def update_item_gl_entries(self, item):
-        if not ((item.get("_is_stock_item")) or item.get("is_fixed_asset")):
+        is_direct_expense = not (item.get("_is_stock_item") or item.get("is_fixed_asset"))
+
+        if self.post_net_entry and self.update_net_item_gl_entries(item, is_direct_expense):
+            return
+
+        if is_direct_expense:
             self.make_gst_expense_entry(item)
 
         self.reverse_input_taxes_entry(item)

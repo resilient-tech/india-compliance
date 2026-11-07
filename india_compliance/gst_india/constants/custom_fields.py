@@ -525,6 +525,12 @@ CUSTOM_FIELDS = {
             "insert_after": "default_gst_expense_account",
         },
         {
+            "fieldname": "post_net_ineligible_itc_entries",
+            "label": "Post Net Entries for Ineligible ITC",
+            "fieldtype": "Check",
+            "insert_after": "default_isd_provisional_account",
+        },
+        {
             "fieldname": "print_options",
             "label": "Print Options",
             "fieldtype": "Tab Break",
