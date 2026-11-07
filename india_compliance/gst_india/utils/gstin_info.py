@@ -45,7 +45,6 @@ TRADE_NAME_BUSINESS_TYPES = frozenset(("Proprietorship", "Hindu Undivided Family
 KEYS_TO_SANITIZE = ("dst", "stcd", "pncd", "bno", "flno", "bnm", "st", "loc", "city", "landMark", "locality")
 KEYS_TO_FILTER_DUPLICATES = frozenset(("dst", "bnm", "st", "loc", "city", "landMark", "locality"))
 CHARACTERS_TO_STRIP = f"{whitespace},"
-E_INVOICE_ADDRESS_LINE_LENGTH = 100
 
 
 # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
@@ -194,6 +193,7 @@ def _extract_address_lines(address):
     address_parts = {
         part.strip().lower() for part in f"{address_line1}, {street}, {address_line2}".split(",")
     }
+    line2_length = cint(frappe.get_meta("Address").get_field("address_line2").length) or frappe.db.VARCHAR_LEN
 
     for key in ("landMark", "locality"):
         new_parts = []
@@ -205,7 +205,7 @@ def _extract_address_lines(address):
         value = ", ".join(new_parts)
         line2_with_value = ", ".join(part for part in (*line2, value, address_line2) if part)
 
-        if value and len(line2_with_value) <= E_INVOICE_ADDRESS_LINE_LENGTH:
+        if value and len(line2_with_value) <= line2_length:
             line2.append(value)
             address_parts.update(part.lower() for part in new_parts)
 

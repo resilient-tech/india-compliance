@@ -207,7 +207,8 @@ class TestGstinInfo(IntegrationTestCase):
                     {
                         "address_line1": "Shop No. 4",
                         "address_line2": (
-                            "Beside Phonewale and Poojara Telecom Shops, Dilbahar Water Tank to Industrial Jewel Circle"
+                            "Beside Phonewale and Poojara Telecom Shops, Dilbahar Water Tank to Industrial Jewel Circle,"
+                            " Opp. Victoria Park"
                         ),
                         "city": "Bhavnagar",
                         "state": "Gujarat",
