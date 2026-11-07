@@ -4,9 +4,10 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt, get_link_to_form
+from frappe.utils import add_days, add_years, flt, get_link_to_form
 
 from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
+from india_compliance.gst_india.utils.itc_claim import get_gst_fy_start
 
 
 class GSTInwardSupply(Document):
@@ -35,9 +36,27 @@ class GSTInwardSupply(Document):
 
 
 def create_inward_supply(transaction):
+    if name := frappe.get_value("GST Inward Supply", get_inward_supply_filters(transaction)):
+        gst_inward_supply = frappe.get_doc("GST Inward Supply", name)
+        preserve_pending_itc_declaration(gst_inward_supply, transaction)
+    else:
+        gst_inward_supply = frappe.new_doc("GST Inward Supply")
+
+    update_reco_action(gst_inward_supply.link_name, gst_inward_supply.action, transaction)
+
+    gst_inward_supply.update(transaction)
+    return gst_inward_supply.save(ignore_permissions=True)
+
+
+def get_inward_supply_filters(transaction):
+    bill_date = transaction.bill_date
+    if bill_date:
+        fy_start = get_gst_fy_start(bill_date)
+        bill_date = ("between", (fy_start, add_days(add_years(fy_start, 1), -1)))
+
     filters = {
         "bill_no": transaction.bill_no,
-        "bill_date": transaction.bill_date,
+        "bill_date": bill_date,
         "classification": transaction.classification,
         "supplier_gstin": transaction.supplier_gstin,
     }
@@ -56,16 +75,7 @@ def create_inward_supply(transaction):
     if transaction.classification in ("ISD", "ISDA"):
         filters["itc_availability"] = transaction.get("itc_availability") or ("is", "not set")
 
-    if name := frappe.get_value("GST Inward Supply", filters):
-        gst_inward_supply = frappe.get_doc("GST Inward Supply", name)
-        preserve_pending_itc_declaration(gst_inward_supply, transaction)
-    else:
-        gst_inward_supply = frappe.new_doc("GST Inward Supply")
-
-    update_reco_action(gst_inward_supply.link_name, gst_inward_supply.action, transaction)
-
-    gst_inward_supply.update(transaction)
-    return gst_inward_supply.save(ignore_permissions=True)
+    return filters
 
 
 def preserve_pending_itc_declaration(existing, transaction):
@@ -106,16 +116,9 @@ def update_previous_ims_action(transaction):
     After successfull upload of IMS Invoices,
     update the ims_action taken in previous_ims_action field.
     """
-    filters = {
-        "bill_no": transaction.bill_no,
-        "bill_date": transaction.bill_date,
-        "classification": transaction.classification,
-        "supplier_gstin": transaction.supplier_gstin,
-    }
-
     frappe.db.set_value(
         "GST Inward Supply",
-        filters,
+        get_inward_supply_filters(transaction),
         {
             "previous_ims_action": transaction.previous_ims_action or "No Action",
             # uploaded -> declaration in sync
