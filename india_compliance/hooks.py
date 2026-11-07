@@ -182,6 +182,9 @@ doc_events = {
         "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.validate_transporter_fields_after_submit",
         "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
     },
+    "Bank Account": {
+        "validate": "india_compliance.gst_india.overrides.bank_account.validate",
+    },
     "Company": {
         "on_trash": "india_compliance.gst_india.overrides.company.on_trash",
         "on_update": [

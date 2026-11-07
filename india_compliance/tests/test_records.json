@@ -1000,5 +1000,11 @@
                 }
             ]
         }
+    ],
+    "Bank": [
+        {
+            "doctype": "Bank",
+            "bank_name": "_Test IFSC Bank"
+        }
     ]
 }
