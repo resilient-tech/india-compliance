@@ -74,6 +74,7 @@ def download_gstr_2a(gstin, return_periods):
 
         json_data = frappe._dict({"gstin": gstin, "fp": return_period})
         has_data = False
+        queued = []
         for action, category in GSTR_2A_ACTIONS.items():
             requests_made += 1
 
@@ -110,6 +111,7 @@ def download_gstr_2a(gstin, return_periods):
                     retry_after_mins=cint(response.est),
                 )
                 queued_message = True
+                queued.append(category)
                 continue
 
             if response.error_type:
@@ -128,7 +130,7 @@ def download_gstr_2a(gstin, return_periods):
             json_data[action.lower()] = data
             has_data = True
 
-        save_gstr_2a(gstin, return_period, json_data)
+        save_gstr_2a(gstin, return_period, json_data, skip=queued)
 
     if queued_message:
         publish_2a_2b_queued_message()
@@ -270,7 +272,7 @@ def download_ims_invoices(gstin, for_upload=False):
     return has_queued_invoices
 
 
-def save_gstr_2a(gstin, return_period, json_data):
+def save_gstr_2a(gstin, return_period, json_data, skip=()):
     return_type = ReturnType.GSTR2A
     if not json_data or json_data.get("gstin") != gstin or json_data.get("fp") != return_period:
         frappe.throw(
@@ -282,6 +284,8 @@ def save_gstr_2a(gstin, return_period, json_data):
         )
 
     raw_data = dict(json_data)
+    raw_keys = {category: action.lower() for action, category in GSTR_2A_ACTIONS.items()}
+    keep = [raw_keys.get(category, category.value.lower()) for category in skip]
 
     for action, category in GSTR_2A_ACTIONS.items():
         if action.lower() not in json_data:
@@ -292,8 +296,8 @@ def save_gstr_2a(gstin, return_period, json_data):
         # making consistent with GSTR2b
         json_data[category.value.lower()] = json_data.pop(action.lower())
 
-    store_raw_return_data(gstin, return_type.value, return_period, raw_data)
-    save_gstr(gstin, return_type, return_period, json_data)
+    store_raw_return_data(gstin, return_type.value, return_period, raw_data, keep=keep)
+    save_gstr(gstin, return_type, return_period, json_data, skip=skip)
 
 
 def save_gstr_2b(gstin, return_period, json_data):
@@ -333,6 +337,7 @@ def save_gstr(
     json_data,
     rejected_data=None,
     gen_date_2b=None,
+    skip=(),
 ):
     """Save GSTR data to Inward Supply
 
@@ -347,7 +352,7 @@ def save_gstr(
     created = 0
     for category in GSTRCategory:
         gstr = get_data_handler(return_type.value, category.value)
-        if not gstr:
+        if not gstr or category in skip:
             continue
 
         created += (
@@ -408,7 +413,14 @@ def update_import_history(gstin, return_periods):
 def _download_gstr_2a(gstin, return_period, json_data):
     json_data.gstin = gstin
     json_data.fp = return_period
-    save_gstr_2a(gstin, return_period, json_data)
+    received = [category for action, category in GSTR_2A_ACTIONS.items() if action.lower() in json_data]
+    skip = [category for category in GSTRCategory if category not in received]
+    save_gstr_2a(gstin, return_period, json_data, skip)
+
+
+def clear_gstr_2a_category(gstin, return_period, classification):
+    skip = [category for category in GSTRCategory if category.value != classification]
+    save_gstr_2a(gstin, return_period, frappe._dict(gstin=gstin, fp=return_period), skip)
 
 
 def publish_2a_2b_queued_message():
