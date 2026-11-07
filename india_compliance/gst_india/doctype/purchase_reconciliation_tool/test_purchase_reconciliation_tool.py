@@ -311,6 +311,82 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertEqual(rows[0].supplier, supplier.name)
         self.assertEqual(rows[0].supplier_name, supplier.supplier_name)
 
+    def test_unbooked_invoice_takes_the_supplier_booked_against_its_gstin(self):
+        """
+        A 2A/2B row must take the supplier booked against its GSTIN, not another supplier
+        sharing it, or the supplier tab shows the group under the wrong name.
+        """
+        supplier_gstin = "24AANFA2641L1ZF"
+        booked_supplier = frappe.get_doc(
+            {
+                "doctype": "Supplier",
+                "supplier_name": "_Test Booked Supplier",
+                "supplier_type": "Company",
+                "gst_category": "Registered Regular",
+            }
+        ).insert()
+        address = frappe.get_doc(
+            {
+                "doctype": "Address",
+                "address_title": booked_supplier.name,
+                "address_type": "Billing",
+                "address_line1": "Test Address",
+                "city": "Test City",
+                "state": "Gujarat",
+                "pincode": "380015",
+                "country": "India",
+                "gstin": supplier_gstin,
+                "gst_category": "Registered Regular",
+                "links": [{"link_doctype": "Supplier", "link_name": booked_supplier.name}],
+            }
+        ).insert()
+
+        frappe.get_doc(
+            {
+                "doctype": "Supplier",
+                "supplier_name": "_Test Supplier Sharing GSTIN",
+                "supplier_type": "Company",
+                "gstin": supplier_gstin,
+                "gst_category": "Registered Regular",
+            }
+        ).insert()
+
+        pinv = create_purchase_invoice(
+            supplier=booked_supplier.name,
+            supplier_address=address.name,
+            bill_no="PB-7781",
+            bill_date="2024-02-12",
+            posting_date="2024-02-12",
+            rate=3000,
+        )
+        self.assertEqual(pinv.supplier_gstin, supplier_gstin)
+
+        gst_is = create_gst_inward_supply(
+            supplier_name="",
+            supplier_gstin=supplier_gstin,
+            bill_no="SR-2290",
+            bill_date="2024-02-10",
+            return_period_2b="022024",
+            gen_date_2b="2024-02-14",
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "period": "Custom",
+                "from_date": "2024-02-01",
+                "to_date": "2024-02-29",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        rows = [row for row in prt.reconcile_and_generate_data() if row.supplier_gstin == supplier_gstin]
+        unbooked = next(row for row in rows if row.inward_supply_name == gst_is.name)
+
+        self.assertEqual(unbooked.match_status, "Only in 2A/2B")
+        self.assertEqual(unbooked.supplier, pinv.supplier)
+        self.assertEqual(unbooked.supplier_name, pinv.supplier_name)
+
     def test_itc_claim_period_on_reconciliation_match(self):
         """
         Test ITC Claim Period is updated when a Purchase Invoice is matched
