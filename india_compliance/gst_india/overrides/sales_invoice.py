@@ -1,6 +1,7 @@
 import frappe
 from frappe import _, bold
 from frappe.desk.form.load import run_onload
+from frappe.model.meta import get_field_precision
 from frappe.utils import flt, fmt_money
 
 from india_compliance.gst_india.constants import VALID_HSN_LENGTHS
@@ -334,6 +335,11 @@ def set_and_validate_advances_with_gst(doc):
 
     taxes = get_taxes_summary(doc.company, doc.advances)
 
+    # advances, their GST share and the outstanding are all in the party account currency;
+    # doc.precision may have cached this field before that currency was set
+    precision = get_field_precision(
+        frappe.get_meta("Sales Invoice").get_field("outstanding_amount"), currency=doc.party_account_currency
+    )
     allocated_amount_with_taxes = 0
     tax_amount = 0
 
@@ -345,7 +351,7 @@ def set_and_validate_advances_with_gst(doc):
 
         # proportion off net base so inclusive (paid_amount = gross) reverses like exclusive
         _tax_amount = get_proportionate_tax(
-            tax_row.tax_amount, advance.allocated_amount, tax_row.taxable_amount
+            tax_row.tax_amount, advance.allocated_amount, tax_row.taxable_amount, precision
         )
         tax_amount += _tax_amount
         allocated_amount_with_taxes += _tax_amount
@@ -359,13 +365,12 @@ def set_and_validate_advances_with_gst(doc):
     else:
         total = doc.get("rounded_total") or doc.grand_total
 
-    precision = doc.precision("grand_total")
     excess_allocation = flt(flt(allocated_amount_with_taxes, precision) - total, precision)
     if excess_allocation > 0:
         message = _(
             "Allocated amount with taxes (GST) in advances table cannot be greater than"
             " outstanding amount of the document. Allocated amount with taxes is greater by {0}."
-        ).format(bold(fmt_money(excess_allocation, currency=doc.currency)))
+        ).format(bold(fmt_money(excess_allocation, precision=precision, currency=doc.party_account_currency)))
 
         if excess_allocation < 1:
             message += (

@@ -3,6 +3,7 @@ from collections import defaultdict
 from typing import ClassVar
 
 import frappe
+from erpnext import get_company_currency
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
@@ -144,7 +145,7 @@ def update_taxable_values(doc):
 
         applicable_charges = flt(
             proportionate_value * (total_charges / total_value),
-            item.precision("taxable_value"),
+            doc.precision("taxable_value", "items"),
         )
 
         item.taxable_value += applicable_charges
@@ -1310,7 +1311,7 @@ class ItemGSTDetails:
         Return Item GST Details for a list of documents
         """
         self.get_item_defaults()
-        self.set_tax_amount_precisions(doctype)
+        self.set_tax_amount_precisions(doctype, company)
 
         response = frappe._dict()
 
@@ -1340,7 +1341,7 @@ class ItemGSTDetails:
         if ignore_gst_validations(doc):
             return
 
-        self.set_tax_amount_precisions(doc.doctype)
+        self.set_tax_amount_precisions(doc.doctype, doc.company)
 
         # To Deprecate
         if self.dont_recompute_tax_is_set():
@@ -1595,13 +1596,14 @@ class ItemGSTDetails:
                 title=_("Incorrect Item GST Details"),
             )
 
-    def set_tax_amount_precisions(self, doctype):
+    def set_tax_amount_precisions(self, doctype, company):
         item_doctype = frappe.get_meta(doctype).get_field("items").options
 
         meta = frappe.get_meta(item_doctype)
 
         self.precision = frappe._dict()
         default_precision = cint(frappe.db.get_default("float_precision")) or 3
+        currency = get_company_currency(company)
 
         for tax_type in GST_TAX_TYPES:
             fieldname = f"{tax_type}_amount"
@@ -1609,7 +1611,7 @@ class ItemGSTDetails:
             if not field:
                 continue
 
-            self.precision[fieldname] = get_field_precision(field) or default_precision
+            self.precision[fieldname] = get_field_precision(field, currency=currency) or default_precision
 
     def dont_recompute_tax_is_set(self):
         for row in self.doc.taxes:

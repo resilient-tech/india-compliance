@@ -27,6 +27,13 @@ TRANSPORTER_DETAILS = {
     "gst_vehicle_type": "Over Dimensional Cargo (ODC)",
 }
 
+# the site format carries three decimals while INR keeps two, as the ledger does
+THREE_DECIMAL_NUMBER_FORMAT = {
+    "currency_precision": "",
+    "number_format": "#,###.###",
+    "use_number_format_from_currency": 1,
+}
+
 
 def create_sales_invoice(**data):
     data["doctype"] = "Sales Invoice"
