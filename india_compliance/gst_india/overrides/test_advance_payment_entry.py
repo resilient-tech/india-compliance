@@ -1143,10 +1143,13 @@ class TestMultiCurrencyReconciliation(LedgerNetMixin, FrappeTestCase):
         # the GST share keeps the third decimal of a three-decimal party account currency
         usd_format = frappe.db.get_value("Currency", "USD", "number_format")
         frappe.db.set_value("Currency", "USD", "number_format", "#,###.###")
+        self.addCleanup(frappe.db.value_cache.clear)
         self.addCleanup(frappe.db.set_value, "Currency", "USD", "number_format", usd_format)
 
         # names are reused after earlier rollbacks; forget the INR currency cached against them
         frappe.local.field_currency = frappe._dict()
+        # v15's set_value leaves the old format in the value cache
+        frappe.db.value_cache.clear()
 
         # the site stays at two decimals, so only the party account currency can give the third
         with change_settings(
@@ -1164,6 +1167,9 @@ class TestMultiCurrencyReconciliation(LedgerNetMixin, FrappeTestCase):
                 rate=1.234,
                 do_not_save=True,
             )
+            invoice_doc.save()
+            # v15 rounds the rows of an unsaved parent at the site format; recalculate now it is saved
+            invoice_doc = frappe.get_doc("Sales Invoice", invoice_doc.name)
             invoice_doc.save()
             invoice_doc.set_advances()
             for row in invoice_doc.advances:
