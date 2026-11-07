@@ -11,7 +11,7 @@ from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     ItemGSTTreatment,
 )
-from india_compliance.gst_india.utils import get_all_gst_accounts, get_items
+from india_compliance.gst_india.utils import get_all_gst_accounts, get_items, get_items_fieldname
 
 
 class CustomItemGSTDetails(ItemGSTDetails):
@@ -161,10 +161,12 @@ class CustomTaxController:
         return taxes
 
     def update_item_taxable_value(self):
+        precision = self.doc.precision("taxable_value", get_items_fieldname(self.doc.doctype))
+
         for item in self._items:
             # a new row has no value yet, and get() cannot default a key that is set to None
-            taxable_value = flt(self.get_value("amount", item), item.precision("taxable_value"))
-            taxable_value += flt(item.get("additional_taxable_value", 0), item.precision("taxable_value"))
+            taxable_value = flt(self.get_value("amount", item), precision)
+            taxable_value += flt(item.get("additional_taxable_value", 0), precision)
 
             item.taxable_value = taxable_value
 

@@ -47,6 +47,7 @@ from india_compliance.gst_india.utils.e_waybill import (
 )
 from india_compliance.gst_india.utils.jinja import get_gst_breakup
 from india_compliance.gst_india.utils.tests import (
+    THREE_DECIMAL_NUMBER_FORMAT,
     TRANSPORTER_DETAILS,
     _append_taxes,
     append_item,
@@ -812,6 +813,25 @@ class TestTransaction(IntegrationTestCase):
 
         self.assertDocumentEqual({"taxable_value": 120}, doc.items[0])  # 100 + 20
 
+        with change_settings("System Settings", THREE_DECIMAL_NUMBER_FORMAT):
+            doc = create_transaction(**self.transaction_details, do_not_save=True)
+            append_item(doc)
+            append_item(doc)
+            doc.append(
+                "taxes",
+                {
+                    "charge_type": "Actual",
+                    "account_head": "Freight and Forwarding Charges - _TIRC",
+                    "description": "Freight",
+                    "tax_amount": 10,
+                    "cost_center": "Main - _TIRC",
+                },
+            )
+            _append_taxes(doc, ("CGST", "SGST"), charge_type="On Previous Row Total", row_id=1)
+            doc.insert()
+
+        self.assertEqual([flt(item.taxable_value, 3) for item in doc.items], [103.33, 103.33, 103.34])
+
     def test_taxable_value_with_charges_after_tax(self):
         if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
             return
@@ -1256,6 +1276,16 @@ class TestTransaction(IntegrationTestCase):
 
         self.assertDocumentEqual({"taxable_value": 62.51, "cgst_amount": 5.63}, doc.items[0])
 
+        with change_settings("System Settings", THREE_DECIMAL_NUMBER_FORMAT):
+            doc = create_transaction(
+                **self.transaction_details, rate=10.01, is_in_state=True, do_not_save=True
+            )
+            append_item(doc, frappe._dict(rate=10.01))
+            append_item(doc, frappe._dict(rate=10.01))
+            doc.save()
+
+        self.assertEqual([item.cgst_amount for item in doc.items], [0.9, 0.9, 0.9])
+
     def test_rounding_gst_details_across_many_items(self):
         """
         Rounding loss of each item must be diffused across items. It used to accumulate
@@ -1271,7 +1301,7 @@ class TestTransaction(IntegrationTestCase):
 
         doc.save().reload()
 
-        precision = ItemGSTDetails.get_tax_amount_precisions(self.doctype).get("cgst_amount")
+        precision = ItemGSTDetails.get_tax_amount_precisions(self.doctype, doc.company).get("cgst_amount")
         allowed_difference = 10**-precision
 
         for tax_row in doc.taxes:
