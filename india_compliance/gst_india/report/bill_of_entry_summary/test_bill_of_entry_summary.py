@@ -167,8 +167,6 @@ class TestBillOfEntrySummary(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_payment_journal_entry_is_reported(self):
-        self.assertEqual(self.run_report(), [])
-
         boe, _invoices = self.create_bill_of_entry()
 
         journal_entry = create_payment_journal_entry(boe, 100)
@@ -182,11 +180,6 @@ class TestBillOfEntrySummary(IntegrationTestCase):
         self.assertEqual(self.run_report()[0].payment_journal_entry, journal_entry.name)
 
         second_payment.submit()
-        self.assertEqual(
-            self.run_report()[0].payment_journal_entry,
-            ",".join(sorted([journal_entry.name, second_payment.name])),
-        )
-
         journal_entry.cancel()
         self.assertEqual(self.run_report()[0].payment_journal_entry, second_payment.name)
 

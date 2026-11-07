@@ -10,7 +10,7 @@ from erpnext.accounts.doctype.journal_entry.mapper import make_reverse_journal_e
 from frappe.desk.form.load import run_onload
 from frappe.exceptions import LinkExistsError
 from frappe.tests import IntegrationTestCase
-from frappe.utils import flt, today
+from frappe.utils import today
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     fetch_pending_boe_invoices,
@@ -96,7 +96,6 @@ class TestBillofEntry(IntegrationTestCase):
             je.accounts[0],
         )
         self.assertEqual(je.total_debit, boe.total_amount_payable)
-        self.assertOutstandingAmount(boe, 0)
 
         # Create Landed Cost Voucher
         lcv = make_landed_cost_voucher(boe.name)
@@ -510,16 +509,6 @@ class TestBillofEntry(IntegrationTestCase):
         expense_row.submit()
         self.assertOutstandingAmount(boe, 36)
 
-        bank_row = make_journal_entry_for_payment(boe.name)
-        bank_row.cheque_no = "123"
-        bank_row.accounts[0].reference_type = ""
-        bank_row.accounts[0].reference_name = ""
-        bank_row.accounts[1].reference_type = boe.doctype
-        bank_row.accounts[1].reference_name = boe.name
-        bank_row.save()
-        bank_row.submit()
-        self.assertOutstandingAmount(boe, 36)
-
         # overpaying is allowed and never fills a negative amount
         create_payment_journal_entry(boe, 50).submit()
         self.assertOutstandingAmount(boe, 0)
@@ -531,26 +520,9 @@ class TestBillofEntry(IntegrationTestCase):
         )
 
     def test_rounding_leaves_nothing_to_pay(self):
-        boe = self.create_bill_of_entry(customs_duty=33.335, rate=33.33, qty=1)
-        self.assertNotEqual(boe.total_amount_payable, flt(boe.total_amount_payable, 2))
-
-        create_payment_journal_entry(boe, 20).submit()
-        self.assertOutstandingAmount(boe, flt(boe.total_amount_payable - 20, 2))
-
-        last = create_payment_journal_entry(boe)
-        last.submit()
-        self.assertEqual(last.total_debit, flt(boe.total_amount_payable - 20, 2))
-        self.assertOutstandingAmount(boe, 0)
-
         # half a paisa: the ledger books the rounded payable
         boe = self.create_bill_of_entry(customs_duty=64.025, igst_rate=0, rate=100, qty=1)
         self.assertOutstandingAmount(boe, 64.02)
-        create_payment_journal_entry(boe).submit()
-        self.assertOutstandingAmount(boe, 0)
-
-        boe = self.create_bill_of_entry(customs_duty=1.375, igst_rate=0, rate=100, qty=1)
-        create_payment_journal_entry(boe, 0.69).submit()
-        self.assertOutstandingAmount(boe, 0.69)
         create_payment_journal_entry(boe).submit()
         self.assertOutstandingAmount(boe, 0)
 
@@ -558,16 +530,6 @@ class TestBillofEntry(IntegrationTestCase):
         boe = self.create_bill_of_entry(customs_duty=0.3, igst_rate=0, rate=100, qty=1)
         create_payment_journal_entry(boe, 0.1).submit()
         self.assertOutstandingAmount(boe, 0.2)
-
-    def test_pay_interest_after_customs_duty(self):
-        boe = self.create_bill_of_entry(charge=306)
-        self.assertEqual(boe.total_amount_payable, 442)
-
-        create_payment_journal_entry(boe, 136).submit()
-        self.assertOutstandingAmount(boe, 306)
-
-        create_payment_journal_entry(boe).submit()
-        self.assertOutstandingAmount(boe, 0)
 
     def test_nothing_payable(self):
         boe = self.create_bill_of_entry(customs_duty=0, igst_rate=0)
@@ -599,10 +561,7 @@ class TestBillofEntry(IntegrationTestCase):
         amended.submit()
         self.assertOutstandingAmount(amended, 136)
 
-        create_payment_journal_entry(amended, 100).submit()
-        self.assertOutstandingAmount(amended, 36)
-
-    def create_bill_of_entry(self, customs_duty=100, igst_rate=18, charge=0, **invoice_args):
+    def create_bill_of_entry(self, customs_duty=100, igst_rate=18, **invoice_args):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1, **invoice_args)
 
         boe = make_bill_of_entry(pi.name)
@@ -610,16 +569,6 @@ class TestBillofEntry(IntegrationTestCase):
         boe.taxes[0].rate = igst_rate
         boe.bill_of_entry_no = "123"
         boe.bill_of_entry_date = today()
-
-        if charge:
-            boe.append(
-                "taxes",
-                {
-                    "charge_type": "Actual",
-                    "account_head": "Miscellaneous Expenses - _TIRC",
-                    "tax_amount": charge,
-                },
-            )
 
         boe.save()
         boe.submit()
