@@ -56,11 +56,18 @@ class EwaybillApplicability {
         return is_ewb_applicable;
     }
 
+    get_e_waybill_doc_no() {
+        return this.frm.doc.name;
+    }
+
     is_e_waybill_generatable(show_message = false) {
         let is_ewb_applicable = this.is_e_waybill_applicable(show_message);
         let message_list = [];
 
-        let is_invalid_invoice_number = india_compliance.validate_invoice_number(this.frm.doc.name);
+        // once an e-Waybill exists, its number no longer matters
+        let is_invalid_invoice_number = this.frm.doc.ewaybill
+            ? []
+            : india_compliance.validate_invoice_number(this.get_e_waybill_doc_no());
 
         if (is_invalid_invoice_number.length > 0) {
             is_ewb_applicable = false;
@@ -105,6 +112,12 @@ class SalesInvoiceEwaybill extends EwaybillApplicability {
 class PurchaseInvoiceEwaybill extends EwaybillApplicability {
     is_e_waybill_applicable(show_message = false) {
         return super.is_e_waybill_applicable(show_message) && gst_settings.enable_e_waybill_from_pi;
+    }
+
+    get_e_waybill_doc_no() {
+        // same as get_e_waybill_doc_no on the server
+        if (this.frm.doc.is_return) return this.frm.doc.name;
+        return this.frm.doc.bill_no || this.frm.doc.name;
     }
 
     is_e_waybill_generatable(show_message = false) {

@@ -41,7 +41,8 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     after_save(frm) {
-        if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm))
+        const party_field = frm.doc.purpose === "Receipt" ? "bill_from_address" : "bill_to_address";
+        if (is_e_waybill_applicable(frm) && !frm.doc[party_field])
             frappe.show_alert(
                 {
                     message: __("Party Address is required to create e-Waybill"),
