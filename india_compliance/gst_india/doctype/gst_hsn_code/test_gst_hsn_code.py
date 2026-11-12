@@ -8,6 +8,7 @@ from frappe.tests.utils import FrappeTestCase, change_settings
 from india_compliance.gst_india.doctype.gst_hsn_code.gst_hsn_code import (
     update_taxes_in_item_master,
 )
+from india_compliance.gst_india.overrides.cross_app_hsn_code import before_update
 from india_compliance.gst_india.utils import get_hsn_code_list
 
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Item Tax Template", "Tax Category"]
@@ -100,3 +101,12 @@ class TestGSTHSNCode(FrappeTestCase):
         item.save()
         update_taxes_in_item_master(taxes=taxes, hsn_code="100000")
         self.assertDocumentEqual(taxes[0], frappe.get_doc("Item", "SKU9999").taxes[0])
+
+    def test_cross_app_hsn_code_without_hsn_field(self):
+        # e.g. Healthcare creating Observation Templates before the custom field exists
+        doc = frappe.new_doc("ToDo")
+        self.assertFalse(doc.meta.has_field("gst_hsn_code"))
+
+        frappe.flags.cross_app_hsn_code = None
+        before_update(doc)
+        self.assertFalse(frappe.flags.cross_app_hsn_code)
