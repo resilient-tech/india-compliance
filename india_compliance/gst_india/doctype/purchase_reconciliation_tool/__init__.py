@@ -1234,6 +1234,14 @@ class ReconciledData(BaseReconciliation):
         self.gstin_map = self.get_gstin_status_map(reconciliation_data)
 
         for data in reconciliation_data:
+            purchase = data.get("_purchase_invoice")
+            if purchase and purchase.get("supplier_gstin") and purchase.get("supplier"):
+                self.gstin_party_map.setdefault(
+                    purchase.supplier_gstin,
+                    frappe._dict(supplier=purchase.supplier, supplier_name=purchase.supplier_name),
+                )
+
+        for data in reconciliation_data:
             data.update(default_dict)
             method = data.get if retain_doc else data.pop
 
