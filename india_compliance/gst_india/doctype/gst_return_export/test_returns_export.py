@@ -4,12 +4,13 @@
 """Adapters (summary math, storage) and the tool's endpoints."""
 
 from typing import ClassVar
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import frappe
 from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
+from rq.job import JobStatus
 
 from india_compliance.gst_india.doctype.gst_return_export import gst_return_export as controller
 from india_compliance.gst_india.doctype.gst_return_export.return_adapters import (
@@ -354,6 +355,49 @@ class TestGSTReturnExportController(IntegrationTestCase):
             )
 
         self.assertEqual(result["indicator"], "orange")
+
+    def test_sync_refuses_a_second_download_of_the_same_return(self):
+        today = "india_compliance.gst_india.doctype.purchase_reconciliation_tool.getdate"
+        with (
+            patch(today, return_value=getdate("2021-05-20")),
+            patch(
+                "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.get_periods_to_download",
+                return_value=["042021"],
+            ),
+            patch.object(controller, "is_job_enqueued", return_value=True),
+            patch("frappe.enqueue") as enqueue,
+        ):
+            result = self.doc.sync_return_data(GSTIN, "GSTR-2B", ["042021"], "2021-03-01", "2021-08-01")
+
+        self.assertEqual(result["indicator"], "orange")
+        enqueue.assert_not_called()
+
+    def test_sync_refuses_while_another_return_of_the_gstin_downloads(self):
+        reco = "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool"
+        today = "india_compliance.gst_india.doctype.purchase_reconciliation_tool.getdate"
+        with patch(f"{reco}.TaxpayerBaseAPI"), patch("frappe.enqueue") as enqueue:
+            frappe.get_doc("Purchase Reconciliation Tool").download_gstr(
+                company_gstin=GSTIN,
+                date_range=["2021-04-01", "2021-04-30"],
+                return_type=ReturnType.GSTR2A.value,
+            )
+
+        running = enqueue.call_args.kwargs["job_id"]
+        started = Mock(**{"get_status.return_value": JobStatus.STARTED})
+        with (
+            patch(today, return_value=getdate("2021-05-20")),
+            patch(f"{reco}.get_periods_to_download", return_value=["042021"]),
+            patch(
+                "frappe.utils.background_jobs.get_job",
+                side_effect=lambda job_id: started if job_id == running else None,
+            ),
+            patch.object(controller, "TaxpayerBaseAPI"),
+            patch("frappe.enqueue") as enqueue,
+        ):
+            result = self.doc.sync_return_data(GSTIN, "GSTR-2B", ["042021"], "2021-03-01", "2021-08-01")
+
+        self.assertEqual(result["indicator"], "orange")
+        enqueue.assert_not_called()
 
     def test_sync_status_stops_at_the_portal_cut_off(self):
         """2B for a month exists from the 14th of the next; on 20 May, April is the newest."""
