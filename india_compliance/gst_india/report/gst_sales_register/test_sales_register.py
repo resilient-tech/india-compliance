@@ -495,7 +495,7 @@ EXPECTED_OVERVIEW = [
         "total_cess_amount": 0.0,
     },
     {
-        "description": "Overlaping Invoices in Nil-Rated/Exempt/Non-GST and E-commerce Sales",
+        "description": "Overlaping Invoices in Nil-Rated/Exempt/Non-GST and Taxable Sales",
         "no_of_records": -5,
     },
 ]
@@ -782,3 +782,19 @@ class TestSalesRegisterEcommerce(IntegrationTestCase):
             self.assertEqual(row["invoice_category"], Category.ECOM_RCM.value)
             self.assertFalse(row.get("invoice_sub_category"))
             self.assertEqual(row["ecommerce_supply_type"], SubCategory.SUPECOM_9_5.value)
+
+    @change_settings("GST Settings", {"enable_sales_through_ecommerce_operators": 1})
+    def test_overview_document_count_with_ecommerce_supplies(self):
+        frappe.db.delete("Sales Invoice", filters={"company": FILTERS["company"]})
+
+        create_sales_invoice(is_in_state=True, ecommerce_gstin="20ALYPD6528PQC5")
+        create_sales_invoice(is_in_state=True)
+
+        overview = execute({**FILTERS, "summary_by": "Overview"})[1]
+        total_records = sum(
+            row["no_of_records"]
+            for row in overview
+            if row.get("indent") != 1 and row["description"] != Category.SUPECOM.value
+        )
+
+        self.assertEqual(total_records, 2)
