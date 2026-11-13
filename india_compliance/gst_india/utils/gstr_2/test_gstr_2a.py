@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from unittest.mock import Mock, patch
 
 import frappe
@@ -255,6 +255,41 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
             },
             doc,
         )
+
+    def test_bill_number_identifies_an_invoice_within_its_financial_year(self):
+        self.addCleanup(frappe.db.delete, self.doctype, {"company_gstin": self.gstin, "bill_no": "FY-NO-1"})
+
+        def download(period, bill_date):
+            supplier = {
+                "ctin": "01AAAAP1208Q1ZS",
+                "flprdr1": datetime.strptime(period, "%m%Y").strftime("%b-%y"),
+                "inv": [
+                    {
+                        "inum": "FY-NO-1",
+                        "idt": bill_date,
+                        "val": 118,
+                        "itms": [{"num": 1, "itm_det": {"rt": 18, "txval": 100, "camt": 9, "samt": 9}}],
+                    }
+                ],
+            }
+            save_gstr_2a(
+                self.gstin, period, frappe._dict({"gstin": self.gstin, "fp": period, "b2b": [supplier]})
+            )
+            return frappe.get_all(
+                self.doctype,
+                filters={"company_gstin": self.gstin, "bill_no": "FY-NO-1"},
+                fields=["name", "bill_date"],
+                order_by="bill_date",
+            )
+
+        (original,) = download("092020", "05-09-2020")
+        (corrected,) = download("092020", "07-09-2020")
+
+        self.assertEqual(corrected.name, original.name)
+        self.assertEqual(corrected.bill_date, date(2020, 9, 7))
+
+        rows = download("092021", "05-09-2021")
+        self.assertEqual([row.bill_date for row in rows], [date(2020, 9, 7), date(2021, 9, 5)])
 
     def test_blanks_from_the_portal(self):
         from india_compliance.gst_india.utils.gstr_2.gstr_2a import GSTR2a
