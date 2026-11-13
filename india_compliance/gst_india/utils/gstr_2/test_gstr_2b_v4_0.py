@@ -600,6 +600,46 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
             ["MULTI-FILE-1", "MULTI-FILE-2"],
         )
 
+    @patch("india_compliance.gst_india.utils.gstr_2.GSTR2bAPI")
+    def test_multi_file_download_with_a_failed_file_keeps_the_saved_2b(self, gstr_2b_api):
+        period = "102020"
+        supplier = self.test_data["data"]["docdata"]["b2b"][0]
+        files = {
+            file_num: frappe._dict(
+                gstin=self.gstin,
+                gendt=self.test_data["data"]["gendt"],
+                docdata={
+                    "b2b": [{**supplier, "inv": [{**supplier["inv"][0], "inum": f"FAILED-FILE-{file_num}"}]}]
+                },
+            )
+            for file_num in (1, 2)
+        }
+        failing = set()
+
+        def get_data(return_period, file_num=None):
+            if file_num in failing:
+                return frappe._dict(error_type="no_docs_found")
+
+            return frappe._dict(data=files[file_num] if file_num else frappe._dict(fc=2))
+
+        gstr_2b_api.return_value.get_data.side_effect = get_data
+        download_gstr_2b(self.gstin, [period])
+
+        failing.add(2)
+        download_gstr_2b(self.gstin, [period])
+
+        self.assertEqual(
+            dict(
+                frappe.get_all(
+                    self.doctype,
+                    filters={"company_gstin": self.gstin, "bill_no": ("like", "FAILED-FILE-%")},
+                    fields=["bill_no", "return_period_2b"],
+                    as_list=True,
+                )
+            ),
+            {"FAILED-FILE-1": period, "FAILED-FILE-2": period},
+        )
+
 
 class TestEmptyPeriodProgress(IntegrationTestCase):
     def test_month_with_nothing_to_save_still_reports_done(self):

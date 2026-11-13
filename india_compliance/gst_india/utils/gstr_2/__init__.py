@@ -194,17 +194,23 @@ def download_gstr_2b(gstin, return_periods):
         if response.error_type:
             continue
 
-        has_data = True
-
         # Handle multiple files for GSTR2B
         if response.data and (file_count := response.data.get("fc")):
             combined = {}
             for file_num in range(1, file_count + 1):
                 r = api.get_data(return_period, file_num=file_num)
+                if r.error_type:
+                    break
+
                 merge_dicts(combined, r.data or {})
+
+            # saving without a failed file would clear its invoices from 2B on the next download
+            if r.error_type:
+                continue
 
             response = frappe._dict(data=frappe._dict(combined))
 
+        has_data = True
         save_gstr_2b(gstin, return_period, response)
 
     if queued_message:
