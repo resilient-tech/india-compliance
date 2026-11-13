@@ -985,6 +985,16 @@ class TestEInvoice(FrappeTestCase):
         si.reload()
         si.cancel()
 
+        amended = frappe.copy_doc(si)
+        amended.update({"amended_from": si.name, "docstatus": 0})
+        amended.insert()
+        self.assertDocumentEqual(
+            {"irn": None, "einvoice_status": None, "ewaybill": None, "e_waybill_status": None}, amended
+        )
+
+        amended.submit()
+        self.assertEqual(amended.einvoice_status, "Pending")
+
         cancelled_on = get_datetime("2026-06-05 11:00:00")
         values = frappe._dict(
             {
