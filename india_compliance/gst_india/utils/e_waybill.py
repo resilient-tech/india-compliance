@@ -1911,20 +1911,6 @@ class EWaybillData(GSTTransactionData):
 #######################################################################################
 
 
-def before_insert(doc, method=None):
-    if not doc.amended_from:
-        return
-
-    # Amend copies no_copy fields: these belong to the cancelled document
-    doc.update(
-        {
-            fieldname: None
-            for fieldname in ("ewaybill", "e_waybill_status", "irn", "einvoice_status")
-            if doc.meta.has_field(fieldname)
-        }
-    )
-
-
 def before_cancel(doc, method=None):
     """portal cancel can't be undone -> only once the doc cancel is saved."""
     if not doc.get("ewaybill") or not is_api_enabled():
