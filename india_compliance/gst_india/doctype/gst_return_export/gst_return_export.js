@@ -426,7 +426,7 @@ class GSTR2View extends ReturnExportView {
 
         this.render_itc_summary($wrapper, data);
         if (has_data) {
-            this.render_section_table($wrapper.find(".section-table"), data.sections, data.totals);
+            this.render_section_table($wrapper.find(".section-table"), data.sections);
         }
     }
 
@@ -436,7 +436,7 @@ class GSTR2View extends ReturnExportView {
     }
     render_itc_summary() {}
 
-    render_section_table($wrapper, sections, totals) {
+    render_section_table($wrapper, sections) {
         const data = [];
         for (const section of sections) {
             data.push({ ...section, indent: 0 });
@@ -464,13 +464,8 @@ class GSTR2View extends ReturnExportView {
                 serialNoColumn: false,
                 inlineFilters: false,
                 treeView: true,
-                showTotalRow: true,
                 clusterize: false,
                 cellHeight: 34,
-                hooks: {
-                    columnTotal: (_, row) =>
-                        row.column.fieldname === "section" ? __("Total") : totals[row.column.fieldname] ?? "",
-                },
             },
         });
 
