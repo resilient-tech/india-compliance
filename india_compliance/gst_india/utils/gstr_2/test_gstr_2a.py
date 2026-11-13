@@ -6,8 +6,11 @@ from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 from frappe.utils import get_datetime
 
+from india_compliance.gst_india.api_classes.taxpayer_base import FilesAPI
+from india_compliance.gst_india.api_classes.taxpayer_returns import ReturnsAPI
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     get_raw_return_data,
+    store_raw_return_data,
 )
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import (
@@ -16,6 +19,7 @@ from india_compliance.gst_india.utils.gstr_2 import (
     download_gstr_2a,
     save_gstr_2a,
 )
+from india_compliance.gst_india.utils.gstr_utils import _download_queued_request
 
 
 class TestGSTRMixin:
@@ -69,7 +73,7 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
             else:
                 return frappe._dict(error_type="no_docs_found")
 
-        def mock_save_gstr_func(gstin, return_type, return_period, json_data):
+        def mock_save_gstr_func(gstin, return_type, return_period, json_data, skip=()):
             self.assertEqual(gstin, self.gstin)
             self.assertEqual(return_period, self.return_period)
             self.assertTrue("cdnr" in json_data)
@@ -294,6 +298,79 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
         )
 
         self.assertTrue(frappe.db.exists(self.doctype, doc.name))
+
+    @patch("india_compliance.gst_india.utils.gstr_2.GSTR2aAPI")
+    def test_queued_category_keeps_other_categories(self, gstr_2a_api):
+        period = "102020"
+        supplier = {
+            "ctin": "01AAAAP1208Q1ZS",
+            "flprdr1": "Oct-20",
+            "inv": [{"inum": "UNFILED-3", "idt": "24-10-2020", "val": 100}],
+        }
+        self.addCleanup(
+            frappe.db.delete, self.doctype, {"company_gstin": self.gstin, "sup_return_period": period}
+        )
+
+        responses = {"B2B": frappe._dict(b2b=[supplier]), "TCS": frappe._dict(tcs=self.test_data.tcs)}
+        gstr_2a_api.return_value.get_data.side_effect = lambda action, return_period: responses.get(
+            action, frappe._dict(error_type="no_docs_found")
+        )
+        download_gstr_2a(self.gstin, [period])
+        b2b = self.get_doc(GSTRCategory.B2B, bill_no="UNFILED-3")
+        tcs = self.get_doc(GSTRCategory.TCS, sup_return_period=period)
+
+        responses["B2B"] = frappe._dict(token=frappe.generate_hash(length=10), est=1)
+        download_gstr_2a(self.gstin, [period])
+        self.assertTrue(frappe.db.exists(self.doctype, b2b.name))
+        self.assertIn("b2b", get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period))
+
+        isda = frappe.get_doc(
+            {
+                "doctype": self.doctype,
+                "company_gstin": self.gstin,
+                "classification": GSTRCategory.ISDA.value,
+                "sup_return_period": period,
+            }
+        ).insert(ignore_permissions=True)
+        store_raw_return_data(
+            self.gstin, ReturnType.GSTR2A.value, period, {"isda": self.test_data.isd}, overwrite=False
+        )
+
+        log = self.retry_queued_b2b(period, frappe._dict(urls=[]), frappe._dict(b2b=[supplier]))
+        self.assertTrue(frappe.db.exists(self.doctype, tcs.name))
+        self.assertTrue(frappe.db.exists(self.doctype, isda.name))
+        self.assertLessEqual(
+            {"b2b", "tcs", "isda"}, set(get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period))
+        )
+
+        log.db_set("request_id", frappe.generate_hash(length=10))
+        log = self.retry_queued_b2b(period, frappe._dict(error_type="no_docs_found"))
+        raw = get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period)
+        self.assertFalse(frappe.db.exists(self.doctype, b2b.name))
+        self.assertTrue(frappe.db.exists(self.doctype, tcs.name))
+        self.assertTrue(frappe.db.exists(self.doctype, isda.name))
+        self.assertNotIn("b2b", raw)
+        self.assertLessEqual({"tcs", "isda"}, set(raw))
+        self.assertFalse(log.request_id)
+
+    def retry_queued_b2b(self, period, portal_response, files=None):
+        log = frappe.get_last_doc(
+            self.log_doctype,
+            filters={
+                "gstin": self.gstin,
+                "return_type": ReturnType.GSTR2A.value,
+                "return_period": period,
+                "classification": GSTRCategory.B2B.value,
+            },
+        )
+        with (
+            patch.object(ReturnsAPI, "__init__", return_value=None),
+            patch.object(ReturnsAPI, "get", return_value=portal_response),
+            patch.object(FilesAPI, "get_all", return_value=files),
+        ):
+            _download_queued_request(log)
+
+        return log.reload()
 
     def test_gstr2a_isd(self):
         doc = self.get_doc(GSTRCategory.ISD)

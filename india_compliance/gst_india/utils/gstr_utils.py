@@ -87,6 +87,7 @@ def download_queued_request():
 def _download_queued_request(doc):
     from india_compliance.gst_india.utils.gstr_2 import (
         _download_gstr_2a,
+        clear_gstr_2a_category,
         save_gstr_2b,
         save_ims_invoices,
     )
@@ -119,6 +120,9 @@ def _download_queued_request(doc):
         raise e
 
     if response.error_type == "no_docs_found":
+        if doc.return_type == ReturnType.GSTR2A.value:
+            clear_gstr_2a_category(doc.gstin, doc.return_period, doc.classification)
+
         return create_import_log(
             doc.gstin,
             doc.return_type,
