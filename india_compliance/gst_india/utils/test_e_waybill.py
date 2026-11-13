@@ -592,7 +592,14 @@ class TestEWaybill(IntegrationTestCase):
         )
 
         dn.reload()
-        self._cancel_and_run_portal_cancel(dn)
+        dn.cancel()
+
+        amended = frappe.copy_doc(dn)
+        amended.update({"amended_from": dn.name, "docstatus": 0})
+        amended.insert()
+        self.assertIsNone(amended.ewaybill)
+
+        auto_cancel_e_waybill_for_doc(dn.doctype, dn.name)
 
         ewaybill_log.reload()
         self.assertTrue(ewaybill_log.is_cancelled)

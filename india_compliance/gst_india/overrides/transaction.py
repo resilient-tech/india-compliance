@@ -1709,6 +1709,20 @@ def validate_isd_not_supplier(doc):
     )
 
 
+def clear_e_invoice_e_waybill_on_amend(doc, method=None):
+    if not doc.amended_from:
+        return
+
+    # Amend copies no_copy fields: these belong to the cancelled document
+    doc.update(
+        {
+            fieldname: None
+            for fieldname in ("ewaybill", "e_waybill_status", "irn", "einvoice_status")
+            if doc.meta.has_field(fieldname)
+        }
+    )
+
+
 def before_validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
