@@ -140,17 +140,6 @@ doc_events = {
         ],
         "on_update": ["india_compliance.gst_india.overrides.address.update_party_gstin_and_gst_category"],
     },
-<<<<<<< HEAD
-=======
-    "Asset Movement": {
-        "onload": "india_compliance.gst_india.overrides.asset_movement.onload",
-        "validate": "india_compliance.gst_india.overrides.asset_movement.validate",
-        "before_save": "india_compliance.gst_india.overrides.asset_movement.before_save",
-        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.validate_transporter_fields_after_submit",
-        "before_insert": "india_compliance.gst_india.overrides.transaction.clear_e_invoice_e_waybill_on_amend",
-        "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
-    },
->>>>>>> bd3c870 (fix: clear e-Invoice and e-Waybill details on amend)
     "Company": {
         "on_trash": "india_compliance.gst_india.overrides.company.on_trash",
         "on_update": [
