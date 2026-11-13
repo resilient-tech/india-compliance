@@ -127,7 +127,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
@@ -211,7 +211,7 @@ class TestIneligibleITC(FrappeTestCase):
                 "account": "Round Off - _TIRC",
                 "debit": 0.28,
                 "credit": 0.0,
-                "debit_in_transaction_currency": 0.0,
+                "debit_in_transaction_currency": 0.28,
                 "credit_in_transaction_currency": 0.0,
             },
             {
@@ -302,7 +302,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "debit": 0.0,
                     "credit": 0.22,
                     "debit_in_transaction_currency": 0.0,
-                    "credit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.22,
                 },
                 {
                     "account": "GST Expense - _TIRC",
@@ -372,7 +372,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
@@ -532,7 +532,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
@@ -679,7 +679,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
@@ -813,7 +813,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
@@ -888,7 +888,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "debit": 0.0,
                     "credit": 0.28,
                     "debit_in_transaction_currency": 0.0,
-                    "credit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.28,
                 },
                 {
                     "account": "GST Expense - _TIRC",
@@ -1072,7 +1072,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
@@ -1233,7 +1233,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
