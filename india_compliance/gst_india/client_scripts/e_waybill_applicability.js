@@ -56,11 +56,18 @@ class EwaybillApplicability {
         return is_ewb_applicable;
     }
 
+    get_e_waybill_doc_no() {
+        return this.frm.doc.name;
+    }
+
     is_e_waybill_generatable(show_message = false) {
         let is_ewb_applicable = this.is_e_waybill_applicable(show_message);
         let message_list = [];
 
-        let is_invalid_invoice_number = india_compliance.validate_invoice_number(this.frm.doc.name);
+        // once an e-Waybill exists, its number no longer matters
+        let is_invalid_invoice_number = this.frm.doc.ewaybill
+            ? []
+            : india_compliance.validate_invoice_number(this.get_e_waybill_doc_no());
 
         if (is_invalid_invoice_number.length > 0) {
             is_ewb_applicable = false;
@@ -81,7 +88,7 @@ class EwaybillApplicability {
 
 class SalesInvoiceEwaybill extends EwaybillApplicability {
     is_e_waybill_generatable(show_message = false) {
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
         if (!this.frm.doc.customer_address) {
@@ -107,8 +114,14 @@ class PurchaseInvoiceEwaybill extends EwaybillApplicability {
         return super.is_e_waybill_applicable(show_message) && gst_settings.enable_e_waybill_from_pi;
     }
 
+    get_e_waybill_doc_no() {
+        // same as get_e_waybill_doc_no on the server
+        if (this.frm.doc.is_return) return this.frm.doc.name;
+        return this.frm.doc.bill_no || this.frm.doc.name;
+    }
+
     is_e_waybill_generatable(show_message = false) {
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
         if (!this.frm.doc.supplier_address) {
@@ -139,7 +152,7 @@ class PurchaseReceiptEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_generatable(show_message = false) {
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
         if (!this.frm.doc.supplier_address) {
@@ -170,7 +183,7 @@ class DeliveryNoteEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_generatable(show_message = false) {
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
         if (!this.frm.doc.customer_address) {
@@ -241,7 +254,7 @@ class StockEntryEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_generatable(show_message = false) {
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
 
@@ -305,7 +318,7 @@ class AssetMovementEwaybill extends EwaybillApplicability {
 
     is_e_waybill_generatable(show_message = false) {
         // Do we have everything needed to generate e-Waybill for asset movement
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
         const [party_field, party_label] = this.is_inward()
@@ -335,7 +348,7 @@ class SubcontractingReceiptEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_generatable(show_message = false) {
-        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+        let is_ewb_generatable = super.is_e_waybill_generatable(show_message);
 
         let message_list = [];
 
