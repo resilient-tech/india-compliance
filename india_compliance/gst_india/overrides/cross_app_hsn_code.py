@@ -2,5 +2,5 @@ import frappe
 
 
 def before_update(doc, method=None):
-    if doc.gst_hsn_code:
+    if doc.get("gst_hsn_code"):
         frappe.flags.cross_app_hsn_code = doc.gst_hsn_code
