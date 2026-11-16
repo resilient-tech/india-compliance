@@ -1,4 +1,3 @@
-
 ---
 name: ic-house-style
 description: How code reads in india_compliance — plain words, one-line comments, when a function may exist, file and class order, and the structure rules for code that mirrors a government template or API. Load before writing or changing any code, comment, or name in this app.
@@ -41,7 +40,7 @@ Function over about 12 lines? Mark its steps in one to three words, in order:
 
 # validate, # queue; # headers, # rows, # write.
 
-Deliberate shortcut? # ponytail: <the ceiling></the>, <the upgrade path></the>.
+Deliberate shortcut? `# ponytail: <the ceiling>, <the upgrade path>`.
 
 Good
 
