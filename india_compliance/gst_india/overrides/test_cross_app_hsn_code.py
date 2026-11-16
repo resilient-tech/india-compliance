@@ -1,10 +1,10 @@
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.overrides.cross_app_hsn_code import before_update
 
 
-class TestCrossAppHSNCode(IntegrationTestCase):
+class TestCrossAppHSNCode(FrappeTestCase):
     def setUp(self):
         super().setUp()
         self.addCleanup(frappe.flags.pop, "cross_app_hsn_code", None)
