@@ -1,6 +1,11 @@
+import re
 import sys
 import requests
 from urllib.parse import urlparse
+
+# The pull request template explains these checks in HTML comments, which
+# would otherwise match on every pull request that keeps them.
+HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 
 
 WEBSITE_REPOS = frozenset(("india-compliance-docs",))
@@ -50,7 +55,7 @@ def check_pull_request(number: str) -> "tuple[int, str]":
     payload = response.json()
     title = (payload.get("title") or "").lower().strip()
     head_sha = (payload.get("head") or {}).get("sha")
-    body = (payload.get("body") or "").lower()
+    body = HTML_COMMENT.sub("", payload.get("body") or "").lower()
 
     if (
         not title.startswith("feat")

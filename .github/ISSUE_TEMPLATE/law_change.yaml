@@ -1,0 +1,63 @@
+name: Law change
+description: A notification, circular, advisory or government API change that India Compliance must follow.
+title: "[Law] "
+type: Task
+body:
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source
+      options:
+        - CBIC notification or circular
+        - GSTN advisory
+        - NIC e-invoice
+        - NIC e-waybill
+        - CBDT or Income Tax
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: citation
+    attributes:
+      label: Citation
+      placeholder: "Rule 48(4) CGST Rules; Notfn 10/2023-CT dt 10.05.2023"
+    validations:
+      required: true
+
+  - type: input
+    id: link
+    attributes:
+      label: Official link
+      description: The gazette, CBIC, GSTN or NIC page, not a news site.
+    validations:
+      required: true
+
+  - type: input
+    id: effective
+    attributes:
+      label: Effective from
+      placeholder: 01.08.2023
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-changes
+    attributes:
+      label: What changes
+      description: Who and which documents it covers, and what happens to older ones.
+    validations:
+      required: true
+
+  - type: textarea
+    id: api-change
+    attributes:
+      label: API or schema change
+      description: A sample of the new request or response, with test values.
+      render: json
+
+  - type: input
+    id: branches
+    attributes:
+      label: Versions that need it
+      placeholder: develop, version-15, version-16

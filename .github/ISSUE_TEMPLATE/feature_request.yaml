@@ -1,45 +1,30 @@
----
-name: Feature Request
-description: Suggest an idea to improve India Compliance
-labels: ["feature-request"]
-
+name: Feature
+description: Something new in India Compliance, or a better way to do something.
+type: Feature
 body:
-  - type: markdown
+  - type: textarea
+    id: problem
     attributes:
-      value: |
-        Welcome to India Compliance issue tracker! Prior to submitting a request, kindly consider the following:
-
-        1. This tracker should only be used to report bugs and request features / enhancements to India Compliance
-            - For questions and general support, checkout the [documentation](https://docs.erpnext.com/docs/v14/user/manual/en/regional/india)
-        2. Use the search function before creating a new issue. Duplicates will be closed and directed to
-          the original discussion.
-        3. When making a feature request, make sure to be as verbose as possible. The better you convey your message, the greater the drive to make it happen.
-
-
-        Please keep in mind that we get many many requests and we can't possibly work on all of them, we prioritize development based on the goals of the product and organization. Feature requests are still welcome as it helps us in research when we do decide to work on the requested feature.
+      label: The problem
+      description: Who runs into it, and what they do today.
+      placeholder: Every month our accountant exports ... and fixes ... by hand.
+    validations:
+      required: true
 
   - type: textarea
-    id: problem-info
+    id: idea
     attributes:
-      label: Is your feature request related to a problem? Please describe.
-      description: A clear and concise description of what the problem is.
-      placeholder: Please provide as much information as possible.
+      label: What would help
+      description: Your idea, if you have one.
 
   - type: textarea
-    id: solution-info
+    id: workaround
     attributes:
-      label: Describe the solution you'd like
-      description: A clear and concise description of what you want to happen.
+      label: Workaround today
+      description: How you get by without it, and what else you tried.
 
-  - type: textarea
-    id: alternatives-info
+  - type: input
+    id: how-often
     attributes:
-      label: Describe alternatives you've considered
-      description: A clear and concise description of any alternative solutions or features you've considered.
-
-  - type: textarea
-    id: additional-info
-    attributes:
-      label: Additional context
-      description: Add any other context or screenshots about the feature request here.
-...
+      label: How often it comes up
+      placeholder: Every invoice, once a month at filing, once a year ...
