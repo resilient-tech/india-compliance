@@ -345,7 +345,7 @@ class TestRequestTimeout(FrappeTestCase):
         self.assertEqual(self.count_inflight(), 1)
 
 
-class TestSchedulerCheck(IntegrationTestCase):
+class TestSchedulerCheck(FrappeTestCase):
     def test_api_blocked_unless_scheduler_active(self):
         cases = (
             ({}, 1, False),
@@ -369,7 +369,7 @@ class TestSchedulerCheck(IntegrationTestCase):
                         **conf,
                     },
                 ),
-                patch("frappe.get_system_settings", return_value=enable_scheduler),
+                patch("frappe.db.get_single_value", return_value=enable_scheduler),
             ):
                 if is_blocked:
                     self.assertRaises(frappe.ValidationError, check_scheduler_status)
