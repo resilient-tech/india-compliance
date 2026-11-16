@@ -470,11 +470,11 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         po = create_purchase_order(
             items=service_item,
             supplier="_Test Unregistered Supplier",
-            supplier_warhouse="Finished Goods - _TIUC",
+            supplier_warehouse="Finished Goods - _TIRC",
         )
 
         sco = create_subcontracting_order(po_name=po.name, do_not_save=True)
-        sco.supplier_warehouse = "Finished Goods - _TIUC"
+        sco.supplier_warehouse = "Finished Goods - _TIRC"
         sco.save()
         sco.submit()
 
