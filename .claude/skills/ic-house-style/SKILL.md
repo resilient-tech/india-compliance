@@ -36,6 +36,12 @@ One line. Only where the code can't say it.
 
 Say why, not what. Never restate the name or the signature.
 Delete it if the line below already reads clearly.
+
+Law or spec behind the code? Cite it above the function or constant:
+`# Law: <provision>; Notfn <no>/<year>-CT dt DD.MM.YYYY, w.e.f. DD.MM.YYYY`.
+Use Circ for a circular and Adv for a GSTN advisory. For an API, name the
+portal and the version: NIC e-invoice API v1.03.
+
 Function over about 12 lines? Mark its steps in one to three words, in order:
 
 # validate, # queue; # headers, # rows, # write.
@@ -46,6 +52,7 @@ Good
 
     # SEZ carry the supplier under sgstin/tdname
     # portal has no amended-TDS category
+    # Law: Rule 48(4) CGST Rules; Notfn 10/2023-CT dt 10.05.2023, w.e.f. 01.08.2023
 
 Bad
 
