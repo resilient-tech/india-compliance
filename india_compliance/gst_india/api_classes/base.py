@@ -8,7 +8,7 @@ import frappe
 import requests
 from frappe import _
 from frappe.utils import sbool
-from frappe.utils.scheduler import is_scheduler_disabled
+from frappe.utils.scheduler import is_scheduler_inactive
 
 from india_compliance.exceptions import (
     GatewayTimeoutError,
@@ -437,16 +437,16 @@ class BaseAPI:
 
 def check_scheduler_status():
     """
-    Throw an error if scheduler is disabled
+    Throw an error if scheduler is inactive
     """
 
     if frappe.flags.in_test or frappe.conf.developer_mode:
         return
 
-    if is_scheduler_disabled():
+    if is_scheduler_inactive():
         frappe.throw(
             _(
-                "The Scheduler is currently disabled, which needs to be enabled to use e-Invoicing and e-Waybill features. "
+                "The Scheduler is currently inactive, which needs to be active to use e-Invoicing and e-Waybill features. "
                 "Please get in touch with your server administrator to resolve this issue.<br><br>"
                 "For more information, refer to the following documentation: {0}"
             ).format(
