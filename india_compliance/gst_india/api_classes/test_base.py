@@ -7,7 +7,7 @@ import responses
 from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.exceptions import GatewayTimeoutError, GSPLimitExceededError, GSPServerError
-from india_compliance.gst_india.api_classes.base import BASE_URL, BaseAPI
+from india_compliance.gst_india.api_classes.base import BASE_URL, BaseAPI, check_scheduler_status
 from india_compliance.gst_india.utils import (
     INFLIGHT_STALE_SECONDS,
     SLOW_RESPONSE_SECONDS,
@@ -343,3 +343,35 @@ class TestRequestTimeout(FrappeTestCase):
 
         self.assertFalse(has_slow_inflight_call())
         self.assertEqual(self.count_inflight(), 1)
+
+
+class TestSchedulerCheck(FrappeTestCase):
+    def test_api_blocked_unless_scheduler_active(self):
+        cases = (
+            ({}, 1, False),
+            ({"pause_scheduler": 1}, 1, True),
+            ({"maintenance_mode": 1}, 1, True),
+            ({"disable_scheduler": 1}, 1, True),
+            ({}, 0, True),
+            ({"pause_scheduler": 1, "developer_mode": 1}, 1, False),
+        )
+        for conf, enable_scheduler, is_blocked in cases:
+            with (
+                self.subTest(conf=conf, enable_scheduler=enable_scheduler),
+                patch.dict(frappe.flags, {"in_test": False}),
+                patch.dict(
+                    frappe.local.conf,
+                    {
+                        "developer_mode": 0,
+                        "pause_scheduler": 0,
+                        "maintenance_mode": 0,
+                        "disable_scheduler": 0,
+                        **conf,
+                    },
+                ),
+                patch("frappe.db.get_single_value", return_value=enable_scheduler),
+            ):
+                if is_blocked:
+                    self.assertRaises(frappe.ValidationError, check_scheduler_status)
+                else:
+                    check_scheduler_status()
