@@ -11,10 +11,9 @@ forks it.
 - Present both readings. Ask when the task is ambiguous.
 - Say so when a simpler approach exists.
 
-**Self-Documenting Code.**
+**Comments.**
 
-- Write no comments: no one-liners, banners, TODOs, or docstrings. Leave existing comments alone. Exception: a docstring on a `@frappe.whitelist()` method, only when asked.
-- A comment you removed stays removed in every later edit; never restore it.
+- One line, saying why, where the code can't. `ic-house-style` has the rules, including the `# Law:` citation for code that carries out a law.
 
 **Root Cause Fix, Minimal Diff.**
 
