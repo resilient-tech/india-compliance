@@ -133,8 +133,7 @@ class WorkflowTestBase(FrappeAPITestCase):
         super().tearDown()
 
         self.si.reload()
-        if self.si.docstatus == 1:
-            self.si.cancel()
+        self.si.cancel()
         self.si.delete(force=True, ignore_permissions=True)
         frappe.db.commit()  # nosemgrep
 
