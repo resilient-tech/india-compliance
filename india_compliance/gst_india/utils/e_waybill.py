@@ -753,7 +753,7 @@ def generate_pending_e_waybills():
     for doctype in doctypes:
         queued_docs = frappe.get_all(
             doctype,
-            filters={"e_waybill_status": "Auto-Retry"},
+            filters={"e_waybill_status": "Auto-Retry", "docstatus": 1},
             pluck="name",
         )
 

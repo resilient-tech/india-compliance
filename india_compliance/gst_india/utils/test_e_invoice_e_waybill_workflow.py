@@ -14,6 +14,7 @@ from india_compliance.gst_india.utils import clear_server_down, mark_server_down
 from india_compliance.gst_india.utils.e_invoice import (
     generate_e_invoice,
     generate_e_invoices,
+    retry_e_invoice_e_waybill_generation,
 )
 from india_compliance.gst_india.utils.e_waybill import (
     _generate_e_waybill,
@@ -332,6 +333,7 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
             with self.assertRaises(frappe.ValidationError):
                 generate_e_invoice(self.si.name)
 
+    @check_error_logged_for_doc(no_logs=True)
     def test_auto_gen_server_gsp_error(self):
         with patch(E_INVOICE_DATA) as mock_data:
             mock_data.side_effect = GSPServerError
@@ -340,8 +342,12 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         self.assertIsNone(result)
         self.si.reload()
         self.assertIn(self.si.einvoice_status, ("Auto-Retry", "Failed"))
-        frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
-        frappe.db.commit()  # nosemgrep
+
+        self.si.cancel()
+        retry_e_invoice_e_waybill_generation()
+
+        self.si.reload()
+        self.assertEqual(self.si.einvoice_status, "Auto-Retry")
 
     def test_auto_gen_server_unhandled_exception_raises(self):
         """raised whatever `throw` says, after the status is saved as Failed"""
@@ -479,6 +485,7 @@ class TestEWaybillWorkflow(WorkflowTestBase):
         self.si.reload()
         self.assertEqual(self.si.e_waybill_status, "Failed")
 
+    @check_error_logged_for_doc(no_logs=True)
     def test_auto_gen_gsp_error_sets_status(self):
         with patch(E_WAYBILL_DATA) as mock_data:
             mock_data.side_effect = GSPServerError
@@ -486,8 +493,12 @@ class TestEWaybillWorkflow(WorkflowTestBase):
 
         self.si.reload()
         self.assertIn(self.si.e_waybill_status, ("Auto-Retry", "Failed"))
-        frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
-        frappe.db.commit()  # nosemgrep
+
+        self.si.cancel()
+        retry_e_invoice_e_waybill_generation()
+
+        self.si.reload()
+        self.assertEqual(self.si.e_waybill_status, "Auto-Retry")
 
     @check_error_logged_for_doc(doctype="Sales Invoice", error_substr="Unexpected")
     def test_auto_gen_unhandled_exception_logs_and_sets_failed(self):
