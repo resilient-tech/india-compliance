@@ -13,10 +13,12 @@ from india_compliance.gst_india.utils import clear_server_down, mark_server_down
 from india_compliance.gst_india.utils.e_invoice import (
     generate_e_invoice,
     generate_e_invoices,
+    generate_pending_e_invoices,
 )
 from india_compliance.gst_india.utils.e_waybill import (
     _generate_e_waybill,
     generate_e_waybills,
+    generate_pending_e_waybills,
 )
 from india_compliance.gst_india.utils.tests import (
     create_sales_invoice,
@@ -639,3 +641,30 @@ class TestBulkGeneration(WorkflowTestBase):
             generate_e_waybills("Sales Invoice", [self.si1.name, self.si2.name])
 
         self.assertEqual(mock_gen.call_count, 2)
+
+    @check_error_logged_for_doc(no_logs=True)
+    def test_cancelled_invoice_leaves_the_retry_queue(self):
+        """Retry run generates for an invoice the user already cancelled"""
+        cancelled_si = self._create_si()
+        self.addCleanup(cancelled_si.delete, force=True, ignore_permissions=True)
+
+        for si in (self.si1, cancelled_si):
+            si.db_set({"einvoice_status": "Auto-Retry", "e_waybill_status": "Auto-Retry"})
+
+        cancelled_si.reload()
+        cancelled_si.cancel()
+
+        with (
+            patch("india_compliance.gst_india.utils.e_invoice.generate_e_invoices") as mock_e_invoices,
+            patch("india_compliance.gst_india.utils.e_waybill.generate_e_waybills") as mock_e_waybills,
+        ):
+            generate_pending_e_invoices()
+            generate_pending_e_waybills()
+
+        e_invoice_queue = mock_e_invoices.call_args.args[0]
+        e_waybill_queue = mock_e_waybills.call_args.args[1]
+
+        self.assertIn(self.si1.name, e_invoice_queue)
+        self.assertNotIn(cancelled_si.name, e_invoice_queue)
+        self.assertIn(self.si1.name, e_waybill_queue)
+        self.assertNotIn(cancelled_si.name, e_waybill_queue)
