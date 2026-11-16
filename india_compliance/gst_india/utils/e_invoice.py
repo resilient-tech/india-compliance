@@ -578,7 +578,7 @@ def retry_e_invoice_e_waybill_generation():
 def generate_pending_e_invoices():
     queued_sales_invoices = frappe.db.get_all(
         "Sales Invoice",
-        filters={"einvoice_status": "Auto-Retry"},
+        filters={"einvoice_status": "Auto-Retry", "docstatus": 1},
         pluck="name",
     )
 
