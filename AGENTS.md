@@ -19,9 +19,16 @@ forks it.
 - Missing repo context, or a file you were not pointed at needs changing.
 - Anything destructive: `rm -rf`, force push, deleting data.
 
+## Skills
+
+Both are in `.claude/skills/`.
+
+- Adding or changing behaviour, form layout, or tests → `ic-feature-creation`
+- Writing or changing any code, comment, or name → `ic-house-style`
+
 ## Growing this setup
 
 - Add a new rule as one line in the matching skill, with the reason.
-- Create a skill when none fits and the rule will recur; add it to the table.
+- Create a skill when none fits and the rule will recur; add it to Skills above.
 - Split a skill over ~150 lines by topic; delete a rule unused for six months.
 - Put machine-specific recipes in agent memory, not here.
