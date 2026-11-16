@@ -112,8 +112,9 @@ def download_gstr_2a(gstin, return_periods):
             if response.error_type:
                 frappe.throw(
                     _(
-                        "Could not download {0} for return period {1} from the GST Portal. Please try again."
-                    ).format(action, return_period)
+                        "Could not download GSTR-2A {0} data for GSTIN {1} and return period {2}"
+                        " from the GST Portal. Please try again."
+                    ).format(category.value, gstin, return_period)
                 )
 
             if not (data := response.get(action.lower())):
@@ -208,9 +209,9 @@ def download_gstr_2b(gstin, return_periods):
                 if not r.data:
                     frappe.throw(
                         _(
-                            "Could not download file {0} of {1} for return period {2} from the GST Portal."
-                            " Please try again."
-                        ).format(file_num, file_count, return_period)
+                            "Could not download GSTR-2B file {0} of {1} for GSTIN {2} and return period {3}"
+                            " from the GST Portal. Please try again."
+                        ).format(file_num, file_count, gstin, return_period)
                     )
                 merge_dicts(combined, r.data)
 

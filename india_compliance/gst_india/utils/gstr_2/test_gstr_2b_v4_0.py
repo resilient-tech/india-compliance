@@ -589,7 +589,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
             else frappe._dict(data=files[file_num] if file_num else frappe._dict(fc=2))
         )
 
-        with self.assertRaises(frappe.ValidationError):
+        with self.assertRaisesRegex(frappe.ValidationError, "GSTR-2B file 2 of 2"):
             download_gstr_2b(self.gstin, [period])
 
         self.assert_every_file_kept(period)
