@@ -477,7 +477,7 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
             otp=otp,
         )
 
-        if response.error_type:
+        if response.error_type in ("queued", "no_docs_found"):
             return response
 
         return FilesAPI().get_all(response)
