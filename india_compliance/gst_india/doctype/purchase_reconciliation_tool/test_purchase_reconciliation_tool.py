@@ -343,6 +343,25 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         itc_claim_period = frappe.db.get_value("Purchase Invoice", pinv.name, "itc_claim_period")
         self.assertEqual(itc_claim_period, gst_is.return_period_2b)
 
+        mid_month_pinv = create_purchase_invoice(
+            bill_no="ITC-REC-008",
+            bill_date="2023-09-20",
+            posting_date="2023-09-20",
+        )
+        create_gst_inward_supply(
+            bill_no="ITC-REC-008",
+            bill_date="2023-09-20",
+            return_period_2b="012024",
+        )
+
+        prt.update({"from_date": "2023-09-15", "to_date": "2024-01-10"})
+        rows = [row for row in prt.reconcile_and_generate_data() if row.bill_no == "ITC-REC-008"]
+
+        self.assertEqual(len(rows), 1)
+        self.assertTrue(rows[0].inward_supply_name)
+        itc_claim_period = frappe.db.get_value("Purchase Invoice", mid_month_pinv.name, "itc_claim_period")
+        self.assertEqual(itc_claim_period, "012024")
+
     def test_itc_claim_period_deferred_on_rejected_ims(self):
         """
         Test ITC Claim Period is set to 'Deferred' when matched inward supply
