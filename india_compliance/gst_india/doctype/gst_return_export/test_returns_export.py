@@ -13,13 +13,12 @@ from frappe.utils import getdate
 
 from india_compliance.gst_india.doctype.gst_return_export import gst_return_export as controller
 from india_compliance.gst_india.doctype.gst_return_export.return_adapters import (
+    ITC_REVERSAL_SECTION,
     SECTION_ORDER,
-    TAX_FIELDS,
     GSTR2AAdapter,
     GSTR2BAdapter,
     ReturnAdapter,
     section_rank,
-    sum_summaries,
 )
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     get_raw_return_data,
@@ -28,6 +27,7 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
 from india_compliance.gst_india.utils import get_data_file_path, merge_dicts
 from india_compliance.gst_india.utils.gstr_2 import save_gstr_2a, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
+from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
 
 GSTIN = "01AABCE2207R1Z5"
 PERIOD_2B = "032020"
@@ -70,53 +70,6 @@ class TestSummaryHelpers(FrappeTestCase):
     def test_section_rank_unknown_goes_last(self):
         self.assertEqual(section_rank("ZZZ"), len(SECTION_ORDER))
 
-    def test_sum_summaries_sums_totals_and_itc(self):
-        summaries = [
-            {
-                "totals": {
-                    "documents": 2,
-                    "taxable_value": 100.0,
-                    "igst": 18.0,
-                    "cgst": 0.0,
-                    "sgst": 0.0,
-                    "cess": 0.0,
-                },
-                "itc_summary": {"available": 18.0, "not_available": 0.0, "reversal": 0.0},
-            },
-            {
-                "totals": {
-                    "documents": 1,
-                    "taxable_value": 50.0,
-                    "igst": 9.0,
-                    "cgst": 0.0,
-                    "sgst": 0.0,
-                    "cess": 0.0,
-                },
-                "itc_summary": {"available": 0.0, "not_available": 9.0, "reversal": 0.0},
-            },
-        ]
-        result = sum_summaries(summaries)
-        self.assertEqual(result["totals"]["documents"], 3)
-        self.assertEqual(result["totals"]["taxable_value"], 150.0)
-        self.assertEqual(result["totals"]["igst"], 27.0)
-        self.assertEqual(result["itc_summary"], {"available": 18.0, "not_available": 9.0, "reversal": 0.0})
-
-    def test_sum_summaries_itc_none_when_absent(self):
-        summaries = [
-            {
-                "totals": {
-                    "documents": 1,
-                    "taxable_value": 10.0,
-                    "igst": 1.0,
-                    "cgst": 0.0,
-                    "sgst": 0.0,
-                    "cess": 0.0,
-                },
-                "itc_summary": None,
-            }
-        ]
-        self.assertIsNone(sum_summaries(summaries)["itc_summary"])
-
 
 class TestRangeSummary(FrappeTestCase):
     """get_range_summary driven by crafted stored summaries (no DB)."""
@@ -135,15 +88,7 @@ class TestRangeSummary(FrappeTestCase):
                     "cess": 0.0,
                 }
             ],
-            "totals": {
-                "documents": 2,
-                "taxable_value": 100.0,
-                "igst": 18.0,
-                "cgst": 0.0,
-                "sgst": 0.0,
-                "cess": 0.0,
-            },
-            "itc_summary": {"available": 18.0, "not_available": 0.0, "reversal": 0.0},
+            "itc_summary": {"available": 18.0, "not_available": 5.0, "reversal": 2.0},
         },
         {
             "period": "052024",
@@ -167,15 +112,7 @@ class TestRangeSummary(FrappeTestCase):
                     "cess": 0.0,
                 },
             ],
-            "totals": {
-                "documents": 2,
-                "taxable_value": 70.0,
-                "igst": 12.6,
-                "cgst": 0.0,
-                "sgst": 0.0,
-                "cess": 0.0,
-            },
-            "itc_summary": {"available": 12.6, "not_available": 0.0, "reversal": 0.0},
+            "itc_summary": {"available": -12.6, "not_available": 3.0, "reversal": 1.0},
         },
     ]
 
@@ -192,12 +129,15 @@ class TestRangeSummary(FrappeTestCase):
         self.assertEqual(b2b["igst"], 27.0)
         self.assertEqual([m["period"] for m in b2b["months"]], ["042024", "052024"])
 
-    def test_totals_and_itc_summed(self):
-        result = self._range(["042024", "052024"])
-        self.assertEqual(result["totals"]["documents"], 4)
-        self.assertEqual(result["totals"]["taxable_value"], 170.0)
-        self.assertAlmostEqual(result["totals"]["igst"], 30.6)
-        self.assertAlmostEqual(result["itc_summary"]["available"], 30.6)
+    def test_itc_summed(self):
+        itc = self._range(["042024", "052024"])["itc_summary"]
+        self.assertAlmostEqual(itc["available"], 5.4)
+        self.assertEqual((itc["not_available"], itc["reversal"]), (8.0, 3.0))
+
+    def test_no_itc_when_no_month_has_it(self):
+        stored = [{**summary, "itc_summary": None} for summary in self.STORED]
+        with patch.object(ReturnAdapter, "get_summaries", return_value=stored):
+            self.assertIsNone(GSTR2AAdapter(GSTIN).get_range_summary(["042024", "052024"])["itc_summary"])
 
 
 class TestComputeSummary2B(FrappeTestCase):
@@ -208,22 +148,97 @@ class TestComputeSummary2B(FrappeTestCase):
         save_gstr_2b(GSTIN, PERIOD_2B, data)
         cls.adapter = GSTR2BAdapter(GSTIN)
 
-    def test_sections_and_totals_are_consistent(self):
-        summary = self.adapter.compute_summary(PERIOD_2B)
-        sections = summary["sections"]
+    def test_sections_come_in_portal_order(self):
+        sections = self.adapter.compute_summary(PERIOD_2B)["sections"]
         self.assertTrue(sections)
-        self.assertEqual(summary["totals"]["documents"], sum(s["documents"] for s in sections))
-        for tax in TAX_FIELDS:
-            self.assertAlmostEqual(summary["totals"][tax], sum(s[tax] for s in sections))
         ranks = [section_rank(s["section"]) for s in sections]
         self.assertEqual(ranks, sorted(ranks))
 
-    def test_itc_buckets_partition_total_tax(self):
-        summary = self.adapter.compute_summary(PERIOD_2B)
-        itc = summary["itc_summary"]
-        self.assertIsNotNone(itc)
-        total_tax = sum(summary["totals"][t] for t in TAX_FIELDS)
-        self.assertAlmostEqual(itc["available"] + itc["not_available"] + itc["reversal"], total_tax)
+    def test_itc_cards_show_the_portals_itc_summary(self):
+        itc = self.adapter.compute_summary(PERIOD_2B)["itc_summary"]
+        self.assertEqual(itc, {"available": 3600.0, "not_available": 9000.0, "reversal": 3600.0})
+
+        documents = {"b2b": [{"ctin": GSTIN, "trdnm": "X", "inv": [{"inum": "I1"}]}]}
+        itcsumm = {
+            raw2b.ITC_AVAILABLE: {
+                raw2b.NON_REVERSE_CHARGE_SUPPLIES: {"igst": 1000, "cgst": 100, "sgst": 100, "cess": 10},
+                raw2b.ISD_SUPPLIES: {"igst": 2000},
+                raw2b.REVERSE_CHARGE_SUPPLIES: {"igst": 4000},
+                raw2b.IMPORTS: {"igst": 8000},
+                raw2b.CREDIT_NOTES: {"igst": 300},
+            },
+            raw2b.ITC_NOT_AVAILABLE: {
+                raw2b.NON_REVERSE_CHARGE_SUPPLIES: {"igst": 10},
+                raw2b.ISD_SUPPLIES: {"igst": 20},
+                raw2b.REVERSE_CHARGE_SUPPLIES: {"igst": 40},
+                raw2b.IMPORTS: {"igst": 80},
+                raw2b.CREDIT_NOTES: {"igst": 5},
+            },
+            raw2b.ITC_REVERSAL: {
+                raw2b.NON_REVERSE_CHARGE_SUPPLIES: {"igst": 7},
+                raw2b.ISD_SUPPLIES: {"igst": 70},
+                raw2b.REVERSE_CHARGE_SUPPLIES: {"igst": 700},
+                raw2b.IMPORTS: {"igst": 7000},
+                raw2b.CREDIT_NOTES: {"igst": 70000},
+            },
+            raw2b.ITC_REJECTED: {
+                raw2b.NON_REVERSE_CHARGE_SUPPLIES: {"igst": 100000},
+                raw2b.CREDIT_NOTES: {"igst": 200000},
+            },
+        }
+        store_raw_return_data(
+            GSTIN, ReturnType.GSTR2B.value, "042020", {raw2b.DOC_DATA: documents, raw2b.ITC_SUMMARY: itcsumm}
+        )
+        self.assertEqual(
+            self.adapter.compute_summary("042020")["itc_summary"],
+            {"available": 14905.0, "not_available": 70.0, "reversal": 7.0},
+        )
+
+        credit_notes_exceed_invoices = {
+            raw2b.ITC_AVAILABLE: {
+                raw2b.NON_REVERSE_CHARGE_SUPPLIES: {"igst": 100},
+                raw2b.CREDIT_NOTES: {"igst": 300},
+            }
+        }
+        store_raw_return_data(
+            GSTIN,
+            ReturnType.GSTR2B.value,
+            "052020",
+            {raw2b.DOC_DATA: documents, raw2b.ITC_SUMMARY: credit_notes_exceed_invoices},
+        )
+        self.assertEqual(
+            self.adapter.compute_summary("052020")["itc_summary"],
+            {"available": -200.0, "not_available": 0.0, "reversal": 0.0},
+        )
+        self.assertEqual(
+            self.adapter.get_range_summary(["042020", "052020"])["itc_summary"],
+            {"available": 14705.0, "not_available": 70.0, "reversal": 7.0},
+        )
+
+    def test_reversal_documents_get_their_own_section(self):
+        sections = {s["section"]: s for s in self.adapter.compute_summary(PERIOD_2B)["sections"]}
+        self.assertEqual(sections[ITC_REVERSAL_SECTION]["documents"], 4)
+
+    def test_a_reversal_only_month_still_has_a_summary(self):
+        raw = get_raw_return_data(GSTIN, ReturnType.GSTR2B.value, PERIOD_2B)
+        reversal_only = {**raw, raw2b.DOC_DATA: {raw2b.ITC_REVERSAL: raw[raw2b.DOC_DATA][raw2b.ITC_REVERSAL]}}
+        store_raw_return_data(GSTIN, ReturnType.GSTR2B.value, "062020", reversal_only)
+        sections = self.adapter.compute_summary("062020")["sections"]
+
+        self.assertEqual([s["section"] for s in sections], [ITC_REVERSAL_SECTION])
+
+    def test_reversal_amounts_add_up_from_rate_lines(self):
+        raw = get_raw_return_data(GSTIN, ReturnType.GSTR2B.value, PERIOD_2B)
+        supplier = raw[raw2b.DOC_DATA][raw2b.ITC_REVERSAL][0]["b2b"][0]
+        rate_line = {raw2b.TAX_RATE: 18, raw2b.TAXABLE_VALUE: 1000, raw2b.IGST: 180}
+        invoice = {**supplier[raw2b.INVOICES][0], raw2b.ITEMS: [rate_line, rate_line]}
+        reversal = {
+            raw2b.DOC_DATA: {raw2b.ITC_REVERSAL: [{"b2b": [{**supplier, raw2b.INVOICES: [invoice]}]}]}
+        }
+        store_raw_return_data(GSTIN, ReturnType.GSTR2B.value, "072020", reversal)
+        (section,) = self.adapter.compute_summary("072020")["sections"]
+
+        self.assertEqual((section["documents"], section["taxable_value"], section["igst"]), (1, 2000, 360))
 
     def test_build_and_store_then_get_summaries_round_trip(self):
         stored = self.adapter.build_and_store_summary(PERIOD_2B)
@@ -232,7 +247,7 @@ class TestComputeSummary2B(FrappeTestCase):
         summaries = self.adapter.get_summaries([PERIOD_2B])
         self.assertEqual(len(summaries), 1)
         self.assertEqual(summaries[0]["period"], PERIOD_2B)
-        self.assertEqual(summaries[0]["totals"], stored["totals"])
+        self.assertEqual(summaries[0]["sections"], stored["sections"])
 
     def test_sync_status_tracks_stored_payload(self):
         """Synced = raw stored; a month without raw is not synced."""
@@ -254,11 +269,10 @@ class TestComputeSummary2A(FrappeTestCase):
         save_gstr_2a(GSTIN, "032020", data.copy())
         cls.adapter = GSTR2AAdapter(GSTIN)
 
-    def test_summary_has_no_itc_and_is_consistent(self):
+    def test_summary_has_no_itc(self):
         summary = self.adapter.compute_summary("032020")
         self.assertTrue(summary["sections"])
         self.assertIsNone(summary["itc_summary"])
-        self.assertEqual(summary["totals"]["documents"], sum(s["documents"] for s in summary["sections"]))
 
     def test_summary_reads_gov_keyed_notes(self):
         """Stored 2A raw keeps the portal's cdn/cdna keys; they must land as CDNR/CDNRA."""
@@ -321,7 +335,7 @@ class TestRawReturnDataRoundTrip(FrappeTestCase):
 
         log_name = f"{ReturnType.GSTR2B.value}-{period}-{GSTIN}"
         summary = frappe.parse_json(frappe.db.get_value("GST Return Log", log_name, "section_summary"))
-        self.assertEqual(summary["totals"]["documents"], 2)
+        self.assertEqual(summary["sections"][0]["documents"], 2)
 
 
 class TestGSTReturnExportController(FrappeTestCase):
@@ -338,7 +352,7 @@ class TestGSTReturnExportController(FrappeTestCase):
 
     def test_get_summary_maps_return_type_and_delegates(self):
         """The UI label must reach the adapter as the enum value the logs are named with."""
-        fake = {"sections": [], "totals": {}, "itc_summary": None}
+        fake = {"sections": [], "itc_summary": None}
         with patch.object(ReturnAdapter, "get_range_summary", return_value=fake) as summary:
             result = self.doc.get_summary(GSTIN, "GSTR-2B", "2020-08-01", "2020-08-31")
 
