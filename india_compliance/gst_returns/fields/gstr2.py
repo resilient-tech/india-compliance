@@ -172,6 +172,7 @@ class RawField2b:
     ITC_REVERSAL = "itcrev"
     ITC_AVAILABLE = "itcavl"
     ITC_NOT_AVAILABLE = "itcunavl"
+    ITC_REJECTED = "itcRejected"
     NON_REVERSE_CHARGE_SUPPLIES = "nonrevsup"
     ISD_SUPPLIES = "isdsup"
     REVERSE_CHARGE_SUPPLIES = "revsup"

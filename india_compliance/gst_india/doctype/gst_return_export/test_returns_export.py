@@ -88,7 +88,7 @@ class TestRangeSummary(IntegrationTestCase):
                     "cess": 0.0,
                 }
             ],
-            "itc_summary": {"available": 18.0, "not_available": 0.0, "reversal": 0.0},
+            "itc_summary": {"available": 18.0, "not_available": 5.0, "reversal": 2.0},
         },
         {
             "period": "052024",
@@ -112,7 +112,7 @@ class TestRangeSummary(IntegrationTestCase):
                     "cess": 0.0,
                 },
             ],
-            "itc_summary": {"available": 12.6, "not_available": 0.0, "reversal": 0.0},
+            "itc_summary": {"available": -12.6, "not_available": 3.0, "reversal": 1.0},
         },
     ]
 
@@ -130,7 +130,9 @@ class TestRangeSummary(IntegrationTestCase):
         self.assertEqual([m["period"] for m in b2b["months"]], ["042024", "052024"])
 
     def test_itc_summed(self):
-        self.assertAlmostEqual(self._range(["042024", "052024"])["itc_summary"]["available"], 30.6)
+        itc = self._range(["042024", "052024"])["itc_summary"]
+        self.assertAlmostEqual(itc["available"], 5.4)
+        self.assertEqual((itc["not_available"], itc["reversal"]), (8.0, 3.0))
 
     def test_no_itc_when_no_month_has_it(self):
         stored = [{**summary, "itc_summary": None} for summary in self.STORED]
@@ -156,6 +158,63 @@ class TestComputeSummary2B(IntegrationTestCase):
         itc = self.adapter.compute_summary(PERIOD_2B)["itc_summary"]
         self.assertEqual(itc, {"available": 3600.0, "not_available": 9000.0, "reversal": 3600.0})
 
+        documents = {"b2b": [{"ctin": GSTIN, "trdnm": "X", "inv": [{"inum": "I1"}]}]}
+        itcsumm = {
+            raw2b.ITC_AVAILABLE: {
+                raw2b.NON_REVERSE_CHARGE_SUPPLIES: {"igst": 1000, "cgst": 100, "sgst": 100, "cess": 10},
+                raw2b.ISD_SUPPLIES: {"igst": 2000},
+                raw2b.REVERSE_CHARGE_SUPPLIES: {"igst": 4000},
+                raw2b.IMPORTS: {"igst": 8000},
+                raw2b.CREDIT_NOTES: {"igst": 300},
+            },
+            raw2b.ITC_NOT_AVAILABLE: {
+                raw2b.NON_REVERSE_CHARGE_SUPPLIES: {"igst": 10},
+                raw2b.ISD_SUPPLIES: {"igst": 20},
+                raw2b.REVERSE_CHARGE_SUPPLIES: {"igst": 40},
+                raw2b.IMPORTS: {"igst": 80},
+                raw2b.CREDIT_NOTES: {"igst": 5},
+            },
+            raw2b.ITC_REVERSAL: {
+                raw2b.NON_REVERSE_CHARGE_SUPPLIES: {"igst": 7},
+                raw2b.ISD_SUPPLIES: {"igst": 70},
+                raw2b.REVERSE_CHARGE_SUPPLIES: {"igst": 700},
+                raw2b.IMPORTS: {"igst": 7000},
+                raw2b.CREDIT_NOTES: {"igst": 70000},
+            },
+            raw2b.ITC_REJECTED: {
+                raw2b.NON_REVERSE_CHARGE_SUPPLIES: {"igst": 100000},
+                raw2b.CREDIT_NOTES: {"igst": 200000},
+            },
+        }
+        store_raw_return_data(
+            GSTIN, ReturnType.GSTR2B.value, "042020", {raw2b.DOC_DATA: documents, raw2b.ITC_SUMMARY: itcsumm}
+        )
+        self.assertEqual(
+            self.adapter.compute_summary("042020")["itc_summary"],
+            {"available": 14905.0, "not_available": 70.0, "reversal": 7.0},
+        )
+
+        credit_notes_exceed_invoices = {
+            raw2b.ITC_AVAILABLE: {
+                raw2b.NON_REVERSE_CHARGE_SUPPLIES: {"igst": 100},
+                raw2b.CREDIT_NOTES: {"igst": 300},
+            }
+        }
+        store_raw_return_data(
+            GSTIN,
+            ReturnType.GSTR2B.value,
+            "052020",
+            {raw2b.DOC_DATA: documents, raw2b.ITC_SUMMARY: credit_notes_exceed_invoices},
+        )
+        self.assertEqual(
+            self.adapter.compute_summary("052020")["itc_summary"],
+            {"available": -200.0, "not_available": 0.0, "reversal": 0.0},
+        )
+        self.assertEqual(
+            self.adapter.get_range_summary(["042020", "052020"])["itc_summary"],
+            {"available": 14705.0, "not_available": 70.0, "reversal": 7.0},
+        )
+
     def test_reversal_documents_get_their_own_section(self):
         sections = {s["section"]: s for s in self.adapter.compute_summary(PERIOD_2B)["sections"]}
         self.assertEqual(sections[ITC_REVERSAL_SECTION]["documents"], 4)
@@ -163,11 +222,8 @@ class TestComputeSummary2B(IntegrationTestCase):
     def test_a_reversal_only_month_still_has_a_summary(self):
         raw = get_raw_return_data(GSTIN, ReturnType.GSTR2B.value, PERIOD_2B)
         reversal_only = {**raw, raw2b.DOC_DATA: {raw2b.ITC_REVERSAL: raw[raw2b.DOC_DATA][raw2b.ITC_REVERSAL]}}
-        with patch(
-            "india_compliance.gst_india.doctype.gst_return_export.return_adapters.get_raw_return_data",
-            return_value=reversal_only,
-        ):
-            sections = self.adapter.compute_summary(PERIOD_2B)["sections"]
+        store_raw_return_data(GSTIN, ReturnType.GSTR2B.value, "062020", reversal_only)
+        sections = self.adapter.compute_summary("062020")["sections"]
 
         self.assertEqual([s["section"] for s in sections], [ITC_REVERSAL_SECTION])
 
@@ -179,11 +235,8 @@ class TestComputeSummary2B(IntegrationTestCase):
         reversal = {
             raw2b.DOC_DATA: {raw2b.ITC_REVERSAL: [{"b2b": [{**supplier, raw2b.INVOICES: [invoice]}]}]}
         }
-        with patch(
-            "india_compliance.gst_india.doctype.gst_return_export.return_adapters.get_raw_return_data",
-            return_value=reversal,
-        ):
-            (section,) = self.adapter.compute_summary(PERIOD_2B)["sections"]
+        store_raw_return_data(GSTIN, ReturnType.GSTR2B.value, "072020", reversal)
+        (section,) = self.adapter.compute_summary("072020")["sections"]
 
         self.assertEqual((section["documents"], section["taxable_value"], section["igst"]), (1, 2000, 360))
 
