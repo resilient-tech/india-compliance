@@ -200,22 +200,26 @@ class GSTR2BExporter(GovReturnExporter):
 
     # ITC summary sheet -> its block inside itcsumm; this "itcrev" is not the top-level one
     ITC_SHEET_BLOCK: ClassVar[dict] = {
-        "ITC Available": "itcavl",
-        "ITC not available": "itcunavl",
-        "ITC Reversal": "itcrev",
-        "ITC Rejected": "itcRejected",
+        "ITC Available": raw2b.ITC_AVAILABLE,
+        "ITC not available": raw2b.ITC_NOT_AVAILABLE,
+        "ITC Reversal": raw2b.ITC_REVERSAL,
+        "ITC Rejected": raw2b.ITC_REJECTED,
     }
     ITC_TAX_COLUMNS: ClassVar[dict] = {"igst": 4, "cgst": 5, "sgst": 6, "cess": 7}
 
     # section-total row label -> itcsumm bucket
     ITC_BUCKETS: ClassVar[dict] = {
-        "all other itc - supplies from registered persons other than reverse charge": "nonrevsup",
-        "all other itc - supplies from registered persons other than reverse charge (ims)": "nonrevsup",
-        "itc reversal on account of rule 37a": "nonrevsup",
-        "inward supplies from isd": "isdsup",
-        "inward supplies liable for reverse charge": "revsup",
-        "import of goods": "imports",
-        "others": "othersup",
+        "all other itc - supplies from registered persons other than reverse charge": (
+            raw2b.NON_REVERSE_CHARGE_SUPPLIES
+        ),
+        "all other itc - supplies from registered persons other than reverse charge (ims)": (
+            raw2b.NON_REVERSE_CHARGE_SUPPLIES
+        ),
+        "itc reversal on account of rule 37a": raw2b.NON_REVERSE_CHARGE_SUPPLIES,
+        "inward supplies from isd": raw2b.ISD_SUPPLIES,
+        "inward supplies liable for reverse charge": raw2b.REVERSE_CHARGE_SUPPLIES,
+        "import of goods": raw2b.IMPORTS,
+        "others": raw2b.CREDIT_NOTES,
     }
 
     # detail row label -> key inside the current bucket
