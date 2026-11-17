@@ -362,19 +362,16 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
 
     def test_import_history_lists_only_generated_2b_months(self):
         tool = frappe.get_doc("Purchase Reconciliation Tool")
-        tool.company = "_Test Indian Registered Company"
 
         for today, date_range, expected in (
-            ("2031-12-05", ["2031-11-01", "2031-11-30"], []),
-            ("2031-12-05", ["2031-10-15", "2031-11-30"], ["102031"]),
-            ("2031-12-20", ["2031-11-01", "2031-11-30"], ["112031"]),
+            ("2031-12-05", ["2031-11-01", "2031-11-30"], "No Pending Downloads"),
+            ("2031-12-05", ["2031-10-15", "2031-11-30"], [["102031", {"24AAQCA8719H1ZC"}]]),
+            ("2031-12-20", ["2031-11-01", "2031-11-30"], [["112031", {"24AAQCA8719H1ZC"}]]),
         ):
             with self.freeze_time(today):
                 history = tool.get_import_history("24AAQCA8719H1ZC", "GSTR2b", date_range)
 
-            pending = history["pending_download"]
-            periods = [period for period, _gstins in pending] if isinstance(pending, list) else []
-            self.assertEqual(periods, expected, f"today {today}, range {date_range}")
+            self.assertEqual(history["pending_download"], expected, f"today {today}, range {date_range}")
 
     def test_itc_claim_period_deferred_on_rejected_ims(self):
         """
