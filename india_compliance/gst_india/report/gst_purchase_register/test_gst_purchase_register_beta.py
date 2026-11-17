@@ -268,6 +268,14 @@ class TestGSTPurchaseRegisterITCJournalEntries(FrappeTestCase):
         self.assertIn(p2.name, voucher_nos)
         self.assertNotIn(p3.name, voucher_nos)
 
+        filters.date_range = ["2024-04-15", "2024-07-01"]
+        _, data = execute(filters)
+        voucher_nos = [row["voucher_no"] for row in data]
+
+        self.assertIn(p1.name, voucher_nos)
+        self.assertIn(p2.name, voucher_nos)
+        self.assertNotIn(p3.name, voucher_nos)
+
     def test_isd_recipient_invoice_is_in_purchase_register(self):
         _, data = execute(_filters(self.today))
 
