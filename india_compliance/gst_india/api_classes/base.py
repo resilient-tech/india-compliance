@@ -95,7 +95,6 @@ class BaseAPI:
                 _(
                     "Please set the relevant credentials for GSTIN {0} in GST Settings to use the {1} API"
                 ).format(gstin, self.API_NAME),
-                frappe.DoesNotExistError,
                 title=_("Credentials Unavailable"),
             )
 
