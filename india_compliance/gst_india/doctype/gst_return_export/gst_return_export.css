@@ -17,7 +17,7 @@ div[data-page-route="GST Return Export"] .section-body {
 }
 
 /* stylelint-disable-next-line selector-class-pattern -- air-datepicker's own class names */
-.datepicker--cells .datepicker--cell.-disabled-:not(.-selected-) {
+.air-datepicker-body--cells .air-datepicker-cell.-disabled-:not(.-selected-) {
 	color: var(--text-muted);
 	font-weight: normal;
 }
