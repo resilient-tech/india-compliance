@@ -19,16 +19,17 @@ from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.query_builder.functions import Length
 from frappe.utils import (
-    add_months,
     add_to_date,
     cint,
     cstr,
     get_datetime,
+    get_first_day,
     get_last_day,
     get_link_to_form,
     get_quarter_start,
     get_system_timezone,
     getdate,
+    month_diff,
 )
 from frappe.utils.background_jobs import get_queues_timeout
 from frappe.utils.data import get_timespan_date_range as _get_timespan_date_range
@@ -1413,13 +1414,8 @@ def get_periods_between_dates(
     if from_date > to_date:
         from_date, to_date = to_date, from_date
 
-    periods = []
-    current = from_date
-    while current <= to_date:
-        periods.append(current.strftime("%m%Y"))
-        current = add_months(current, 1)
-
-    return periods
+    month_count = month_diff(to_date, from_date)
+    return [get_first_day(from_date, d_months=offset).strftime("%m%Y") for offset in range(month_count)]
 
 
 def is_outward_stock_entry(doc):
