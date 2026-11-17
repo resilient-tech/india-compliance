@@ -96,6 +96,14 @@ class TestITCClaim(IntegrationTestCase):
         periods = get_periods_between_dates("2024-04-01", "2024-06-30")
         self.assertEqual(periods, ["042024", "052024", "062024"])
 
+        self.assertEqual(
+            get_periods_between_dates("2024-04-15", "2024-06-03"), ["042024", "052024", "062024"]
+        )
+        self.assertEqual(
+            get_periods_between_dates("2024-01-31", "2024-03-01"), ["012024", "022024", "032024"]
+        )
+        self.assertEqual(get_periods_between_dates("2023-12-31", "2024-01-01"), ["122023", "012024"])
+
     def test_get_periods_between_date_reversed(self):
         periods = get_periods_between_dates("2024-06-30", "2024-04-01")
         self.assertEqual(periods, ["042024", "052024", "062024"])

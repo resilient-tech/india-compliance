@@ -11,7 +11,7 @@ from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Max, Sum
-from frappe.utils import add_months, add_years, cint, format_date, getdate, rounded
+from frappe.utils import add_months, add_years, cint, format_date, get_first_day, getdate, rounded
 from pypika.terms import LiteralValue
 from rapidfuzz import fuzz, process
 
@@ -1477,6 +1477,9 @@ class BaseUtil:
 
         date_range = (getdate(date_range[0]), getdate(date_range[1]))
         end_date = min(date_range[1], BaseUtil._getdate(return_type))
+
+        if get_first_day(date_range[0]) > end_date:
+            return []
 
         # latest to oldest
         periods = tuple(
