@@ -74,7 +74,6 @@ class DocField:
     GEN_DATE_2B = "gen_date_2b"
 
     ITEMS = "items"
-    UNIQUE_KEY = "unique_key"
 
 
 class ItemField:

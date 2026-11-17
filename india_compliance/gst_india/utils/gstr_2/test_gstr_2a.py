@@ -291,6 +291,10 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
         rows = download("092021", "05-09-2021")
         self.assertEqual([row.bill_date for row in rows], [date(2020, 9, 7), date(2021, 9, 5)])
 
+        download("032021", "31-03-2021")
+        rows = download("042021", "01-04-2021")
+        self.assertEqual([row.bill_date for row in rows], [date(2021, 3, 31), date(2021, 4, 1)])
+
     def test_blanks_from_the_portal(self):
         from india_compliance.gst_india.utils.gstr_2.gstr_2a import GSTR2a
 
