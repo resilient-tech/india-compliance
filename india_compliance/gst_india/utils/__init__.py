@@ -807,7 +807,6 @@ def get_gst_accounts_by_type(company, account_type, throw=True):
         _("Could not retrieve GST Accounts of type {0} from GST Settings for Company {1}").format(
             frappe.bold(account_type), frappe.bold(company)
         ),
-        frappe.DoesNotExistError,
     )
 
 
