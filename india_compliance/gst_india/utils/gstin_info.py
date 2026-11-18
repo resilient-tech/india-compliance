@@ -340,18 +340,13 @@ def fetch_transporter_id_status(transporter_id, doc=None, throw=True):
 ####################################################################################################
 
 
-def get_gstr_1_return_status(company, gstin, period, year_increment=0):
+def get_gstr_1_return_status(company, gstin, period):
     """Returns Returns-info for the given period"""
-    fy = get_fy(period, year_increment=year_increment)
-    e_filed_list = update_gstr_returns_info(company, gstin, fy)
+    e_filed_list = update_gstr_returns_info(company, gstin, get_fy(period))
 
     for info in e_filed_list:
         if info["rtntype"] == "GSTR1" and info["ret_prd"] == period:
             return info["status"]
-
-    # late filing possibility (limitation: only checks for the next FY: good enough)
-    if not year_increment and get_previous_period_fy() != fy:
-        get_gstr_1_return_status(company, gstin, period, year_increment=1)
 
     return "Not Filed"
 
@@ -498,12 +493,10 @@ def get_filing_preference(period, response):
 ####################################################################################################
 
 
-def get_fy(period, year_increment=0):
+def get_fy(period):
     month, year = period[:2], period[2:]
-    year = str(int(year) + year_increment)
 
-    # For the month of March, it's filed in the next FY
-    if int(month) < 3:
+    if int(month) < 4:
         return f"{int(year) - 1}-{year[-2:]}"
     else:
         return f"{year}-{int(year[-2:]) + 1}"
