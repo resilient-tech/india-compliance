@@ -6,7 +6,11 @@ import responses
 from frappe.tests.utils import FrappeTestCase, change_settings
 from responses import matchers
 
-from india_compliance.gst_india.utils.gstin_info import get_gstin_info
+from india_compliance.gst_india.utils.gstin_info import (
+    get_fy,
+    get_gstin_info,
+    get_gstr_1_return_status,
+)
 
 
 class TestGstinInfo(unittest.TestCase):
@@ -252,6 +256,24 @@ class TestGstinInfo(unittest.TestCase):
         )
         gstin_info = get_gstin_info(self.gstin)
         self.assertEqual(gstin_info.business_name, "Nalin Vora")
+
+    def test_march_gstr_1_is_found_in_its_own_financial_year(self):
+        """March GSTR-1 shows as Not Filed if looked up in the next financial year"""
+        self.assertEqual(get_fy("022026"), "2025-26")
+        self.assertEqual(get_fy("032026"), "2025-26")
+        self.assertEqual(get_fy("042026"), "2026-27")
+
+        e_filed_lists = {
+            "2025-26": [{"rtntype": "GSTR1", "ret_prd": "032026", "status": "Filed"}],
+            "2026-27": [{"rtntype": "GSTR1", "ret_prd": "042026", "status": "Filed"}],
+        }
+        with patch(
+            "india_compliance.gst_india.utils.gstin_info.update_gstr_returns_info",
+            side_effect=lambda company, gstin, fy: e_filed_lists[fy],
+        ):
+            status = get_gstr_1_return_status("_Test Indian Registered Company", self.gstin, "032026")
+
+        self.assertEqual(status, "Filed")
 
     def test_tcs_gstin_info(self):
         self.mock_public_api.return_value = Mock()
