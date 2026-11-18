@@ -74,7 +74,7 @@ class GSTR:
 
         if not suppliers:
             self.handle_missing_transactions()
-            return 0
+            return
 
         transactions = self.get_all_transactions(suppliers)
         self.update_gstins()
@@ -99,7 +99,6 @@ class GSTR:
                 self.existing_transaction.pop(transaction.get("unique_key"))
 
         self.handle_missing_transactions()
-        return total_transactions
 
     def get_all_transactions(self, suppliers):
         get_details, docs_key, has_items = self.SECTIONS[self.category]
