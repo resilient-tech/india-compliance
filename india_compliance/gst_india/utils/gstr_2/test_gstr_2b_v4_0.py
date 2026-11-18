@@ -658,24 +658,7 @@ class TestEmptyPeriodProgress(FrappeTestCase):
         self.assertEqual(message, {"current_progress": 100, "return_period": "032020"})
 
 
-<<<<<<< HEAD
-class TestGetUniqueKey(FrappeTestCase):
-    def test_null_gstin_matches_empty_gstin(self):
-        # DB row with NULL supplier_gstin -> None, vs incoming with field absent
-        existing = frappe._dict(supplier_gstin=None, bill_no="2566282")
-        incoming = frappe._dict(bill_no="2566282")
-        self.assertEqual(get_unique_key(existing), get_unique_key(incoming))
-        self.assertEqual(get_unique_key(existing), "-2566282-")
-
-    def test_normal_gstin(self):
-        t = frappe._dict(supplier_gstin="01AABCE2207R1Z5", bill_no="INV-1")
-        self.assertEqual(get_unique_key(t), "01AABCE2207R1Z5-INV-1-")
-
-
 class TestMultiFileRawMerge(FrappeTestCase):
-=======
-class TestMultiFileRawMerge(IntegrationTestCase):
->>>>>>> 95c3ee3 (fix: identify inward supplies by bill number within its financial year (#4975))
     def test_docs_concat_summary_comes_with_the_first_file(self):
         combined = {}
         file1 = {"itcsumm": {"itcavl": 100}, "docdata": {"b2b": [{"inum": "1"}]}}
