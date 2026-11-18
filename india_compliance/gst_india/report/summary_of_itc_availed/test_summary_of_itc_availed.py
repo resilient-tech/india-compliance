@@ -53,6 +53,14 @@ class TestSummaryOfITCAvailed(IntegrationTestCase):
         boe.items[0].gst_hsn_code = "730419"
         boe.bill_of_entry_no = "BOE-ITC-001"
         boe.bill_of_entry_date = getdate()
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Miscellaneous Expenses - _TIRC",
+                "tax_amount": 500,
+            },
+        )
         boe.save()
         boe.submit()
 

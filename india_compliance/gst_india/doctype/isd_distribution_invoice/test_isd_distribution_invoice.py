@@ -23,7 +23,11 @@ from india_compliance.gst_india.utils.isd import (
     get_isd_autofill_values,
     sum_row_tax_by_type,
 )
-from india_compliance.gst_india.utils.tests import create_purchase_invoice, create_sales_invoice
+from india_compliance.gst_india.utils.tests import (
+    THREE_DECIMAL_NUMBER_FORMAT,
+    create_purchase_invoice,
+    create_sales_invoice,
+)
 
 # On IntegrationTestCase, the doctype test records and all link-field test record dependencies are
 # recursively loaded. The ISD fixtures below are built at runtime, so keep them out of that list.
@@ -1239,6 +1243,13 @@ class IntegrationTestISDDistributionInvoice(IntegrationTestCase):
             places=2,
         )
         self.assertTrue(all(row.company_gstin == RECIPIENT_GSTIN for row in recipient_rows))
+
+        with change_settings("System Settings", THREE_DECIMAL_NUMBER_FORMAT):
+            doc = self._full_distribution(pi=make_isd_pi(self.isd_address.name), branch=1, total=7)
+            doc.insert()
+
+        source_row = doc.source_items[0]
+        self.assertEqual((source_row.distributed_cgst, source_row.distributed_sgst), (128.57, 128.57))
 
     @change_settings("GST Settings", {"auto_create_isd_recipient_invoice": 1})
     def test_ineligible_distribution_gl_entries(self):

@@ -12,7 +12,6 @@ from operator import add
 
 import frappe
 from frappe import _
-from frappe.model.meta import get_field_precision
 from frappe.query_builder.functions import Coalesce, IfNull, Sum
 from frappe.utils import cint, flt, get_link_to_form, getdate
 
@@ -130,9 +129,8 @@ def calculate_distribution(doc):
     inter_state = is_inter_state_distribution(doc)
     distribute_expense = distribute_expense_with_isd_credit()
 
-    meta = frappe.get_meta("ISD Source Item")
-    precision = get_field_precision(meta.get_field("distributed_igst"))
-    expense_precision = get_field_precision(meta.get_field("distributed_expense"))
+    precision = doc.precision("distributed_igst", "source_items")
+    expense_precision = doc.precision("distributed_expense", "source_items")
 
     for row in doc.source_items or []:
         credit = get_row_itc(row, True, precision, ratio)

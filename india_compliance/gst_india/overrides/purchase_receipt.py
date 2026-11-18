@@ -1,7 +1,8 @@
 import frappe
 
 from india_compliance.gst_india.overrides.purchase_invoice import (
-    set_ineligibility_reason,
+    get_ineligibility_reason,
+    show_ineligibility_alert,
 )
 from india_compliance.gst_india.overrides.transaction import (
     ignore_gst_validations,
@@ -31,8 +32,6 @@ def onload(doc, method=None):
     ):
         return
 
-    set_ineligibility_reason(doc, show_alert=False)
-
     # Load e-waybill info if applicable
     if not doc.get("ewaybill"):
         return
@@ -52,4 +51,4 @@ def validate(doc, method=None):
     if validate_transaction(doc) is False:
         return
 
-    set_ineligibility_reason(doc)
+    show_ineligibility_alert(get_ineligibility_reason(doc))

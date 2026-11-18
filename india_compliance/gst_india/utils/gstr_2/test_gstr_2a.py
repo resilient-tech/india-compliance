@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from unittest.mock import Mock, patch
 
 import frappe
@@ -6,8 +6,11 @@ from frappe import parse_json, read_file
 from frappe.tests import IntegrationTestCase
 from frappe.utils import get_datetime
 
+from india_compliance.gst_india.api_classes.taxpayer_base import FilesAPI
+from india_compliance.gst_india.api_classes.taxpayer_returns import ReturnsAPI
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     get_raw_return_data,
+    store_raw_return_data,
 )
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import (
@@ -16,6 +19,7 @@ from india_compliance.gst_india.utils.gstr_2 import (
     download_gstr_2a,
     save_gstr_2a,
 )
+from india_compliance.gst_india.utils.gstr_utils import _download_queued_request
 
 
 class TestGSTRMixin:
@@ -69,7 +73,7 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
             else:
                 return frappe._dict(error_type="no_docs_found")
 
-        def mock_save_gstr_func(gstin, return_type, return_period, json_data):
+        def mock_save_gstr_func(gstin, return_type, return_period, json_data, skip=()):
             self.assertEqual(gstin, self.gstin)
             self.assertEqual(return_period, self.return_period)
             self.assertTrue("cdnr" in json_data)
@@ -256,6 +260,45 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
             doc,
         )
 
+    def test_bill_number_identifies_an_invoice_within_its_financial_year(self):
+        self.addCleanup(frappe.db.delete, self.doctype, {"company_gstin": self.gstin, "bill_no": "FY-NO-1"})
+
+        def download(period, bill_date):
+            supplier = {
+                "ctin": "01AAAAP1208Q1ZS",
+                "flprdr1": datetime.strptime(period, "%m%Y").strftime("%b-%y"),
+                "inv": [
+                    {
+                        "inum": "FY-NO-1",
+                        "idt": bill_date,
+                        "val": 118,
+                        "itms": [{"num": 1, "itm_det": {"rt": 18, "txval": 100, "camt": 9, "samt": 9}}],
+                    }
+                ],
+            }
+            save_gstr_2a(
+                self.gstin, period, frappe._dict({"gstin": self.gstin, "fp": period, "b2b": [supplier]})
+            )
+            return frappe.get_all(
+                self.doctype,
+                filters={"company_gstin": self.gstin, "bill_no": "FY-NO-1"},
+                fields=["name", "bill_date"],
+                order_by="bill_date",
+            )
+
+        (original,) = download("092020", "05-09-2020")
+        (corrected,) = download("092020", "07-09-2020")
+
+        self.assertEqual(corrected.name, original.name)
+        self.assertEqual(corrected.bill_date, date(2020, 9, 7))
+
+        rows = download("092021", "05-09-2021")
+        self.assertEqual([row.bill_date for row in rows], [date(2020, 9, 7), date(2021, 9, 5)])
+
+        download("032021", "31-03-2021")
+        rows = download("042021", "01-04-2021")
+        self.assertEqual([row.bill_date for row in rows], [date(2021, 3, 31), date(2021, 4, 1)])
+
     def test_blanks_from_the_portal(self):
         from india_compliance.gst_india.utils.gstr_2.gstr_2a import GSTR2a
 
@@ -294,6 +337,137 @@ class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
         )
 
         self.assertTrue(frappe.db.exists(self.doctype, doc.name))
+
+    @patch("india_compliance.gst_india.utils.gstr_2.GSTR2aAPI")
+    def test_failed_category_keeps_unfiled_documents(self, gstr_2a_api):
+        period = "092020"
+        self.addCleanup(
+            frappe.db.delete,
+            self.log_doctype,
+            {"gstin": self.gstin, "return_type": ReturnType.GSTR2A.value, "return_period": period},
+        )
+        supplier = {
+            "ctin": "01AAAAP1208Q1ZS",
+            "flprdr1": "Sep-20",
+            "inv": [{"inum": "UNFILED-2", "idt": "24-09-2020", "val": 100}],
+        }
+
+        responses = {"B2B": frappe._dict(b2b=[supplier]), "ECOM": frappe._dict(error_type="not_applicable")}
+        gstr_2a_api.return_value.get_data.side_effect = lambda action, return_period: responses.get(
+            action, frappe._dict(error_type="no_docs_found")
+        )
+
+        download_gstr_2a(self.gstin, [period])
+        doc = self.get_doc(GSTRCategory.B2B, bill_no="UNFILED-2")
+        self.addCleanup(frappe.delete_doc, self.doctype, doc.name, ignore_permissions=True)
+
+        responses["B2B"] = frappe._dict(error_type="queued")
+        with self.assertRaisesRegex(frappe.ValidationError, "GSTR-2A B2B data"):
+            download_gstr_2a(self.gstin, [period])
+
+        self.assertTrue(frappe.db.exists(self.doctype, doc.name))
+
+    @patch("india_compliance.gst_india.utils.gstr_2.GSTR2aAPI")
+    def test_failed_category_leaves_the_month_to_download(self, gstr_2a_api):
+        downloaded, failed = "102020", "112020"
+        logs = {"gstin": self.gstin, "return_type": ReturnType.GSTR2A.value}
+        self.addCleanup(
+            frappe.db.delete, self.log_doctype, {**logs, "return_period": ("in", (downloaded, failed))}
+        )
+
+        responses = {
+            "B2BA": frappe._dict(token=frappe.generate_hash(length=10), est=1),
+            "CDN": frappe._dict(error_type="queued"),
+        }
+        gstr_2a_api.return_value.get_data.side_effect = lambda action, return_period: (
+            responses if return_period == failed else {}
+        ).get(action, frappe._dict(error_type="no_docs_found"))
+
+        with self.assertRaisesRegex(frappe.ValidationError, "GSTR-2A CDNR data"):
+            download_gstr_2a(self.gstin, [downloaded, failed])
+
+        self.assertTrue(frappe.db.exists(self.log_doctype, {**logs, "return_period": downloaded}))
+        self.assertFalse(frappe.db.exists(self.log_doctype, {**logs, "return_period": failed}))
+
+    @patch("india_compliance.gst_india.utils.gstr_2.GSTR2aAPI")
+    def test_queued_category_keeps_other_categories(self, gstr_2a_api):
+        period = "102020"
+        supplier = {
+            "ctin": "01AAAAP1208Q1ZS",
+            "flprdr1": "Oct-20",
+            "nt": [{"ntty": "C", "nt_num": "QUEUED-CN-1", "nt_dt": "24-10-2020", "val": 100}],
+        }
+        new_supplier = {**supplier, "nt": [{**supplier["nt"][0], "nt_num": "QUEUED-CN-2"}]}
+        self.addCleanup(
+            frappe.db.delete, self.doctype, {"company_gstin": self.gstin, "sup_return_period": period}
+        )
+
+        responses = {"CDN": frappe._dict(cdn=[supplier]), "TCS": frappe._dict(tcs=self.test_data.tcs)}
+        gstr_2a_api.return_value.get_data.side_effect = lambda action, return_period: responses.get(
+            action, frappe._dict(error_type="no_docs_found")
+        )
+        download_gstr_2a(self.gstin, [period])
+        cdn = self.get_doc(GSTRCategory.CDNR, bill_no="QUEUED-CN-1")
+        tcs = self.get_doc(GSTRCategory.TCS, sup_return_period=period)
+
+        responses["CDN"] = frappe._dict(token=frappe.generate_hash(length=10), est=1)
+        download_gstr_2a(self.gstin, [period])
+        self.assertTrue(frappe.db.exists(self.doctype, cdn.name))
+        self.assertEqual(
+            get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period)["cdn"][0]["nt"][0]["nt_num"],
+            "QUEUED-CN-1",
+        )
+
+        isda = frappe.get_doc(
+            {
+                "doctype": self.doctype,
+                "company_gstin": self.gstin,
+                "classification": GSTRCategory.ISDA.value,
+                "sup_return_period": period,
+            }
+        ).insert(ignore_permissions=True)
+        store_raw_return_data(
+            self.gstin, ReturnType.GSTR2A.value, period, {"isda": self.test_data.isd}, overwrite=False
+        )
+
+        log = self.retry_queued_cdn(period, frappe._dict(urls=[]), frappe._dict(cdn=[new_supplier]))
+        raw = get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period)
+        new_cdn = self.get_doc(GSTRCategory.CDNR, bill_no="QUEUED-CN-2")
+        self.assertFalse(frappe.db.exists(self.doctype, cdn.name))
+        self.assertTrue(frappe.db.exists(self.doctype, tcs.name))
+        self.assertTrue(frappe.db.exists(self.doctype, isda.name))
+        self.assertEqual(raw["cdn"][0]["nt"][0]["nt_num"], "QUEUED-CN-2")
+        self.assertLessEqual({"cdn", "tcs", "isda"}, set(raw))
+
+        log.db_set("request_id", frappe.generate_hash(length=10))
+        log = self.retry_queued_cdn(period, frappe._dict(error_type="no_docs_found"))
+        raw = get_raw_return_data(self.gstin, ReturnType.GSTR2A.value, period)
+        self.assertFalse(frappe.db.exists(self.doctype, new_cdn.name))
+        self.assertTrue(frappe.db.exists(self.doctype, tcs.name))
+        self.assertTrue(frappe.db.exists(self.doctype, isda.name))
+        self.assertNotIn("cdn", raw)
+        self.assertLessEqual({"tcs", "isda"}, set(raw))
+        self.assertFalse(log.request_id)
+        self.assertTrue(log.data_not_found)
+
+    def retry_queued_cdn(self, period, portal_response, files=None):
+        log = frappe.get_last_doc(
+            self.log_doctype,
+            filters={
+                "gstin": self.gstin,
+                "return_type": ReturnType.GSTR2A.value,
+                "return_period": period,
+                "classification": GSTRCategory.CDNR.value,
+            },
+        )
+        with (
+            patch.object(ReturnsAPI, "__init__", return_value=None),
+            patch.object(ReturnsAPI, "get", return_value=portal_response),
+            patch.object(FilesAPI, "get_all", return_value=files),
+        ):
+            _download_queued_request(log)
+
+        return log.reload()
 
     def test_gstr2a_isd(self):
         doc = self.get_doc(GSTRCategory.ISD)

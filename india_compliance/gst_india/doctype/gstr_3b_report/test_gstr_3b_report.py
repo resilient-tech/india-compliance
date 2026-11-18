@@ -165,10 +165,10 @@ class TestGSTR3BReport(IntegrationTestCase):
                             "ty": "ISD",
                         },
                         {
-                            "camt": 40.5,
+                            "camt": 49.5,
                             "csamt": 0.0,
                             "iamt": 0.0,
-                            "samt": 40.5,
+                            "samt": 49.5,
                             "ty": "OTH",
                         },
                     ],
@@ -188,7 +188,7 @@ class TestGSTR3BReport(IntegrationTestCase):
                             "ty": "OTH",
                         },
                     ],
-                    "itc_net": {"camt": 40.5, "csamt": 0.0, "iamt": 0.0, "samt": 40.5},
+                    "itc_net": {"camt": 49.5, "csamt": 0.0, "iamt": 0.0, "samt": 49.5},
                     "itc_rev": [
                         {
                             "camt": 9.0,
@@ -260,6 +260,14 @@ class TestGSTR3BReport(IntegrationTestCase):
         boe.items[0].customs_duty = 100
         boe.bill_of_entry_no = frappe.generate_hash(length=5)
         boe.bill_of_entry_date = getdate()
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Miscellaneous Expenses - _TIRC",
+                "tax_amount": 500,
+            },
+        )
         boe.save()
         boe.submit()
 

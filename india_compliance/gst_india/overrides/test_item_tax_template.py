@@ -76,6 +76,7 @@ def create_item_tax_template(**data):
             filters={
                 "company": doc.company,
                 "account_type": "Tax",
+                "is_group": 0,
             },
             pluck="name",
         )

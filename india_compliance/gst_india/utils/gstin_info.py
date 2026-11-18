@@ -42,8 +42,8 @@ GST_CATEGORIES = {
 TRADE_NAME_BUSINESS_TYPES = frozenset(("Proprietorship", "Hindu Undivided Family"))
 
 # order of address keys is important
-KEYS_TO_SANITIZE = ("dst", "stcd", "pncd", "bno", "flno", "bnm", "st", "loc", "city")
-KEYS_TO_FILTER_DUPLICATES = frozenset(("dst", "bnm", "st", "loc", "city"))
+KEYS_TO_SANITIZE = ("dst", "stcd", "pncd", "bno", "flno", "bnm", "st", "loc", "city", "landMark", "locality")
+KEYS_TO_FILTER_DUPLICATES = frozenset(("dst", "bnm", "st", "loc", "city", "landMark", "locality"))
 CHARACTERS_TO_STRIP = f"{whitespace},"
 
 
@@ -104,7 +104,7 @@ def _get_gstin_info(gstin, *, doc=None, throw_error=True):
 
     if permanent_address := response.get("pradr"):
         # permanent address will be at the first position
-        all_addresses = [permanent_address, *response.get("adadr", [])]
+        all_addresses = [permanent_address, *(response.get("adadr") or [])]
         gstin_info.all_addresses = list(map(_get_address, all_addresses))
         gstin_info.permanent_address = gstin_info.all_addresses[0]
 
@@ -147,7 +147,7 @@ def get_archived_gstin_info(gstin):
 def _get_address(address):
     """:param address: dict of address with a key of 'addr' and 'ntr'"""
 
-    address = address.get("addr", {})
+    address = address.get("addr") or {}
     address_lines = _extract_address_lines(address)
     return {
         "address_line1": address_lines[0],
@@ -164,7 +164,7 @@ def _extract_address_lines(address):
     unique_values = set()
 
     for key in KEYS_TO_SANITIZE:
-        value = address.get(key, "").strip(CHARACTERS_TO_STRIP)
+        value = (address.get(key) or "").strip(CHARACTERS_TO_STRIP)
 
         if key not in KEYS_TO_FILTER_DUPLICATES:
             address[key] = value
@@ -183,14 +183,33 @@ def _extract_address_lines(address):
 
     address_line2 = ", ".join(titlecase(value) for key in ("loc", "city") if (value := address.get(key)))
 
-    if not (street := address.get("st")):
-        return address_line1, address_line2
-
-    street = titlecase(street)
+    street = titlecase(address.get("st"))
+    line2 = []
     if len(address_line1) > len(address_line2):
-        address_line2 = f"{street}, {address_line2}"
+        line2.append(street)
     else:
-        address_line1 = f"{address_line1}, {street}"
+        address_line1 = ", ".join(part for part in (address_line1, street) if part)
+
+    address_parts = {
+        part.strip().lower() for part in f"{address_line1}, {street}, {address_line2}".split(",")
+    }
+    line2_length = cint(frappe.get_meta("Address").get_field("address_line2").length) or frappe.db.VARCHAR_LEN
+
+    for key in ("landMark", "locality"):
+        new_parts = []
+        for part in titlecase(address.get(key)).split(","):
+            part = part.strip()
+            if part and part.lower() not in address_parts:
+                new_parts.append(part)
+
+        value = ", ".join(new_parts)
+        line2_with_value = ", ".join(part for part in (*line2, value, address_line2) if part)
+
+        if value and len(line2_with_value) <= line2_length:
+            line2.append(value)
+            address_parts.update(part.lower() for part in new_parts)
+
+    address_line2 = ", ".join(part for part in (*line2, address_line2) if part)
 
     return address_line1, address_line2
 
@@ -321,18 +340,13 @@ def fetch_transporter_id_status(transporter_id, doc=None, throw=True):
 ####################################################################################################
 
 
-def get_gstr_1_return_status(company, gstin, period, year_increment=0):
+def get_gstr_1_return_status(company, gstin, period):
     """Returns Returns-info for the given period"""
-    fy = get_fy(period, year_increment=year_increment)
-    e_filed_list = update_gstr_returns_info(company, gstin, fy)
+    e_filed_list = update_gstr_returns_info(company, gstin, get_fy(period))
 
     for info in e_filed_list:
         if info["rtntype"] == "GSTR1" and info["ret_prd"] == period:
             return info["status"]
-
-    # late filing possibility (limitation: only checks for the next FY: good enough)
-    if not year_increment and get_previous_period_fy() != fy:
-        get_gstr_1_return_status(company, gstin, period, year_increment=1)
 
     return "Not Filed"
 
@@ -479,12 +493,10 @@ def get_filing_preference(period, response):
 ####################################################################################################
 
 
-def get_fy(period, year_increment=0):
+def get_fy(period):
     month, year = period[:2], period[2:]
-    year = str(int(year) + year_increment)
 
-    # For the month of March, it's filed in the next FY
-    if int(month) < 3:
+    if int(month) < 4:
         return f"{int(year) - 1}-{year[-2:]}"
     else:
         return f"{year}-{int(year[-2:]) + 1}"

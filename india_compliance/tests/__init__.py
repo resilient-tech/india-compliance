@@ -48,12 +48,13 @@ def before_tests():
 
 
 def set_default_settings_for_tests():
-    # e.g. set "All Supplier Groups" as the default Supplier Group
-    for key in ("Supplier Group", "Item Group", "Territory"):
+    # e.g. set "All Item Groups" as the default Item Group
+    for key in ("Item Group", "Territory"):
         frappe.db.set_default(frappe.scrub(key), get_root_of(key))
 
     # TODO: need to update for other doctypes as well
     frappe.db.set_default("customer_group", "Individual")
+    frappe.db.set_default("supplier_group", "Services")
 
     # Allow Negative Stock
     frappe.db.set_single_value("Stock Settings", "allow_negative_stock", 1)

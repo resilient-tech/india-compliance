@@ -21,6 +21,7 @@ from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     update_regional_gl_entries,
 )
+from frappe.desk.form.load import run_onload
 from frappe.model.mapper import get_mapped_doc
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_days, add_to_date, flt, getdate, now_datetime, today
@@ -48,6 +49,7 @@ from india_compliance.gst_india.utils.e_waybill import (
 )
 from india_compliance.gst_india.utils.jinja import get_gst_breakup
 from india_compliance.gst_india.utils.tests import (
+    THREE_DECIMAL_NUMBER_FORMAT,
     TRANSPORTER_DETAILS,
     _append_taxes,
     append_item,
@@ -757,6 +759,38 @@ class TestTransaction(IntegrationTestCase):
             doc.save,
         )
 
+    def test_gst_breakup_table_in_print(self):
+        if self.doctype != "Sales Invoice":
+            return
+
+        doc = create_transaction(**self.transaction_details)
+        self.assertIsNone(frappe.get_doc(doc.doctype, doc.name).as_dict().get("gst_breakup_table"))
+
+        run_onload(doc)
+        gst_breakup_table = doc.get_onload()["ic_virtual_fields"]["gst_breakup_table"]
+        html = frappe.get_print(doc.doctype, doc.name, print_format="GST Tax Invoice", doc=doc)
+
+        self.assertIn(gst_breakup_table, html)
+
+    def test_ecommerce_supply_type_virtual_field(self):
+        if self.doctype != "Sales Invoice":
+            return
+
+        doc = create_transaction(
+            **self.transaction_details, ecommerce_gstin="29AABCF8078M1C8", do_not_submit=True
+        )
+        run_onload(doc)
+        self.assertEqual(
+            doc.get_onload()["ic_virtual_fields"]["ecommerce_supply_type"],
+            "Liable to collect tax u/s 52(TCS)",
+        )
+
+        doc.is_reverse_charge = 1
+        run_onload(doc)
+        self.assertEqual(
+            doc.get_onload()["ic_virtual_fields"]["ecommerce_supply_type"], "Liable to pay tax u/s 9(5)"
+        )
+
     def test_taxable_value_with_charges(self):
         if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
             return
@@ -780,6 +814,25 @@ class TestTransaction(IntegrationTestCase):
         doc.insert()
 
         self.assertDocumentEqual({"taxable_value": 120}, doc.items[0])  # 100 + 20
+
+        with change_settings("System Settings", THREE_DECIMAL_NUMBER_FORMAT):
+            doc = create_transaction(**self.transaction_details, do_not_save=True)
+            append_item(doc)
+            append_item(doc)
+            doc.append(
+                "taxes",
+                {
+                    "charge_type": "Actual",
+                    "account_head": "Freight and Forwarding Charges - _TIRC",
+                    "description": "Freight",
+                    "tax_amount": 10,
+                    "cost_center": "Main - _TIRC",
+                },
+            )
+            _append_taxes(doc, ("CGST", "SGST"), charge_type="On Previous Row Total", row_id=1)
+            doc.insert()
+
+        self.assertEqual([flt(item.taxable_value, 3) for item in doc.items], [103.33, 103.33, 103.34])
 
     def test_taxable_value_with_charges_after_tax(self):
         if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
@@ -1225,6 +1278,16 @@ class TestTransaction(IntegrationTestCase):
 
         self.assertDocumentEqual({"taxable_value": 62.51, "cgst_amount": 5.63}, doc.items[0])
 
+        with change_settings("System Settings", THREE_DECIMAL_NUMBER_FORMAT):
+            doc = create_transaction(
+                **self.transaction_details, rate=10.01, is_in_state=True, do_not_save=True
+            )
+            append_item(doc, frappe._dict(rate=10.01))
+            append_item(doc, frappe._dict(rate=10.01))
+            doc.save()
+
+        self.assertEqual([item.cgst_amount for item in doc.items], [0.9, 0.9, 0.9])
+
     def test_rounding_gst_details_across_many_items(self):
         """
         Rounding loss of each item must be diffused across items. It used to accumulate
@@ -1240,7 +1303,7 @@ class TestTransaction(IntegrationTestCase):
 
         doc.save().reload()
 
-        precision = ItemGSTDetails.get_tax_amount_precisions(self.doctype).get("cgst_amount")
+        precision = ItemGSTDetails.get_tax_amount_precisions(self.doctype, doc.company).get("cgst_amount")
         allowed_difference = 10**-precision
 
         for tax_row in doc.taxes:

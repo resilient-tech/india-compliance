@@ -14,6 +14,7 @@ from india_compliance.gst_india.overrides.transaction import (
     _validate_hsn_codes,
     ignore_gst_validations,
     sync_address_dependent_fields_after_submit,
+    validate_mandatory_fields,
     validate_transaction,
 )
 from india_compliance.gst_india.utils import (
@@ -312,26 +313,46 @@ def get_tax_amount(taxes, gst_tax_type):
     )
 
 
-def set_ineligibility_reason(doc, show_alert=True):
-    doc.ineligibility_reason = ""
+def set_ineligibility_reason(doc):
+    doc.ineligibility_reason = get_ineligibility_reason(doc)
+    show_ineligibility_alert(doc.ineligibility_reason)
+
+
+def show_ineligibility_alert(ineligibility_reason):
+    if not ineligibility_reason:
+        return
+
+    frappe.msgprint(
+        _("ITC Ineligible: {0}").format(frappe.bold(ineligibility_reason)),
+        alert=True,
+        indicator="orange",
+    )
+
+
+def get_ineligibility_reason(doc):
+    if ignore_gst_validations(doc):
+        return ""
+
+    if (
+        validate_mandatory_fields(doc, ("company_gstin", "place_of_supply", "gst_category"), throw=False)
+        is False
+    ):
+        return ""
+
+    ineligibility_reason = ""
 
     for item in doc.items:
         if item.is_ineligible_for_itc:
-            doc.ineligibility_reason = "Ineligible As Per Section 17(5)"
+            ineligibility_reason = "Ineligible As Per Section 17(5)"
             break
 
     if (
         doc.place_of_supply not in ["96-Other Countries", "97-Other Territory"]
         and doc.place_of_supply[:2] != doc.company_gstin[:2]
     ):
-        doc.ineligibility_reason = "ITC restricted due to PoS rules"
+        ineligibility_reason = "ITC restricted due to PoS rules"
 
-    if show_alert and doc.ineligibility_reason:
-        frappe.msgprint(
-            _("ITC Ineligible: {0}").format(frappe.bold(doc.ineligibility_reason)),
-            alert=True,
-            indicator="orange",
-        )
+    return ineligibility_reason
 
 
 def validate_reverse_charge(doc):

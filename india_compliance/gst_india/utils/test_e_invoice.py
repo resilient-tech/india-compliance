@@ -18,7 +18,7 @@ from india_compliance.gst_india.overrides.test_transaction import (
     create_cess_accounts,
     create_refund_transaction,
 )
-from india_compliance.gst_india.utils import load_doc
+from india_compliance.gst_india.utils import clear_server_down, load_doc
 from india_compliance.gst_india.utils.e_invoice import (
     EInvoiceData,
     cancel_e_invoice,
@@ -62,6 +62,11 @@ class TestEInvoice(IntegrationTestCase):
             )
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
+
+    def setUp(self):
+        super().setUp()
+        # server error in one test shouldn't fail fast the next
+        clear_server_down("e-Invoice", "e-Waybill")
 
     def test_request_data_for_different_shipping_dispatch_address(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill
@@ -979,6 +984,16 @@ class TestEInvoice(IntegrationTestCase):
         generate_e_invoice(si.name)
         si.reload()
         si.cancel()
+
+        amended = frappe.copy_doc(si)
+        amended.update({"amended_from": si.name, "docstatus": 0})
+        amended.insert()
+        self.assertDocumentEqual(
+            {"irn": None, "einvoice_status": None, "ewaybill": None, "e_waybill_status": None}, amended
+        )
+
+        amended.submit()
+        self.assertEqual(amended.einvoice_status, "Pending")
 
         cancelled_on = get_datetime("2026-06-05 11:00:00")
         values = frappe._dict(
