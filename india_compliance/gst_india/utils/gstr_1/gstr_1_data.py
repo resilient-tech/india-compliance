@@ -974,18 +974,32 @@ class GSTR1DocumentIssuedSummary:
         """Move amended docs like SINV-00001-1 to the end of the list"""
 
         data_dict = {doc.name: doc for doc in data}
+        amended_from = {doc.name: doc.amended_from for doc in data}
         amended_dict = {}
 
         for doc in data:
-            if (
-                doc.amended_from and len(doc.amended_from) != len(doc.name)
-            ) or doc.amended_from in amended_dict:
+            if self.is_suffix_amendment(doc.name, amended_from) or (
+                doc.amended_from and doc.amended_from in amended_dict
+            ):
                 amended_dict[doc.name] = doc
                 data_dict.pop(doc.name)
 
         data_dict.update(amended_dict)
 
         return list(data_dict.values())
+
+    def is_suffix_amendment(self, name, amended_from):
+        source = amended_from.get(name)
+        seen = set()
+
+        while source and source not in seen:
+            if name.startswith(f"{source}-"):
+                return True
+
+            seen.add(source)
+            source = amended_from.get(source)
+
+        return False
 
 
 class GSTR11A11BData:
