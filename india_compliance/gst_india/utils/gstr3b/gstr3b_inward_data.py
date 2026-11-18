@@ -108,6 +108,10 @@ JE_CATEGORY_CONDITIONS = {
         "category": "is_itc_reversed_for_je",
         "sub_category": "set_for_itc_reversed",
     },
+    "ITC Available": {
+        "category": "is_itc_reclaimed",
+        "sub_category": "set_for_itc_available_je",
+    },
     "ITC Reclaimed": {
         "category": "is_itc_reclaimed",
         "sub_category": "set_for_itc_reclaimed",
@@ -212,6 +216,9 @@ class GSTR3BSubcategory(GSTR3BCategoryConditions):
 
     def set_for_itc_available_isd(self, invoice):
         invoice.invoice_sub_category = "Input Service Distributor"
+
+    def set_for_itc_available_je(self, invoice):
+        invoice.invoice_sub_category = "All Other ITC"
 
 
 class GSTR3BInwardQuery:
@@ -506,24 +513,17 @@ class GSTR3BInwardInvoices(GSTR3BInwardQuery, GSTR3BSubcategory):
             self.process_uom(invoice, identified_uom)
             processed_invoices.append(invoice)
 
-            if invoice.invoice_category == "ITC Reclaimed":
-                processed_invoices.append(
-                    frappe._dict(
-                        {
-                            **invoice,
-                            "invoice_category": "ITC Available",
-                            "invoice_sub_category": "All Other ITC",
-                        }
-                    )
-                )
-
             if invoice.invoice_category != "ITC Available":
                 continue
 
-            if getattr(self, conditions["ITC Reversed"]["category"], None)(invoice):
-                reversed_invoice = frappe._dict({**invoice, "invoice_category": "ITC Reversed"})
-                self.set_for_itc_reversed(reversed_invoice)
-                processed_invoices.append(reversed_invoice)
+            for category in ("ITC Reversed", "ITC Reclaimed"):
+                condition = conditions.get(category)
+                if not condition or not getattr(self, condition["category"])(invoice):
+                    continue
+
+                copied_invoice = frappe._dict({**invoice, "invoice_category": category})
+                getattr(self, condition["sub_category"])(copied_invoice)
+                processed_invoices.append(copied_invoice)
 
         return processed_invoices
 

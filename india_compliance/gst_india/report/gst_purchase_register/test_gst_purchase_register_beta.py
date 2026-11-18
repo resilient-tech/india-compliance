@@ -190,7 +190,19 @@ class TestGSTPurchaseRegisterITCJournalEntries(FrappeTestCase):
         self.assertEqual(reclaim_row["cgst_amount"], 9.0)
         self.assertEqual(reclaim_row["sgst_amount"], 9.0)
 
-        self.assertIn(self.reclaim_je.name, by_description["All Other ITC"]["unique_records"])
+        overview_before = {row["description"]: row for row in data}
+
+        create_itc_reclaim_journal_entry(posting_date=self.today, tax_amount=7, company_gstin=COMPANY_GSTIN)
+        _, data = execute(_filters(self.today, summary_by="Overview"))
+        overview_after = {row["description"]: row for row in data}
+
+        for description in ("All Other ITC", "Net ITC Available", "Reclaim of ITC Reversal"):
+            for field in ("cgst_amount", "sgst_amount"):
+                self.assertEqual(
+                    overview_after[description][field] - overview_before[description][field],
+                    7.0,
+                    msg=f"{description} {field}",
+                )
 
     def test_boe_in_section_4_as_import_of_goods(self):
         _, data = execute(_filters(self.today, sub_section="4"))

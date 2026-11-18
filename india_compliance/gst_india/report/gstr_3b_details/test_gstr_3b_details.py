@@ -5,6 +5,9 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import flt, get_first_day, get_last_day, get_month, getdate
 
+from india_compliance.gst_india.doctype.gstr_3b_report.test_gstr_3b_report import (
+    generate_gstr_3b_report,
+)
 from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distribution_invoice import (
     create_recipient_invoice,
     make_isd_pi,
@@ -103,6 +106,10 @@ class TestGSTR3BDetails(FrappeTestCase):
             self.assertEqual(row["cgst_amount"], 9.0)
             self.assertEqual(row["sgst_amount"], 9.0)
 
+        for sub_category in ("All Other ITC", "Reclaim of ITC Reversal"):
+            _, filtered_rows = self.get_details("4", invoice_sub_category=[sub_category])
+            self.assertIn(journal_entry.name, [row["voucher_no"] for row in filtered_rows], msg=sub_category)
+
     def test_itc_details_report_includes_pos_restricted_itc(self):
         purchase_invoice = create_purchase_invoice(
             posting_date=getdate(),
@@ -158,7 +165,19 @@ class TestGSTR3BDetails(FrappeTestCase):
                 msg=f"{field} total differs between GSTR-3B Details and GST Purchase Register",
             )
 
-    def get_purchase_register(self, sub_section: str):
+        _, overview_rows = self.get_purchase_register("4", summary_by="Overview")
+        net_itc_row = next(row for row in overview_rows if row["description"] == "Net ITC Available")
+        itc_net = generate_gstr_3b_report()["itc_elg"]["itc_net"]
+
+        for field, json_key in (
+            ("igst_amount", "iamt"),
+            ("cgst_amount", "camt"),
+            ("sgst_amount", "samt"),
+            ("cess_amount", "csamt"),
+        ):
+            self.assertEqual(flt(net_itc_row[field], 2), itc_net[json_key], msg=field)
+
+    def get_purchase_register(self, sub_section: str, summary_by: str = "Summary by Invoice"):
         today = getdate()
         return run_purchase_register(
             frappe._dict(
@@ -167,7 +186,7 @@ class TestGSTR3BDetails(FrappeTestCase):
                     "company_gstin": "24AAQCA8719H1ZC",
                     "date_range": [get_first_day(today), get_last_day(today)],
                     "filter_by": "ITC Claim Period",
-                    "summary_by": "Summary by Invoice",
+                    "summary_by": summary_by,
                     "sub_section": sub_section,
                 }
             )
