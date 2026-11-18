@@ -738,6 +738,26 @@ Object.assign(india_compliance, {
         return Object.values(INWARD_SECTION_MAPPING[sub_section] || {}).flat();
     },
 
+    get_inward_column_total(datamanager, fieldname) {
+        const { data } = datamanager;
+        const visible_rows = datamanager.getFilteredRowIndices().map((index) => data[index]);
+        const visible_reclaim_copies = new Set(
+            visible_rows
+                .filter(
+                    (row) => row.voucher_type === "Journal Entry" && row.invoice_category === "ITC Available",
+                )
+                .map((row) => row.voucher_no),
+        );
+
+        return visible_rows.reduce((acc, row) => {
+            const value = row[fieldname] || 0;
+            if (row.invoice_category === "ITC Reclaimed" && visible_reclaim_copies.has(row.voucher_no))
+                return acc;
+            if (row.invoice_category === "ITC Reversed") return acc - value;
+            return acc + value;
+        }, 0);
+    },
+
     fiscal_year_start(date) {
         const month = moment(date);
         return moment([month.month() >= 3 ? month.year() : month.year() - 1, 3, 1]).format("YYYY-MM-DD");
