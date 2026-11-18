@@ -116,6 +116,10 @@ class GSTR2aAPI(ReturnsAPI):
 
 class GSTR1API(ReturnsAPI):
     API_NAME = "GSTR-1"
+    IGNORED_ERROR_CODES: ClassVar[dict] = {
+        **ReturnsAPI.IGNORED_ERROR_CODES,
+        "AUTH117": "already_filed",
+    }
 
     def setup(self, doc=None, *, company_gstin=None):
         if doc:
