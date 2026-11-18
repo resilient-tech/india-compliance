@@ -554,11 +554,11 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 width: 200,
             },
             {
-                label: "Bill No.",
+                label: __("Bill No"),
                 fieldname: "bill_no",
             },
             {
-                label: "Date",
+                label: __("Bill Date"),
                 fieldname: "bill_date",
                 _value: (...args) => frappe.datetime.str_to_user(args[0]),
             },

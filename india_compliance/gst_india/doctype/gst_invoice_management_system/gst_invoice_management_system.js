@@ -332,7 +332,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 width: 200,
             },
             {
-                label: "Bill No.",
+                label: __("Bill No <br>Date"),
                 fieldname: "bill_no_date",
                 align: "center",
                 width: 120,
