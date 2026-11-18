@@ -2,7 +2,8 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.utils import getdate
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
@@ -12,16 +13,14 @@ from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
     _get_gov_filename,
     _get_selected_sections,
 )
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/test_gstr_1_beta.py
-=======
 from india_compliance.gst_india.utils import MONTHS, get_period
->>>>>>> 5175170 (test(gstr_1): generate and recompute books through the GSTR-1 form):india_compliance/gst_india/doctype/gstr_1/test_gstr_1.py
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import (
     JSON_CATEGORY_EXCEL_CATEGORY_MAPPING,
     JsonKey,
     SheetName,
 )
+from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 # Every JsonKey value that maps to a sheet in JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.
 # sec_sum is excluded (no sheet mapping). Used for exhaustive template checks.
@@ -30,10 +29,7 @@ GOV_EXCEL_SECTIONS = frozenset(
 )
 
 
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/test_gstr_1_beta.py
-class TestGSTR1APIErrorHandling(FrappeTestCase):
-=======
-class TestGSTR1(IntegrationTestCase):
+class TestGSTR1Beta(FrappeTestCase):
     company = "_Test Indian Registered Company"
     company_gstin = "24AAQCA8719H1ZC"
 
@@ -45,72 +41,11 @@ class TestGSTR1(IntegrationTestCase):
         self.month_or_quarter = MONTHS[today.month - 1]
         self.year = str(today.year)
 
-    def get_journal_entry_rows(self):
-        je_details = get_journal_entries(self.month_or_quarter, self.year, self.company, "Monthly")
-        return (je_details or {}).get("data") or []
-
-    def create_reverse_charge_invoice(self, qty=2, rate=1000):
-        return create_sales_invoice(
-            customer="_Test Registered Customer",
-            item_code="_Test Trading Goods 1",
-            qty=qty,
-            rate=rate,
-            is_reverse_charge=1,
-            is_in_state_rcm=1,
-        )
-
-    @change_settings("GST Settings", {"enable_reverse_charge_in_sales": 1})
-    def test_partial_credit_note_nets_against_invoice(self):
-        """An RCM invoice and a partial credit note land on the same account_head with opposite
-        signs. The suggested JE must net them into a single debit-or-credit row, never both."""
-        invoice = self.create_reverse_charge_invoice(qty=2, rate=1000)
-
-        credit_note = make_return_doc("Sales Invoice", invoice.name)
-        credit_note.items[0].qty = -1  # return half of it
-        credit_note.save().submit()
-
-        rows = self.get_journal_entry_rows()
-
-        # 2000 taxable - 1000 returned = 1000 net @ 9%: the liability moves off the output
-        # account and onto the reverse charge account, so one is debited and the other credited
-        amounts = {
-            row["account"]: (
-                flt(row["debit_in_account_currency"]),
-                flt(row["credit_in_account_currency"]),
-            )
-            for row in rows
-        }
-        self.assertEqual(amounts["Output Tax CGST - _TIRC"], (90.0, 0.0))
-        self.assertEqual(amounts["Output Tax CGST RCM - _TIRC"], (0.0, 90.0))
-
-        journal_entry = make_journal_entry(
-            self.company,
-            self.company_gstin,
-            self.month_or_quarter,
-            self.year,
-            rows,
-            frappe._dict(posting_date=getdate(), auto_submit=1),
-        )
-        self.assertTrue(journal_entry)
-        self.assertEqual(frappe.db.get_value("Journal Entry", journal_entry, "docstatus"), 1)
-
-    @change_settings("GST Settings", {"enable_reverse_charge_in_sales": 1})
-    def test_fully_reversed_invoice_suggests_nothing(self):
-        """A credit note that fully reverses the invoice nets to zero — there is no liability to
-        adjust, and a 0/0 row would be rejected by Journal Entry."""
-        invoice = self.create_reverse_charge_invoice()
-
-        credit_note = make_return_doc("Sales Invoice", invoice.name)
-        credit_note.save().submit()
-
-        rows = self.get_journal_entry_rows()
-        self.assertEqual(rows, [])
-
     @change_settings("GST Settings", {"enable_gstr_1_api": 0})
     def test_recompute_replaces_stored_books(self):
         invoice = create_sales_invoice(customer="_Test Registered Customer")
 
-        gstr1 = frappe.get_doc("GSTR-1")
+        gstr1 = frappe.get_doc("GSTR-1 Beta")
         gstr1.update(
             {
                 "company": self.company,
@@ -140,8 +75,7 @@ class TestGSTR1(IntegrationTestCase):
         self.assertIn(invoice.name, frappe.as_json(books))
 
 
-class TestGSTR1APIErrorHandling(IntegrationTestCase):
->>>>>>> 5175170 (test(gstr_1): generate and recompute books through the GSTR-1 form):india_compliance/gst_india/doctype/gstr_1/test_gstr_1.py
+class TestGSTR1APIErrorHandling(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
