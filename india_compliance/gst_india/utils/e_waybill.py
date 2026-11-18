@@ -775,6 +775,14 @@ def generate_pending_e_waybills():
 def fetch_e_waybill_data(*, doctype: str, docname: str, attach: bool = False, force: bool = False):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "write" if attach else "print")
+    if not frappe.db.exists("e-Waybill Log", doc.ewaybill):
+        frappe.throw(
+            _("e-Waybill Log {0} was not found. Restore it from Deleted Documents and try again.").format(
+                frappe.bold(doc.ewaybill)
+            ),
+            title=_("e-Waybill Log Not Found"),
+        )
+
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
     if not log.is_latest_data or force:
         _fetch_e_waybill_data(doc, log)
