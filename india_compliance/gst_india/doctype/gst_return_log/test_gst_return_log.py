@@ -17,6 +17,7 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     add_comment_to_gst_return_log,
     get_gst_return_log,
     get_raw_return_data,
+    process_gstr_1_returns_info,
     store_raw_return_data,
 )
 from india_compliance.gst_india.doctype.gstr_1.gstr_1_export import ReconcileExcel
@@ -43,6 +44,36 @@ class TestGSTReturnLog(IntegrationTestCase):
     def setUp(self):
         # the log is created by the test that needs it: test_add_comment asserts there is none
         self.log_name = f"GSTR1-{getdate(self.POSTING_DATE).strftime('%m%Y')}-{self.GSTIN}"
+
+    def test_tracker_sync_moves_the_lock_for_a_return_filed_through_the_app(self):
+        company = "_Test Indian Registered Company"
+        arn = "AA240198000001A"
+        frappe.get_doc(
+            {
+                "doctype": "GST Return Log",
+                "company": company,
+                "gstin": self.GSTIN,
+                "return_period": "012098",
+                "return_type": "GSTR1",
+                "filing_status": "Filed",
+                "acknowledgement_number": arn,
+            }
+        ).insert()
+        if frappe.db.exists("GSTIN", self.GSTIN):
+            frappe.db.set_value("GSTIN", self.GSTIN, "gstr_1_filed_upto", None)
+
+        tracker_row = {
+            "rtntype": "GSTR1",
+            "ret_prd": "012098",
+            "arn": arn,
+            "dof": "11-02-2098",
+            "status": "Filed",
+            "valid": "Y",
+        }
+        process_gstr_1_returns_info(company, self.GSTIN, [tracker_row])
+
+        filed_upto = frappe.db.get_value("GSTIN", self.GSTIN, "gstr_1_filed_upto")
+        self.assertEqual(filed_upto, getdate("2098-01-31"))
 
     def test_add_comment_creates_log_when_missing(self):
         self.assertFalse(frappe.db.exists("GST Return Log", self.log_name))
