@@ -102,10 +102,22 @@ class TestGSTReturnLog(IntegrationTestCase):
         download_gstr1_json_data(log)
         self.assertIsNone(get_raw_return_data(gstin, "GSTR1", period))
 
+        log.get_reconcile_gstr1_data({}, {})
+        self.assertTrue(frappe.db.get_value("GST Return Log", log_name, "reconcile"))
+
         log.db_set("filing_status", "Filed")
         download_gstr1_json_data(frappe.get_doc("GST Return Log", log_name))
 
+<<<<<<< HEAD
         stored = get_raw_return_data(gstin, "GSTR1", period)
+=======
+        self.assertIsNone(frappe.db.get_value("GST Return Log", log_name, "reconcile"))
+        self.assertFalse(
+            frappe.db.exists("File", {"attached_to_name": log_name, "attached_to_field": "reconcile"})
+        )
+
+        stored = get_raw_return_data(self.GSTIN, "GSTR1", period)
+>>>>>>> 36e139e (fix(gst_return_log): clear the file field before deleting the file)
         self.assertEqual(stored["chksum"], "abc123")
         self.assertNotIn("creation", stored)
 
