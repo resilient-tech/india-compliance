@@ -262,6 +262,24 @@ class TestEWaybill(FrappeTestCase):
 
         fetch_e_waybill_data(doctype="Sales Invoice", docname=si.name, attach=False)
 
+    @change_settings("GST Settings", {"fetch_e_waybill_data": 1})
+    @responses.activate
+    def test_fetch_e_waybill_data_after_its_log_is_deleted(self):
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        self._generate_e_waybill(si.name)
+        si.reload()
+        frappe.delete_doc("e-Waybill Log", si.ewaybill)
+
+        for attach in (False, True):
+            self.assertRaisesRegex(
+                frappe.ValidationError,
+                "Restore it from Deleted Documents",
+                fetch_e_waybill_data,
+                doctype="Sales Invoice",
+                docname=si.name,
+                attach=attach,
+            )
+
     @responses.activate
     def test_credit_note_e_waybill(self):
         si = create_sales_invoice(
