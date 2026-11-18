@@ -124,11 +124,5 @@ function custom_report_column_total(...args) {
     const column_field = args[1].column.fieldname;
     if (!AMOUNT_FIELDS.includes(column_field)) return;
 
-    const { data } = this.datamanager;
-    return this.datamanager.getFilteredRowIndices().reduce((acc, index) => {
-        const row = data[index];
-        const value = row[column_field] || 0;
-        if (row.invoice_category === "ITC Reversed") return acc - value;
-        return acc + value;
-    }, 0);
+    return india_compliance.get_inward_column_total(this.datamanager, column_field);
 }
