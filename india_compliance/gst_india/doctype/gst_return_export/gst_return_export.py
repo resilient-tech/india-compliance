@@ -164,16 +164,17 @@ def _sync_return_data(company_gstin, return_type, periods):
     adapter = get_adapter(return_type, company_gstin)
     try:
         adapter.download(periods)
-        delete_export_files(_log_names(return_type, company_gstin, periods))
-        for period in periods:
-            adapter.build_and_store_summary(period)
     except Exception as e:
+        frappe.log_error(title="GST Return Export Sync Failed")
         frappe.publish_realtime(
             "gstr_2a_2b_download_message",
             {"title": _("Sync Failed"), "message": str(e), "indicator": "red"},
             user=frappe.session.user,
         )
-        raise e
+
+    delete_export_files(_log_names(return_type, company_gstin, periods))
+    for period in periods:
+        adapter.build_and_store_summary(period)
 
 
 @frappe.whitelist()
