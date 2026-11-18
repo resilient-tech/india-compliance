@@ -6,6 +6,7 @@ from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import save_ims_invoices
+from india_compliance.gst_india.utils.gstr_2.ims import IMSB2B
 
 
 class TestIMS(IntegrationTestCase):
@@ -217,3 +218,27 @@ class TestIMS(IntegrationTestCase):
             },
             doc,
         )
+
+    def test_same_bill_number_of_another_financial_year_is_settled_on_its_own(self):
+        self.addCleanup(
+            frappe.db.delete, self.doctype, {"company_gstin": self.gstin, "bill_no": "IMS-SAME-1"}
+        )
+        invoice = self.test_data["b2b"][0]
+        invoices = {
+            bill_date: {**invoice, "inum": "IMS-SAME-1", "idt": bill_date}
+            for bill_date in ("10-03-2019", "10-03-2020")
+        }
+
+        def download(*bill_dates):
+            IMSB2B("_Test Indian Registered Company", self.gstin).create_transactions(
+                [invoice, *(invoices[bill_date] for bill_date in bill_dates)], None
+            )
+            return frappe.get_all(
+                self.doctype,
+                filters={"company_gstin": self.gstin, "bill_no": "IMS-SAME-1"},
+                pluck="bill_date",
+                order_by="bill_date",
+            )
+
+        self.assertEqual(download("10-03-2019", "10-03-2020"), [date(2019, 3, 10), date(2020, 3, 10)])
+        self.assertEqual(download("10-03-2020"), [date(2020, 3, 10)])
