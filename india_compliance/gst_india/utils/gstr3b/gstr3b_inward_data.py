@@ -506,6 +506,17 @@ class GSTR3BInwardInvoices(GSTR3BInwardQuery, GSTR3BSubcategory):
             self.process_uom(invoice, identified_uom)
             processed_invoices.append(invoice)
 
+            if invoice.invoice_category == "ITC Reclaimed":
+                processed_invoices.append(
+                    frappe._dict(
+                        {
+                            **invoice,
+                            "invoice_category": "ITC Available",
+                            "invoice_sub_category": "All Other ITC",
+                        }
+                    )
+                )
+
             if invoice.invoice_category != "ITC Available":
                 continue
 
