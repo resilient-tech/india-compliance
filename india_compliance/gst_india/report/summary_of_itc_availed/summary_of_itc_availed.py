@@ -99,7 +99,9 @@ class ITCAvailedCategory:
         elif row.get("is_fixed_asset") == 1:
             return SubCategory.CAPITAL_GOODS
 
-        elif (row.get("gst_hsn_code") or "").startswith(SERVICE_HSN_PREFIX):
+        elif category != Category.IMPORT_GOODS and (row.get("gst_hsn_code") or "").startswith(
+            SERVICE_HSN_PREFIX
+        ):
             return SubCategory.INPUT_SERVICES
 
         return SubCategory.INPUTS
