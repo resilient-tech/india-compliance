@@ -5,13 +5,13 @@ import json
 
 import frappe
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
-from erpnext.controllers.accounts_controller import AccountsController
+from erpnext.controllers.accounts_controller import AccountsController, validate_account_head
 from erpnext.stock.get_item_details import _get_item_tax_template
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import IfNull, Sum
-from frappe.utils import today
+from frappe.utils import flt, today
 
 from india_compliance.gst_india.constants import IMPORT_GST_CATEGORIES
 from india_compliance.gst_india.overrides.ineligible_itc import (
@@ -23,7 +23,7 @@ from india_compliance.gst_india.overrides.transaction import (
     GSTAccounts,
     set_gst_tax_type,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import get_all_gst_accounts, get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import (
     set_or_validate_itc_claim_period,
     validate_itc_claim_period_on_update_after_submit,
@@ -44,17 +44,25 @@ class BillofEntry(Document):
         if self.docstatus != 1:
             return
 
-        self.set_onload(
-            "journal_entry_exists",
-            frappe.db.exists(
-                "Journal Entry Account",
-                {
-                    "reference_type": "Bill of Entry",
-                    "reference_name": self.name,
-                    "docstatus": 1,
-                },
-            ),
-        )
+        self.set_onload("outstanding_amount", self.outstanding_amount)
+
+    @property
+    def outstanding_amount(self):
+        journal_entry_account = frappe.qb.DocType("Journal Entry Account")
+        paid_amount = (
+            frappe.qb.from_(journal_entry_account)
+            .select(
+                Sum(journal_entry_account.debit_in_account_currency)
+                - Sum(journal_entry_account.credit_in_account_currency)
+            )
+            .where(journal_entry_account.reference_type == self.doctype)
+            .where(journal_entry_account.reference_name == self.name)
+            .where(journal_entry_account.account == self.customs_payable_account)
+            .where(journal_entry_account.docstatus == 1)
+        ).run()[0][0]
+
+        precision = self.precision("total_amount_payable")
+        return max(flt(flt(self.total_amount_payable, precision) - flt(paid_amount), precision), 0)
 
     def before_validate(self):
         self.set_taxes_and_totals()
@@ -110,13 +118,15 @@ class BillofEntry(Document):
     def set_item_defaults(self):
         """These defaults are needed for taxes and totals to get calculated"""
         for item in self.items:
-            item.name = frappe.generate_hash(length=10)
-            item.customs_duty = 0
+            if not item.name:
+                item.name = frappe.generate_hash(length=10)
+
+            item.customs_duty = flt(item.customs_duty)
 
     def set_default_accounts(self):
         company = frappe.get_cached_doc("Company", self.company)
-        self.customs_expense_account = company.default_customs_expense_account
-        self.customs_payable_account = company.default_customs_payable_account
+        self.customs_expense_account = self.customs_expense_account or company.default_customs_expense_account
+        self.customs_payable_account = self.customs_payable_account or company.default_customs_payable_account
 
     def set_taxes_and_totals(self):
         self.validate_item_tax_template()
@@ -196,9 +206,17 @@ class BillofEntry(Document):
 
     def validate_taxes(self):
         input_accounts = get_gst_accounts_by_type(self.company, "Input", throw=True)
+        if not input_accounts.igst_account:
+            frappe.throw(
+                _("Please set the Input IGST account for Company {0} in GST Settings").format(self.company)
+            )
+
+        gst_accounts = get_all_gst_accounts(self.company)
 
         for tax in self.taxes:
-            if not tax.tax_amount:
+            validate_account_head(tax.idx, tax.account_head, self.company, _("Taxes and Charges"))
+
+            if not tax.tax_amount or tax.account_head not in gst_accounts:
                 continue
 
             if tax.account_head not in (
@@ -254,6 +272,11 @@ class BillofEntry(Document):
                         " is incorrect. Try setting the Charge Type to {2}."
                     ).format(tax.idx, tax.tax_amount, column)
                 )
+
+        if input_accounts.igst_account not in {tax.account_head for tax in self.taxes}:
+            frappe.throw(
+                _("Input IGST account {0} is required in Bill of Entry").format(input_accounts.igst_account)
+            )
 
     def validate_item_tax_template(self):
         for item in self.items:
@@ -311,14 +334,20 @@ class BillofEntry(Document):
                 )
             )
 
+        default_cost_center = frappe.get_cached_value("Company", self.company, "cost_center")
+
         for tax in self.taxes:
+            tax_cost_center = self.cost_center
+            if not tax_cost_center and not tax.gst_tax_type:
+                tax_cost_center = default_cost_center
+
             gl_entries.append(
                 self.get_gl_dict(
                     {
                         "account": tax.account_head,
                         "debit": tax.tax_amount,
                         "credit": 0,
-                        "cost_center": self.cost_center,
+                        "cost_center": tax_cost_center,
                         "remarks": remarks,
                     },
                 )
@@ -373,11 +402,14 @@ class BillofEntry(Document):
 
     @frappe.whitelist()
     def get_items_from_purchase_invoice(self, purchase_invoices: list[str]):
+        if self.docstatus != 0:
+            frappe.throw(_("Items can be fetched only on a draft Bill of Entry"))
+
         if not purchase_invoices:
             frappe.msgprint(_("No Purchase Invoices selected"))
             return
 
-        frappe.has_permission("Bill Of Entry", "write", throw=True)
+        frappe.has_permission("Bill of Entry", "write", throw=True)
         frappe.has_permission("Purchase Invoice", "read", throw=True)
 
         existing_items = [item.pi_detail for item in self.get("items") if item.pi_detail]
@@ -446,27 +478,21 @@ def set_missing_values(source, target=None):
     if not input_igst_account:
         return
 
-    rate = (
-        frappe.db.get_value(
-            "Purchase Taxes and Charges",
-            {
-                "parenttype": "Purchase Taxes and Charges Template",
-                "account_head": input_igst_account,
-            },
-            "rate",
-        )
-        or 0
-    )
-
-    has_igst_tax = any(
-        tax.charge_type == "On Net Total"
-        and tax.account_head == input_igst_account
-        and tax.rate == rate
-        and tax.gst_tax_type == "igst"
-        for tax in source.taxes
-    )
+    has_igst_tax = any(tax.account_head == input_igst_account for tax in target.taxes)
 
     if not has_igst_tax:
+        rate = (
+            frappe.db.get_value(
+                "Purchase Taxes and Charges",
+                {
+                    "parenttype": "Purchase Taxes and Charges Template",
+                    "account_head": input_igst_account,
+                },
+                "rate",
+            )
+            or 0
+        )
+
         valid_tax_row = {tax_row.account_head for tax_row in target.taxes if tax_row.account_head}
         if not valid_tax_row:
             target.taxes = []
@@ -536,11 +562,12 @@ def make_journal_entry_for_payment(source_name: str, target_doc: str | None = No
         target.user_remark = f"Payment against Bill of Entry {source.name}"
 
         company = frappe.get_cached_doc("Company", source.company)
+        outstanding_amount = source.outstanding_amount
         target.append(
             "accounts",
             {
                 "account": source.customs_payable_account,
-                "debit_in_account_currency": source.total_amount_payable,
+                "debit_in_account_currency": outstanding_amount,
                 "reference_type": "Bill of Entry",
                 "reference_name": source.name,
                 "cost_center": company.cost_center,
@@ -551,7 +578,7 @@ def make_journal_entry_for_payment(source_name: str, target_doc: str | None = No
             "accounts",
             {
                 "account": company.default_bank_account or company.default_cash_account,
-                "credit_in_account_currency": source.total_amount_payable,
+                "credit_in_account_currency": outstanding_amount,
                 "cost_center": company.cost_center,
             },
         )

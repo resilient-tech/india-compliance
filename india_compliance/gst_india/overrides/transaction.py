@@ -3,6 +3,7 @@ from collections import defaultdict
 from typing import ClassVar
 
 import frappe
+from erpnext import get_company_currency
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
@@ -70,12 +71,15 @@ DOCTYPES_WITH_GST_DETAIL = {
 ALLOWED_TAX_DIFFERENCE = 1  # Allowable difference in tax amount due to rounding off
 
 
-def set_gst_breakup(doc):
+def get_gst_breakup_html(doc):
+    if not doc.place_of_supply or not doc.company_gstin or ignore_gst_validations(doc):
+        return
+
     gst_breakup_html = frappe.render_template("templates/gst_breakup.html", dict(doc=doc))  # nosemgrep
     if not gst_breakup_html:
         return
 
-    doc.gst_breakup_table = gst_breakup_html.replace("\n", "").replace("    ", "")
+    return gst_breakup_html.replace("\n", "").replace("    ", "")
 
 
 def update_taxable_values(doc):
@@ -141,7 +145,7 @@ def update_taxable_values(doc):
 
         applicable_charges = flt(
             proportionate_value * (total_charges / total_value),
-            item.precision("taxable_value"),
+            doc.precision("taxable_value", "items"),
         )
 
         item.taxable_value += applicable_charges
@@ -1307,7 +1311,7 @@ class ItemGSTDetails:
         Return Item GST Details for a list of documents
         """
         self.get_item_defaults()
-        self.set_tax_amount_precisions(doctype)
+        self.set_tax_amount_precisions(doctype, company)
 
         response = frappe._dict()
 
@@ -1337,7 +1341,7 @@ class ItemGSTDetails:
         if ignore_gst_validations(doc):
             return
 
-        self.set_tax_amount_precisions(doc.doctype)
+        self.set_tax_amount_precisions(doc.doctype, doc.company)
 
         # To Deprecate
         if self.dont_recompute_tax_is_set():
@@ -1592,13 +1596,14 @@ class ItemGSTDetails:
                 title=_("Incorrect Item GST Details"),
             )
 
-    def set_tax_amount_precisions(self, doctype):
+    def set_tax_amount_precisions(self, doctype, company):
         item_doctype = frappe.get_meta(doctype).get_field("items").options
 
         meta = frappe.get_meta(item_doctype)
 
         self.precision = frappe._dict()
         default_precision = cint(frappe.db.get_default("float_precision")) or 3
+        currency = get_company_currency(company)
 
         for tax_type in GST_TAX_TYPES:
             fieldname = f"{tax_type}_amount"
@@ -1606,7 +1611,7 @@ class ItemGSTDetails:
             if not field:
                 continue
 
-            self.precision[fieldname] = get_field_precision(field) or default_precision
+            self.precision[fieldname] = get_field_precision(field, currency=currency) or default_precision
 
     def dont_recompute_tax_is_set(self):
         for row in self.doc.taxes:
@@ -1865,6 +1870,20 @@ def validate_isd_not_supplier(doc):
     )
 
 
+def clear_e_invoice_e_waybill_on_amend(doc, method=None):
+    if not doc.amended_from:
+        return
+
+    # Amend copies no_copy fields: these belong to the cancelled document
+    doc.update(
+        {
+            fieldname: None
+            for fieldname in ("ewaybill", "e_waybill_status", "irn", "einvoice_status")
+            if doc.meta.has_field(fieldname)
+        }
+    )
+
+
 def before_validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
@@ -1983,22 +2002,6 @@ def validate_transaction(doc, method=None):
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
     update_item_gst_details(doc)  # depends on taxable_value computed above
-
-
-def before_print(doc, method=None, print_settings=None):
-    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
-        return
-
-    set_ecommerce_supply_type(doc)
-    set_gst_breakup(doc)
-
-
-def onload(doc, method=None):
-    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
-        return
-
-    set_ecommerce_supply_type(doc)
-    set_gst_breakup(doc)
 
 
 def validate_ecommerce_gstin(doc):
@@ -2213,17 +2216,11 @@ def sync_gst_details_from_address(doc, changed_address_fields):
             doc.set(category_field, gst_category or "Unregistered")
 
 
-def set_ecommerce_supply_type(doc):
-    """
-    - Set GSTR-1 E-commerce section for virtual field ecommerce_supply_type
-    """
-    if doc.doctype not in ("Sales Order", "Sales Invoice", "Delivery Note"):
-        return
-
-    if not doc.ecommerce_gstin:
+def get_ecommerce_supply_type(doc):
+    if not doc.ecommerce_gstin or not doc.company_gstin or ignore_gst_validations(doc):
         return
 
     if doc.is_reverse_charge:
-        doc.ecommerce_supply_type = SubCategory.SUPECOM_9_5.value
-    else:
-        doc.ecommerce_supply_type = SubCategory.SUPECOM_52.value
+        return SubCategory.SUPECOM_9_5.value
+
+    return SubCategory.SUPECOM_52.value

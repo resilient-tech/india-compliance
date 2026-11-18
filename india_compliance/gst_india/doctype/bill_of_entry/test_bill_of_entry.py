@@ -3,9 +3,13 @@
 
 import json
 import re
+from unittest.mock import patch
 
 import frappe
+from erpnext.accounts.doctype.journal_entry.journal_entry import make_reverse_journal_entry
 from erpnext.projects.doctype.project.test_project import make_project
+from frappe.desk.form.load import run_onload
+from frappe.exceptions import LinkExistsError
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import today
 
@@ -111,6 +115,138 @@ class TestBillofEntry(FrappeTestCase):
             },
             lcv,
         )
+
+    def test_non_gst_charge_in_boe(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.items[0].customs_duty = 100
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Miscellaneous Expenses - _TIRC",
+                "rate": 5,
+                "tax_amount": 500,
+            },
+        )
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Round Off - _TIRC",
+                "tax_amount": -0.3,
+            },
+        )
+        boe.save()
+        boe.submit()
+
+        self.assertDocumentEqual(
+            {"total_taxes": 535.7, "total_amount_payable": 635.7},
+            boe,
+        )
+        self.assertEqual(boe.items[0].igst_amount, 36)
+        self.assertEqual(boe.taxes[1].rate, 0)
+
+        round_off_gle = frappe.db.get_value(
+            "GL Entry",
+            {"voucher_type": "Bill of Entry", "voucher_no": boe.name, "account": "Round Off - _TIRC"},
+            ["debit", "credit"],
+            as_dict=True,
+        )
+        self.assertEqual(round_off_gle.debit, 0)
+        self.assertEqual(round_off_gle.credit, 0.3)
+
+        lcv = make_landed_cost_voucher(boe.name)
+        self.assertEqual([tax.amount for tax in lcv.taxes], [100])
+
+        penalty_gle = frappe.db.get_value(
+            "GL Entry",
+            {
+                "voucher_type": "Bill of Entry",
+                "voucher_no": boe.name,
+                "account": "Miscellaneous Expenses - _TIRC",
+            },
+            ["debit", "cost_center"],
+            as_dict=True,
+        )
+        self.assertEqual(penalty_gle.debit, 500)
+        self.assertEqual(penalty_gle.cost_center, "Main - _TIRC")
+
+        igst_cost_center = frappe.db.get_value(
+            "GL Entry",
+            {"voucher_type": "Bill of Entry", "voucher_no": boe.name, "account": "Input Tax IGST - _TIRC"},
+            "cost_center",
+        )
+        self.assertFalse(igst_cost_center)
+
+    def test_non_input_gst_account_in_boe(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.taxes[0].account_head = "Output Tax IGST - _TIRC"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"Only Input IGST and CESS accounts are allowed"),
+            boe.save,
+        )
+
+        boe.taxes[0].account_head = "Miscellaneous Expenses - _TIRC"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"Input IGST account .* is required"),
+            boe.save,
+        )
+
+        boe.taxes[0].account_head = frappe.db.get_value(
+            "Account", {"company": ("!=", boe.company), "is_group": 0}
+        )
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"does not belong"),
+            boe.save,
+        )
+
+        boe.taxes[0].account_head = "Indirect Expenses - _TIRC"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"is a Group Account"),
+            boe.save,
+        )
+
+        boe.taxes[0].account_head = "Input Tax IGST - _TIRC"
+        with patch(
+            "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.get_gst_accounts_by_type",
+            return_value=frappe._dict(igst_account=None),
+        ):
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"Please set the Input IGST account"),
+                boe.save,
+            )
+
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "On Net Total",
+                "account_head": "Miscellaneous Expenses - _TIRC",
+                "rate": 2,
+            },
+        )
+        boe.save()
+        self.assertEqual(boe.taxes[1].tax_amount, 2)
+        self.assertEqual(boe.items[0].igst_amount, 18)
+
+        exempt_boe = make_bill_of_entry(pi.name)
+        exempt_boe.taxes[0].rate = 0
+        exempt_boe.get_items_from_purchase_invoice([pi.name])
+        self.assertEqual(len(exempt_boe.taxes), 1)
+        self.assertEqual(exempt_boe.taxes[0].rate, 0)
 
     def test_gst_details_in_boe(self):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
@@ -322,6 +458,117 @@ class TestBillofEntry(FrappeTestCase):
             },
             pi.items[0],
         )
+
+    def test_pay_bill_of_entry_in_parts(self):
+        boe = self.create_bill_of_entry()
+        self.assertEqual(boe.total_amount_payable, 136)
+
+        first = create_payment_journal_entry(boe, 100)
+        first.submit()
+        self.assertOutstandingAmount(boe, 36)
+
+        draft = create_payment_journal_entry(boe, 30)
+        self.assertOutstandingAmount(boe, 36)
+
+        draft.submit()
+        self.assertOutstandingAmount(boe, 6)
+
+        last = create_payment_journal_entry(boe)
+        self.assertEqual(last.total_debit, 6)
+        last.submit()
+        self.assertOutstandingAmount(boe, 0)
+
+        # cancelled amount is unpaid again
+        draft.cancel()
+        self.assertOutstandingAmount(boe, 30)
+
+        reversal = make_reverse_journal_entry(last.name)
+        reversal.posting_date = today()
+        reversal.save()
+        reversal.submit()
+        self.assertOutstandingAmount(boe, 36)
+
+        # only the customs payable account holds what is owed
+        expense_row = make_journal_entry_for_payment(boe.name)
+        expense_row.cheque_no = "123"
+        expense_row.accounts[0].account = boe.customs_expense_account
+        expense_row.save()
+        expense_row.submit()
+        self.assertOutstandingAmount(boe, 36)
+
+        # overpaying is allowed and never fills a negative amount
+        create_payment_journal_entry(boe, 50).submit()
+        self.assertOutstandingAmount(boe, 0)
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(r"Both Debit and Credit values cannot be zero"),
+            create_payment_journal_entry,
+            boe,
+        )
+
+    def test_rounding_leaves_nothing_to_pay(self):
+        # half a paisa: the ledger books the rounded payable
+        boe = self.create_bill_of_entry(customs_duty=64.025, igst_rate=0, rate=100, qty=1)
+        self.assertOutstandingAmount(boe, 64.02)
+        create_payment_journal_entry(boe).submit()
+        self.assertOutstandingAmount(boe, 0)
+
+        # 0.3 - 0.1 is 0.19999999999999998 in floats
+        boe = self.create_bill_of_entry(customs_duty=0.3, igst_rate=0, rate=100, qty=1)
+        create_payment_journal_entry(boe, 0.1).submit()
+        self.assertOutstandingAmount(boe, 0.2)
+
+    def test_nothing_payable(self):
+        boe = self.create_bill_of_entry(customs_duty=0, igst_rate=0)
+
+        self.assertEqual(boe.total_amount_payable, 0)
+        self.assertOutstandingAmount(boe, 0)
+
+    def test_cancel_and_amend_paid_bill_of_entry(self):
+        boe = self.create_bill_of_entry()
+
+        je = create_payment_journal_entry(boe, 100)
+        je.submit()
+
+        frappe.db.savepoint("before_cancel")
+        self.assertRaises(LinkExistsError, frappe.get_doc(boe.doctype, boe.name).cancel)
+        frappe.db.rollback(save_point="before_cancel")
+
+        je.cancel()
+        boe.cancel()
+
+        run_onload(boe)
+        self.assertNotIn("outstanding_amount", boe.get_onload())
+        self.assertRaises(frappe.ValidationError, make_journal_entry_for_payment, boe.name)
+
+        amended = frappe.copy_doc(boe)
+        amended.amended_from = boe.name
+        amended.docstatus = 0
+        amended.save()
+        amended.submit()
+        self.assertOutstandingAmount(amended, 136)
+
+    def create_bill_of_entry(self, customs_duty=100, igst_rate=18, **invoice_args):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1, **invoice_args)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.items[0].customs_duty = customs_duty
+        boe.taxes[0].rate = igst_rate
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+
+        boe.save()
+        boe.submit()
+
+        return boe
+
+    def assertOutstandingAmount(self, boe, amount):
+        je = make_journal_entry_for_payment(boe.name)
+        self.assertEqual(je.accounts[0].debit_in_account_currency, amount)
+        self.assertEqual(je.accounts[1].credit_in_account_currency, amount)
+
+        run_onload(boe)
+        self.assertEqual(boe.get_onload("outstanding_amount"), amount)
 
     def test_project_in_gl_entries(self):
         """Test that project from Purchase Invoice is auto-copied to Bill of Entry and passed to GL Entry"""
@@ -552,3 +799,140 @@ class TestBillofEntry(FrappeTestCase):
         )
 
         self.assertNotIn(pi.name, [invoice.name for invoice in pending_invoices])
+
+    def test_get_items_keeps_existing_rows(self):
+        pi1, pi2, pi3, pi4, pi5 = (
+            create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1) for _ in range(5)
+        )
+
+        boe = make_bill_of_entry(pi1.name)
+        boe.items[0].customs_duty = 77
+        boe.items[0].assessable_value = 150
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.save()
+
+        saved_row = boe.items[0].name
+
+        boe.get_items_from_purchase_invoice([pi2.name])
+
+        self.assertEqual(boe.items[0].name, saved_row)
+        self.assertEqual(boe.items[0].customs_duty, 77)
+        self.assertEqual(boe.items[0].assessable_value, 150)
+        self.assertEqual(boe.items[1].customs_duty, 0)
+        self.assertEqual(boe.total_customs_duty, 77)
+        self.assertEqual(boe.total_taxable_value, 327)
+        self.assertEqual(boe.total_taxes, 58.86)
+        self.assertEqual(boe.total_amount_payable, 135.86)
+
+        boe.save()
+        boe.reload()
+
+        new_row = boe.items[1].name
+        self.assertEqual(
+            [(row.name, row.purchase_invoice, row.customs_duty) for row in boe.items],
+            [(saved_row, pi1.name, 77), (new_row, pi2.name, 0)],
+        )
+        self.assertEqual(boe.total_taxes, 58.86)
+        item_wise_tax_rates = json.loads(boe.taxes[0].item_wise_tax_rates)
+        self.assertEqual(item_wise_tax_rates[saved_row], 18)
+        self.assertEqual(item_wise_tax_rates[new_row], 18)
+
+        boe.items[1].customs_duty = 50
+        boe.get_items_from_purchase_invoice([pi1.name])
+        boe.save()
+        boe.reload()
+
+        self.assertEqual(
+            [(row.name, row.customs_duty) for row in boe.items],
+            [(saved_row, 77), (new_row, 50)],
+        )
+
+        boe.taxes[0].rate = 5
+        boe.save()
+
+        boe.get_items_from_purchase_invoice([pi3.name])
+        boe.save()
+        boe.reload()
+
+        self.assertEqual(len(boe.items), 3)
+        self.assertEqual([tax.rate for tax in boe.taxes], [5])
+        self.assertEqual(boe.total_taxes, 23.85)
+
+        boe.submit()
+
+        self.assertEqual(
+            sum(frappe.get_all("Bill of Entry Item", {"parent": boe.name}, pluck="taxable_value")),
+            boe.total_taxable_value,
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"only on a draft"),
+            boe.get_items_from_purchase_invoice,
+            [pi4.name],
+        )
+
+        boe = make_bill_of_entry(pi4.name)
+        boe.items[0].customs_duty = 40
+        boe.get_items_from_purchase_invoice([pi5.name])
+
+        self.assertEqual([row.customs_duty for row in boe.items], [40, 0])
+
+        boe.bill_of_entry_no = "456"
+        boe.bill_of_entry_date = today()
+        boe.save()
+        boe.reload()
+
+        self.assertEqual([row.customs_duty for row in boe.items], [40, 0])
+        self.assertEqual(boe.total_taxes, 43.2)
+
+        for customs_duty, expected_duty in ((None, 0), ("", 0), ("25", 25), ("abc", 0)):
+            boe.items[0].customs_duty = customs_duty
+            boe.get_items_from_purchase_invoice([pi4.name])
+            self.assertEqual(boe.items[0].customs_duty, expected_duty)
+
+        company = frappe.get_cached_doc("Company", boe.company)
+        self.assertEqual(boe.customs_expense_account, company.default_customs_expense_account)
+        self.assertEqual(boe.customs_payable_account, company.default_customs_payable_account)
+
+        expense_account = frappe.db.get_value(
+            "Account",
+            {
+                "company": boe.company,
+                "root_type": "Expense",
+                "is_group": 0,
+                "account_currency": "INR",
+                "name": ["!=", boe.customs_expense_account],
+            },
+        )
+        payable_account = frappe.db.get_value(
+            "Account",
+            {
+                "company": boe.company,
+                "root_type": "Liability",
+                "account_type": ["!=", "Payable"],
+                "is_group": 0,
+                "account_currency": "INR",
+                "name": ["!=", boe.customs_payable_account],
+            },
+        )
+        boe.customs_expense_account = expense_account
+        boe.customs_payable_account = payable_account
+        boe.get_items_from_purchase_invoice([pi5.name])
+        boe.save()
+        boe.reload()
+
+        self.assertEqual(boe.customs_expense_account, expense_account)
+        self.assertEqual(boe.customs_payable_account, payable_account)
+
+
+def create_payment_journal_entry(boe, amount=None):
+    je = make_journal_entry_for_payment(boe.name)
+    je.cheque_no = "123"
+
+    if amount:
+        je.accounts[0].debit_in_account_currency = amount
+        je.accounts[1].credit_in_account_currency = amount
+
+    return je.save()

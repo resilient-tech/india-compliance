@@ -6,7 +6,11 @@ import responses
 from frappe.tests.utils import FrappeTestCase, change_settings
 from responses import matchers
 
-from india_compliance.gst_india.utils.gstin_info import get_gstin_info
+from india_compliance.gst_india.utils.gstin_info import (
+    get_fy,
+    get_gstin_info,
+    get_gstr_1_return_status,
+)
 
 
 class TestGstinInfo(unittest.TestCase):
@@ -28,7 +32,82 @@ class TestGstinInfo(unittest.TestCase):
                         "stcd": "Gujarat",
                     },
                     "ntr": "Office / Sale Office",
-                }
+                },
+                {
+                    "addr": {
+                        "bnm": "SUN INDUSTRIAL PARK",
+                        "bno": "Plot No. 09",
+                        "dst": "Ahmedabad",
+                        "flno": "",
+                        "landMark": "Sharda Vidyalaya",
+                        "loc": "Kubadthal",
+                        "locality": None,
+                        "pncd": "382430",
+                        "st": "Kubadthal",
+                        "stcd": "Gujarat",
+                    },
+                    "ntr": "Factory / Manufacturing",
+                },
+                {
+                    "addr": {
+                        "bnm": "Gut No 1667",
+                        "bno": "4430 - Survey No. 43",
+                        "dst": "Sindhudurg",
+                        "flno": "",
+                        "landMark": "Opp Saheb Hotel, Highway 66",
+                        "loc": "Osargaon",
+                        "locality": "Osargaon, Kankavli",
+                        "pncd": "416602",
+                        "st": "Opp Saheb Hotel, Highway 66, Kalmath",
+                        "stcd": "Maharashtra",
+                    },
+                    "ntr": "Warehouse / Depot",
+                },
+                {
+                    "addr": {
+                        "bnm": "",
+                        "bno": "Shop No. 4",
+                        "dst": "Bhavnagar",
+                        "flno": "",
+                        "landMark": "Opp. Victoria Park",
+                        "loc": "Bhavnagar",
+                        "locality": "",
+                        "pncd": "364002",
+                        "st": "Beside Phonewale and Poojara Telecom Shops, Dilbahar Water Tank to Industrial Jewel Circle",
+                        "stcd": "Gujarat",
+                    },
+                    "ntr": "Retail Business",
+                },
+                {
+                    "addr": {
+                        "bnm": "",
+                        "bno": "1",
+                        "dst": "Surat",
+                        "flno": "",
+                        "landMark": "Near Textile Market",
+                        "loc": "Surat",
+                        "locality": "",
+                        "pncd": "395003",
+                        "st": "Industrial Estate Road " * 10,
+                        "stcd": "Gujarat",
+                    },
+                    "ntr": "Warehouse / Depot",
+                },
+                {
+                    "addr": {
+                        "bnm": "",
+                        "bno": "12",
+                        "dst": "Kachchh",
+                        "flno": "",
+                        "landMark": "Near Bus Stand",
+                        "loc": "Gandhidham Industrial Area",
+                        "locality": "Ganesh Nagar",
+                        "pncd": "370201",
+                        "st": "Ganesh Nagar Road",
+                        "stcd": "Gujarat",
+                    },
+                    "ntr": "Office / Sale Office",
+                },
             ],
             "ctb": "Proprietorship",
             "ctj": "RANGE-V",
@@ -114,6 +193,49 @@ class TestGstinInfo(unittest.TestCase):
                         "pincode": "390023",
                         "country": "India",
                     },
+                    {
+                        "address_line1": "Plot No. 09, Sun Industrial Park",
+                        "address_line2": "Kubadthal, Sharda Vidyalaya",
+                        "city": "Ahmedabad",
+                        "state": "Gujarat",
+                        "pincode": "382430",
+                        "country": "India",
+                    },
+                    {
+                        "address_line1": "4430 - Survey No. 43, Gut No 1667",
+                        "address_line2": "Opp Saheb Hotel, Highway 66, Kalmath, Kankavli, Osargaon",
+                        "city": "Sindhudurg",
+                        "state": "Maharashtra",
+                        "pincode": "416602",
+                        "country": "India",
+                    },
+                    {
+                        "address_line1": "Shop No. 4",
+                        "address_line2": (
+                            "Beside Phonewale and Poojara Telecom Shops, Dilbahar Water Tank to Industrial Jewel Circle,"
+                            " Opp. Victoria Park"
+                        ),
+                        "city": "Bhavnagar",
+                        "state": "Gujarat",
+                        "pincode": "364002",
+                        "country": "India",
+                    },
+                    {
+                        "address_line1": "1",
+                        "address_line2": ("Industrial Estate Road " * 10).strip(),
+                        "city": "Surat",
+                        "state": "Gujarat",
+                        "pincode": "395003",
+                        "country": "India",
+                    },
+                    {
+                        "address_line1": "12, Ganesh Nagar Road",
+                        "address_line2": "Near Bus Stand, Ganesh Nagar, Gandhidham Industrial Area",
+                        "city": "Kachchh",
+                        "state": "Gujarat",
+                        "pincode": "370201",
+                        "country": "India",
+                    },
                 ],
                 "permanent_address": {
                     "address_line1": "Plot No. 420, National Highway No. 8",
@@ -134,6 +256,24 @@ class TestGstinInfo(unittest.TestCase):
         )
         gstin_info = get_gstin_info(self.gstin)
         self.assertEqual(gstin_info.business_name, "Nalin Vora")
+
+    def test_march_gstr_1_is_found_in_its_own_financial_year(self):
+        """March GSTR-1 shows as Not Filed if looked up in the next financial year"""
+        self.assertEqual(get_fy("022026"), "2025-26")
+        self.assertEqual(get_fy("032026"), "2025-26")
+        self.assertEqual(get_fy("042026"), "2026-27")
+
+        e_filed_lists = {
+            "2025-26": [{"rtntype": "GSTR1", "ret_prd": "032026", "status": "Filed"}],
+            "2026-27": [{"rtntype": "GSTR1", "ret_prd": "042026", "status": "Filed"}],
+        }
+        with patch(
+            "india_compliance.gst_india.utils.gstin_info.update_gstr_returns_info",
+            side_effect=lambda company, gstin, fy: e_filed_lists[fy],
+        ):
+            status = get_gstr_1_return_status("_Test Indian Registered Company", self.gstin, "032026")
+
+        self.assertEqual(status, "Filed")
 
     def test_tcs_gstin_info(self):
         self.mock_public_api.return_value = Mock()

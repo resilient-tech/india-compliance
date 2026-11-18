@@ -91,7 +91,7 @@ jobs:
               - '!**/*.csv'
 
   tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     needs: changes
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.backend == 'true' }}

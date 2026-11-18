@@ -74,6 +74,8 @@ def download_gstr_2a(gstin, return_periods):
 
         json_data = frappe._dict({"gstin": gstin, "fp": return_period})
         has_data = False
+        logs = []
+        queued = []
         for action, category in GSTR_2A_ACTIONS.items():
             requests_made += 1
 
@@ -90,30 +92,32 @@ def download_gstr_2a(gstin, return_periods):
             response = api.get_data(action, return_period)
 
             if response.error_type == "no_docs_found":
-                create_import_log(
-                    gstin,
-                    return_type.value,
-                    return_period,
-                    classification=category.value,
-                    data_not_found=True,
-                )
+                logs.append({"classification": category.value, "data_not_found": True})
                 continue
 
             # Queued
             if response.token:
-                create_import_log(
-                    gstin,
-                    return_type.value,
-                    return_period,
-                    classification=category.value,
-                    request_id=response.token,
-                    retry_after_mins=cint(response.est),
+                logs.append(
+                    {
+                        "classification": category.value,
+                        "request_id": response.token,
+                        "retry_after_mins": cint(response.est),
+                    }
                 )
                 queued_message = True
+                queued.append(category)
+                continue
+
+            if response.error_type == "not_applicable":
                 continue
 
             if response.error_type:
-                continue
+                frappe.throw(
+                    _(
+                        "Could not download GSTR-2A {0} data for GSTIN {1} and return period {2}"
+                        " from the GST Portal. Please try again."
+                    ).format(category.value, gstin, return_period)
+                )
 
             if not (data := response.get(action.lower())):
                 frappe.throw(
@@ -128,7 +132,10 @@ def download_gstr_2a(gstin, return_periods):
             json_data[action.lower()] = data
             has_data = True
 
-        save_gstr_2a(gstin, return_period, json_data)
+        for log in logs:
+            create_import_log(gstin, return_type.value, return_period, **log)
+
+        save_gstr_2a(gstin, return_period, json_data, skip=queued)
 
     if queued_message:
         publish_2a_2b_queued_message()
@@ -201,7 +208,14 @@ def download_gstr_2b(gstin, return_periods):
             combined = {}
             for file_num in range(1, file_count + 1):
                 r = api.get_data(return_period, file_num=file_num)
-                merge_dicts(combined, r.data or {})
+                if not r.data:
+                    frappe.throw(
+                        _(
+                            "Could not download GSTR-2B file {0} of {1} for GSTIN {2} and return period {3}"
+                            " from the GST Portal. Please try again."
+                        ).format(file_num, file_count, gstin, return_period)
+                    )
+                merge_dicts(combined, r.data)
 
             response = frappe._dict(data=frappe._dict(combined))
 
@@ -270,7 +284,7 @@ def download_ims_invoices(gstin, for_upload=False):
     return has_queued_invoices
 
 
-def save_gstr_2a(gstin, return_period, json_data):
+def save_gstr_2a(gstin, return_period, json_data, skip=()):
     return_type = ReturnType.GSTR2A
     if not json_data or json_data.get("gstin") != gstin or json_data.get("fp") != return_period:
         frappe.throw(
@@ -282,6 +296,8 @@ def save_gstr_2a(gstin, return_period, json_data):
         )
 
     raw_data = dict(json_data)
+    raw_keys = {category: action.lower() for action, category in GSTR_2A_ACTIONS.items()}
+    keep = [raw_keys.get(category, category.value.lower()) for category in skip]
 
     for action, category in GSTR_2A_ACTIONS.items():
         if action.lower() not in json_data:
@@ -292,8 +308,8 @@ def save_gstr_2a(gstin, return_period, json_data):
         # making consistent with GSTR2b
         json_data[category.value.lower()] = json_data.pop(action.lower())
 
-    store_raw_return_data(gstin, return_type.value, return_period, raw_data)
-    save_gstr(gstin, return_type, return_period, json_data)
+    store_raw_return_data(gstin, return_type.value, return_period, raw_data, keep=keep)
+    save_gstr(gstin, return_type, return_period, json_data, skip=skip)
 
 
 def save_gstr_2b(gstin, return_period, json_data):
@@ -333,6 +349,7 @@ def save_gstr(
     json_data,
     rejected_data=None,
     gen_date_2b=None,
+    skip=(),
 ):
     """Save GSTR data to Inward Supply
 
@@ -347,7 +364,7 @@ def save_gstr(
     created = 0
     for category in GSTRCategory:
         gstr = get_data_handler(return_type.value, category.value)
-        if not gstr:
+        if not gstr or category in skip:
             continue
 
         created += (
@@ -408,7 +425,14 @@ def update_import_history(gstin, return_periods):
 def _download_gstr_2a(gstin, return_period, json_data):
     json_data.gstin = gstin
     json_data.fp = return_period
-    save_gstr_2a(gstin, return_period, json_data)
+    received = [category for action, category in GSTR_2A_ACTIONS.items() if action.lower() in json_data]
+    skip = [category for category in GSTRCategory if category not in received]
+    save_gstr_2a(gstin, return_period, json_data, skip)
+
+
+def clear_gstr_2a_category(gstin, return_period, classification):
+    skip = [category for category in GSTRCategory if category.value != classification]
+    save_gstr_2a(gstin, return_period, frappe._dict(gstin=gstin, fp=return_period), skip)
 
 
 def publish_2a_2b_queued_message():

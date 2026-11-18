@@ -127,7 +127,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
@@ -211,7 +211,7 @@ class TestIneligibleITC(FrappeTestCase):
                 "account": "Round Off - _TIRC",
                 "debit": 0.28,
                 "credit": 0.0,
-                "debit_in_transaction_currency": 0.0,
+                "debit_in_transaction_currency": 0.28,
                 "credit_in_transaction_currency": 0.0,
             },
             {
@@ -302,7 +302,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "debit": 0.0,
                     "credit": 0.22,
                     "debit_in_transaction_currency": 0.0,
-                    "credit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.22,
                 },
                 {
                     "account": "GST Expense - _TIRC",
@@ -372,7 +372,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
@@ -532,7 +532,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
@@ -679,7 +679,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
@@ -813,7 +813,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
@@ -871,6 +871,11 @@ class TestIneligibleITC(FrappeTestCase):
         }
 
         doc = create_transaction(**transaction_details)
+
+        # ERPNext refuses an asset return while the draft assets it created still exist
+        for asset in frappe.get_all("Asset", filters={"purchase_invoice": doc.name}, pluck="name"):
+            frappe.delete_doc("Asset", asset)
+
         doc = make_return_doc("Purchase Invoice", doc.name)
         doc.save()
         doc.submit()
@@ -883,7 +888,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "debit": 0.0,
                     "credit": 0.28,
                     "debit_in_transaction_currency": 0.0,
-                    "credit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.28,
                 },
                 {
                     "account": "GST Expense - _TIRC",
@@ -950,6 +955,11 @@ class TestIneligibleITC(FrappeTestCase):
         }
 
         doc = create_transaction(**transaction_details)
+
+        # ERPNext refuses an asset return while the draft assets it created still exist
+        for asset in frappe.get_all("Asset", filters={"purchase_receipt": doc.name}, pluck="name"):
+            frappe.delete_doc("Asset", asset)
+
         doc = make_return_doc("Purchase Receipt", doc.name)
         doc.submit()
 
@@ -1062,7 +1072,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
@@ -1223,7 +1233,7 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Round Off - _TIRC",
                     "debit": 0.28,
                     "credit": 0.0,
-                    "debit_in_transaction_currency": 0.0,
+                    "debit_in_transaction_currency": 0.28,
                     "credit_in_transaction_currency": 0.0,
                 },
                 {
@@ -1274,6 +1284,35 @@ class TestIneligibleITC(FrappeTestCase):
                     "credit": 5610.0,
                     "debit_in_transaction_currency": 0.0,
                     "credit_in_transaction_currency": 5610.0,
+                },
+                # Reversal of the provisional entries booked by the Purchase Receipt
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 0.0,
+                    "credit": 1500.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
+                {
+                    "account": "Unsecured Loans - _TIRC",
+                    "debit": 1500.0,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 0.0,
+                    "credit": 998.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
+                },
+                {
+                    "account": "Unsecured Loans - _TIRC",
+                    "debit": 998.0,
+                    "credit": 0.0,
+                    "debit_in_transaction_currency": 0.0,
+                    "credit_in_transaction_currency": 0.0,
                 },
             ],
         )

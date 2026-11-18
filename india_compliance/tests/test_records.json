@@ -60,6 +60,14 @@
                     "conversion_factor": 1,
                     "uom": "Nos",
                     "name": "_Test Trading Goods 1"
+                },
+                {
+                    "conversion_factor": 1,
+                    "uom": "Box"
+                },
+                {
+                    "conversion_factor": 1,
+                    "uom": "Litre"
                 }
             ],
             "item_defaults": [

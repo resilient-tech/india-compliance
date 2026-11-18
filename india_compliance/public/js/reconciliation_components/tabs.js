@@ -342,7 +342,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         return `
             <div class="d-flex align-items-center flex-wrap">
                 <span class="text-muted mr-2">${frappe.utils.escape_html(gstin)}</span>
-                <span class="es-badge" data-size="sm" data-theme="${get_gstin_indicator_color(
+                <span class="indicator-pill no-indicator-dot ${get_gstin_indicator_color(
                     status,
                 )}" title="${__("GSTIN Status")}">${status || __("Unknown")}</span>
                 ${note ? `<span class="text-muted ml-2">${note}</span>` : ""}
