@@ -2,7 +2,8 @@
 # See license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests import IntegrationTestCase, change_settings
+from frappe.utils import getdate
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.doctype.gstr_1.gstr_1_export import (
@@ -12,16 +13,14 @@ from india_compliance.gst_india.doctype.gstr_1.gstr_1_export import (
     _get_gov_filename,
     _get_selected_sections,
 )
-<<<<<<< HEAD
-=======
 from india_compliance.gst_india.utils import MONTHS, get_period
->>>>>>> 5175170 (test(gstr_1): generate and recompute books through the GSTR-1 form)
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import (
     JSON_CATEGORY_EXCEL_CATEGORY_MAPPING,
     JsonKey,
     SheetName,
 )
+from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 # Every JsonKey value that maps to a sheet in JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.
 # sec_sum is excluded (no sheet mapping). Used for exhaustive template checks.
@@ -31,7 +30,16 @@ GOV_EXCEL_SECTIONS = frozenset(
 
 
 class TestGSTR1(IntegrationTestCase):
-    pass
+    company = "_Test Indian Registered Company"
+    company_gstin = "24AAQCA8719H1ZC"
+
+    def setUp(self):
+        for doctype in ("Sales Invoice", "Journal Entry"):
+            frappe.db.delete(doctype, filters={"company": self.company})
+
+        today = getdate()
+        self.month_or_quarter = MONTHS[today.month - 1]
+        self.year = str(today.year)
 
     @change_settings("GST Settings", {"enable_gstr_1_api": 0})
     def test_recompute_replaces_stored_books(self):
