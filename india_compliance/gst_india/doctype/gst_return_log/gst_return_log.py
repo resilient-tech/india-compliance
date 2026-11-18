@@ -111,10 +111,10 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
             return
 
         file = get_file_doc(self.doctype, self.name, file_field)
+        self.db_set(file_field, None)
+
         if file:
             file.delete(ignore_permissions=True)
-
-        self.db_set(file_field, None)
 
         if "summary" not in file_field:
             self.remove_json_for(f"{file_field}_summary")
