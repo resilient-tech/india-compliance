@@ -147,12 +147,15 @@ class TestGSTPurchaseRegisterITCJournalEntries(FrappeTestCase):
     def test_reclaim_of_itc_reversal_je_is_in_purchase_register(self):
         _, data = execute(_filters(self.today))
 
-        row = next((r for r in data if r.get("voucher_no") == self.reclaim_je.name), None)
-        self.assertEqual(row["ineligibility_type"], "Reclaim of ITC Reversal")
-        self.assertEqual(row["invoice_sub_category"], "Reclaim of ITC Reversal")
-        self.assertEqual(row["cgst_amount"], 9.0)
-        self.assertEqual(row["sgst_amount"], 9.0)
-        self.assertEqual(row["total_tax"], 18.0)
+        rows = [r for r in data if r.get("voucher_no") == self.reclaim_je.name]
+        self.assertCountEqual(
+            [r["invoice_sub_category"] for r in rows], ["All Other ITC", "Reclaim of ITC Reversal"]
+        )
+        for row in rows:
+            self.assertEqual(row["ineligibility_type"], "Reclaim of ITC Reversal")
+            self.assertEqual(row["cgst_amount"], 9.0)
+            self.assertEqual(row["sgst_amount"], 9.0)
+            self.assertEqual(row["total_tax"], 18.0)
 
     def test_reversal_of_itc_others_je_is_in_purchase_register(self):
         _, data = execute(_filters(self.today))
@@ -186,6 +189,8 @@ class TestGSTPurchaseRegisterITCJournalEntries(FrappeTestCase):
         self.assertIsNotNone(reclaim_row)
         self.assertEqual(reclaim_row["cgst_amount"], 9.0)
         self.assertEqual(reclaim_row["sgst_amount"], 9.0)
+
+        self.assertIn(self.reclaim_je.name, by_description["All Other ITC"]["unique_records"])
 
     def test_boe_in_section_4_as_import_of_goods(self):
         _, data = execute(_filters(self.today, sub_section="4"))

@@ -94,12 +94,14 @@ class TestGSTR3BDetails(FrappeTestCase):
         )
 
         _, data = self.get_details("4")
-        row = next((item for item in data if item["voucher_no"] == journal_entry.name), None)
+        rows = [item for item in data if item["voucher_no"] == journal_entry.name]
 
-        self.assertIsNotNone(row)
-        self.assertEqual(row["invoice_sub_category"], "Reclaim of ITC Reversal")
-        self.assertEqual(row["cgst_amount"], 9.0)
-        self.assertEqual(row["sgst_amount"], 9.0)
+        self.assertCountEqual(
+            [row["invoice_sub_category"] for row in rows], ["All Other ITC", "Reclaim of ITC Reversal"]
+        )
+        for row in rows:
+            self.assertEqual(row["cgst_amount"], 9.0)
+            self.assertEqual(row["sgst_amount"], 9.0)
 
     def test_itc_details_report_includes_pos_restricted_itc(self):
         purchase_invoice = create_purchase_invoice(
