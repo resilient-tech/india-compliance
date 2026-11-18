@@ -3,6 +3,7 @@ from collections import defaultdict
 from typing import ClassVar
 
 import frappe
+from erpnext import get_company_currency
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_default_address
@@ -143,7 +144,7 @@ def update_taxable_values(doc):
 
         applicable_charges = flt(
             proportionate_value * (total_charges / total_value),
-            item.precision("taxable_value"),
+            doc.precision("taxable_value", "items"),
         )
 
         item.taxable_value += applicable_charges
@@ -1184,7 +1185,7 @@ class ItemGSTDetails:
             return response
 
         self = cls(docs[0])
-        self.precision = cls.get_tax_amount_precisions(doctype)
+        self.precision = cls.get_tax_amount_precisions(doctype, company)
 
         for doc in docs:
             self.doc = doc
@@ -1211,7 +1212,7 @@ class ItemGSTDetails:
         if ignore_gst_validations(self.doc):
             return
 
-        self.precision = self.get_tax_amount_precisions(self.doc.doctype)
+        self.precision = self.get_tax_amount_precisions(self.doc.doctype, self.doc.company)
         self.set_temp_item_wise_tax_detail_object()
 
         self.set_item_name_wise_tax_details()
@@ -1426,13 +1427,14 @@ class ItemGSTDetails:
             )
 
     @classmethod
-    def get_tax_amount_precisions(cls, doctype):
+    def get_tax_amount_precisions(cls, doctype, company):
         item_doctype = frappe.get_meta(doctype).get_field(get_items_fieldname(doctype)).options
 
         meta = frappe.get_meta(item_doctype)
 
         precisions = frappe._dict()
         default_precision = cint(frappe.db.get_default("float_precision")) or 3
+        currency = get_company_currency(company)
 
         for tax_type in GST_TAX_TYPES:
             fieldname = f"{tax_type}_amount"
@@ -1440,7 +1442,7 @@ class ItemGSTDetails:
             if not field:
                 continue
 
-            precisions[fieldname] = get_field_precision(field) or default_precision
+            precisions[fieldname] = get_field_precision(field, currency=currency) or default_precision
 
         return precisions
 
@@ -1704,6 +1706,20 @@ def validate_isd_not_supplier(doc):
             " An ISD cannot make any outward supply."
         ).format(get_link_to_form("Address", company_address)),
         title=_("Invalid Company Address"),
+    )
+
+
+def clear_e_invoice_e_waybill_on_amend(doc, method=None):
+    if not doc.amended_from:
+        return
+
+    # Amend copies no_copy fields: these belong to the cancelled document
+    doc.update(
+        {
+            fieldname: None
+            for fieldname in ("ewaybill", "e_waybill_status", "irn", "einvoice_status")
+            if doc.meta.has_field(fieldname)
+        }
     )
 
 

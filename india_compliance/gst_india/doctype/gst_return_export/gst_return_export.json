@@ -55,7 +55,7 @@
    "fieldname": "from_date",
    "fieldtype": "Date",
    "label": "From Month",
-   "options": "{\"minView\": \"months\", \"view\": \"months\", \"dateFormat\": \"mm-yyyy\", \"todayButton\": false}"
+   "options": "{\"minView\": \"months\", \"view\": \"months\", \"dateFormat\": \"MM-yyyy\", \"buttons\": false}"
   },
   {
    "fieldname": "column_break_filters_3",
@@ -65,7 +65,7 @@
    "fieldname": "to_date",
    "fieldtype": "Date",
    "label": "To Month",
-   "options": "{\"minView\": \"months\", \"view\": \"months\", \"dateFormat\": \"mm-yyyy\", \"todayButton\": false}"
+   "options": "{\"minView\": \"months\", \"view\": \"months\", \"dateFormat\": \"MM-yyyy\", \"buttons\": false}"
   },
   {
    "fieldname": "summary_section",
@@ -80,7 +80,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-06-26 00:00:00.000000",
+ "modified": "2026-11-17 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Export",

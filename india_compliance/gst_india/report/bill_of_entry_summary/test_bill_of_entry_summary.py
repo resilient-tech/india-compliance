@@ -8,10 +8,14 @@ from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
     make_journal_entry_for_payment,
 )
+from india_compliance.gst_india.doctype.bill_of_entry.test_bill_of_entry import (
+    create_payment_journal_entry,
+)
 from india_compliance.gst_india.report.bill_of_entry_summary.bill_of_entry_summary import (
     execute,
 )
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
+from india_compliance.tests.erpnext_test_utils import create_account
 
 COMPANY = "_Test Indian Registered Company"
 POSTING_DATE = "2023-08-11"
@@ -33,7 +37,7 @@ class TestBillOfEntrySummary(IntegrationTestCase):
     def setUp(self):
         frappe.db.delete("Bill of Entry", filters={"company": COMPANY})
 
-    def create_bill_of_entry(self, invoice_count=1):
+    def create_bill_of_entry(self, invoice_count=1, charges=None):
         invoices = [
             create_purchase_invoice(
                 bill_no=f"BOE-SUMMARY-{index}",
@@ -61,6 +65,9 @@ class TestBillOfEntrySummary(IntegrationTestCase):
                 "posting_date": POSTING_DATE,
             }
         )
+        for account, amount in (charges or {"Miscellaneous Expenses - _TIRC": 500}).items():
+            boe.append("taxes", {"charge_type": "Actual", "account_head": account, "tax_amount": amount})
+
         boe.save(ignore_permissions=True).submit()
 
         return boe, invoices
@@ -71,18 +78,41 @@ class TestBillOfEntrySummary(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_single_invoice(self):
-        boe, invoices = self.create_bill_of_entry()
+        for account_name in ("bank fee", "Unused Fee"):
+            create_account(
+                account_name=account_name,
+                parent_account="Indirect Expenses - _TIRC",
+                company=COMPANY,
+            )
+
+        boe, invoices = self.create_bill_of_entry(
+            charges={
+                "Miscellaneous Expenses - _TIRC": 500,
+                "bank fee - _TIRC": 50,
+                "Unused Fee - _TIRC": 0,
+            }
+        )
 
         data = self.run_report()
 
         self.assertEqual(len(data), 1)
         row = data[0]
         self.assertEqual(row.name, boe.name)
+        self.assertIsNone(row.payment_journal_entry)
         self.assertEqual(row.bill_of_entry_no, "BOE-SUMMARY")
         self.assertEqual(row.supplier, invoices[0].supplier)
         self.assertEqual(row.purchase_invoice, invoices[0].name)
         self.assertEqual(row.total_taxes, boe.total_taxes)
         self.assertEqual(row.total_amount_payable, boe.total_amount_payable)
+        self.assertEqual(row["Input Tax IGST - _TIRC"], boe.taxes[0].tax_amount)
+        self.assertEqual(row["Miscellaneous Expenses - _TIRC"], 500)
+
+        columns, _data = execute(frappe._dict(company=COMPANY, from_date="2023-08-01", to_date="2023-08-31"))
+        labels = [column["label"] for column in columns]
+        self.assertEqual(
+            labels[labels.index("Total Customs Duty") + 1 : labels.index("Total Taxes and Charges")],
+            ["Input Tax IGST - _TIRC", "bank fee - _TIRC", "Miscellaneous Expenses - _TIRC"],
+        )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_multiple_invoices_stay_one_row(self):
@@ -99,15 +129,72 @@ class TestBillOfEntrySummary(IntegrationTestCase):
             sorted(row.purchase_invoice.split(",")),
             sorted(invoice.name for invoice in invoices),
         )
+        self.assertEqual(row["Miscellaneous Expenses - _TIRC"], 500)
+
+        journal_entries = [create_payment_journal_entry(boe, 100) for _ in range(2)]
+        for journal_entry in journal_entries:
+            journal_entry.submit()
+
+        data = self.run_report()
+
+        self.assertEqual(len(data), 1)
+        row = data[0]
+        self.assertEqual(row.purchase_invoice, ",".join(sorted(invoice.name for invoice in invoices)))
+        self.assertEqual(
+            row.payment_journal_entry,
+            ",".join(sorted(journal_entry.name for journal_entry in journal_entries)),
+        )
+        self.assertEqual(row.total_taxes, boe.total_taxes)
+        self.assertEqual(row.total_amount_payable, boe.total_amount_payable)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_similar_account_names_keep_their_own_amounts(self):
+        """Both names scrub to late_fee___tirc, so a scrubbed column key would add the amounts together."""
+        for account_name in ("Late Fee", "Late-Fee"):
+            create_account(
+                account_name=account_name,
+                parent_account="Indirect Expenses - _TIRC",
+                company=COMPANY,
+            )
+
+        self.create_bill_of_entry(charges={"Late Fee - _TIRC": 100, "Late-Fee - _TIRC": 50})
+
+        columns, data = execute(frappe._dict(company=COMPANY, from_date="2023-08-01", to_date="2023-08-31"))
+        fieldnames = [column["fieldname"] for column in columns]
+        self.assertEqual(data[0]["Late Fee - _TIRC"], 100)
+        self.assertEqual(data[0]["Late-Fee - _TIRC"], 50)
+        self.assertEqual(len(fieldnames), len(set(fieldnames)))
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_payment_journal_entry_is_reported(self):
         boe, _invoices = self.create_bill_of_entry()
 
-        journal_entry = make_journal_entry_for_payment(boe.name)
-        journal_entry.cheque_no = "BOE-SUMMARY-PAYMENT"  # mandatory on a Bank Entry
-        journal_entry.save().submit()
+        journal_entry = create_payment_journal_entry(boe, 100)
+        journal_entry.submit()
 
         data = self.run_report()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].payment_journal_entry, journal_entry.name)
+
+        second_payment = create_payment_journal_entry(boe, 100)
+        self.assertEqual(self.run_report()[0].payment_journal_entry, journal_entry.name)
+
+        second_payment.submit()
+        journal_entry.cancel()
+        self.assertEqual(self.run_report()[0].payment_journal_entry, second_payment.name)
+
+        # a naming series can carry a field value, and that value can contain a comma
+        comma_payment = make_journal_entry_for_payment(boe.name)
+        comma_payment.update(
+            {
+                "naming_series": "ACC-JV-.user_remark.-.####",
+                "user_remark": "Zeta, Alpha",
+                "cheque_no": "123",
+            }
+        )
+        comma_payment.save().submit()
+        self.assertIn(", ", comma_payment.name)
+        self.assertEqual(
+            self.run_report()[0].payment_journal_entry,
+            ",".join(sorted([second_payment.name, comma_payment.name])),
+        )

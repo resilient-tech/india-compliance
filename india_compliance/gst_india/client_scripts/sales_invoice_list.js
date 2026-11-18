@@ -56,22 +56,25 @@ async function generate_e_waybill_json(docnames) {
 }
 
 function show_bulk_update_transporter_dialog(docnames) {
-    const d = get_generate_e_waybill_dialog({
-        title: __("Update Transporter Detail"),
-        primary_action_label: __("Update Invoices"),
-        primary_action(values) {
-            d.hide();
+    const d = get_generate_e_waybill_dialog(
+        {
+            title: __("Update Transporter Detail"),
+            primary_action_label: __("Update Invoices"),
+            primary_action(values) {
+                d.hide();
 
-            frappe.call({
-                method: "india_compliance.gst_india.utils.e_waybill.bulk_update_transporter_in_docs",
-                args: {
-                    doctype: DOCTYPE,
-                    docnames,
-                    values,
-                },
-            });
+                frappe.call({
+                    method: "india_compliance.gst_india.utils.e_waybill.bulk_update_transporter_in_docs",
+                    args: {
+                        doctype: DOCTYPE,
+                        docnames,
+                        values,
+                    },
+                });
+            },
         },
-    });
+        { doctype: DOCTYPE, doc: {} },
+    );
 
     d.show();
 }

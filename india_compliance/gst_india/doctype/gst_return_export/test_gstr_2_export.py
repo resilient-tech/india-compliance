@@ -150,6 +150,7 @@ def _remove_file_later(test, file):
     def remove():
         if frappe.db.exists("File", file.name):
             frappe.delete_doc("File", file.name, ignore_permissions=True, delete_permanently=True)
+            frappe.db.after_commit.run()  # disk copy goes on commit, which tests never do
         else:
             delete_file(file.file_url)
 

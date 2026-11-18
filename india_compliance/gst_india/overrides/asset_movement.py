@@ -56,7 +56,7 @@ class AssetMovementController(CustomEwaybillController):
             row.qty = 1
             row.taxable_value = flt(
                 get_asset_value_after_depreciation(row.asset),
-                row.precision("taxable_value"),
+                self.doc.precision("taxable_value", "assets"),
             )
 
             if row.item_tax_template or not row.item_code:
