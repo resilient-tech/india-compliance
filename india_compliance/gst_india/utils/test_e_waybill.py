@@ -2559,6 +2559,20 @@ class TestEWaybillLookup(IntegrationTestCase):
         self.assertTrue(linked)
         self.assertEqual(log_generation.call_args.args[1]["ewayBillNo"], 123)
 
+    def test_two_suppliers_with_the_same_bill_no_link_neither(self):
+        rows = [
+            {"docNo": "SUP/778", "status": "ACT", "ewbNo": ewb_no, "ewbDate": "05/01/2026"}
+            for ewb_no in (111, 222)
+        ]
+        with patch("india_compliance.gst_india.utils.e_waybill.frappe.msgprint") as msgprint:
+            linked, log_generation, _ = self.lookup(
+                rows, docname="PINV-TEST", doctype="Purchase Invoice", bill_no="SUP/778"
+            )
+
+        self.assertFalse(linked)
+        log_generation.assert_not_called()
+        self.assertIn("111, 222", msgprint.call_args.args[0])
+
     def test_purchase_return_matches_on_our_name(self):
         # a return goes out under our name
         linked, _, _ = self.lookup(
