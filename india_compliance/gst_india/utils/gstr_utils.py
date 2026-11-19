@@ -1,6 +1,8 @@
 from enum import Enum
 
 import frappe
+from frappe import _
+from frappe.permissions import get_role_permissions
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -27,11 +29,18 @@ class ReturnType(Enum):
     IMS = "IMS"
 
 
+def check_gst_settings_permission():
+    # GST Settings holds the GST accounts of every company, so a document check
+    # refuses users restricted to one company. validate_gstin_permission checks the company.
+    if not get_role_permissions("GST Settings").get("read"):
+        frappe.throw(_("No permission for {0}").format(_("GST Settings")), frappe.PermissionError)
+
+
 @frappe.whitelist()
 @validate_gstin_permission
 @otp_handler
 def request_otp(company_gstin: str):
-    frappe.has_permission("GST Settings", throw=True)
+    check_gst_settings_permission()
 
     return TaxpayerBaseAPI(company_gstin).request_otp()
 
@@ -40,7 +49,7 @@ def request_otp(company_gstin: str):
 @validate_gstin_permission
 @otp_handler
 def authenticate_otp(company_gstin: str, otp: str):
-    frappe.has_permission("GST Settings", throw=True)
+    check_gst_settings_permission()
 
     api = TaxpayerBaseAPI(company_gstin)
     response = api.autheticate_with_otp(otp)
