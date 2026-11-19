@@ -199,12 +199,24 @@ def download_gstr_2b(gstin, return_periods):
             continue
 
         if response.error_type:
-            frappe.throw(
-                _(
+            reason = {
+                "requested_before_cutoff_date": _(
+                    "GSTR-2B for this return period is not available yet."
+                ),
+                "not_needed": _(
+                    "The GST Portal says GSTR-2B generation is not needed because there are no changes."
+                ),
+            }.get(response.error_type)
+            if reason:
+                message = _(
+                    "Could not download GSTR-2B for GSTIN {0} and return period {1}: {2}"
+                ).format(gstin, return_period, reason)
+            else:
+                message = _(
                     "Could not download GSTR-2B for GSTIN {0} and return period {1}"
                     " from the GST Portal. Please try again."
                 ).format(gstin, return_period)
-            )
+            frappe.throw(message)
 
         has_data = True
 

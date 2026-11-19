@@ -596,13 +596,25 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
     @patch("india_compliance.gst_india.utils.gstr_2.GSTR2bAPI")
     def test_unhandled_portal_answer_is_reported_not_skipped(self, gstr_2b_api):
         period = "112026"
+        expected_reasons = {
+            "requested_before_cutoff_date": "GSTR-2B for this return period is not available yet.",
+            "not_needed": "GSTR-2B generation is not needed because there are no changes.",
+            "unknown_portal_error": "from the GST Portal. Please try again.",
+        }
 
-        for error_type in ("requested_before_cutoff_date", "not_needed"):
+        for error_type, expected_reason in expected_reasons.items():
             with self.subTest(error_type=error_type):
                 gstr_2b_api.return_value.get_data.return_value = frappe._dict(error_type=error_type)
 
-                with self.assertRaisesRegex(frappe.ValidationError, f"GSTR-2B for GSTIN .* {period}"):
+                with self.assertRaises(frappe.ValidationError) as error:
                     download_gstr_2b(self.gstin, [period])
+
+                message = str(error.exception)
+                self.assertIn(self.gstin, message)
+                self.assertIn(period, message)
+                self.assertIn(expected_reason, message)
+                if error_type == "unknown_portal_error":
+                    self.assertNotIn(error_type, message)
 
                 self.assertFalse(
                     frappe.db.exists(
