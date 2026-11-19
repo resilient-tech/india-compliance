@@ -807,8 +807,9 @@ def _fetch_e_waybill_data(doc, log):
 def find_matching_e_waybill(*, doctype: str, docname: str, e_waybill_date: str):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "submit")
+    linked = link_matching_e_waybill(doc, e_waybill_date)
 
-    if not link_matching_e_waybill(doc, e_waybill_date):
+    if linked is False:
         frappe.msgprint(
             _(
                 "We couldn't find a matching e-Waybill for the date {0}. Please verify the date and try again."
@@ -816,6 +817,8 @@ def find_matching_e_waybill(*, doctype: str, docname: str, e_waybill_date: str):
             _("Warning"),
             indicator="yellow",
         )
+
+    if not linked:
         return
 
     return send_updated_doc(doc)
@@ -830,18 +833,28 @@ def get_e_waybill_doc_no(doc):
 
 
 def link_matching_e_waybill(doc, e_waybill_date):
-    """Link this doc's active e-Waybill for the date, if the portal has one. True when linked."""
+    """Link this doc's active e-Waybill for the date. True when linked, False when the portal
+    has none, None when more than one could be this doc's and nothing was linked."""
     response = EWaybillAPI.create(doc).get_e_waybills_by_date(format_date(e_waybill_date, "dd/mm/yyyy"))
 
     doc_no = get_e_waybill_doc_no(doc)
-    result = next(
-        (row for row in response if row.get("docNo") == doc_no and row.get("status") == "ACT"), None
-    )
+    matches = [row for row in response if row.get("docNo") == doc_no and row.get("status") == "ACT"]
 
-    if not result:
+    if len(matches) > 1:
+        # two suppliers can use the same bill no, so do not guess which one is ours
+        frappe.msgprint(
+            _(
+                "More than one active e-Waybill on this date has document number {0}: {1}. Use Mark as Generated to link the right one."
+            ).format(frappe.bold(doc_no), ", ".join(str(row.get("ewbNo")) for row in matches)),
+            _("Warning"),
+            indicator="yellow",
+        )
+        return None
+
+    if not matches:
         return False
 
-    result = frappe._dict(result)
+    result = frappe._dict(matches[0])
 
     # to the shape log_and_process expects for generation without IRN
     result["ewayBillNo"] = result["ewbNo"]
