@@ -19,6 +19,7 @@ from india_compliance.gst_india.doctype.gst_return_export.return_adapters import
     GSTR2BAdapter,
     ReturnAdapter,
     section_rank,
+    section_totals,
 )
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     get_raw_return_data,
@@ -27,6 +28,7 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
 from india_compliance.gst_india.utils import get_data_file_path, merge_dicts
 from india_compliance.gst_india.utils.gstr_2 import save_gstr_2a, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
+from india_compliance.gst_returns.fields.gstr2 import DocField as doc
 from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
 
 GSTIN = "01AABCE2207R1Z5"
@@ -69,6 +71,20 @@ class TestSummaryHelpers(IntegrationTestCase):
 
     def test_section_rank_unknown_goes_last(self):
         self.assertEqual(section_rank("ZZZ"), len(SECTION_ORDER))
+
+    def test_cdnr_totals_subtract_credit_notes(self):
+        debit_note = {doc.DOC_TYPE: "Debit Note", "taxable_value": 100, "igst": 18}
+        credit_note = {doc.DOC_TYPE: "Credit Note", "taxable_value": 300, "igst": 54}
+
+        total = section_totals("CDNR", [debit_note, credit_note])
+        self.assertEqual((total["documents"], total["taxable_value"], total["igst"]), (2, -200, -36))
+        self.assertEqual((debit_note["taxable_value"], credit_note["taxable_value"]), (100, 300))
+
+        credit_only = section_totals("CDNR", [credit_note])
+        self.assertEqual((credit_only["taxable_value"], credit_only["igst"]), (-300, -54))
+
+        b2b = section_totals("B2B", [credit_note])
+        self.assertEqual((b2b["taxable_value"], b2b["igst"]), (300, 54))
 
 
 class TestRangeSummary(IntegrationTestCase):

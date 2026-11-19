@@ -20,6 +20,7 @@ from india_compliance.gst_india.utils.gstr_2.gstr import GSTR
 from india_compliance.gst_india.utils.gstr_2.gstr_2a import GSTR2a
 from india_compliance.gst_india.utils.gstr_2.gstr_2b import GSTR2b
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
+from india_compliance.gst_returns.fields.gstr2 import DocField as doc
 from india_compliance.gst_returns.fields.gstr2 import RawField2b as raw2b
 
 SECTION_ORDER = [
@@ -63,11 +64,15 @@ def section_rank(section):
 
 
 def section_totals(section, rows):
+    signed_rows = [
+        (-1 if section == "CDNR" and row.get(doc.DOC_TYPE) == "Credit Note" else 1, row)
+        for row in rows
+    ]
     return {
         "section": section,
         "documents": len(rows),
-        "taxable_value": flt(sum(flt(row.get("taxable_value")) for row in rows)),
-        **{t: flt(sum(flt(row.get(t)) for row in rows)) for t in TAX_FIELDS},
+        "taxable_value": flt(sum(sign * flt(row.get("taxable_value")) for sign, row in signed_rows)),
+        **{t: flt(sum(sign * flt(row.get(t)) for sign, row in signed_rows)) for t in TAX_FIELDS},
     }
 
 
