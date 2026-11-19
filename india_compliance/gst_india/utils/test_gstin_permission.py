@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -5,6 +7,7 @@ from india_compliance.gst_india.utils import (
     validate_company_gstin_access,
     validate_gstin_permission,
 )
+from india_compliance.gst_india.utils.gstr_utils import request_otp
 
 OWN_GSTIN = "24AAQCA8719H1ZC"  # _Test Indian Registered Company (user is permitted)
 OTHER_GSTIN = "29AAQCA8719H1Z1"  # another company (user is not permitted)
@@ -134,3 +137,24 @@ class TestGstinPermission(IntegrationTestCase):
             @validate_gstin_permission
             def action(period):
                 return "ran"
+
+    def test_restricted_user_can_request_otp(self):
+        gst_account = frappe.get_doc(
+            {
+                "doctype": "GST Account",
+                "parent": "GST Settings",
+                "parenttype": "GST Settings",
+                "parentfield": "gst_accounts",
+                "company": self.other_company,
+                "account_type": "Input",
+            }
+        )
+        gst_account.db_insert()
+        self.addCleanup(frappe.db.delete, "GST Account", gst_account.name)
+
+        self.restrict_user_to_own_company()
+        with patch("india_compliance.gst_india.utils.gstr_utils.TaxpayerBaseAPI") as api:
+            with self.set_user(TEST_USER):
+                request_otp(company_gstin=OWN_GSTIN)
+
+        api.return_value.request_otp.assert_called_once()
