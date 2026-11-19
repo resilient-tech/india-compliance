@@ -199,7 +199,12 @@ def download_gstr_2b(gstin, return_periods):
             continue
 
         if response.error_type:
-            continue
+            frappe.throw(
+                _(
+                    "Could not download GSTR-2B for GSTIN {0} and return period {1}"
+                    " from the GST Portal. Please try again."
+                ).format(gstin, return_period)
+            )
 
         has_data = True
 

@@ -593,6 +593,24 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
 
         self.assert_every_file_kept(period)
 
+    @patch("india_compliance.gst_india.utils.gstr_2.GSTR2bAPI")
+    def test_unhandled_portal_answer_is_reported_not_skipped(self, gstr_2b_api):
+        period = "112026"
+
+        for error_type in ("requested_before_cutoff_date", "not_needed"):
+            with self.subTest(error_type=error_type):
+                gstr_2b_api.return_value.get_data.return_value = frappe._dict(error_type=error_type)
+
+                with self.assertRaisesRegex(frappe.ValidationError, f"GSTR-2B for GSTIN .* {period}"):
+                    download_gstr_2b(self.gstin, [period])
+
+                self.assertFalse(
+                    frappe.db.exists(
+                        self.log_doctype,
+                        {"gstin": self.gstin, "return_type": ReturnType.GSTR2B.value, "return_period": period},
+                    )
+                )
+
     def assert_every_file_kept(self, period):
         self.assertEqual(
             dict(
