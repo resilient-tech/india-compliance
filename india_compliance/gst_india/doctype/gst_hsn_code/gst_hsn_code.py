@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document, bulk_insert
-from frappe.utils import get_email_address, random_string
+from frappe.utils import get_email_address, get_fullname, random_string
 
 from india_compliance.gst_india.utils import (
     get_hsn_settings,
@@ -96,7 +96,7 @@ def _add_comment_to_items(item_names, hsn_code, timestamp=None):
                 "name": random_string(10),
                 "comment_type": "Info",
                 "comment_email": get_email_address(current_user),
-                "comment_by": current_user,
+                "comment_by": get_fullname(current_user),
                 "creation": current_time,
                 "modified": current_time,
                 "modified_by": current_user,
