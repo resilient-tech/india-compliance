@@ -384,6 +384,8 @@ def _bulk_update(updates: dict[str, set[str]], doctype: str, source: str) -> Non
         )
 
     user = frappe.session.user
+    user_email = get_email_address(user)
+    user_fullname = get_fullname(user)
     current_time = frappe.utils.now()
     comments = []
     for period, names in updates.items():
@@ -394,8 +396,8 @@ def _bulk_update(updates: dict[str, set[str]], doctype: str, source: str) -> Non
                 {
                     "name": random_string(10),
                     "comment_type": "Info",
-                    "comment_email": get_email_address(user),
-                    "comment_by": get_fullname(user),
+                    "comment_email": user_email,
+                    "comment_by": user_fullname,
                     "creation": current_time,
                     "modified": current_time,
                     "modified_by": user,
