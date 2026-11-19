@@ -353,6 +353,67 @@ class TestRawReturnDataRoundTrip(IntegrationTestCase):
         summary = frappe.parse_json(frappe.db.get_value("GST Return Log", log_name, "section_summary"))
         self.assertEqual(summary["sections"][0]["documents"], 2)
 
+    def test_patch_invalidates_old_2b_summary_and_lazy_read_recomputes_signed_cdnr(self):
+        from india_compliance.patches.v17.invalidate_gstr2b_section_summaries import execute
+
+        period_2b = "112024"
+        period_2a = "112024"
+        raw_2b = {
+            "docdata": {
+                "cdnr": [
+                    {
+                        "ctin": GSTIN,
+                        "nt": [
+                            {"ntnum": "CN1", "typ": "C", "txval": 100, "igst": 18},
+                            {"ntnum": "DN1", "typ": "D", "txval": 40, "igst": 7},
+                        ],
+                    }
+                ]
+            }
+        }
+        store_raw_return_data(GSTIN, ReturnType.GSTR2B.value, period_2b, raw_2b)
+        store_raw_return_data(GSTIN, ReturnType.GSTR2A.value, period_2a, {"cdn": []})
+
+        log_2b = f"{ReturnType.GSTR2B.value}-{period_2b}-{GSTIN}"
+        log_2a = f"{ReturnType.GSTR2A.value}-{period_2a}-{GSTIN}"
+        stale_summary = {
+            "sections": [
+                {
+                    "section": "CDNR",
+                    "documents": 2,
+                    "taxable_value": 140.0,
+                    "igst": 25.0,
+                    "cgst": 0.0,
+                    "sgst": 0.0,
+                    "cess": 0.0,
+                }
+            ],
+            "itc_summary": None,
+        }
+        section_summary_2a = '{"sections":[{"section":"CDNR","taxable_value":123}]}'
+        frappe.db.set_value(
+            "GST Return Log", log_2b, "section_summary", frappe.as_json(stale_summary), update_modified=False
+        )
+        frappe.db.set_value(
+            "GST Return Log", log_2a, "section_summary", section_summary_2a, update_modified=False
+        )
+        modified_2b = frappe.db.get_value("GST Return Log", log_2b, "modified")
+        modified_2a = frappe.db.get_value("GST Return Log", log_2a, "modified")
+
+        execute()
+        execute()
+
+        self.assertFalse(frappe.db.get_value("GST Return Log", log_2b, "section_summary"))
+        self.assertEqual(frappe.db.get_value("GST Return Log", log_2a, "section_summary"), section_summary_2a)
+        self.assertEqual(frappe.db.get_value("GST Return Log", log_2b, "modified"), modified_2b)
+        self.assertEqual(frappe.db.get_value("GST Return Log", log_2a, "modified"), modified_2a)
+        self.assertEqual(get_raw_return_data(GSTIN, ReturnType.GSTR2B.value, period_2b), raw_2b)
+
+        summary = GSTR2BAdapter(GSTIN).get_summaries([period_2b])[0]
+        cdnr = summary["sections"][0]
+        self.assertEqual((cdnr["documents"], cdnr["taxable_value"], cdnr["igst"]), (2, -60.0, -11.0))
+        self.assertEqual(frappe.db.get_value("GST Return Log", log_2b, "modified"), modified_2b)
+
 
 class TestGSTReturnExportController(IntegrationTestCase):
     @classmethod
