@@ -21,7 +21,7 @@ from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_ord
     create_subcontracting_order,
 )
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import add_to_date, getdate, now_datetime
+from frappe.utils import add_to_date, flt, getdate, now_datetime
 
 from india_compliance.gst_india.utils.e_waybill import mark_e_waybill_as_generated
 from india_compliance.gst_india.utils.taxes_controller import (
@@ -404,13 +404,15 @@ class TestSubcontractingTransaction(FrappeTestCase):
         sco = make_sco()
         se = make_stock_transfer_entry(sco_no=sco.name, rm_items=get_rm_items(sco.supplied_items))
 
+        # receive half, so the supplier still holds raw material to return
+        scr = make_subcontracting_receipt(sco.name)
+        scr.items[0].qty = flt(scr.items[0].qty / 2)
+        scr.save()
+        scr.submit()
+
         return_se = get_materials_from_supplier(sco.name, [d.name for d in sco.supplied_items])
         return_se.supplier = "_Test Registered Supplier"
         return_se.save()
-
-        scr = make_subcontracting_receipt(sco.name)
-        scr.save()
-        scr.submit()
 
         self.assertRaisesRegex(
             frappe.ValidationError,
