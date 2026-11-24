@@ -291,7 +291,9 @@ class TestEWaybill(FrappeTestCase):
             },
         )
 
+        api_calls_before = len(responses.calls)
         fetch_latest_data(cancelled_e_waybill)
+        self.assertEqual(len(responses.calls), api_calls_before + 1)
         self.assertIn(f"ewbNo={cancelled_e_waybill}", responses.calls[-1].request.url)
 
         si.reload()
