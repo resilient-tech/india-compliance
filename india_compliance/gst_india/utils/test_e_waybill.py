@@ -23,11 +23,7 @@ from india_compliance.gst_india.constants import (
     SERVICE_HSN_PREFIX,
     SHIP_TO_GSTIN_APPLICABLE_DATE,
 )
-<<<<<<< HEAD
-=======
-from india_compliance.gst_india.constants.e_waybill import SUB_SUPPLY_TYPES
 from india_compliance.gst_india.doctype.e_waybill_log.e_waybill_log import fetch_latest_data
->>>>>>> 1fa7421 (fix(e-waybill): fetch the open log's own e-Waybill from its form)
 from india_compliance.gst_india.overrides.sales_invoice import (
     cancel_e_waybill_e_invoice,
     is_e_waybill_applicable,
