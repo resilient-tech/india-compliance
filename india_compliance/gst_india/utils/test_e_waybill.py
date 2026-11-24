@@ -271,6 +271,17 @@ class TestEWaybill(IntegrationTestCase):
 
         fetch_e_waybill_data(doctype="Sales Invoice", docname=si.name, attach=False)
 
+        si.reload()
+        frappe.delete_doc("e-Waybill Log", si.ewaybill)
+
+        for attach in (False, True):
+            with self.assertRaisesRegex(
+                frappe.ValidationError, f"e-Waybill Log {si.ewaybill} not found"
+            ) as cm:
+                fetch_e_waybill_data(doctype="Sales Invoice", docname=si.name, attach=attach)
+
+            self.assertNotIsInstance(cm.exception, frappe.DoesNotExistError)
+
     @responses.activate
     def test_credit_note_e_waybill(self):
         si = create_sales_invoice(
@@ -390,6 +401,14 @@ class TestEWaybill(IntegrationTestCase):
         e_waybill_log = frappe.get_doc("e-Waybill Log", "351002721233")
         self.assertEqual(e_waybill_log.is_cancelled, 1)
         self.assertEqual(e_waybill_log.cancelled_on, cancelled_on)
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "has no e-Waybill",
+            fetch_e_waybill_data,
+            doctype=si.doctype,
+            docname=si.name,
+        )
 
     @responses.activate
     def test_get_e_waybill_cancel_data(self):
