@@ -397,39 +397,39 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
     get_summary_columns() {
         return [
             {
-                label: "Match Status",
+                label: __("Match Status"),
                 fieldname: "match_status",
                 width: 200,
                 _value: (...args) => this.get_match_status_link(args[0]),
             },
             {
-                label: "Count <br>2A/2B Docs",
+                label: __("Count <br>2A/2B Docs"),
                 fieldname: "inward_supply_count",
                 width: 120,
                 align: "center",
             },
             {
-                label: "Count <br>Purchase Docs",
+                label: __("Count <br>Purchase Docs"),
                 fieldname: "purchase_count",
                 width: 120,
                 align: "center",
             },
             {
-                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                label: __("Taxable Amount Diff <br>2A/2B - Purchase"),
                 fieldname: "taxable_value_difference",
                 width: 180,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "Tax Difference <br>2A/2B - Purchase",
+                label: __("Tax Difference <br>2A/2B - Purchase"),
                 fieldname: "tax_difference",
                 width: 180,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "% Action Taken",
+                label: __("% Action Taken"),
                 fieldname: "action_taken",
                 width: 120,
                 align: "center",
@@ -490,39 +490,39 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
     get_supplier_columns() {
         return [
             {
-                label: "Supplier Name",
+                label: __("Supplier Name"),
                 fieldname: "supplier_name_gstin",
                 fieldtype: "Link",
                 width: 200,
             },
             {
-                label: "Count <br>2A/2B Docs",
+                label: __("Count <br>2A/2B Docs"),
                 fieldname: "inward_supply_count",
                 align: "center",
                 width: 120,
             },
             {
-                label: "Count <br>Purchase Docs",
+                label: __("Count <br>Purchase Docs"),
                 fieldname: "purchase_count",
                 align: "center",
                 width: 120,
             },
             {
-                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                label: __("Taxable Amount Diff <br>2A/2B - Purchase"),
                 fieldname: "taxable_value_difference",
                 align: "center",
                 width: 150,
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "Tax Difference <br>2A/2B - Purchase",
+                label: __("Tax Difference <br>2A/2B - Purchase"),
                 fieldname: "tax_difference",
                 align: "center",
                 width: 150,
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "% Action <br>Taken",
+                label: __("% Action <br>Taken"),
                 fieldname: "action_taken",
                 align: "center",
                 width: 120,
@@ -566,33 +566,33 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 _value: (...args) => get_icon(...args, "eye"),
             },
             {
-                label: "Supplier Name",
+                label: __("Supplier Name"),
                 fieldname: "supplier_name_gstin",
                 width: 200,
             },
             {
-                label: "Bill No.",
+                label: __("Bill No"),
                 fieldname: "bill_no",
             },
             {
-                label: "Date",
+                label: __("Bill Date"),
                 fieldname: "bill_date",
                 _value: (...args) => frappe.datetime.str_to_user(args[0]),
             },
             {
-                label: "Classification",
+                label: __("Classification"),
                 fieldname: "classification",
                 width: 100,
                 _value: (...args) => `<a href="#" class='classification'>${args[0] || ""}</a>`,
             },
             {
-                label: "Match Status",
+                label: __("Match Status"),
                 fieldname: "match_status",
                 width: 120,
                 _value: (...args) => this.get_match_status_link(args[0]),
             },
             {
-                label: "GST Inward <br>Supply",
+                label: __("GST Inward <br>Supply"),
                 fieldname: "inward_supply_name",
                 fieldtype: "Link",
                 options: "GST Inward Supply",
@@ -601,7 +601,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 _after_format: (...args) => this.get_value_with_indicator(...args),
             },
             {
-                label: "Purchase <br>Invoice",
+                label: __("Purchase <br>Invoice"),
                 fieldname: "purchase_invoice_name",
                 fieldtype: "Dynamic Link",
                 options: "purchase_doctype",
@@ -610,7 +610,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             },
             {
                 fieldname: "taxable_value_difference",
-                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                label: __("Taxable Amount Diff <br>2A/2B - Purchase"),
                 width: 150,
                 align: "center",
                 _value: (...args) => {
@@ -618,7 +618,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 },
             },
             {
-                label: "Tax Difference <br>2A/2B - Purchase",
+                label: __("Tax Difference <br>2A/2B - Purchase"),
                 fieldname: "tax_difference",
                 width: 120,
                 align: "center",
@@ -628,25 +628,25 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             },
             {
                 fieldname: "differences",
-                label: "Differences",
+                label: __("Differences"),
                 width: 150,
                 align: "Left",
             },
             {
-                label: "ITC Availability",
+                label: __("ITC Availability"),
                 fieldname: "itc_availability",
                 width: 120,
                 align: "left",
             },
             {
-                label: "IRN",
+                label: __("IRN"),
                 fieldname: "irn_number",
                 width: 80,
                 align: "center",
                 _value: (...args) => get_irn_indicator(args[0], args[2]),
             },
             {
-                label: "Action",
+                label: __("Action"),
                 fieldname: "action",
                 _value: (...args) => {
                     return `<a href="#" class='action-performed'>${args[0]}</a>`;
