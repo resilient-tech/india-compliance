@@ -9,12 +9,8 @@ from india_compliance.gst_india.utils import get_data_file_path
 
 SINGLE_DOCTYPES_WITH_COMPANY_FIELD = (
     "GST Invoice Management System",
-<<<<<<< HEAD
-    "GSTR-1 Beta",
-=======
     "GST Return Export",
-    "GSTR-1",
->>>>>>> 7d8796c (fix: clear the stored company from report-like tools)
+    "GSTR-1 Beta",
     "Purchase Reconciliation Tool",
 )
 
