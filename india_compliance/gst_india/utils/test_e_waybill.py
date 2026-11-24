@@ -24,6 +24,7 @@ from india_compliance.gst_india.constants import (
     SHIP_TO_GSTIN_APPLICABLE_DATE,
 )
 from india_compliance.gst_india.constants.e_waybill import SUB_SUPPLY_TYPES
+from india_compliance.gst_india.doctype.e_waybill_log.e_waybill_log import fetch_latest_data
 from india_compliance.gst_india.overrides.sales_invoice import (
     cancel_e_waybill_e_invoice,
     is_e_waybill_applicable,
@@ -270,6 +271,32 @@ class TestEWaybill(IntegrationTestCase):
         self._generate_e_waybill(si.name)
 
         fetch_e_waybill_data(doctype="Sales Invoice", docname=si.name, attach=False)
+
+        si.reload()
+        cancelled_e_waybill = si.ewaybill
+        mark_e_waybill_as_cancelled(
+            si.doctype,
+            si.name,
+            values={
+                "reason": "Data Entry Mistake",
+                "remark": "Manually Cancelled",
+                "cancelled_on": str(now_datetime()),
+            },
+        )
+        mark_e_waybill_as_generated(
+            si.doctype,
+            si.name,
+            values={
+                "ewaybill": "351002721234",
+                "e_waybill_date": str(now_datetime()),
+                "valid_upto": str(add_to_date(now_datetime(), days=1)),
+            },
+        )
+
+        api_calls_before = len(responses.calls)
+        fetch_latest_data(cancelled_e_waybill)
+        self.assertEqual(len(responses.calls), api_calls_before + 1)
+        self.assertIn(f"ewbNo={cancelled_e_waybill}", responses.calls[-1].request.url)
 
         si.reload()
         frappe.delete_doc("e-Waybill Log", si.ewaybill)
