@@ -18,6 +18,7 @@ from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.database.utils import commit_after_response
 from frappe.desk.form.load import get_docinfo, run_onload
+from frappe.permissions import has_user_permission
 from frappe.query_builder.functions import Length
 from frappe.utils import (
     add_to_date,
@@ -300,8 +301,12 @@ def validate_company_access(company, doctype="GST Inward Supply", perm="read"):
     if not company:
         return
 
-    reference = frappe.get_doc({"doctype": doctype, "__islocal": 1, "company": company})
-    if not frappe.has_permission(doctype, perm, doc=reference):
+    reference = frappe.get_doc(
+        {"doctype": doctype, "__islocal": 1, "owner": frappe.session.user, "company": company}
+    )
+    if not (
+        has_user_permission(reference, ptype=perm) and frappe.has_permission(doctype, perm, doc=reference)
+    ):
         frappe.throw(
             _("You are not permitted to access data for Company {0}.").format(company),
             frappe.PermissionError,
