@@ -428,6 +428,7 @@ class TestEInvoice(IntegrationTestCase):
                 "irn": test_data.get("response_data").get("result").get("Irn"),
                 "ewaybill": test_data.get("response_data").get("result").get("EwbNo"),
                 "einvoice_status": "Generated",
+                "distance": 2467,
             },
             frappe.get_doc("Sales Invoice", si.name),
         )
