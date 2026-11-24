@@ -442,13 +442,11 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
 
     get_supplier_data() {
         const data = {};
+        const gstin_rows = {};
         this.filtered_data.forEach((row) => {
             let new_row = data[row.supplier_gstin];
             if (!new_row) {
                 new_row = data[row.supplier_gstin] = {
-                    supplier_name_gstin: this.get_supplier_name_gstin(row),
-                    supplier: row.supplier,
-                    supplier_name: row.supplier_name,
                     supplier_gstin: row.supplier_gstin,
                     inward_supply_count: 0,
                     purchase_count: 0,
@@ -457,7 +455,9 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                     tax_difference: 0,
                     taxable_value_difference: 0,
                 };
+                gstin_rows[row.supplier_gstin] = [];
             }
+            gstin_rows[row.supplier_gstin].push(row);
             if (row.inward_supply_name) new_row.inward_supply_count += 1;
             if (row.purchase_invoice_name) new_row.purchase_count += 1;
             if (row.action != "No Action") new_row.action_taken_count += 1;
@@ -465,7 +465,26 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             new_row.tax_difference += row.tax_difference || 0;
             new_row.taxable_value_difference += row.taxable_value_difference || 0;
         });
+
+        for (const [gstin, rows] of Object.entries(gstin_rows)) {
+            const row = this.get_supplier_row(rows);
+            Object.assign(data[gstin], {
+                supplier_name_gstin: this.get_supplier_name_gstin(row),
+                supplier: row.supplier,
+                supplier_name: row.supplier_name,
+            });
+        }
         return this.sort_by_supplier_gstin(Object.values(data));
+    }
+
+    // same order the server uses to name each row
+    get_supplier_row(rows) {
+        return (
+            rows.find((row) => row.purchase_invoice_name && row.supplier) ||
+            rows.find((row) => row.supplier) ||
+            rows.find((row) => row.supplier_name != "Unknown") ||
+            rows[0]
+        );
     }
 
     get_supplier_columns() {
@@ -748,8 +767,6 @@ class PurchaseReconciliationToolAction {
         if (!this.frm.reconciliation_tabs.filtered_data?.length) {
             frappe.throw(__("There is no data to export"));
         }
-        if (selected_row) delete data_to_export.supplier_summary;
-
         const url = `${RECO_MODULE}.download_excel_report`;
 
         open_url_post(`/api/method/${url}`, {
