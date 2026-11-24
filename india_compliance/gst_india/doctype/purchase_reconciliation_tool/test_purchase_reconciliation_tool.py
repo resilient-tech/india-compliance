@@ -19,6 +19,7 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
     setup_isd_fixtures,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
+    AutoReconcile,
     BuildExcel,
     generate_excel_attachment,
 )
@@ -392,6 +393,23 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertTrue(rows[0].inward_supply_name)
         itc_claim_period = frappe.db.get_value("Purchase Invoice", mid_month_pinv.name, "itc_claim_period")
         self.assertEqual(itc_claim_period, "012024")
+
+    def test_auto_reconcile_matches_without_storing_the_company(self):
+        period = frappe.db.get_single_value("Purchase Reconciliation Tool", "period")
+        frappe.db.set_single_value("Purchase Reconciliation Tool", "period", "This Month")
+        self.addCleanup(frappe.db.set_single_value, "Purchase Reconciliation Tool", "period", period)
+        posting_date = str(getdate())
+        pinv = create_purchase_invoice(
+            bill_no="AUTO-RECO-001", bill_date=posting_date, posting_date=posting_date
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="AUTO-RECO-001", bill_date=posting_date, return_period_2b=getdate().strftime("%m%Y")
+        )
+
+        AutoReconcile().reconcile_purchases_for_company("_Test Indian Registered Company")
+
+        self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+        self.assertFalse(frappe.db.get_single_value("Purchase Reconciliation Tool", "company"))
 
     def test_import_history_lists_only_generated_2b_months(self):
         tool = frappe.get_doc("Purchase Reconciliation Tool")
