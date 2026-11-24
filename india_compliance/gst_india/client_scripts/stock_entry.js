@@ -39,11 +39,6 @@ frappe.ui.form.on(DOCTYPE, {
                 },
             };
         });
-
-        // No event trigger are called when form is new
-        if (frm.is_new()) {
-            frm.trigger("bill_to_address");
-        }
     },
 
     onload(frm) {
@@ -52,6 +47,11 @@ frappe.ui.form.on(DOCTYPE, {
         });
 
         on_change_set_address(frm, "supplier_address", ...get_field_and_label(frm, "party_field"));
+
+        // No event trigger are called when form is new
+        if (frm.is_new()) {
+            frm.trigger("bill_to_address");
+        }
     },
 
     refresh(frm) {
