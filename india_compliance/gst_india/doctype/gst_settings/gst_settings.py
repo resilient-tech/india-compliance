@@ -190,6 +190,15 @@ class GSTSettings(Document):
 
                 account_list.append(account)
 
+                if frappe.get_cached_value("Account", account, "company") != row.company:
+                    frappe.throw(
+                        _("Row #{0}: Account {1} does not belong to Company {2}").format(
+                            row.idx,
+                            frappe.bold(account),
+                            frappe.bold(row.company),
+                        )
+                    )
+
             # Validate Duplicate Account Types for each Company
             account_types = company_wise_account_types.setdefault(row.company, [])
             if row.account_type in account_types:
