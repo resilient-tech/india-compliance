@@ -32,6 +32,7 @@ from india_compliance.gst_india.doctype.gst_return_export.template_exporter impo
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     DOCTYPE as RETURN_LOG,
 )
+from india_compliance.gst_india.utils.gstr_2 import get_gstin_name
 from india_compliance.gst_india.utils.gstr_2.sections.b2b import ITC_AVAILABILITY, ITC_REASONS
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
 from india_compliance.gst_returns.fields.gstr2 import DIFF_PERCENT, ISD_TYPE_2B, NOTE_TYPE, YES_NO
@@ -557,13 +558,13 @@ class GSTR2AExporter(GovReturnExporter):
 
         # the portal's 2A shows the legal name (its 2B the trade name)
         return {
-            row.name: row.legal_name or row.trade_name
+            row.name: name
             for row in frappe.get_all(
                 "GSTIN",
                 filters={"name": ("in", list(gstins))},
                 fields=["name", "legal_name", "trade_name"],
             )
-            if row.legal_name or row.trade_name
+            if (name := get_gstin_name(row))
         }
 
     def _section_groups(self, category):
