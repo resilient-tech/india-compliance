@@ -9,6 +9,7 @@ from india_compliance.gst_india.utils import get_data_file_path
 
 SINGLE_DOCTYPES_WITH_COMPANY_FIELD = (
     "GST Invoice Management System",
+    "GST Return Export",
     "GSTR-1",
     "Purchase Reconciliation Tool",
 )
