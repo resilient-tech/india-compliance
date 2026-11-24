@@ -22,6 +22,9 @@ from india_compliance.patches.post_install.update_company_gstin import (
     get_gst_accounts,
     verify_gstin_update,
 )
+from india_compliance.patches.post_install.update_company_gstin import (
+    get_pending_voucher_types as get_voucher_types_missing_gstin,
+)
 
 
 def execute(filters=None):
@@ -51,10 +54,12 @@ def execute(filters=None):
 
 @frappe.whitelist()
 def get_pending_voucher_types(company: str | None = None):
+    can_run_patch = frappe.has_permission("GST Settings", "write")
+
     if company:
         validate_company_access(company, "GL Entry")
         company_accounts = get_all_gst_accounts(company)
-    elif frappe.has_permission("GST Settings", "write"):
+    elif can_run_patch:
         company_accounts = get_gst_accounts()
     else:
         return [], []
@@ -62,7 +67,10 @@ def get_pending_voucher_types(company: str | None = None):
     if not company_accounts:
         return [], []
 
-    return verify_gstin_update(company_accounts), company_accounts
+    if can_run_patch:
+        verify_gstin_update()
+
+    return get_voucher_types_missing_gstin(company_accounts), company_accounts
 
 
 @frappe.whitelist()

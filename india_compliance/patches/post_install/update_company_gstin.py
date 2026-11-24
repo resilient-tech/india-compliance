@@ -170,14 +170,12 @@ def get_pending_voucher_types(gst_accounts):
 
 
 def toggle_allow_on_submit(allow=True, voucher_types=None):
-    custom_field = frappe.qb.DocType("Custom Field")
-    query = (
-        frappe.qb.update(custom_field)
-        .set(custom_field.allow_on_submit, cint(allow))
-        .where(custom_field.fieldname == "company_gstin")
-    )
-
+    filters = {"fieldname": "company_gstin", "allow_on_submit": cint(not allow)}
     if voucher_types:
-        query = query.where(custom_field.dt.isin(voucher_types))
+        filters["dt"] = ("in", voucher_types)
 
-    query.run()
+    for doctype in frappe.get_all("Custom Field", filters=filters, pluck="dt"):
+        frappe.db.set_value(
+            "Custom Field", {"dt": doctype, "fieldname": "company_gstin"}, "allow_on_submit", cint(allow)
+        )
+        frappe.clear_cache(doctype=doctype)

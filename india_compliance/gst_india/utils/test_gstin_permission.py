@@ -13,9 +13,11 @@ from india_compliance.gst_india.utils import (
     validate_gstin_permission,
 )
 from india_compliance.gst_india.utils.tests import create_sales_invoice
+from india_compliance.patches.post_install.update_company_gstin import toggle_allow_on_submit
 
 OWN_GSTIN = "24AAQCA8719H1ZC"  # _Test Indian Registered Company (user is permitted)
 OTHER_GSTIN = "29AAQCA8719H1Z1"  # another company (user is not permitted)
+SECOND_OWN_GSTIN = "24AAQCA8719H3ZA"
 TEST_USER = "gstin-perm-test@example.com"
 
 
@@ -155,12 +157,7 @@ class TestGstinPermission(IntegrationTestCase):
         self.assertTrue(
             frappe.db.exists("GL Entry", {"voucher_no": invoice.name, "company_gstin": ("is", "not set")})
         )
-
-        with self.set_user(TEST_USER):
-            self.assertEqual(get_pending_voucher_types("_Test Foreign Company"), ([], []))
-            self.assertTrue(get_all_gst_accounts(self.other_company))
-            self.assertEqual(get_pending_voucher_types(self.other_company)[0], [])
-            self.assertIn("Sales Invoice", get_pending_voucher_types()[0])
+        self.addCleanup(toggle_allow_on_submit, False, ["Sales Invoice"])
 
         self.restrict_user_to_own_company()
         filters = frappe._dict(company=own_company, from_date=getdate(), to_date=getdate())
@@ -178,3 +175,15 @@ class TestGstinPermission(IntegrationTestCase):
                 execute(frappe._dict(filters, company=self.other_company))
             with self.assertRaises(frappe.PermissionError):
                 update_company_gstin()
+
+        invoice.company_gstin = SECOND_OWN_GSTIN
+        self.assertRaises(frappe.UpdateAfterSubmitError, invoice.save)
+
+        self.assertEqual(get_pending_voucher_types("_Test Foreign Company"), ([], []))
+        self.assertTrue(get_all_gst_accounts(self.other_company))
+        self.assertEqual(get_pending_voucher_types(self.other_company)[0], [])
+        self.assertIn("Sales Invoice", get_pending_voucher_types()[0])
+
+        invoice = frappe.get_doc("Sales Invoice", invoice.name)
+        invoice.company_gstin = SECOND_OWN_GSTIN
+        invoice.save()
