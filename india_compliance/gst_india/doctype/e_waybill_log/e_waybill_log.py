@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from india_compliance.gst_india.utils import send_updated_doc
+from india_compliance.gst_india.utils import load_doc, send_updated_doc
 from india_compliance.gst_india.utils.e_waybill import _fetch_e_waybill_data
 
 
@@ -18,3 +18,11 @@ class eWaybillLog(Document):
         _fetch_e_waybill_data(doc, self)
         send_updated_doc(self)
         frappe.msgprint(_("Fetched latest e-Waybill data"), alert=True, indicator="green")
+
+
+@frappe.whitelist(methods=["POST"])
+def fetch_latest_data(log_name: str):
+    log = load_doc("e-Waybill Log", log_name, "read")
+    doc = load_doc(log.reference_doctype, log.reference_name, "print")
+    _fetch_e_waybill_data(doc, log)
+    send_updated_doc(log)
