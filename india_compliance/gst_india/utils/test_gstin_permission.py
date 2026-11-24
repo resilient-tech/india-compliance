@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -5,6 +7,7 @@ from india_compliance.gst_india.utils import (
     validate_company_gstin_access,
     validate_gstin_permission,
 )
+from india_compliance.gst_india.utils.gstr_utils import authenticate_otp, request_otp
 
 OWN_GSTIN = "24AAQCA8719H1ZC"  # _Test Indian Registered Company (user is permitted)
 OTHER_GSTIN = "29AAQCA8719H1Z1"  # another company (user is not permitted)
@@ -134,3 +137,22 @@ class TestGstinPermission(IntegrationTestCase):
             @validate_gstin_permission
             def action(period):
                 return "ran"
+
+    def test_otp_endpoints_check_only_the_gstin_company(self):
+        self.assertTrue(
+            frappe.db.exists("GST Account", {"parent": "GST Settings", "company": self.other_company})
+        )
+        self.restrict_user_to_own_company()
+
+        with patch("india_compliance.gst_india.utils.gstr_utils.TaxpayerBaseAPI") as api:
+            with self.set_user(TEST_USER):
+                request_otp(company_gstin=OWN_GSTIN)
+                authenticate_otp(company_gstin=OWN_GSTIN, otp="123456")
+
+                with self.assertRaises(frappe.PermissionError):
+                    request_otp(company_gstin=OTHER_GSTIN)
+                with self.assertRaises(frappe.PermissionError):
+                    authenticate_otp(company_gstin=OTHER_GSTIN, otp="123456")
+
+        api.return_value.request_otp.assert_called_once()
+        api.return_value.autheticate_with_otp.assert_called_once_with("123456")

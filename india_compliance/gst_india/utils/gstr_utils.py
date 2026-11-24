@@ -31,8 +31,6 @@ class ReturnType(Enum):
 @validate_gstin_permission
 @otp_handler
 def request_otp(company_gstin: str):
-    frappe.has_permission("GST Settings", throw=True)
-
     return TaxpayerBaseAPI(company_gstin).request_otp()
 
 
@@ -40,8 +38,6 @@ def request_otp(company_gstin: str):
 @validate_gstin_permission
 @otp_handler
 def authenticate_otp(company_gstin: str, otp: str):
-    frappe.has_permission("GST Settings", throw=True)
-
     api = TaxpayerBaseAPI(company_gstin)
     response = api.autheticate_with_otp(otp)
 
