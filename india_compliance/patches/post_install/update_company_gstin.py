@@ -50,13 +50,16 @@ def verify_gstin_update(gst_accounts=None):
     if not gst_accounts:
         gst_accounts = get_gst_accounts()
 
-    voucher_types = get_pending_voucher_types(gst_accounts)
+    return set_allow_on_submit(get_pending_voucher_types(gst_accounts))
 
+
+def set_allow_on_submit(voucher_types):
     if voucher_types:
         toggle_allow_on_submit(True, voucher_types)
         return voucher_types
 
     toggle_allow_on_submit(False)
+    return []
 
 
 def update_gstin_for_je(company, gst_accounts):
@@ -156,6 +159,10 @@ def _update_gl_entries(gstin_voucher_map):
 
 
 def get_pending_voucher_types(gst_accounts):
+    return sorted({row.voucher_type for row in get_pending_gl_entries(gst_accounts)})
+
+
+def get_pending_gl_entries(gst_accounts):
     return frappe.get_all(
         "GL Entry",
         filters={
@@ -163,20 +170,18 @@ def get_pending_voucher_types(gst_accounts):
             "company_gstin": ("is", "not set"),
             "is_cancelled": 0,
         },
-        pluck="voucher_type",
+        fields=["voucher_type", "account"],
         distinct=True,
     )
 
 
 def toggle_allow_on_submit(allow=True, voucher_types=None):
-    custom_field = frappe.qb.DocType("Custom Field")
-    query = (
-        frappe.qb.update(custom_field)
-        .set(custom_field.allow_on_submit, cint(allow))
-        .where(custom_field.fieldname == "company_gstin")
-    )
-
+    filters = {"fieldname": "company_gstin", "allow_on_submit": cint(not allow)}
     if voucher_types:
-        query = query.where(custom_field.dt.isin(voucher_types))
+        filters["dt"] = ("in", voucher_types)
 
-    query.run()
+    for doctype in frappe.get_all("Custom Field", filters=filters, pluck="dt"):
+        frappe.db.set_value(
+            "Custom Field", {"dt": doctype, "fieldname": "company_gstin"}, "allow_on_submit", cint(allow)
+        )
+        frappe.clear_cache(doctype=doctype)

@@ -10,12 +10,21 @@ from frappe import _
 from frappe.query_builder.functions import Sum
 from frappe.utils import cstr
 
-from india_compliance.gst_india.utils import get_all_gst_accounts, get_gstin_list
+from india_compliance.gst_india.utils import (
+    get_all_gst_accounts,
+    get_gstin_list,
+    validate_company_access,
+)
 from india_compliance.patches.post_install.update_company_gstin import (
     execute as _update_company_gstin,
 )
 from india_compliance.patches.post_install.update_company_gstin import (
-    verify_gstin_update,
+    get_gst_accounts,
+    get_pending_gl_entries,
+    set_allow_on_submit,
+)
+from india_compliance.patches.post_install.update_company_gstin import (
+    get_pending_voucher_types as get_voucher_types_missing_gstin,
 )
 
 
@@ -32,6 +41,9 @@ def execute(filters=None):
     report = GSTBalanceReport(filters)
     columns = report.get_columns()
 
+    if not report.gst_accounts:
+        return columns, []
+
     if not filters.show_summary:
         data = report.get_trial_balance_data()
 
@@ -43,13 +55,26 @@ def execute(filters=None):
 
 @frappe.whitelist()
 def get_pending_voucher_types(company: str | None = None):
-    frappe.has_permission("GST Settings", "read", throw=True)
+    can_run_patch = frappe.has_permission("GST Settings", "write")
 
-    company_accounts = ""
     if company:
+        validate_company_access(company, "GL Entry")
         company_accounts = get_all_gst_accounts(company)
+    elif can_run_patch:
+        company_accounts = get_gst_accounts()
+    else:
+        return [], []
 
-    return verify_gstin_update(company_accounts), company_accounts
+    if not company_accounts:
+        return [], []
+
+    if not can_run_patch:
+        return get_voucher_types_missing_gstin(company_accounts), company_accounts
+
+    pending = get_pending_gl_entries(get_gst_accounts())
+    set_allow_on_submit(sorted({row.voucher_type for row in pending}))
+
+    return sorted({row.voucher_type for row in pending if row.account in company_accounts}), company_accounts
 
 
 @frappe.whitelist()

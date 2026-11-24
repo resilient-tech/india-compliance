@@ -18,10 +18,10 @@ class TestGSTBalance(IntegrationTestCase):
 
         self.output_accounts = get_gst_accounts_by_type(COMPANY, "Output")
 
-    def run_report(self, show_summary=0):
+    def run_report(self, show_summary=0, company=COMPANY):
         _columns, data = execute(
             frappe._dict(
-                company=COMPANY,
+                company=company,
                 from_date=add_to_date(getdate(), days=-1),
                 to_date=getdate(),
                 show_summary=show_summary,
@@ -52,3 +52,7 @@ class TestGSTBalance(IntegrationTestCase):
         rows = self.run_report(show_summary=1)
 
         self.assertTrue(rows)
+
+    def test_company_without_gst_accounts_returns_no_rows(self):
+        for show_summary in (0, 1):
+            self.assertEqual(self.run_report(show_summary, company="_Test Foreign Company"), [])
