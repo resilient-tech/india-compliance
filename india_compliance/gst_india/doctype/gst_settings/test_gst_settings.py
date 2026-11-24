@@ -67,6 +67,28 @@ class TestGSTSettings(IntegrationTestCase):
                 )
                 break
 
+    def test_validate_account_company(self):
+        accounts = {
+            "account_type": "Output Refund",
+            "cgst_account": "Output Tax CGST Refund - _TIUC",
+            "sgst_account": "Output Tax SGST Refund - _TIUC",
+            "igst_account": "Output Tax IGST Refund - _TIUC",
+        }
+        doc = frappe.get_doc("GST Settings")
+        doc.append("gst_accounts", {"company": "_Test Indian Registered Company", **accounts})
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(r"^(Row #\d+: Account .* does not belong to Company .*)"),
+            doc.save,
+        )
+
+        doc = frappe.get_doc("GST Settings")
+        row = doc.append("gst_accounts", {"company": "_Test Indian Unregistered Company", **accounts})
+        doc.save()
+
+        doc.remove(row)
+        doc.save()
+
     @change_settings(
         "GST Settings",
         {"enable_e_invoice": 1, "apply_e_invoice_only_for_selected_companies": 0},
