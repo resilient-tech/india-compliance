@@ -268,23 +268,16 @@ class TestEWaybill(IntegrationTestCase):
 
         fetch_e_waybill_data(doctype="Sales Invoice", docname=si.name, attach=False)
 
-    @change_settings("GST Settings", {"fetch_e_waybill_data": 1})
-    @responses.activate
-    def test_fetch_e_waybill_data_after_its_log_is_deleted(self):
-        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
-        self._generate_e_waybill(si.name)
         si.reload()
         frappe.delete_doc("e-Waybill Log", si.ewaybill)
 
         for attach in (False, True):
-            self.assertRaisesRegex(
-                frappe.ValidationError,
-                "Restore it from Deleted Documents",
-                fetch_e_waybill_data,
-                doctype="Sales Invoice",
-                docname=si.name,
-                attach=attach,
-            )
+            with self.assertRaisesRegex(
+                frappe.ValidationError, f"e-Waybill Log {si.ewaybill} not found"
+            ) as cm:
+                fetch_e_waybill_data(doctype="Sales Invoice", docname=si.name, attach=attach)
+
+            self.assertNotIsInstance(cm.exception, frappe.DoesNotExistError)
 
     @responses.activate
     def test_credit_note_e_waybill(self):
@@ -405,6 +398,14 @@ class TestEWaybill(IntegrationTestCase):
         e_waybill_log = frappe.get_doc("e-Waybill Log", "351002721233")
         self.assertEqual(e_waybill_log.is_cancelled, 1)
         self.assertEqual(e_waybill_log.cancelled_on, cancelled_on)
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "has no e-Waybill",
+            fetch_e_waybill_data,
+            doctype=si.doctype,
+            docname=si.name,
+        )
 
     @responses.activate
     def test_get_e_waybill_cancel_data(self):
