@@ -1,7 +1,9 @@
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.permissions import add_permission, reset_perms, update_permission_property
+from frappe.tests import IntegrationTestCase, change_settings
 
 from india_compliance.gst_india.utils import (
+    validate_company_access,
     validate_company_gstin_access,
     validate_gstin_permission,
 )
@@ -9,6 +11,8 @@ from india_compliance.gst_india.utils import (
 OWN_GSTIN = "24AAQCA8719H1ZC"  # _Test Indian Registered Company (user is permitted)
 OTHER_GSTIN = "29AAQCA8719H1Z1"  # another company (user is not permitted)
 TEST_USER = "gstin-perm-test@example.com"
+OWNER_ONLY_USER = "gstin-owner-only-test@example.com"
+OWNER_ONLY_ROLE = "_Test IC Owner Only"
 
 
 class TestGstinPermission(IntegrationTestCase):
@@ -134,3 +138,41 @@ class TestGstinPermission(IntegrationTestCase):
             @validate_gstin_permission
             def action(period):
                 return "ran"
+
+    def test_company_access_allows_roles_limited_to_own_documents(self):
+        if not frappe.db.exists("Role", OWNER_ONLY_ROLE):
+            frappe.get_doc({"doctype": "Role", "role_name": OWNER_ONLY_ROLE}).insert(ignore_permissions=True)
+        if not frappe.db.exists("User", OWNER_ONLY_USER):
+            frappe.get_doc(
+                {
+                    "doctype": "User",
+                    "email": OWNER_ONLY_USER,
+                    "first_name": "Owner Only",
+                    "roles": [{"role": OWNER_ONLY_ROLE}],
+                }
+            ).insert(ignore_permissions=True)
+
+        add_permission("GST Inward Supply", OWNER_ONLY_ROLE)
+        update_permission_property("GST Inward Supply", OWNER_ONLY_ROLE, 0, "if_owner", 1)
+        self.addCleanup(reset_perms, "GST Inward Supply")
+
+        with self.set_user(OWNER_ONLY_USER):
+            validate_company_access("_Test Indian Registered Company")
+
+    @change_settings("System Settings", {"apply_strict_user_permissions": 1})
+    def test_company_access_under_strict_user_permissions(self):
+        self.restrict_user_to_own_company()
+        frappe.get_doc(
+            {
+                "doctype": "User Permission",
+                "user": TEST_USER,
+                "allow": "Cost Center",
+                "for_value": "Main - _TIRC",
+            }
+        ).insert(ignore_permissions=True)
+        frappe.clear_cache(user=TEST_USER)
+
+        with self.set_user(TEST_USER):
+            validate_company_access("_Test Indian Registered Company", "GL Entry")
+            with self.assertRaises(frappe.PermissionError):
+                validate_company_access(self.other_company, "GL Entry")

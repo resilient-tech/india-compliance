@@ -300,7 +300,9 @@ def validate_company_access(company, doctype="GST Inward Supply", perm="read"):
     if not company:
         return
 
-    reference = frappe.get_doc({"doctype": doctype, "__islocal": 1, "company": company})
+    reference = frappe.get_doc(
+        {"doctype": doctype, "__islocal": 1, "owner": frappe.session.user, "company": company}
+    )
     if not frappe.has_permission(doctype, perm, doc=reference):
         frappe.throw(
             _("You are not permitted to access data for Company {0}.").format(company),
