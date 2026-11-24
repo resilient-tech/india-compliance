@@ -211,10 +211,12 @@ class GSTSettings(Document):
 
                 if account_companies.get(account) != row.company:
                     other_company_accounts.append(
-                        _("Row #{0}: Account {1} does not belong to Company {2}").format(
-                            row.idx,
-                            frappe.bold(account),
-                            frappe.bold(row.company),
+                        "<li>{}</li>".format(
+                            _("Row #{0}: {1} belongs to {2}").format(
+                                row.idx,
+                                frappe.bold(account),
+                                frappe.bold(account_companies.get(account)),
+                            )
                         )
                     )
 
@@ -232,7 +234,11 @@ class GSTSettings(Document):
             account_types.append(row.account_type)
 
         if other_company_accounts:
-            frappe.throw("<br>".join(other_company_accounts), title=_("Accounts of Another Company"))
+            frappe.throw(
+                _("The following accounts do not belong to the company on their row:")
+                + f"<br><ul>{''.join(other_company_accounts)}</ul>",
+                title=_("Invalid GST Accounts"),
+            )
 
     def update_custom_fields(self):
         if self.has_value_changed("enable_e_waybill"):
