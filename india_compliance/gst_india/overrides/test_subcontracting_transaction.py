@@ -404,13 +404,27 @@ class TestSubcontractingTransaction(FrappeTestCase):
         sco = make_sco()
         se = make_stock_transfer_entry(sco_no=sco.name, rm_items=get_rm_items(sco.supplied_items))
 
+<<<<<<< HEAD
         return_se = get_materials_from_supplier(sco.name, [d.name for d in sco.supplied_items])
         return_se.supplier = "_Test Registered Supplier"
-        return_se.save()
-
+=======
+        # receive half, so the supplier still holds raw material to return
         scr = make_subcontracting_receipt(sco.name)
+        scr.items[0].qty = flt(scr.items[0].qty / 2)
         scr.save()
         scr.submit()
+
+        frappe.flags.args = frappe._dict(
+            subcontract_order=sco.name,
+            rm_details=[d.name for d in sco.supplied_items],
+            order_doctype=sco.doctype,
+        )
+        try:
+            return_se = get_materials_from_supplier(sco.name)
+        finally:
+            frappe.flags.args = None
+>>>>>>> 087ae71 (test: receive part of the order before returning components)
+        return_se.save()
 
         self.assertRaisesRegex(
             frappe.ValidationError,
