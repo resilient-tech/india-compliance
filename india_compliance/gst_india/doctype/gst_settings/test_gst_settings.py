@@ -76,11 +76,14 @@ class TestGSTSettings(IntegrationTestCase):
         }
         doc = frappe.get_doc("GST Settings")
         doc.append("gst_accounts", {"company": "_Test Indian Registered Company", **accounts})
-        self.assertRaisesRegex(
-            frappe.ValidationError,
-            re.compile(r"^(Row #\d+: Account .* does not belong to Company .*)"),
-            doc.save,
-        )
+        with self.assertRaisesRegex(
+            frappe.ValidationError, re.compile(r"^(Row #\d+: Account .* does not belong to Company .*)")
+        ) as error:
+            doc.save()
+
+        # every wrong account is listed, not only the first
+        for fieldname in ("cgst_account", "sgst_account", "igst_account"):
+            self.assertIn(accounts[fieldname], str(error.exception))
 
         doc = frappe.get_doc("GST Settings")
         row = doc.append("gst_accounts", {"company": "_Test Indian Unregistered Company", **accounts})
