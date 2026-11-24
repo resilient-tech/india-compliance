@@ -10,11 +10,16 @@ from frappe import _
 from frappe.query_builder.functions import Sum
 from frappe.utils import cstr
 
-from india_compliance.gst_india.utils import get_all_gst_accounts, get_gstin_list
+from india_compliance.gst_india.utils import (
+    get_all_gst_accounts,
+    get_gstin_list,
+    validate_company_access,
+)
 from india_compliance.patches.post_install.update_company_gstin import (
     execute as _update_company_gstin,
 )
 from india_compliance.patches.post_install.update_company_gstin import (
+    get_gst_accounts,
     verify_gstin_update,
 )
 
@@ -32,6 +37,9 @@ def execute(filters=None):
     report = GSTBalanceReport(filters)
     columns = report.get_columns()
 
+    if not report.gst_accounts:
+        return columns, []
+
     if not filters.show_summary:
         data = report.get_trial_balance_data()
 
@@ -43,11 +51,16 @@ def execute(filters=None):
 
 @frappe.whitelist()
 def get_pending_voucher_types(company: str | None = None):
-    frappe.has_permission("GST Settings", "read", throw=True)
-
-    company_accounts = ""
     if company:
+        validate_company_access(company, "GL Entry")
         company_accounts = get_all_gst_accounts(company)
+    elif frappe.has_permission("GST Settings", "write"):
+        company_accounts = get_gst_accounts()
+    else:
+        return [], []
+
+    if not company_accounts:
+        return [], []
 
     return verify_gstin_update(company_accounts), company_accounts
 

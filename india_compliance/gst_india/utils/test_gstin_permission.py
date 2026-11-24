@@ -1,10 +1,18 @@
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import getdate
 
+from india_compliance.gst_india.report.gst_balance.gst_balance import (
+    execute,
+    get_pending_voucher_types,
+    update_company_gstin,
+)
 from india_compliance.gst_india.utils import (
+    get_all_gst_accounts,
     validate_company_gstin_access,
     validate_gstin_permission,
 )
+from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 OWN_GSTIN = "24AAQCA8719H1ZC"  # _Test Indian Registered Company (user is permitted)
 OTHER_GSTIN = "29AAQCA8719H1Z1"  # another company (user is not permitted)
@@ -134,3 +142,39 @@ class TestGstinPermission(IntegrationTestCase):
             @validate_gstin_permission
             def action(period):
                 return "ran"
+
+    def test_gst_balance_pending_vouchers_follow_company_access(self):
+        own_company = "_Test Indian Registered Company"
+        invoice = create_sales_invoice(is_in_state=1, qty=1, rate=1000)
+        frappe.db.set_value(
+            "GL Entry",
+            {"voucher_no": invoice.name, "account": ("in", get_all_gst_accounts(own_company))},
+            "company_gstin",
+            None,
+        )
+        self.assertTrue(
+            frappe.db.exists("GL Entry", {"voucher_no": invoice.name, "company_gstin": ("is", "not set")})
+        )
+
+        with self.set_user(TEST_USER):
+            self.assertEqual(get_pending_voucher_types("_Test Foreign Company"), ([], []))
+            self.assertTrue(get_all_gst_accounts(self.other_company))
+            self.assertEqual(get_pending_voucher_types(self.other_company)[0], [])
+            self.assertIn("Sales Invoice", get_pending_voucher_types()[0])
+
+        self.restrict_user_to_own_company()
+        filters = frappe._dict(company=own_company, from_date=getdate(), to_date=getdate())
+
+        with self.set_user(TEST_USER):
+            self.assertEqual(get_pending_voucher_types(), ([], []))
+
+            voucher_types, _accounts = get_pending_voucher_types(own_company)
+            self.assertIn("Sales Invoice", voucher_types)
+            self.assertEqual(execute(filters), ([], []))
+
+            with self.assertRaises(frappe.PermissionError):
+                get_pending_voucher_types(self.other_company)
+            with self.assertRaises(frappe.PermissionError):
+                execute(frappe._dict(filters, company=self.other_company))
+            with self.assertRaises(frappe.PermissionError):
+                update_company_gstin()
