@@ -146,6 +146,7 @@ frappe.ui.form.on(DOCTYPE, {
                     setTimeout(() => {
                         frm.dashboard.clear_headline();
                     }, 2000);
+                    frm.trigger("company_gstin");
                 }, 1000);
             }
         });
