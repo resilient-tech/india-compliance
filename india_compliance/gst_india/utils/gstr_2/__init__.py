@@ -62,6 +62,11 @@ ISD_CATEGORY = ("ISD", "ISDA")
 NON_RECONCILE_CATEGORY = ("TDS", "TCS")
 
 
+def get_gstin_name(gstin_record):
+    """Legal name first, as the portal's 2A shows it, else the trade name its 2B shows."""
+    return gstin_record.get("legal_name") or gstin_record.get("trade_name")
+
+
 def download_gstr_2a(gstin, return_periods):
     total_expected_requests = len(return_periods) * len(GSTR_2A_ACTIONS)
     requests_made = 0
