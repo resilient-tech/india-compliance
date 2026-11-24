@@ -416,6 +416,12 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         sco = make_sco()
         se = make_stock_transfer_entry(sco_no=sco.name, rm_items=get_rm_items(sco.supplied_items))
 
+        # receive half, so the supplier still holds raw material to return
+        scr = make_subcontracting_receipt(sco.name)
+        scr.items[0].qty = flt(scr.items[0].qty / 2)
+        scr.save()
+        scr.submit()
+
         frappe.flags.args = frappe._dict(
             subcontract_order=sco.name,
             rm_details=[d.name for d in sco.supplied_items],
@@ -426,10 +432,6 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         finally:
             frappe.flags.args = None
         return_se.save()
-
-        scr = make_subcontracting_receipt(sco.name)
-        scr.save()
-        scr.submit()
 
         self.assertRaisesRegex(
             frappe.ValidationError,
