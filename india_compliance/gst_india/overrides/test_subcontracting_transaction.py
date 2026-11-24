@@ -610,13 +610,26 @@ class TestAddressMappingAfterMapping(FrappeTestCase):
         self.assertEqual(target_se.ship_to_address, source_se.ship_to_address)
 
     def test_sco_to_se_place_of_supply_follows_bill_to(self):
-        sco = make_sco()
-        sco.db_set("place_of_supply", "33-Tamil Nadu")
+        po = create_purchase_order(
+            **SERVICE_ITEM,
+            supplier_warehouse="Finished Goods - _TIRC",
+            supplier_address="_Test Registered Supplier-Billing-3",
+        )
+        sco = create_subcontracting_order(po_name=po.name)
+        # the form gives the order the company's state
+        sco.db_set("place_of_supply", "24-Gujarat")
 
         se = make_rm_stock_entry(sco.name, get_rm_items(sco.supplied_items))
+        self.assertEqual(se.place_of_supply, "29-Karnataka")
 
-        self.assertEqual(se.bill_to_gstin, sco.supplier_gstin)
-        self.assertEqual(se.place_of_supply, "24-Gujarat")
+        make_stock_transfer_entry(
+            sco_no=sco.name,
+            rm_items=get_rm_items(sco.supplied_items),
+            bill_from_address=sco.billing_address,
+            bill_to_address=sco.supplier_address,
+        )
+        return_se = get_materials_from_supplier(sco.name, [d.name for d in sco.supplied_items])
+        self.assertEqual(return_se.place_of_supply, "24-Gujarat")
 
 
 def _make_taxes_controller_doc(items=None, taxes=None):
