@@ -136,7 +136,9 @@ class TestEWaybill(IntegrationTestCase):
     def test_generate_e_waybill(self):
         """Test whitelisted method `generate_e_waybill`"""
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
-        self._generate_e_waybill(si.name)
+        test_data = copy.deepcopy(self.e_waybill_test_data.goods_item_with_ewaybill)
+        test_data["response_data"]["result"]["alert"] = ", Distance between these two pincodes is 12, "
+        self._generate_e_waybill(si.name, test_data=test_data)
 
         self.assertDocumentEqual(
             {
@@ -146,6 +148,7 @@ class TestEWaybill(IntegrationTestCase):
             },
             frappe.get_doc("e-Waybill Log", {"reference_name": si.name}),
         )
+        self.assertEqual(frappe.db.get_value("Sales Invoice", si.name, "distance"), 12)
 
     @responses.activate
     def test_update_vehicle_info(self):
