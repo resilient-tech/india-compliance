@@ -20,6 +20,7 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
     BuildExcel,
+    generate_excel_attachment,
 )
 from india_compliance.gst_india.utils.gstr_2 import save_gstr_2b
 from india_compliance.gst_india.utils.itc_claim import (
@@ -308,6 +309,36 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         self.assertEqual(rows[0].match_status, "Only in 2A/2B")
         self.assertEqual(rows[0].supplier, supplier.name)
         self.assertEqual(rows[0].supplier_name, supplier.supplier_name)
+
+    def test_supplier_file_is_named_as_in_the_supplier_tab(self):
+        """The emailed file takes an invoice's "Unknown" instead of the supplier tab's name."""
+        gst_is = create_gst_inward_supply(
+            supplier_name="",
+            supplier_gstin="24AQTPC8950E1ZO",
+            bill_no="RECO-FILE-001",
+            bill_date="2024-02-10",
+            return_period_2b="022024",
+            gen_date_2b="2024-02-14",
+        )
+        data = {
+            "match_summary": [],
+            "supplier_summary": [{"supplier_name": "Shree Traders", "supplier_gstin": "24AQTPC8950E1ZO"}],
+            "purchases": [],
+            "inward_supplies": [gst_is.name],
+        }
+        doc = {
+            "doctype": "Purchase Reconciliation Tool",
+            "company": "_Test Indian Registered Company",
+            "company_gstin": "24AAQCA8719H1ZC",
+            "from_date": "2024-02-01",
+            "to_date": "2024-02-29",
+            "gst_return": "GSTR 2B",
+            "include_ignored": 0,
+        }
+
+        file = generate_excel_attachment(json.dumps(data), json.dumps(doc))[0]
+        # frappe suffixes the name when a file left by an aborted run already has it
+        self.assertTrue(file.file_name.startswith("Shree_Traders_24AQTPC8950E1ZO"), file.file_name)
 
     def test_itc_claim_period_on_reconciliation_match(self):
         """
