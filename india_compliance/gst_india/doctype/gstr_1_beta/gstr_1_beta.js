@@ -1329,13 +1329,13 @@ class GSTR1_TabManager extends TabManager {
     get_summary_columns() {
         return [
             {
-                name: "Description",
+                name: __("Description"),
                 fieldname: "description",
                 width: 300,
                 _value: (...args) => this.format_summary_table_cell(args),
             },
             {
-                name: "Total Docs",
+                name: __("Total Docs"),
                 fieldname: "no_of_records",
                 _fieldtype: "Float",
                 width: 100,
@@ -1343,7 +1343,7 @@ class GSTR1_TabManager extends TabManager {
                 _value: (...args) => this.format_summary_table_cell(args),
             },
             {
-                name: "Taxable Value",
+                name: __("Taxable Value"),
                 fieldname: GSTR1_DataField.TAXABLE_VALUE,
                 _fieldtype: "Float",
                 width: 180,
@@ -1351,7 +1351,7 @@ class GSTR1_TabManager extends TabManager {
                 _value: (...args) => this.format_summary_table_cell(args),
             },
             {
-                name: "IGST",
+                name: __("IGST"),
                 fieldname: GSTR1_DataField.IGST,
                 _fieldtype: "Float",
                 width: 150,
@@ -1359,7 +1359,7 @@ class GSTR1_TabManager extends TabManager {
                 _value: (...args) => this.format_summary_table_cell(args),
             },
             {
-                name: "CGST",
+                name: __("CGST"),
                 fieldname: GSTR1_DataField.CGST,
                 _fieldtype: "Float",
                 width: 150,
@@ -1367,7 +1367,7 @@ class GSTR1_TabManager extends TabManager {
                 _value: (...args) => this.format_summary_table_cell(args),
             },
             {
-                name: "SGST",
+                name: __("SGST"),
                 fieldname: GSTR1_DataField.SGST,
                 _fieldtype: "Float",
                 width: 150,
@@ -1375,7 +1375,7 @@ class GSTR1_TabManager extends TabManager {
                 _value: (...args) => this.format_summary_table_cell(args),
             },
             {
-                name: "CESS",
+                name: __("CESS"),
                 fieldname: GSTR1_DataField.CESS,
                 _fieldtype: "Float",
                 width: 150,
@@ -1389,36 +1389,36 @@ class GSTR1_TabManager extends TabManager {
         return [
             ...this.get_detail_view_column(),
             {
-                name: "Invoice Date",
+                name: __("Invoice Date"),
                 fieldname: GSTR1_DataField.DOC_DATE,
                 fieldtype: "Date",
                 width: 120,
             },
             {
-                name: "Invoice Number",
+                name: __("Invoice Number"),
                 fieldname: GSTR1_DataField.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
                 width: 160,
             },
             {
-                name: "Customer GSTIN",
+                name: __("Customer GSTIN"),
                 fieldname: GSTR1_DataField.CUST_GSTIN,
                 width: 160,
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
             {
-                name: "Customer Name",
+                name: __("Customer Name"),
                 fieldname: GSTR1_DataField.CUST_NAME,
                 width: 200,
             },
             {
-                name: "Invoice Type",
+                name: __("Invoice Type"),
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 150,
             },
             {
-                name: "Reverse Charge",
+                name: __("Reverse Charge"),
                 fieldname: GSTR1_DataField.REVERSE_CHARGE,
                 width: 120,
                 _value: (...args) => this.format_detailed_table_cell(args),
@@ -1426,7 +1426,7 @@ class GSTR1_TabManager extends TabManager {
             ...this.get_match_columns(),
             ...this.get_tax_columns(),
             {
-                name: "Invoice Value",
+                name: __("Invoice Value"),
                 fieldname: GSTR1_DataField.DOC_VALUE,
                 fieldtype: "Currency",
                 width: 150,
@@ -1438,40 +1438,40 @@ class GSTR1_TabManager extends TabManager {
         return [
             ...this.get_detail_view_column(),
             {
-                name: "Invoice Date",
+                name: __("Invoice Date"),
                 fieldname: GSTR1_DataField.DOC_DATE,
                 fieldtype: "Date",
                 width: 120,
             },
             {
-                name: "Invoice Number",
+                name: __("Invoice Number"),
                 fieldname: GSTR1_DataField.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
                 width: 160,
             },
             {
-                name: "Customer Name",
+                name: __("Customer Name"),
                 fieldname: GSTR1_DataField.CUST_NAME,
                 width: 200,
             },
             {
-                name: "Invoice Type",
+                name: __("Invoice Type"),
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 150,
             },
             {
-                name: "Shipping Bill Number",
+                name: __("Shipping Bill Number"),
                 fieldname: GSTR1_DataField.SHIPPING_BILL_NUMBER,
                 width: 150,
             },
             {
-                name: "Shipping Bill Date",
+                name: __("Shipping Bill Date"),
                 fieldname: GSTR1_DataField.SHIPPING_BILL_DATE,
                 width: 120,
             },
             {
-                name: "Port Code",
+                name: __("Port Code"),
                 fieldname: GSTR1_DataField.SHIPPING_PORT_CODE,
                 width: 100,
                 _value: (...args) => this.format_detailed_table_cell(args),
@@ -1479,7 +1479,7 @@ class GSTR1_TabManager extends TabManager {
             ...this.get_match_columns(),
             ...this.get_igst_tax_columns(),
             {
-                name: "Invoice Value",
+                name: __("Invoice Value"),
                 fieldname: GSTR1_DataField.DOC_VALUE,
                 fieldtype: "Currency",
                 width: 150,
@@ -1492,41 +1492,41 @@ class GSTR1_TabManager extends TabManager {
         return [
             ...this.get_detail_view_column(),
             {
-                name: "Transaction Type",
+                name: __("Transaction Type"),
                 fieldname: GSTR1_DataField.TRANSACTION_TYPE,
                 width: 100,
             },
             {
-                name: "Document Date",
+                name: __("Document Date"),
                 fieldname: GSTR1_DataField.DOC_DATE,
                 fieldtype: "Date",
                 width: 120,
             },
             {
-                name: "Document Number",
+                name: __("Document Number"),
                 fieldname: GSTR1_DataField.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
                 width: 160,
             },
             {
-                name: "Customer GSTIN",
+                name: __("Customer GSTIN"),
                 fieldname: GSTR1_DataField.CUST_GSTIN,
                 width: 160,
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
             {
-                name: "Customer Name",
+                name: __("Customer Name"),
                 fieldname: GSTR1_DataField.CUST_NAME,
                 width: 200,
             },
             {
-                name: "Document Type",
+                name: __("Document Type"),
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 150,
             },
             {
-                name: "Reverse Charge",
+                name: __("Reverse Charge"),
                 fieldname: GSTR1_DataField.REVERSE_CHARGE,
                 width: 120,
                 _value: (...args) => this.format_detailed_table_cell(args),
@@ -1534,7 +1534,7 @@ class GSTR1_TabManager extends TabManager {
             ...this.get_match_columns(),
             ...this.get_tax_columns(with_tax_rate),
             {
-                name: "Document Value",
+                name: __("Document Value"),
                 fieldname: GSTR1_DataField.DOC_VALUE,
                 fieldtype: "Currency",
                 width: 150,
@@ -1546,61 +1546,61 @@ class GSTR1_TabManager extends TabManager {
         return [
             ...this.get_detail_view_column(),
             {
-                name: "HSN Code",
+                name: __("HSN Code"),
                 fieldname: GSTR1_DataField.HSN_CODE,
                 width: 150,
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
             {
-                name: "Description",
+                name: __("Description"),
                 fieldname: GSTR1_DataField.DESCRIPTION,
                 width: 300,
             },
             {
-                name: "UOM",
+                name: __("UOM"),
                 fieldname: GSTR1_DataField.UOM,
                 width: 100,
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
             ...this.get_match_columns(),
             {
-                name: "Total Quantity",
+                name: __("Total Quantity"),
                 fieldname: GSTR1_DataField.QUANTITY,
                 fieldtype: "Float",
                 width: 150,
             },
             {
-                name: "Tax Rate",
+                name: __("Tax Rate"),
                 fieldname: GSTR1_DataField.TAX_RATE,
                 fieldtype: "Float",
                 width: 100,
             },
             {
-                name: "Taxable Value",
+                name: __("Taxable Value"),
                 fieldname: GSTR1_DataField.TAXABLE_VALUE,
                 fieldtype: "Float",
                 width: 150,
             },
             {
-                name: "IGST",
+                name: __("IGST"),
                 fieldname: GSTR1_DataField.IGST,
                 fieldtype: "Float",
                 width: 100,
             },
             {
-                name: "CGST",
+                name: __("CGST"),
                 fieldname: GSTR1_DataField.CGST,
                 fieldtype: "Float",
                 width: 100,
             },
             {
-                name: "SGST",
+                name: __("SGST"),
                 fieldname: GSTR1_DataField.SGST,
                 fieldtype: "Float",
                 width: 100,
             },
             {
-                name: "CESS",
+                name: __("CESS"),
                 fieldname: GSTR1_DataField.CESS,
                 fieldtype: "Float",
                 width: 100,
@@ -1612,34 +1612,34 @@ class GSTR1_TabManager extends TabManager {
         return [
             ...this.get_detail_view_column(),
             {
-                name: "Document Type",
+                name: __("Document Type"),
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 200,
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
             ...this.get_match_columns(),
             {
-                name: "Sr No From",
+                name: __("Sr No From"),
                 fieldname: GSTR1_DataField.FROM_SR,
                 width: 150,
             },
             {
-                name: "Sr No To",
+                name: __("Sr No To"),
                 fieldname: GSTR1_DataField.TO_SR,
                 width: 150,
             },
             {
-                name: "Total Count",
+                name: __("Total Count"),
                 fieldname: GSTR1_DataField.TOTAL_COUNT,
                 width: 120,
             },
             {
-                name: "Draft Count",
+                name: __("Draft Count"),
                 fieldname: GSTR1_DataField.DRAFT_COUNT,
                 width: 120,
             },
             {
-                name: "Cancelled Count",
+                name: __("Cancelled Count"),
                 fieldname: GSTR1_DataField.CANCELLED_COUNT,
                 width: 120,
             },
@@ -1650,49 +1650,49 @@ class GSTR1_TabManager extends TabManager {
         return [
             ...this.get_detail_view_column(),
             {
-                name: "Description",
+                name: __("Description"),
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 260,
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
             {
-                name: "E-Commerce GSTIN",
+                name: __("E-Commerce GSTIN"),
                 fieldname: GSTR1_DataField.ECOMMERCE_GSTIN,
                 width: 170,
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
             {
-                name: "E-Commerce Operator Name",
+                name: __("E-Commerce Operator Name"),
                 fieldname: GSTR1_DataField.ECOMMERCE_OPERATOR_NAME,
                 width: 220,
             },
             ...this.get_match_columns(),
             {
-                name: "Taxable Value",
+                name: __("Taxable Value"),
                 fieldname: GSTR1_DataField.TAXABLE_VALUE,
                 fieldtype: "Float",
                 width: 150,
             },
             {
-                name: "IGST",
+                name: __("IGST"),
                 fieldname: GSTR1_DataField.IGST,
                 fieldtype: "Float",
                 width: 100,
             },
             {
-                name: "CGST",
+                name: __("CGST"),
                 fieldname: GSTR1_DataField.CGST,
                 fieldtype: "Float",
                 width: 100,
             },
             {
-                name: "SGST",
+                name: __("SGST"),
                 fieldname: GSTR1_DataField.SGST,
                 fieldtype: "Float",
                 width: 100,
             },
             {
-                name: "CESS",
+                name: __("CESS"),
                 fieldname: GSTR1_DataField.CESS,
                 fieldtype: "Float",
                 width: 100,
@@ -1713,43 +1713,43 @@ class GSTR1_TabManager extends TabManager {
     get_tax_columns(with_tax_rate) {
         const columns = [
             {
-                name: "Place of Supply",
+                name: __("Place of Supply"),
                 fieldname: GSTR1_DataField.POS,
                 width: 150,
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
             {
-                name: "Tax Rate",
+                name: __("Tax Rate"),
                 fieldname: GSTR1_DataField.TAX_RATE,
                 fieldtype: "Float",
                 width: 100,
             },
             {
-                name: "Taxable Value",
+                name: __("Taxable Value"),
                 fieldname: GSTR1_DataField.TAXABLE_VALUE,
                 fieldtype: "Float",
                 width: 150,
             },
             {
-                name: "IGST",
+                name: __("IGST"),
                 fieldname: GSTR1_DataField.IGST,
                 fieldtype: "Float",
                 width: 100,
             },
             {
-                name: "CGST",
+                name: __("CGST"),
                 fieldname: GSTR1_DataField.CGST,
                 fieldtype: "Float",
                 width: 100,
             },
             {
-                name: "SGST",
+                name: __("SGST"),
                 fieldname: GSTR1_DataField.SGST,
                 fieldtype: "Float",
                 width: 100,
             },
             {
-                name: "CESS",
+                name: __("CESS"),
                 fieldname: GSTR1_DataField.CESS,
                 fieldtype: "Float",
                 width: 100,
@@ -1766,7 +1766,7 @@ class GSTR1_TabManager extends TabManager {
 
         if (with_pos)
             columns.push({
-                name: "Place of Supply",
+                name: __("Place of Supply"),
                 fieldname: GSTR1_DataField.POS,
                 width: 150,
                 _value: (...args) => this.format_detailed_table_cell(args),
@@ -1774,25 +1774,25 @@ class GSTR1_TabManager extends TabManager {
 
         columns.push(
             {
-                name: "Tax Rate",
+                name: __("Tax Rate"),
                 fieldname: GSTR1_DataField.TAX_RATE,
                 fieldtype: "Float",
                 width: 100,
             },
             {
-                name: "Taxable Value",
+                name: __("Taxable Value"),
                 fieldname: GSTR1_DataField.TAXABLE_VALUE,
                 fieldtype: "Float",
                 width: 150,
             },
             {
-                name: "IGST",
+                name: __("IGST"),
                 fieldname: GSTR1_DataField.IGST,
                 fieldtype: "Float",
                 width: 100,
             },
             {
-                name: "CESS",
+                name: __("CESS"),
                 fieldname: GSTR1_DataField.CESS,
                 fieldtype: "Float",
                 width: 100,
@@ -1851,7 +1851,7 @@ class BooksTab extends GSTR1_TabManager {
         return {
             additional_total_rows: [
                 {
-                    label: "Rounding Difference",
+                    label: __("Rounding Difference"),
                     row_id: "rounding_difference",
                     label_column: "description",
                     exclude_columns: ["_rowIndex", "_checkbox", "no_of_records"],
@@ -1899,7 +1899,7 @@ class BooksTab extends GSTR1_TabManager {
         if (this.status === "Filed") return [];
         return [
             {
-                name: "Upload Status",
+                name: __("Upload Status"),
                 fieldname: GSTR1_DataField.UPLOAD_STATUS,
                 width: 150,
             },
@@ -1919,60 +1919,60 @@ class BooksTab extends GSTR1_TabManager {
         return [
             ...this.get_detail_view_column(),
             {
-                name: "Transaction Type",
+                name: __("Transaction Type"),
                 fieldname: GSTR1_DataField.TRANSACTION_TYPE,
                 width: 100,
             },
             {
-                name: "Document Date",
+                name: __("Document Date"),
                 fieldname: GSTR1_DataField.DOC_DATE,
                 fieldtype: "Date",
                 width: 120,
             },
             {
-                name: "Document Number",
+                name: __("Document Number"),
                 fieldname: GSTR1_DataField.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
                 width: 160,
             },
             {
-                name: "Customer GSTIN",
+                name: __("Customer GSTIN"),
                 fieldname: GSTR1_DataField.CUST_GSTIN,
                 width: 160,
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
             {
-                name: "Customer Name",
+                name: __("Customer Name"),
                 fieldname: GSTR1_DataField.CUST_NAME,
                 width: 200,
             },
             {
-                name: "Document Type",
+                name: __("Document Type"),
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 150,
             },
             ...this.get_match_columns(),
             {
-                name: "Nil-Rated Supplies",
+                name: __("Nil-Rated Supplies"),
                 fieldname: GSTR1_DataField.NIL_RATED_AMOUNT,
                 fieldtype: "Float",
                 width: 150,
             },
             {
-                name: "Exempted Supplies",
+                name: __("Exempted Supplies"),
                 fieldname: GSTR1_DataField.EXEMPTED_AMOUNT,
                 fieldtype: "Float",
                 width: 150,
             },
             {
-                name: "Non-GST Supplies",
+                name: __("Non-GST Supplies"),
                 fieldname: GSTR1_DataField.NON_GST_AMOUNT,
                 fieldtype: "Float",
                 width: 150,
             },
             {
-                name: "Document Value",
+                name: __("Document Value"),
                 fieldname: GSTR1_DataField.DOC_VALUE,
                 fieldtype: "Currency",
                 width: 150,
@@ -1983,20 +1983,20 @@ class BooksTab extends GSTR1_TabManager {
     get_advances_received_columns() {
         return [
             {
-                name: "Advance Date",
+                name: __("Advance Date"),
                 fieldname: GSTR1_DataField.DOC_DATE,
                 fieldtype: "Date",
                 width: 120,
             },
             {
-                name: "Payment Entry Number",
+                name: __("Payment Entry Number"),
                 fieldname: GSTR1_DataField.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Payment Entry",
                 width: 160,
             },
             {
-                name: "Customer Name",
+                name: __("Customer Name"),
                 fieldname: GSTR1_DataField.CUST_NAME,
                 width: 200,
             },
@@ -2007,20 +2007,20 @@ class BooksTab extends GSTR1_TabManager {
     get_advances_adjusted_columns() {
         return [
             {
-                name: "Adjustment Date",
+                name: __("Adjustment Date"),
                 fieldname: GSTR1_DataField.DOC_DATE,
                 fieldtype: "Date",
                 width: 120,
             },
             {
-                name: "Adjustment Entry Number",
+                name: __("Adjustment Entry Number"),
                 fieldname: GSTR1_DataField.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
                 width: 160,
             },
             {
-                name: "Customer Name",
+                name: __("Customer Name"),
                 fieldname: GSTR1_DataField.CUST_NAME,
                 width: 200,
             },
@@ -2238,27 +2238,27 @@ class FiledTab extends GSTR1_TabManager {
         return [
             ...this.get_detail_view_column(),
             {
-                name: "Invoice Date",
+                name: __("Invoice Date"),
                 fieldname: GSTR1_DataField.DOC_DATE,
                 fieldtype: "Date",
                 width: 120,
             },
             {
-                name: "Invoice Number",
+                name: __("Invoice Number"),
                 fieldname: GSTR1_DataField.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
                 width: 160,
             },
             {
-                name: "Customer Name",
+                name: __("Customer Name"),
                 fieldname: GSTR1_DataField.CUST_NAME,
                 width: 200,
             },
             ...this.get_match_columns(),
             ...this.get_igst_tax_columns(true),
             {
-                name: "Invoice Value",
+                name: __("Invoice Value"),
                 fieldname: GSTR1_DataField.DOC_VALUE,
                 fieldtype: "Currency",
                 width: 150,
@@ -2270,7 +2270,7 @@ class FiledTab extends GSTR1_TabManager {
         return [
             ...this.get_detail_view_column(),
             {
-                name: "Invoice Type",
+                name: __("Invoice Type"),
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 100,
             },
@@ -2283,32 +2283,32 @@ class FiledTab extends GSTR1_TabManager {
         return [
             ...this.get_detail_view_column(),
             {
-                name: "Description",
+                name: __("Description"),
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 200,
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
             ...this.get_match_columns(),
             {
-                name: "Nil-Rated Supplies",
+                name: __("Nil-Rated Supplies"),
                 fieldname: GSTR1_DataField.NIL_RATED_AMOUNT,
                 fieldtype: "Currency",
                 width: 150,
             },
             {
-                name: "Exempted Supplies",
+                name: __("Exempted Supplies"),
                 fieldname: GSTR1_DataField.EXEMPTED_AMOUNT,
                 fieldtype: "Currency",
                 width: 150,
             },
             {
-                name: "Non-GST Supplies",
+                name: __("Non-GST Supplies"),
                 fieldname: GSTR1_DataField.NON_GST_AMOUNT,
                 fieldtype: "Currency",
                 width: 150,
             },
             {
-                name: "Total Taxable Value",
+                name: __("Total Taxable Value"),
                 fieldname: GSTR1_DataField.TAXABLE_VALUE,
                 fieldtype: "Currency",
                 width: 150,
@@ -2320,37 +2320,37 @@ class FiledTab extends GSTR1_TabManager {
         return [
             ...this.get_detail_view_column(),
             {
-                name: "Transaction Type",
+                name: __("Transaction Type"),
                 fieldname: GSTR1_DataField.TRANSACTION_TYPE,
                 width: 100,
             },
             {
-                name: "Document Date",
+                name: __("Document Date"),
                 fieldname: GSTR1_DataField.DOC_DATE,
                 fieldtype: "Date",
                 width: 120,
             },
             {
-                name: "Document Number",
+                name: __("Document Number"),
                 fieldname: GSTR1_DataField.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
                 width: 160,
             },
             {
-                name: "Customer Name",
+                name: __("Customer Name"),
                 fieldname: GSTR1_DataField.CUST_NAME,
                 width: 200,
             },
             {
-                name: "Document Type",
+                name: __("Document Type"),
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 150,
             },
             ...this.get_match_columns(),
             ...this.get_igst_tax_columns(true),
             {
-                name: "Document Value",
+                name: __("Document Value"),
                 fieldname: GSTR1_DataField.DOC_VALUE,
                 fieldtype: "Currency",
                 width: 150,
@@ -2421,12 +2421,12 @@ class ReconcileTab extends FiledTab {
     get_match_columns() {
         return [
             {
-                name: "Match Status",
+                name: __("Match Status"),
                 fieldname: "match_status",
                 width: 150,
             },
             {
-                name: "Differences",
+                name: __("Differences"),
                 fieldname: "differences",
                 width: 150,
             },
@@ -2448,34 +2448,34 @@ class ErrorsTab extends TabManager {
     get_summary_columns() {
         return [
             {
-                name: "Category",
+                name: __("Category"),
                 fieldname: "category",
                 width: 150,
             },
             {
-                name: "Error Code",
+                name: __("Error Code"),
                 fieldname: "error_code",
                 width: 100,
             },
             {
-                name: "Error Message",
+                name: __("Error Message"),
                 fieldname: "error_message",
                 width: 325,
             },
             {
-                name: "Invoice Number",
+                name: __("Invoice Number"),
                 fieldname: GSTR1_DataField.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
                 width: 150,
             },
             {
-                name: "Party GSTIN",
+                name: __("Party GSTIN"),
                 fieldname: GSTR1_DataField.CUST_GSTIN,
                 width: 160,
             },
             {
-                name: "Place Of Supply",
+                name: __("Place Of Supply"),
                 fieldname: GSTR1_DataField.POS,
                 width: 150,
             },
