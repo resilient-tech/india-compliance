@@ -20,7 +20,8 @@ from india_compliance.patches.post_install.update_company_gstin import (
 )
 from india_compliance.patches.post_install.update_company_gstin import (
     get_gst_accounts,
-    verify_gstin_update,
+    get_pending_gl_entries,
+    set_allow_on_submit,
 )
 from india_compliance.patches.post_install.update_company_gstin import (
     get_pending_voucher_types as get_voucher_types_missing_gstin,
@@ -67,10 +68,13 @@ def get_pending_voucher_types(company: str | None = None):
     if not company_accounts:
         return [], []
 
-    if can_run_patch:
-        verify_gstin_update()
+    if not can_run_patch:
+        return get_voucher_types_missing_gstin(company_accounts), company_accounts
 
-    return get_voucher_types_missing_gstin(company_accounts), company_accounts
+    pending = get_pending_gl_entries(get_gst_accounts())
+    set_allow_on_submit(sorted({row.voucher_type for row in pending}))
+
+    return sorted({row.voucher_type for row in pending if row.account in company_accounts}), company_accounts
 
 
 @frappe.whitelist()

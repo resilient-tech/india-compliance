@@ -50,8 +50,10 @@ def verify_gstin_update(gst_accounts=None):
     if not gst_accounts:
         gst_accounts = get_gst_accounts()
 
-    voucher_types = get_pending_voucher_types(gst_accounts)
+    return set_allow_on_submit(get_pending_voucher_types(gst_accounts))
 
+
+def set_allow_on_submit(voucher_types):
     if voucher_types:
         toggle_allow_on_submit(True, voucher_types)
         return voucher_types
@@ -157,6 +159,10 @@ def _update_gl_entries(gstin_voucher_map):
 
 
 def get_pending_voucher_types(gst_accounts):
+    return sorted({row.voucher_type for row in get_pending_gl_entries(gst_accounts)})
+
+
+def get_pending_gl_entries(gst_accounts):
     return frappe.get_all(
         "GL Entry",
         filters={
@@ -164,7 +170,7 @@ def get_pending_voucher_types(gst_accounts):
             "company_gstin": ("is", "not set"),
             "is_cancelled": 0,
         },
-        pluck="voucher_type",
+        fields=["voucher_type", "account"],
         distinct=True,
     )
 
