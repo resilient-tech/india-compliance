@@ -152,8 +152,8 @@ frappe.ui.form.on(DOCTYPE, {
                     frm.dashboard.set_headline("Successfully Imported");
                     setTimeout(() => {
                         frm.dashboard.clear_headline();
+                        frm.trigger("company_gstin");
                     }, 2000);
-                    frm.trigger("company_gstin");
                 }, 1000);
             }
         });
