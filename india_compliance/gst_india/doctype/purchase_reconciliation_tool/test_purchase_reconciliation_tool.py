@@ -393,21 +393,41 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         self.assertEqual(itc_claim_period, "012024")
 
     def test_auto_reconcile_matches_without_storing_the_company(self):
-        period = frappe.db.get_single_value("Purchase Reconciliation Tool", "period")
-        frappe.db.set_single_value("Purchase Reconciliation Tool", "period", "This Month")
-        self.addCleanup(frappe.db.set_single_value, "Purchase Reconciliation Tool", "period", period)
+        stored_tool = frappe.db.get_singles_dict("Purchase Reconciliation Tool")
         posting_date = str(getdate())
+        return_period = getdate().strftime("%m%Y")
         pinv = create_purchase_invoice(
             bill_no="AUTO-RECO-001", bill_date=posting_date, posting_date=posting_date
         )
         gst_is = create_gst_inward_supply(
-            bill_no="AUTO-RECO-001", bill_date=posting_date, return_period_2b=getdate().strftime("%m%Y")
+            bill_no="AUTO-RECO-001", bill_date=posting_date, return_period_2b=return_period
+        )
+        create_purchase_invoice(bill_no="AUTO-RECO-002", bill_date=posting_date, posting_date=posting_date)
+        ignored_gst_is = create_gst_inward_supply(
+            bill_no="AUTO-RECO-002", bill_date=posting_date, return_period_2b=return_period
+        )
+        ignored_pinv = create_purchase_invoice(
+            bill_no="AUTO-RECO-003", bill_date=posting_date, posting_date=posting_date
+        )
+        create_gst_inward_supply(
+            bill_no="AUTO-RECO-003", bill_date=posting_date, return_period_2b=return_period
+        )
+        frappe.get_doc("Purchase Reconciliation Tool").apply_action(
+            [
+                {"inward_supply_name": ignored_gst_is.name},
+                {"purchase_doctype": "Purchase Invoice", "purchase_invoice_name": ignored_pinv.name},
+            ],
+            "Ignore",
         )
 
         AutoReconcile().reconcile_purchases_for_company("_Test Indian Registered Company")
 
         self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
-        self.assertFalse(frappe.db.get_single_value("Purchase Reconciliation Tool", "company"))
+        self.assertFalse(frappe.db.get_value("GST Inward Supply", ignored_gst_is.name, "link_name"))
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", ignored_pinv.name, "reconciliation_status"), "Ignored"
+        )
+        self.assertEqual(frappe.db.get_singles_dict("Purchase Reconciliation Tool"), stored_tool)
 
     def test_import_history_lists_only_generated_2b_months(self):
         tool = frappe.get_doc("Purchase Reconciliation Tool")
