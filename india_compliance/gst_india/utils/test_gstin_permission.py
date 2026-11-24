@@ -156,8 +156,22 @@ class TestGstinPermission(IntegrationTestCase):
         update_permission_property("GST Inward Supply", OWNER_ONLY_ROLE, 0, "if_owner", 1)
         self.addCleanup(reset_perms, "GST Inward Supply")
 
+        frappe.get_doc(
+            {
+                "doctype": "User Permission",
+                "user": OWNER_ONLY_USER,
+                "allow": "Company",
+                "for_value": "_Test Indian Registered Company",
+            }
+        ).insert(ignore_permissions=True)
+        self.addCleanup(frappe.clear_cache, user=OWNER_ONLY_USER)
+        self.addCleanup(frappe.db.delete, "User Permission", {"user": OWNER_ONLY_USER})
+        frappe.clear_cache(user=OWNER_ONLY_USER)
+
         with self.set_user(OWNER_ONLY_USER):
             validate_company_access("_Test Indian Registered Company")
+            with self.assertRaises(frappe.PermissionError):
+                validate_company_access(self.other_company)
 
     @change_settings("System Settings", {"apply_strict_user_permissions": 1})
     def test_company_access_under_strict_user_permissions(self):
