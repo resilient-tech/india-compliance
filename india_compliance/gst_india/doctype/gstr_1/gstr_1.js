@@ -2472,7 +2472,7 @@ class ErrorsTab extends TabManager {
                 width: 160,
             },
             {
-                name: __("Place Of Supply"),
+                name: __("Place of Supply"),
                 fieldname: GSTR1_DataField.POS,
                 width: 150,
             },
