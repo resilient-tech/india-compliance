@@ -710,6 +710,7 @@ class AutoReconcile:
                 "gst_return": "Both GSTR 2A & 2B",
                 "from_date": self.inward_supply_from_date,
                 "to_date": self.today,
+                "include_ignored": 0,
             }
         ).reconcile()
 
