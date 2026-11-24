@@ -172,6 +172,25 @@ class GSTSettings(Document):
     def validate_gst_accounts(self):
         account_list = []
         company_wise_account_types = {}
+        other_company_accounts = []
+        account_companies = dict(
+            frappe.get_all(
+                "Account",
+                filters={
+                    "name": (
+                        "in",
+                        [
+                            row.get(fieldname)
+                            for row in self.gst_accounts
+                            for fieldname in GST_ACCOUNT_FIELDS
+                            if row.get(fieldname)
+                        ],
+                    )
+                },
+                fields=["name", "company"],
+                as_list=True,
+            )
+        )
 
         for row in self.gst_accounts:
             # Validate Duplicate Accounts
@@ -190,8 +209,8 @@ class GSTSettings(Document):
 
                 account_list.append(account)
 
-                if frappe.get_cached_value("Account", account, "company") != row.company:
-                    frappe.throw(
+                if account_companies.get(account) != row.company:
+                    other_company_accounts.append(
                         _("Row #{0}: Account {1} does not belong to Company {2}").format(
                             row.idx,
                             frappe.bold(account),
@@ -211,6 +230,9 @@ class GSTSettings(Document):
                 )
 
             account_types.append(row.account_type)
+
+        if other_company_accounts:
+            frappe.throw("<br>".join(other_company_accounts), title=_("Accounts of Another Company"))
 
     def update_custom_fields(self):
         if self.has_value_changed("enable_e_waybill"):
