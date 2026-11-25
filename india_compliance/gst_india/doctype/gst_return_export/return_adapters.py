@@ -63,9 +63,14 @@ def section_rank(section):
     return SECTION_ORDER.index(section) if section in SECTION_ORDER else len(SECTION_ORDER)
 
 
-def section_totals(section, rows):
+def section_totals(section, rows, *, subtract_credit_notes=False):
     signed_rows = [
-        (-1 if section == "CDNR" and row.get(doc.DOC_TYPE) == "Credit Note" else 1, row)
+        (
+            -1
+            if subtract_credit_notes and section == "CDNR" and row.get(doc.DOC_TYPE) == "Credit Note"
+            else 1,
+            row,
+        )
         for row in rows
     ]
     return {
@@ -82,6 +87,7 @@ class ReturnAdapter:
     return_type: ClassVar[str]
     handler_class: ClassVar[type[GSTR]]
     first_month: ClassVar[str]
+    subtract_credit_notes: ClassVar[bool] = False
 
     def __init__(self, gstin):
         self.gstin = gstin
@@ -172,7 +178,7 @@ class ReturnAdapter:
                 continue
 
             rows = self.get_handler(period, category).get_all_transactions(groups)
-            sections.append(section_totals(category, rows))
+            sections.append(section_totals(category, rows, subtract_credit_notes=self.subtract_credit_notes))
 
         sections.extend(self.extra_sections(period, docdata))
         sections.sort(key=lambda s: section_rank(s["section"]))
@@ -246,6 +252,7 @@ class GSTR2BAdapter(ReturnAdapter):
     return_type = ReturnType.GSTR2B.value
     handler_class = GSTR2b
     first_month = "2020-07-01"
+    subtract_credit_notes = True
 
     def download(self, periods):
         download_gstr_2b(self.gstin, periods)

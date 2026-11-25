@@ -76,14 +76,14 @@ class TestSummaryHelpers(IntegrationTestCase):
         debit_note = {doc.DOC_TYPE: "Debit Note", "taxable_value": 100, "igst": 18}
         credit_note = {doc.DOC_TYPE: "Credit Note", "taxable_value": 300, "igst": 54}
 
-        total = section_totals("CDNR", [debit_note, credit_note])
+        total = section_totals("CDNR", [debit_note, credit_note], subtract_credit_notes=True)
         self.assertEqual((total["documents"], total["taxable_value"], total["igst"]), (2, -200, -36))
         self.assertEqual((debit_note["taxable_value"], credit_note["taxable_value"]), (100, 300))
 
-        credit_only = section_totals("CDNR", [credit_note])
+        credit_only = section_totals("CDNR", [credit_note], subtract_credit_notes=True)
         self.assertEqual((credit_only["taxable_value"], credit_only["igst"]), (-300, -54))
 
-        b2b = section_totals("B2B", [credit_note])
+        b2b = section_totals("B2B", [credit_note], subtract_credit_notes=True)
         self.assertEqual((b2b["taxable_value"], b2b["igst"]), (300, 54))
 
 
@@ -298,6 +298,102 @@ class TestComputeSummary2A(IntegrationTestCase):
 
 
 class TestRawReturnDataRoundTrip(IntegrationTestCase):
+    def test_summary_cache_preserves_return_specific_note_signs(self):
+        from india_compliance.patches.v17.invalidate_gstr2b_section_summaries import execute
+
+        period = "122024"
+        raw_2a = {
+            "cdn": [
+                {
+                    "ctin": GSTIN,
+                    "nt": [
+                        {
+                            "nt_num": "CN1",
+                            "ntty": "C",
+                            "itms": [{"num": 1, "itm_det": {"txval": 100, "iamt": 18}}],
+                        },
+                        {
+                            "nt_num": "DN1",
+                            "ntty": "D",
+                            "itms": [{"num": 1, "itm_det": {"txval": 40, "iamt": 7}}],
+                        },
+                    ],
+                }
+            ],
+            "b2b": [
+                {
+                    "ctin": GSTIN,
+                    "inv": [{"inum": "I1", "itms": [{"num": 1, "itm_det": {"txval": 200, "iamt": 36}}]}],
+                }
+            ],
+        }
+        raw_2b = {
+            "docdata": {
+                "cdnr": [
+                    {
+                        "ctin": GSTIN,
+                        "nt": [
+                            {"ntnum": "CN1", "typ": "C", "txval": 100, "igst": 18},
+                            {"ntnum": "DN1", "typ": "D", "txval": 40, "igst": 7},
+                        ],
+                    }
+                ],
+                "b2b": [{"ctin": GSTIN, "inv": [{"inum": "I1", "txval": 200, "igst": 36}]}],
+            },
+        }
+        old_sections = [
+            {
+                "section": "B2B",
+                "documents": 1,
+                "taxable_value": 200,
+                "igst": 36,
+                "cgst": 0,
+                "sgst": 0,
+                "cess": 0,
+            },
+            {
+                "section": "CDNR",
+                "documents": 2,
+                "taxable_value": 140,
+                "igst": 25,
+                "cgst": 0,
+                "sgst": 0,
+                "cess": 0,
+            },
+        ]
+        adapters = [(GSTR2AAdapter(GSTIN), raw_2a), (GSTR2BAdapter(GSTIN), raw_2b)]
+        for adapter, raw in adapters:
+            store_raw_return_data(GSTIN, adapter.return_type, period, raw)
+            summary = {"sections": old_sections, "itc_summary": adapter._itc_summary(raw)}
+            frappe.db.set_value(
+                "GST Return Log",
+                adapter._log_name(period),
+                "section_summary",
+                frappe.as_json(summary),
+                update_modified=False,
+            )
+            self.assertEqual(adapter.get_summaries([period])[0]["sections"], old_sections)
+
+        execute()
+        execute()
+        for adapter, raw in adapters:
+            with self.subTest(return_type=adapter.return_type):
+                expected = [dict(section) for section in old_sections]
+                if isinstance(adapter, GSTR2BAdapter):
+                    expected[1].update(taxable_value=-60, igst=-11)
+                self.assertEqual(adapter.get_summaries([period])[0]["sections"], expected)
+                self.assertEqual(adapter.compute_summary(period)["sections"], expected)
+                frappe.db.set_value(
+                    "GST Return Log",
+                    adapter._log_name(period),
+                    "section_summary",
+                    None,
+                    update_modified=False,
+                )
+                self.assertEqual(adapter.get_summaries([period])[0]["sections"], expected)
+                self.assertEqual(adapter.get_summaries([period])[0]["sections"], expected)
+                self.assertEqual(get_raw_return_data(GSTIN, adapter.return_type, period), raw)
+
     def test_store_get_and_overwrite(self):
         raw = {"b2b": [{"ctin": GSTIN}], "itcsumm": {"itcavl": {"igst": 10}}}
         store_raw_return_data(GSTIN, ReturnType.GSTR2B.value, "062024", raw)
