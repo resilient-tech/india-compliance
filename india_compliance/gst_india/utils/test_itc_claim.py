@@ -432,3 +432,15 @@ class TestITCClaim(IntegrationTestCase):
         self.assertEqual(comment.comment_email, user.email)
         self.assertEqual(comment.comment_by, user.email)
         self.assertEqual(comment.owner, user.name)
+
+    def test_claim_period_comment_by_administrator_keeps_the_name(self):
+        invoice = frappe.generate_hash()
+        with patch.object(frappe.db, "set_value"):
+            _bulk_update({"012024": {invoice}}, "Purchase Invoice", "test")
+
+        comment_email = frappe.db.get_value(
+            "Comment",
+            {"reference_doctype": "Purchase Invoice", "reference_name": invoice},
+            "comment_email",
+        )
+        self.assertEqual(comment_email, "Administrator")

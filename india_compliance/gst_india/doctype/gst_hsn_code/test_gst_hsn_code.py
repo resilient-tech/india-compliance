@@ -127,3 +127,14 @@ class TestGSTHSNCode(IntegrationTestCase):
         self.assertEqual(comment.comment_email, user.email)
         self.assertEqual(comment.comment_by, user.email)
         self.assertEqual(comment.owner, user.name)
+
+    def test_item_comment_by_administrator_keeps_the_name(self):
+        item_name = frappe.generate_hash()
+        _add_comment_to_items([item_name], "100000")
+
+        comment_email = frappe.db.get_value(
+            "Comment",
+            {"reference_doctype": "Item", "reference_name": item_name},
+            "comment_email",
+        )
+        self.assertEqual(comment_email, "Administrator")

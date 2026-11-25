@@ -394,7 +394,8 @@ def _bulk_update(updates: dict[str, set[str]], doctype: str, source: str) -> Non
                 {
                     "name": random_string(10),
                     "comment_type": "Info",
-                    "comment_email": get_email_address(user),
+                    # like frappe's Comment: Administrator and Guest by name
+                    "comment_email": user if user in frappe.STANDARD_USERS else get_email_address(user),
                     "comment_by": get_user_display_id(user),
                     "creation": current_time,
                     "modified": current_time,

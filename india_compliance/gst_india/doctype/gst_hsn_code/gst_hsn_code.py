@@ -95,7 +95,10 @@ def _add_comment_to_items(item_names, hsn_code, timestamp=None):
             {
                 "name": random_string(10),
                 "comment_type": "Info",
-                "comment_email": get_email_address(current_user),
+                # like frappe's Comment: Administrator and Guest by name
+                "comment_email": (
+                    current_user if current_user in frappe.STANDARD_USERS else get_email_address(current_user)
+                ),
                 "comment_by": get_user_display_id(current_user),
                 "creation": current_time,
                 "modified": current_time,
