@@ -1,5 +1,5 @@
 import frappe
-from frappe.tests import IntegrationTestCase, change_settings
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import today
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import make_bill_of_entry
@@ -11,7 +11,7 @@ from india_compliance.gst_india.utils.tests import append_item, create_purchase_
 COMPANY = "_Test Indian Registered Company"
 
 
-class TestHSNWiseSummaryOfInwardSupplies(IntegrationTestCase):
+class TestHSNWiseSummaryOfInwardSupplies(FrappeTestCase):
     @classmethod
     def tearDownClass(cls):
         frappe.db.rollback()
