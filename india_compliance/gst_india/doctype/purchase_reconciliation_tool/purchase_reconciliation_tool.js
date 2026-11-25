@@ -397,39 +397,39 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
     get_summary_columns() {
         return [
             {
-                label: "Match Status",
+                label: __("Match Status"),
                 fieldname: "match_status",
                 width: 200,
                 _value: (...args) => this.get_match_status_link(args[0]),
             },
             {
-                label: "Count <br>2A/2B Docs",
+                label: __("Count <br>2A/2B Docs"),
                 fieldname: "inward_supply_count",
                 width: 120,
                 align: "center",
             },
             {
-                label: "Count <br>Purchase Docs",
+                label: __("Count <br>Purchase Docs"),
                 fieldname: "purchase_count",
                 width: 120,
                 align: "center",
             },
             {
-                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                label: __("Taxable Amount Diff <br>2A/2B - Purchase"),
                 fieldname: "taxable_value_difference",
                 width: 180,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "Tax Difference <br>2A/2B - Purchase",
+                label: __("Tax Difference <br>2A/2B - Purchase"),
                 fieldname: "tax_difference",
                 width: 180,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "% Action Taken",
+                label: __("% Action Taken"),
                 fieldname: "action_taken",
                 width: 120,
                 align: "center",
@@ -442,13 +442,11 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
 
     get_supplier_data() {
         const data = {};
+        const gstin_rows = {};
         this.filtered_data.forEach((row) => {
             let new_row = data[row.supplier_gstin];
             if (!new_row) {
                 new_row = data[row.supplier_gstin] = {
-                    supplier_name_gstin: this.get_supplier_name_gstin(row),
-                    supplier: row.supplier,
-                    supplier_name: row.supplier_name,
                     supplier_gstin: row.supplier_gstin,
                     inward_supply_count: 0,
                     purchase_count: 0,
@@ -457,7 +455,9 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                     tax_difference: 0,
                     taxable_value_difference: 0,
                 };
+                gstin_rows[row.supplier_gstin] = [];
             }
+            gstin_rows[row.supplier_gstin].push(row);
             if (row.inward_supply_name) new_row.inward_supply_count += 1;
             if (row.purchase_invoice_name) new_row.purchase_count += 1;
             if (row.action != "No Action") new_row.action_taken_count += 1;
@@ -465,45 +465,64 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             new_row.tax_difference += row.tax_difference || 0;
             new_row.taxable_value_difference += row.taxable_value_difference || 0;
         });
+
+        for (const [gstin, rows] of Object.entries(gstin_rows)) {
+            const row = this.get_supplier_row(rows);
+            Object.assign(data[gstin], {
+                supplier_name_gstin: this.get_supplier_name_gstin(row),
+                supplier: row.supplier,
+                supplier_name: row.supplier_name,
+            });
+        }
         return this.sort_by_supplier_gstin(Object.values(data));
+    }
+
+    // same order the server uses to name each row
+    get_supplier_row(rows) {
+        return (
+            rows.find((row) => row.purchase_invoice_name && row.supplier) ||
+            rows.find((row) => row.supplier) ||
+            rows.find((row) => row.supplier_name != "Unknown") ||
+            rows[0]
+        );
     }
 
     get_supplier_columns() {
         return [
             {
-                label: "Supplier Name",
+                label: __("Supplier Name"),
                 fieldname: "supplier_name_gstin",
                 fieldtype: "Link",
                 width: 200,
             },
             {
-                label: "Count <br>2A/2B Docs",
+                label: __("Count <br>2A/2B Docs"),
                 fieldname: "inward_supply_count",
                 align: "center",
                 width: 120,
             },
             {
-                label: "Count <br>Purchase Docs",
+                label: __("Count <br>Purchase Docs"),
                 fieldname: "purchase_count",
                 align: "center",
                 width: 120,
             },
             {
-                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                label: __("Taxable Amount Diff <br>2A/2B - Purchase"),
                 fieldname: "taxable_value_difference",
                 align: "center",
                 width: 150,
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "Tax Difference <br>2A/2B - Purchase",
+                label: __("Tax Difference <br>2A/2B - Purchase"),
                 fieldname: "tax_difference",
                 align: "center",
                 width: 150,
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "% Action <br>Taken",
+                label: __("% Action <br>Taken"),
                 fieldname: "action_taken",
                 align: "center",
                 width: 120,
@@ -549,33 +568,33 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 _value: (...args) => get_icon(...args, "eye"),
             },
             {
-                label: "Supplier Name",
+                label: __("Supplier Name"),
                 fieldname: "supplier_name_gstin",
                 width: 200,
             },
             {
-                label: "Bill No.",
+                label: __("Bill No"),
                 fieldname: "bill_no",
             },
             {
-                label: "Date",
+                label: __("Bill Date"),
                 fieldname: "bill_date",
                 _value: (...args) => frappe.datetime.str_to_user(args[0]),
             },
             {
-                label: "Classification",
+                label: __("Classification"),
                 fieldname: "classification",
                 width: 100,
                 _value: (...args) => `<a href="#" class='classification'>${args[0] || ""}</a>`,
             },
             {
-                label: "Match Status",
+                label: __("Match Status"),
                 fieldname: "match_status",
                 width: 120,
                 _value: (...args) => this.get_match_status_link(args[0]),
             },
             {
-                label: "GST Inward <br>Supply",
+                label: __("GST Inward <br>Supply"),
                 fieldname: "inward_supply_name",
                 fieldtype: "Link",
                 options: "GST Inward Supply",
@@ -584,7 +603,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 _after_format: (...args) => this.get_value_with_indicator(...args),
             },
             {
-                label: "Purchase <br>Invoice",
+                label: __("Purchase <br>Invoice"),
                 fieldname: "purchase_invoice_name",
                 fieldtype: "Dynamic Link",
                 options: "purchase_doctype",
@@ -593,7 +612,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             },
             {
                 fieldname: "taxable_value_difference",
-                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                label: __("Taxable Amount Diff <br>2A/2B - Purchase"),
                 width: 150,
                 align: "center",
                 _value: (...args) => {
@@ -601,7 +620,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 },
             },
             {
-                label: "Tax Difference <br>2A/2B - Purchase",
+                label: __("Tax Difference <br>2A/2B - Purchase"),
                 fieldname: "tax_difference",
                 width: 120,
                 align: "center",
@@ -611,25 +630,25 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             },
             {
                 fieldname: "differences",
-                label: "Differences",
+                label: __("Differences"),
                 width: 150,
                 align: "Left",
             },
             {
-                label: "ITC Availability",
+                label: __("ITC Availability"),
                 fieldname: "itc_availability",
                 width: 120,
                 align: "left",
             },
             {
-                label: "IRN",
+                label: __("IRN"),
                 fieldname: "irn_number",
                 width: 80,
                 align: "center",
                 _value: (...args) => get_irn_indicator(args[0], args[2]),
             },
             {
-                label: "Action",
+                label: __("Action"),
                 fieldname: "action",
                 _value: (...args) => {
                     return `<a href="#" class='action-performed'>${args[0]}</a>`;
@@ -748,8 +767,6 @@ class PurchaseReconciliationToolAction {
         if (!this.frm.reconciliation_tabs.filtered_data?.length) {
             frappe.throw(__("There is no data to export"));
         }
-        if (selected_row) delete data_to_export.supplier_summary;
-
         const url = `${RECO_MODULE}.download_excel_report`;
 
         open_url_post(`/api/method/${url}`, {

@@ -416,6 +416,12 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         sco = make_sco()
         se = make_stock_transfer_entry(sco_no=sco.name, rm_items=get_rm_items(sco.supplied_items))
 
+        # receive half, so the supplier still holds raw material to return
+        scr = make_subcontracting_receipt(sco.name)
+        scr.items[0].qty = flt(scr.items[0].qty / 2)
+        scr.save()
+        scr.submit()
+
         frappe.flags.args = frappe._dict(
             subcontract_order=sco.name,
             rm_details=[d.name for d in sco.supplied_items],
@@ -426,10 +432,6 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         finally:
             frappe.flags.args = None
         return_se.save()
-
-        scr = make_subcontracting_receipt(sco.name)
-        scr.save()
-        scr.submit()
 
         self.assertRaisesRegex(
             frappe.ValidationError,
@@ -669,6 +671,22 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertEqual(target_se.bill_to_gstin, source_se.bill_to_gstin)
         self.assertEqual(target_se.ship_from_address, source_se.ship_from_address)
         self.assertEqual(target_se.ship_to_address, source_se.ship_to_address)
+
+    def test_sco_to_se_place_of_supply_follows_bill_to(self):
+        po = create_purchase_order(
+            **SERVICE_ITEM,
+            supplier_warehouse="Finished Goods - _TIRC",
+            supplier_address="_Test Registered Supplier-Billing-3",
+        )
+        sco = create_subcontracting_order(po_name=po.name)
+        # the form gives the order the company's state
+        sco.db_set("place_of_supply", "24-Gujarat")
+
+        se = make_rm_stock_entry(sco.name, get_rm_items(sco.supplied_items))
+        self.assertEqual(se.place_of_supply, "29-Karnataka")
+
+        return_se = self._make_material_transfer_return(sco)
+        self.assertEqual(return_se.place_of_supply, "24-Gujarat")
 
 
 def _make_taxes_controller_doc(items=None, taxes=None, doctype="Subcontracting Order", assets=None):

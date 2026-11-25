@@ -850,9 +850,12 @@ class BuildExcel:
             prefix="inward_supply",
         )
 
+        # name the file as the supplier tab names this supplier
+        supplier = (self.data.get("supplier_summary") or data)[0]
+
         # remove special characters (not allowed in excel sheet name)
-        self.supplier_name = re.sub(r"[<>[\]?:|*]", "", data[0].get("supplier_name"))
-        self.supplier_gstin = data[0].get("supplier_gstin")
+        self.supplier_name = re.sub(r"[<>[\]?:|*]", "", supplier.get("supplier_name"))
+        self.supplier_gstin = supplier.get("supplier_gstin")
 
         return self.process_data(data, self.invoice_header)
 
