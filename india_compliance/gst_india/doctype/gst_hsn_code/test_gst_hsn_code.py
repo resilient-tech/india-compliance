@@ -125,7 +125,7 @@ class TestGSTHSNCode(IntegrationTestCase):
             )
 
         self.assertEqual(comment.comment_email, user.email)
-        self.assertEqual(comment.comment_by, user.email)
+        self.assertEqual(comment.comment_by, frappe.utils.get_fullname(user.name))
         self.assertEqual(comment.owner, user.name)
 
     def test_item_comment_by_administrator_keeps_the_name(self):

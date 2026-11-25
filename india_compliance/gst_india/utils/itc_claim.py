@@ -16,9 +16,9 @@ from frappe.utils import (
     formatdate,
     get_email_address,
     get_first_day,
+    get_fullname,
     get_last_day,
     get_table_name,
-    get_user_display_id,
     getdate,
     random_string,
 )
@@ -396,7 +396,7 @@ def _bulk_update(updates: dict[str, set[str]], doctype: str, source: str) -> Non
                     "comment_type": "Info",
                     # like frappe's Comment: Administrator and Guest by name
                     "comment_email": user if user in frappe.STANDARD_USERS else get_email_address(user),
-                    "comment_by": get_user_display_id(user),
+                    "comment_by": get_fullname(user),
                     "creation": current_time,
                     "modified": current_time,
                     "modified_by": user,
