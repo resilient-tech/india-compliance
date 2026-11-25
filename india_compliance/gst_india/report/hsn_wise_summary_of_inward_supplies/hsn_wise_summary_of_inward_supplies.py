@@ -5,6 +5,9 @@ from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_
 )
 from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import GSTR3BInwardInvoices
 
+# GSTR-3B repeats an ineligible invoice under this category to reverse its ITC
+ITC_REVERSED = "ITC Reversed"
+
 
 def execute(filters=None):
     if not filters:
@@ -23,6 +26,10 @@ def get_data(filters):
     invoices = []
 
     for doctype in ("Purchase Invoice", "Bill of Entry"):
-        invoices.extend(inward_invoices.get_data(doctype))
+        invoices.extend(
+            invoice
+            for invoice in inward_invoices.get_data(doctype)
+            if invoice.invoice_category != ITC_REVERSED
+        )
 
     return process_hsn_data(invoices)
