@@ -22,6 +22,19 @@
   {
    "child": 0,
    "collapsible": 1,
+   "icon": "list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "MSME Registration",
+   "link_to": "MSME Registration",
+   "link_type": "DocType",
+   "open_in_new_tab": 0,
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
    "icon": "sheet",
    "indent": 1,
    "keep_closed": 0,
@@ -57,7 +70,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-04-24 15:12:55.679203",
+ "modified": "2026-11-26 13:49:40.191293",
  "modified_by": "Administrator",
  "module": "Income Tax India",
  "name": "Income Tax India",

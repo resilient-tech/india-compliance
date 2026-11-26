@@ -1,3 +1,8 @@
+import re
+
+FISCAL_YEAR_START_MONTH = 4
+FINANCIAL_YEAR_REGEX = re.compile(r"^\d{4}-\d{4}$")
+
 # Income Tax Act 1961 (pre FY 2026-27)
 OLD_TDS_SECTIONS = [
     "192A",

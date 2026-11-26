@@ -121,6 +121,7 @@ doctype_js = {
     "Supplier": [
         "gst_india/client_scripts/party.js",
         "gst_india/client_scripts/supplier.js",
+        "income_tax_india/client_scripts/supplier.js",
     ],
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
     "Customize Form": "audit_trail/client_scripts/customize_form.js",

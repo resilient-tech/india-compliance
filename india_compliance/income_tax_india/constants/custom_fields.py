@@ -35,7 +35,16 @@ party_fields = [
 CUSTOM_FIELDS = {
     "Company": party_fields,
     "Customer": party_fields,
-    "Supplier": party_fields,
+    "Supplier": [
+        *party_fields,
+        {
+            "fieldname": "msme_registration",
+            "label": "MSME Registration",
+            "fieldtype": "Link",
+            "options": "MSME Registration",
+            "insert_after": "is_reverse_charge_applicable",
+        },
+    ],
     "Finance Book": [
         {
             "fieldname": "for_income_tax",
