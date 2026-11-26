@@ -327,6 +327,7 @@ doc_events = {
         "validate": [
             "india_compliance.gst_india.overrides.supplier.validate",
             "india_compliance.gst_india.overrides.party.validate_party",
+            "india_compliance.income_tax_india.overrides.supplier.validate",
         ],
         "after_insert": ("india_compliance.gst_india.overrides.party.create_primary_address"),
     },

@@ -3,6 +3,10 @@ import re
 FISCAL_YEAR_START_MONTH = 4
 FINANCIAL_YEAR_REGEX = re.compile(r"^\d{4}-\d{4}$")
 
+# Law: MSMED Act 2006, s.15 (payment within 45 days of acceptance)
+MSME_PAYMENT_DAYS = 45
+MSME_PAYMENT_TERMS_TEMPLATE = "45 Days (MSME)"
+
 # Income Tax Act 1961 (pre FY 2026-27)
 OLD_TDS_SECTIONS = [
     "192A",

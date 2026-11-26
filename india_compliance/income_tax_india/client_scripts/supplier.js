@@ -27,3 +27,10 @@ async function set_msme_registration_description(frm) {
             : `<span class="indicator red">${classification}, ${__("Invalid")}</span>`,
     );
 }
+
+india_compliance.set_msme_payment_terms = ({ supplier, payment_terms }) => {
+    frappe.hide_msgprint();
+    if (cur_frm?.doctype !== "Supplier" || cur_frm.doc.name !== supplier) return;
+
+    cur_frm.set_value("payment_terms", payment_terms).then(() => cur_frm.save());
+};

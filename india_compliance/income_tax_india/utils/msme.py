@@ -68,6 +68,15 @@ def get_msme_registration_details(msme_registration: str, on_date=None) -> dict 
     return registrations[0] if registrations else None
 
 
+def is_msme_covered(registration) -> bool:
+    return bool(
+        registration
+        and registration.valid
+        and registration.enterprise_type in ("Micro", "Small")
+        and registration.activity != "Trading"
+    )
+
+
 @frappe.whitelist()
 def get_msme_registration_status(msme_registration: str) -> dict | None:
     frappe.has_permission("MSME Registration", "read", throw=True)
