@@ -91,7 +91,6 @@ doctype_js = {
         "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/purchase_invoice.js",
-        "income_tax_india/client_scripts/purchase_invoice.js",
     ],
     "Purchase Receipt": [
         "gst_india/client_scripts/e_waybill_applicability.js",
@@ -224,7 +223,10 @@ doc_events = {
     "Item": {"validate": "india_compliance.gst_india.overrides.item.validate"},
     "Item Tax Template": {"validate": "india_compliance.gst_india.overrides.item_tax_template.validate"},
     "Journal Entry": {
-        "validate": "india_compliance.gst_india.overrides.journal_entry.validate",
+        "validate": [
+            "india_compliance.gst_india.overrides.journal_entry.validate",
+            "india_compliance.income_tax_india.overrides.transaction.validate_msme_due_date",
+        ],
     },
     "Payment Entry": {
         "onload": "india_compliance.gst_india.overrides.payment_entry.onload",
@@ -240,7 +242,7 @@ doc_events = {
         ],
         "validate": [
             "india_compliance.gst_india.overrides.purchase_invoice.validate",
-            "india_compliance.income_tax_india.overrides.purchase_invoice.validate",
+            "india_compliance.income_tax_india.overrides.transaction.validate_msme_due_date",
         ],
         "before_save": "india_compliance.gst_india.overrides.transaction.update_valuation_rate",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_valuation_rate",
@@ -257,7 +259,10 @@ doc_events = {
         "before_validate": [
             "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         ],
-        "validate": ("india_compliance.gst_india.overrides.transaction.validate_transaction"),
+        "validate": [
+            "india_compliance.gst_india.overrides.transaction.validate_transaction",
+            "india_compliance.income_tax_india.overrides.transaction.validate_msme_order_terms",
+        ],
         "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit",
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },

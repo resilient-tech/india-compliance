@@ -792,6 +792,22 @@ Object.assign(india_compliance, {
         }
     },
 
+    set_msme_due_date({ doctype, name, due_date }) {
+        frappe.hide_msgprint();
+
+        const frm = frappe.views.formview[doctype]?.frm;
+        if (frm?.doc.name !== name || frm.doc.docstatus !== 0) return;
+
+        const schedule = frm.doc.payment_schedule || [];
+        if (!schedule.length) return frm.set_value("due_date", due_date);
+
+        const last_row = schedule.reduce((last, row) => (row.due_date > last.due_date ? row : last));
+        frappe.model.set_value(last_row.doctype, last_row.name, "due_date", due_date);
+
+        frm.doc.due_date = due_date;
+        frm.refresh_field("due_date");
+    },
+
     validate_udyam_number(udyam_number) {
         if (!udyam_number) return;
 

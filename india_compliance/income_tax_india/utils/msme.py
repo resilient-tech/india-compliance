@@ -5,7 +5,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, add_years, format_date, get_first_day, getdate, today
+from frappe.utils import add_days, add_years, flt, format_date, get_first_day, getdate, today
 
 from india_compliance.income_tax_india.constants import FISCAL_YEAR_START_MONTH, MSME_PAYMENT_DAYS
 
@@ -139,23 +139,44 @@ def resolve_msme_status(doc):
     return {"msme_status": get_msme_status(doc)}
 
 
+def get_bill_suppliers(doc) -> list[str]:
+    if doc.doctype != "Journal Entry":
+        return [doc.supplier] if doc.get("supplier") else []
+
+    return list(
+        dict.fromkeys(
+            row.party
+            for row in doc.get("accounts") or []
+            if row.party_type == "Supplier"
+            and row.party
+            and flt(row.credit_in_account_currency) > 0
+            and not row.reference_name
+        )
+    )
+
+
 def get_msme_status(doc):
-    if not doc.get("supplier"):
-        return None
-
     on_date = doc.get("bill_date") or doc.get("posting_date") or doc.get("transaction_date")
-    registration = get_supplier_msme_details(doc.supplier, on_date)
-    if not registration:
-        return None
+    statuses = []
 
-    if not is_msme_covered(registration):
-        return _("MSME Registration {0}: {1}").format(registration.name, get_coverage_label(registration))
+    for supplier in get_bill_suppliers(doc):
+        registration = get_supplier_msme_details(supplier, on_date)
+        if not registration:
+            continue
 
-    status = _("MSME supplier ({0}) · {1}").format(_(registration.enterprise_type), registration.name)
+        if not is_msme_covered(registration):
+            statuses.append(
+                _("MSME Registration {0}: {1}").format(registration.name, get_coverage_label(registration))
+            )
+            continue
 
-    if doc.doctype == "Purchase Invoice":
-        limit = get_msme_payment_limit(doc)
-        pay_by = min(getdate(doc.due_date), limit) if doc.due_date else limit
-        status += " · " + _("pay by {0}").format(format_date(pay_by))
+        status = _("MSME supplier ({0}) · {1}").format(_(registration.enterprise_type), registration.name)
 
-    return status
+        if doc.doctype == "Purchase Invoice":
+            limit = get_msme_payment_limit(doc)
+            pay_by = min(getdate(doc.due_date or doc.posting_date), limit)
+            status += " · " + _("pay by {0}").format(format_date(pay_by))
+
+        statuses.append(status)
+
+    return "; ".join(statuses) or None
