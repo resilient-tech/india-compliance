@@ -88,6 +88,9 @@ def _add_comment_to_items(item_names, hsn_code, timestamp=None):
     comment_docs = []
     current_time = timestamp or frappe.utils.now()
     current_user = frappe.session.user
+    # like frappe's Comment: Administrator and Guest by name
+    comment_email = current_user if current_user in frappe.STANDARD_USERS else get_email_address(current_user)
+    comment_by = get_fullname(current_user)
 
     for item_name in item_names:
         comment_doc = frappe.new_doc("Comment")
@@ -95,11 +98,8 @@ def _add_comment_to_items(item_names, hsn_code, timestamp=None):
             {
                 "name": random_string(10),
                 "comment_type": "Info",
-                # like frappe's Comment: Administrator and Guest by name
-                "comment_email": (
-                    current_user if current_user in frappe.STANDARD_USERS else get_email_address(current_user)
-                ),
-                "comment_by": get_fullname(current_user),
+                "comment_email": comment_email,
+                "comment_by": comment_by,
                 "creation": current_time,
                 "modified": current_time,
                 "modified_by": current_user,
