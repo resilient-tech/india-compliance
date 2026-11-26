@@ -4,32 +4,13 @@
 frappe.ui.form.on("Supplier", {
     refresh: set_msme_registration_description,
     msme_registration: set_msme_registration_description,
-    gstin: offer_msme_registration_for_pan,
-    pan: offer_msme_registration_for_pan,
 });
-
-async function offer_msme_registration_for_pan(frm) {
-    const { pan } = frm.doc;
-    if (!frm.is_new() || frm.doc.msme_registration || !pan) return;
-
-    const msme_registration = await frappe.xcall(
-        "india_compliance.income_tax_india.utils.msme.get_msme_registration_for_pan",
-        { pan },
-    );
-    if (!msme_registration || frm.doc.msme_registration || frm.doc.pan !== pan) return;
-
-    frappe.confirm(
-        __("Another Supplier with PAN {0} uses MSME Registration {1}. Link it here?", [
-            pan,
-            msme_registration,
-        ]),
-        () => frm.set_value("msme_registration", msme_registration),
-    );
-}
 
 async function set_msme_registration_description(frm) {
     const field = frm.get_field("msme_registration");
-    if (!frm.doc.msme_registration) return field.set_description("");
+    if (!frm.doc.msme_registration || !frappe.model.can_read("MSME Registration")) {
+        return field.set_description("");
+    }
 
     const { message } = await frappe.call({
         method: "india_compliance.income_tax_india.utils.msme.get_msme_registration_status",
@@ -56,4 +37,13 @@ india_compliance.set_msme_payment_terms = ({ supplier, payment_terms }) => {
     if (frm?.doc.name !== supplier) return;
 
     frm.set_value("payment_terms", payment_terms).then(() => frm.save());
+};
+
+india_compliance.set_supplier_msme_registration = ({ supplier, msme_registration }) => {
+    frappe.hide_msgprint();
+
+    const frm = frappe.views.formview.Supplier?.frm;
+    if (frm?.doc.name !== supplier) return;
+
+    frm.set_value("msme_registration", msme_registration).then(() => frm.save());
 };

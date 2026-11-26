@@ -50,7 +50,6 @@
    "fieldname": "is_cancelled",
    "fieldtype": "Check",
    "hidden": 1,
-   "in_standard_filter": 1,
    "label": "Is Cancelled",
    "no_copy": 1,
    "read_only": 1
@@ -132,6 +131,26 @@
   {
    "read": 1,
    "role": "Purchase User"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Purchase Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Purchase Master Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Stock Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Stock User"
   }
  ],
  "quick_entry": 1,

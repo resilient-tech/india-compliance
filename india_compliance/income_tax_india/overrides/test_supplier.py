@@ -72,10 +72,17 @@ class TestSupplierOverride(IntegrationTestCase):
         self.assertIn("Set Payment Terms of 45 days or less", message["message"])
 
     def test_msme_registration_offered_for_same_pan(self):
+        group = frappe.db.get_value("Supplier Group", {"is_group": 0})
         self.assertIsNone(get_msme_registration_for_pan("AAAPL9001C"))
 
         micro = create_msme_registration(pan="AAAPL9001C").name
         self.assertEqual(get_msme_registration_for_pan("AAAPL9001C"), micro)
+
+        supplier = self.new_supplier(None, group)
+        supplier.pan = "AAAPL9001C"
+        [message] = self.get_messages(supplier, "MSME Registration Found")
+        self.assertEqual(message["primary_action"]["args"]["msme_registration"], micro)
+        self.assertFalse(self.saved_with(supplier, "MSME Registration Found"))
 
         create_msme_registration(pan="AAAPL9001C")
         self.assertIsNone(get_msme_registration_for_pan("AAAPL9001C"))

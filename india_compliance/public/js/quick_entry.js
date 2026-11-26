@@ -400,17 +400,11 @@ class ItemQuickEntryForm extends frappe.ui.form.QuickEntryForm {
 frappe.ui.form.ItemQuickEntryForm = ItemQuickEntryForm;
 
 class MSMERegistrationQuickEntryForm extends frappe.ui.form.QuickEntryForm {
-    /**
-     * Frappe skips Quick Entry for doctypes with a child table, so the first
-     * classification is captured as plain fields and appended before insert.
-     * Creating a registration this way keeps it classified from the start.
-     */
     render_dialog() {
         const linked_from = frappe._from_link?.doc;
         if (!this.doc.pan && linked_from?.doctype === "Supplier") this.doc.pan = linked_from.pan;
 
-        // underscore-prefixed: frappe replaces a dialog field that shares a real
-        // fieldname with the doctype's own docfield, dropping onchange and description
+        // underscore-prefixed so frappe.ui.form.Layout keeps their onchange and description
         this.docfields = [
             ...this.docfields.filter((df) => !["udyam_number", "registration_date"].includes(df.fieldname)),
             this.get_udyam_number_field(),
@@ -447,7 +441,6 @@ class MSMERegistrationQuickEntryForm extends frappe.ui.form.QuickEntryForm {
         const field = this.dialog.get_field("_financial_year");
 
         field.set_data(india_compliance.get_indian_fiscal_year_options(9, 1, registration_date));
-        this.dialog.set_value("_financial_year", india_compliance.get_indian_fiscal_year(registration_date));
     }
 
     get_classification_fields() {

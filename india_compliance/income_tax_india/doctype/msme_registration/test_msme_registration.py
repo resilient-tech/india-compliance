@@ -98,9 +98,7 @@ class IntegrationTestMSME(IntegrationTestCase):
             )
 
     def test_duplicate_financial_year_rejected(self):
-        """A period is always the year it names, so two rows for one year would
-        make the classification ambiguous.
-        """
+        """Two rows for one year would make the category ambiguous."""
         self.assertRaisesRegex(
             frappe.ValidationError,
             "Duplicate MSME classification",
@@ -112,9 +110,7 @@ class IntegrationTestMSME(IntegrationTestCase):
         )
 
     def test_year_ending_before_the_registration_is_rejected(self):
-        """Classifying a year the enterprise was not yet registered for would
-        leave a period starting after it ends.
-        """
+        """A year ending before registration would have a period that ends before it starts."""
         self.assertRaisesRegex(
             frappe.ValidationError,
             "Not registered in Financial Year",
@@ -139,9 +135,7 @@ class IntegrationTestMSME(IntegrationTestCase):
         self.assertFalse(get_msme_registration_details(msme.name, "2023-10-16").valid)
 
     def test_cancellation_shortens_the_period_of_that_year(self):
-        """The stored period must say what the registration actually covered,
-        not the whole year it was cancelled in.
-        """
+        """The period stops at the cancellation date, not the year end."""
         msme = create_msme_registration(
             registration_date="2023-04-01",
             classifications=[{"financial_year": FY, "enterprise_type": "Micro"}],
@@ -156,9 +150,7 @@ class IntegrationTestMSME(IntegrationTestCase):
         self.assertEqual(getdate(msme.classifications[0].to_date), getdate("2024-03-31"))
 
     def test_year_starting_after_the_cancellation_is_rejected(self):
-        """The mirror of the registration rule: a year the enterprise was no
-        longer registered for cannot be classified.
-        """
+        """A year starting after the cancellation cannot be classified."""
         msme = create_msme_registration(
             registration_date="2023-04-01",
             classifications=[
@@ -204,9 +196,7 @@ class IntegrationTestMSME(IntegrationTestCase):
         self.assertFalse(get_msme_registration_details(msme.name, "2023-05-01").valid)
 
     def test_supplier_details_are_read_on_demand(self):
-        """Nothing is copied onto the Supplier, so the details cannot drift from
-        the master - the form fetches them when it shows them.
-        """
+        """The Supplier stores only the link; details come from the registration."""
         msme = create_msme_registration(
             classifications=[
                 {
@@ -250,6 +240,9 @@ class IntegrationTestMSME(IntegrationTestCase):
         msme = create_msme_registration(registration_date="2023-04-01")
         self.assertRaises(frappe.ValidationError, msme.mark_as_cancelled, add_days(today(), 1))
 
+    def test_copy_checks_the_financial_year_first(self):
+        self.assertRaises(frappe.ValidationError, copy_to_financial_year, [], "2025-2027")
+
     def test_cancelling_twice_rejected(self):
         msme = create_msme_registration(registration_date="2023-04-01")
         msme.mark_as_cancelled("2023-10-15")
@@ -287,15 +280,21 @@ class IntegrationTestMSME(IntegrationTestCase):
             classifications=[{"financial_year": last_year, "enterprise_type": "Micro"}]
         )
         cancelled.mark_as_cancelled(f"{start}-01-15")
+        undated = create_msme_registration(
+            classifications=[{"financial_year": last_year, "enterprise_type": "Micro"}]
+        )
+        frappe.db.set_value("MSME Registration", undated.name, "is_cancelled", 1)
         no_rows = create_msme_registration()
 
-        copy_to_financial_year([to_copy.name, already.name, later.name, cancelled.name, no_rows.name])
+        copy_to_financial_year(
+            [to_copy.name, already.name, later.name, cancelled.name, no_rows.name, undated.name]
+        )
         to_copy.reload()
         self.assertEqual(
             [(row.financial_year, row.enterprise_type, row.activity) for row in to_copy.classifications][-1],
             (current_year, "Small", "Manufacturing"),
         )
-        for skipped in (already, later, cancelled, no_rows):
+        for skipped in (already, later, cancelled, no_rows, undated):
             self.assertEqual(
                 len(skipped.classifications),
                 len(frappe.get_doc("MSME Registration", skipped.name).classifications),

@@ -32,21 +32,6 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "MSME Registration",
-   "link_to": "MSME Registration",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "TDS Computation Summary-India",
-   "link_to": "TDS Computation Summary-India",
-   "report_ref_doctype": "Purchase Invoice",
-   "type": "Report"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
    "label": "Tax Withholding Category",
    "link_to": "Tax Withholding Category",
    "stats_filter": "[]",
@@ -66,6 +51,21 @@
    "label": "Tax Withholding Group",
    "link_to": "Tax Withholding Group",
    "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "TDS Computation Summary-India",
+   "link_to": "TDS Computation Summary-India",
+   "report_ref_doctype": "Purchase Invoice",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "MSME Registration",
+   "link_to": "MSME Registration",
    "type": "DocType"
   }
  ],

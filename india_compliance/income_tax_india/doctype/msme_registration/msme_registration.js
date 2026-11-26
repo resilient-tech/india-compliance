@@ -40,18 +40,6 @@ frappe.ui.form.on("MSME Registration", {
             "financial_year",
             frm.doc.registration_date || undefined,
         );
-
-        // a lone classification is the one the registration was created with, so
-        // it follows the date rather than being left describing another year
-        if (frm.doc.classifications?.length !== 1) return;
-
-        const [classification] = frm.doc.classifications;
-        frappe.model.set_value(
-            classification.doctype,
-            classification.name,
-            "financial_year",
-            india_compliance.get_indian_fiscal_year(frm.doc.registration_date || undefined),
-        );
     },
 
     udyam_number(frm) {

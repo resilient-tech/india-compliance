@@ -6,13 +6,35 @@ from frappe.utils import date_diff, getdate
 from india_compliance.income_tax_india.constants import MSME_PAYMENT_DAYS, MSME_PAYMENT_TERMS_TEMPLATE
 from india_compliance.income_tax_india.utils.msme import (
     get_msme_registration_details,
+    get_msme_registration_for_pan,
     is_msme_covered,
 )
 
 
 def validate(doc, method=None):
+    suggest_msme_registration(doc)
     validate_msme_pan(doc)
     validate_msme_payment_terms(doc)
+
+
+def suggest_msme_registration(doc):
+    if doc.msme_registration or not doc.pan or not (doc.is_new() or doc.has_value_changed("pan")):
+        return
+
+    msme_registration = get_msme_registration_for_pan(doc.pan)
+    if not msme_registration:
+        return
+
+    frappe.msgprint(
+        _("MSME Registration {0} has PAN {1}.").format(bold(msme_registration), bold(doc.pan)),
+        title=_("MSME Registration Found"),
+        indicator="blue",
+        primary_action={
+            "label": _("Link {0}").format(msme_registration),
+            "client_action": "india_compliance.set_supplier_msme_registration",
+            "args": {"supplier": doc.name, "msme_registration": msme_registration},
+        },
+    )
 
 
 def validate_msme_pan(doc):

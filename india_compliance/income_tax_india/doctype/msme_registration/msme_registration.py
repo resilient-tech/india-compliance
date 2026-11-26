@@ -81,10 +81,7 @@ class MSMERegistration(Document):
             financial_years.add(row.financial_year)
 
     def validate_financial_year(self, row):
-        financial_year = row.financial_year or ""
-        start_year, _sep, end_year = financial_year.partition("-")
-
-        if FINANCIAL_YEAR_REGEX.match(financial_year) and int(end_year) == int(start_year) + 1:
+        if is_valid_financial_year(row.financial_year):
             return
 
         frappe.throw(
@@ -167,6 +164,14 @@ def copy_to_financial_year(registrations: str | list, financial_year: str | None
     registrations = frappe.parse_json(registrations)
     financial_year = financial_year or get_indian_fiscal_year()
 
+    if not is_valid_financial_year(financial_year):
+        frappe.throw(
+            _("{0} is not a valid Financial Year. Expected two consecutive years, e.g. 2024-2025").format(
+                bold(financial_year)
+            ),
+            title=_("Invalid Financial Year"),
+        )
+
     if len(registrations) > 500:
         frappe.throw(
             _("Copy supports up to 500 MSME Registrations at a time."),
@@ -216,9 +221,9 @@ def _copy_latest_classification(name, financial_year):
     if not rows or rows[-1].financial_year >= financial_year:
         return
 
-    if (
-        registration.is_cancelled
-        and getdate(registration.cancelled_date) < get_financial_year_dates(financial_year)[0]
+    if registration.is_cancelled and (
+        not registration.cancelled_date
+        or getdate(registration.cancelled_date) < get_financial_year_dates(financial_year)[0]
     ):
         return
 
@@ -231,3 +236,8 @@ def _copy_latest_classification(name, financial_year):
         },
     )
     registration.save()
+
+
+def is_valid_financial_year(financial_year) -> bool:
+    start_year, _sep, end_year = (financial_year or "").partition("-")
+    return bool(FINANCIAL_YEAR_REGEX.match(financial_year or "")) and int(end_year) == int(start_year) + 1

@@ -79,13 +79,12 @@ def is_msme_covered(registration) -> bool:
 
 @frappe.whitelist()
 def get_msme_registration_status(msme_registration: str) -> dict | None:
-    frappe.has_permission("MSME Registration", "read", throw=True)
+    frappe.has_permission("MSME Registration", "read", doc=msme_registration, throw=True)
 
     return get_msme_registration_details(msme_registration)
 
 
-@frappe.whitelist()
 def get_msme_registration_for_pan(pan: str) -> str | None:
-    registrations = frappe.get_list("MSME Registration", filters={"pan": pan}, pluck="name")
+    registrations = frappe.get_all("MSME Registration", filters={"pan": pan}, pluck="name")
 
     return registrations[0] if len(registrations) == 1 else None
