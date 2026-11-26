@@ -91,6 +91,7 @@ doctype_js = {
         "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/purchase_invoice.js",
+        "income_tax_india/client_scripts/purchase_invoice.js",
     ],
     "Purchase Receipt": [
         "gst_india/client_scripts/e_waybill_applicability.js",
@@ -237,7 +238,10 @@ doc_events = {
         "before_validate": [
             "india_compliance.gst_india.overrides.transaction.before_validate_transaction",
         ],
-        "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
+        "validate": [
+            "india_compliance.gst_india.overrides.purchase_invoice.validate",
+            "india_compliance.income_tax_india.overrides.purchase_invoice.validate",
+        ],
         "before_save": "india_compliance.gst_india.overrides.transaction.update_valuation_rate",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_valuation_rate",
         "before_update_after_submit": [

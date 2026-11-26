@@ -1,6 +1,6 @@
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, format_date, today
+from frappe.utils import add_days, format_date, getdate, today
 
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 from india_compliance.income_tax_india.doctype.msme_registration.test_msme_registration import (
@@ -33,6 +33,21 @@ class TestPurchaseInvoiceOverride(IntegrationTestCase):
             ]
         ).name
 
+    def test_msme_due_date_message(self):
+        limit = add_days(self.bill_date, 45)
+
+        [message] = self.get_messages(self.create_bill(self.micro, due_in=60))
+        self.assertEqual(message["primary_action"]["args"]["due_date"], str(getdate(limit)))
+
+        self.assertFalse(self.get_messages(self.create_bill(self.micro, due_in=45)))
+        self.assertFalse(self.get_messages(self.create_bill(self.medium, due_in=60)))
+
+        bill = self.create_bill(self.micro, due_in=30)
+        bill.due_date = add_days(self.bill_date, 50)
+        bill.payment_schedule = []
+        self.assertTrue(self.save_and_get_messages(bill))
+        self.assertFalse(self.save_and_get_messages(bill))
+
     def test_msme_status(self):
         bill = self.create_bill(self.micro, due_in=60)
         status = resolve_msme_status(bill)["msme_status"]
@@ -55,6 +70,7 @@ class TestPurchaseInvoiceOverride(IntegrationTestCase):
         )
 
     def create_bill(self, supplier, due_in):
+        frappe.clear_messages()
         return create_purchase_invoice(
             supplier=supplier,
             posting_date=self.bill_date,
@@ -63,3 +79,11 @@ class TestPurchaseInvoiceOverride(IntegrationTestCase):
             set_posting_time=1,
             do_not_submit=1,
         )
+
+    def get_messages(self, bill):
+        return [message for message in frappe.get_message_log() if message.get("title") == "MSME Due Date"]
+
+    def save_and_get_messages(self, bill):
+        frappe.clear_messages()
+        bill.save()
+        return self.get_messages(bill)
