@@ -406,7 +406,8 @@ class MSMERegistrationQuickEntryForm extends frappe.ui.form.QuickEntryForm {
      * Creating a registration this way keeps it classified from the start.
      */
     render_dialog() {
-        if (!this.doc.pan && cur_frm?.doctype === "Supplier") this.doc.pan = cur_frm.doc.pan;
+        const linked_from = frappe._from_link?.doc;
+        if (!this.doc.pan && linked_from?.doctype === "Supplier") this.doc.pan = linked_from.pan;
 
         // underscore-prefixed: frappe replaces a dialog field that shares a real
         // fieldname with the doctype's own docfield, dropping onchange and description
