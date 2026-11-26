@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "udyam_number",
+  "pan",
   "registration_date",
   "column_break_cxfg",
   "is_cancelled",
@@ -23,6 +24,15 @@
    "reqd": 1,
    "unique": 1,
    "description": "Format: UDYAM-XX-00-0000000"
+  },
+  {
+   "description": "The PAN this Udyam registration is issued to",
+   "fieldname": "pan",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "PAN",
+   "reqd": 1
   },
   {
    "fieldname": "registration_date",
@@ -74,7 +84,7 @@
    "link_fieldname": "msme_registration"
   }
  ],
- "modified": "2026-11-26 13:49:40.191293",
+ "modified": "2026-11-26 14:44:38.087275",
  "modified_by": "Administrator",
  "module": "Income Tax India",
  "name": "MSME Registration",
@@ -130,5 +140,6 @@
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1,
- "allow_rename": 1
+ "allow_rename": 1,
+ "search_fields": "pan"
 }

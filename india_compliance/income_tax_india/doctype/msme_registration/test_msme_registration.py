@@ -26,6 +26,7 @@ def create_msme_registration(classifications=None, **kwargs):
     """MSME registration with a unique UDYAM number."""
     msme = frappe.new_doc("MSME Registration")
     kwargs.setdefault("registration_date", "2020-04-01")
+    kwargs.setdefault("pan", f"AAAPL{random.randint(1000, 9999)}C")
     msme.udyam_number = kwargs.pop("udyam_number", None) or (
         f"UDYAM-MH-12-{random.randint(1000000, 9999999)}"
     )
@@ -55,6 +56,11 @@ class IntegrationTestMSME(IntegrationTestCase):
     @classmethod
     def tearDownClass(cls):
         frappe.db.rollback(save_point="before_test_msme")
+
+    def test_pan_is_checked_and_uppercased(self):
+        self.assertEqual(create_msme_registration(pan=" aaapl1234c ").pan, "AAAPL1234C")
+        self.assertRaises(frappe.ValidationError, create_msme_registration, pan="AAAPL1234")
+        self.assertRaises(frappe.ValidationError, create_msme_registration, pan="")
 
     def test_invalid_udyam_number_rejected(self):
         self.assertRaises(frappe.ValidationError, create_msme_registration, udyam_number="INVALID-123")

@@ -7,7 +7,10 @@ from india_compliance.income_tax_india.doctype.msme_registration.test_msme_regis
     create_msme_registration,
 )
 from india_compliance.income_tax_india.setup import create_msme_payment_terms_template
-from india_compliance.income_tax_india.utils.msme import get_indian_fiscal_year
+from india_compliance.income_tax_india.utils.msme import (
+    get_indian_fiscal_year,
+    get_msme_registration_for_pan,
+)
 
 
 class TestSupplierOverride(IntegrationTestCase):
@@ -68,6 +71,27 @@ class TestSupplierOverride(IntegrationTestCase):
         self.assertFalse(message.get("primary_action"))
         self.assertIn("Set Payment Terms of 45 days or less", message["message"])
 
+    def test_msme_registration_offered_for_same_pan(self):
+        self.assertIsNone(get_msme_registration_for_pan("AAAPL9001C"))
+
+        micro = create_msme_registration(pan="AAAPL9001C").name
+        self.assertEqual(get_msme_registration_for_pan("AAAPL9001C"), micro)
+
+        create_msme_registration(pan="AAAPL9001C")
+        self.assertIsNone(get_msme_registration_for_pan("AAAPL9001C"))
+
+    def test_msme_pan_mismatch_message(self):
+        group = frappe.db.get_value("Supplier Group", {"is_group": 0})
+        registration = create_msme_registration(pan="AAAPL9002C").name
+
+        supplier = self.new_supplier(registration, group, MSME_PAYMENT_TERMS_TEMPLATE)
+        supplier.pan = "AAAPL9003C"
+        self.assertTrue(self.saved_with(supplier, "MSME PAN Mismatch"))
+        self.assertFalse(self.saved_with(supplier, "MSME PAN Mismatch"))
+
+        supplier.pan = "AAAPL9002C"
+        self.assertFalse(self.saved_with(supplier, "MSME PAN Mismatch"))
+
     def create_registration(self, enterprise_type, activity="Manufacturing"):
         return create_msme_registration(
             classifications=[
@@ -92,14 +116,15 @@ class TestSupplierOverride(IntegrationTestCase):
         return supplier
 
     def saved_with_message(self, supplier):
-        return bool(self.get_messages(supplier))
+        return self.saved_with(supplier, "MSME Payment Terms")
 
-    def get_messages(self, supplier):
+    def saved_with(self, supplier, title):
+        return bool(self.get_messages(supplier, title))
+
+    def get_messages(self, supplier, title="MSME Payment Terms"):
         frappe.clear_messages()
         supplier.save()
-        return [
-            message for message in frappe.get_message_log() if message.get("title") == "MSME Payment Terms"
-        ]
+        return [message for message in frappe.get_message_log() if message.get("title") == title]
 
 
 def terms_template(credit_days, due_date_based_on="Day(s) after invoice date"):

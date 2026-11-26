@@ -6,7 +6,7 @@ from frappe import _, bold
 from frappe.model.document import Document
 from frappe.utils import format_date, getdate, today
 
-from india_compliance.gst_india.utils import commit, send_updated_doc
+from india_compliance.gst_india.utils import commit, is_valid_pan, send_updated_doc
 from india_compliance.income_tax_india.constants import FINANCIAL_YEAR_REGEX
 from india_compliance.income_tax_india.utils.msme import (
     UDYAM_NUMBER_REGEX,
@@ -26,6 +26,7 @@ class MSMERegistration(Document):
 
     def validate(self):
         self.validate_udyam_number()
+        self.validate_pan()
         self.validate_cancelled_date()
         self.validate_classifications()
 
@@ -54,6 +55,12 @@ class MSMERegistration(Document):
                 ).format(bold(self.udyam_number)),
                 title=_("Invalid UDYAM Number"),
             )
+
+    def validate_pan(self):
+        self.pan = (self.pan or "").strip().upper()
+
+        if not is_valid_pan(self.pan):
+            frappe.throw(_("{0} is not a valid PAN").format(bold(self.pan)), title=_("Invalid PAN"))
 
     def validate_classifications(self):
         financial_years = set()

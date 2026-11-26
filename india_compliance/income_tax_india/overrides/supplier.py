@@ -11,7 +11,28 @@ from india_compliance.income_tax_india.utils.msme import (
 
 
 def validate(doc, method=None):
+    validate_msme_pan(doc)
     validate_msme_payment_terms(doc)
+
+
+def validate_msme_pan(doc):
+    if not doc.msme_registration or not doc.pan:
+        return
+
+    if not (doc.is_new() or doc.has_value_changed("pan") or doc.has_value_changed("msme_registration")):
+        return
+
+    registration_pan = frappe.db.get_value("MSME Registration", doc.msme_registration, "pan")
+    if not registration_pan or registration_pan == doc.pan:
+        return
+
+    frappe.msgprint(
+        _("PAN {0} does not match PAN {1} of MSME Registration {2}.").format(
+            bold(doc.pan), bold(registration_pan), bold(doc.msme_registration)
+        ),
+        title=_("MSME PAN Mismatch"),
+        indicator="orange",
+    )
 
 
 def validate_msme_payment_terms(doc):

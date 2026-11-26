@@ -4,7 +4,28 @@
 frappe.ui.form.on("Supplier", {
     refresh: set_msme_registration_description,
     msme_registration: set_msme_registration_description,
+    gstin: offer_msme_registration_for_pan,
+    pan: offer_msme_registration_for_pan,
 });
+
+async function offer_msme_registration_for_pan(frm) {
+    const { pan } = frm.doc;
+    if (!frm.is_new() || frm.doc.msme_registration || !pan) return;
+
+    const msme_registration = await frappe.xcall(
+        "india_compliance.income_tax_india.utils.msme.get_msme_registration_for_pan",
+        { pan },
+    );
+    if (!msme_registration || frm.doc.msme_registration || frm.doc.pan !== pan) return;
+
+    frappe.confirm(
+        __("Another Supplier with PAN {0} uses MSME Registration {1}. Link it here?", [
+            pan,
+            msme_registration,
+        ]),
+        () => frm.set_value("msme_registration", msme_registration),
+    );
+}
 
 async function set_msme_registration_description(frm) {
     const field = frm.get_field("msme_registration");
