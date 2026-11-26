@@ -7,6 +7,10 @@ import frappe
 from frappe.tests import IntegrationTestCase, UnitTestCase
 from frappe.utils import add_days, getdate, today
 
+from india_compliance.income_tax_india.doctype.msme_registration.msme_registration import (
+    copy_latest_classification,
+    copy_to_financial_year,
+)
 from india_compliance.income_tax_india.utils.msme import (
     get_financial_year_dates,
     get_fiscal_year_dates,
@@ -246,6 +250,87 @@ class IntegrationTestMSME(IntegrationTestCase):
         msme.reload()
 
         self.assertRaises(frappe.ValidationError, msme.mark_as_cancelled, "2023-11-01")
+
+    def test_copy_to_next_year(self):
+        current_year = get_indian_fiscal_year(today())
+        start = int(current_year.split("-")[0])
+        last_year = f"{start - 1}-{start}"
+        next_year = f"{start + 1}-{start + 2}"
+
+        to_copy = create_msme_registration(
+            classifications=[
+                {
+                    "financial_year": f"{start - 3}-{start - 2}",
+                    "enterprise_type": "Micro",
+                    "activity": "Service",
+                },
+                {
+                    "financial_year": f"{start - 2}-{start - 1}",
+                    "enterprise_type": "Small",
+                    "activity": "Manufacturing",
+                },
+            ]
+        )
+        already = create_msme_registration(
+            classifications=[{"financial_year": current_year, "enterprise_type": "Micro"}]
+        )
+        later = create_msme_registration(
+            classifications=[{"financial_year": next_year, "enterprise_type": "Micro"}]
+        )
+        cancelled = create_msme_registration(
+            classifications=[{"financial_year": last_year, "enterprise_type": "Micro"}]
+        )
+        cancelled.mark_as_cancelled(f"{start}-01-15")
+        no_rows = create_msme_registration()
+
+        copy_to_financial_year([to_copy.name, already.name, later.name, cancelled.name, no_rows.name])
+        to_copy.reload()
+        self.assertEqual(
+            [(row.financial_year, row.enterprise_type, row.activity) for row in to_copy.classifications][-1],
+            (current_year, "Small", "Manufacturing"),
+        )
+        for skipped in (already, later, cancelled, no_rows):
+            self.assertEqual(
+                len(skipped.classifications),
+                len(frappe.get_doc("MSME Registration", skipped.name).classifications),
+            )
+
+        copy_to_financial_year([to_copy.name])
+        to_copy.reload()
+        self.assertEqual([row.financial_year for row in to_copy.classifications].count(current_year), 1)
+
+        copy_to_financial_year([to_copy.name, later.name], next_year)
+        to_copy.reload()
+        later.reload()
+        self.assertEqual(to_copy.classifications[-1].financial_year, next_year)
+        self.assertEqual(len(later.classifications), 1)
+
+        self.assertEqual(copy_latest_classification([later.name], "next year"), [later.name])
+        later.reload()
+        self.assertEqual(len(later.classifications), 1)
+
+        batch = [
+            create_msme_registration(
+                classifications=[{"financial_year": last_year, "enterprise_type": "Micro"}]
+            ).name
+            for _ in range(20)
+        ]
+        copy_to_financial_year(batch)
+        self.assertTrue(
+            all(
+                frappe.db.exists(
+                    "India MSME Classification", {"parent": name, "financial_year": current_year}
+                )
+                for name in batch
+            )
+        )
+        self.assertRaises(frappe.ValidationError, copy_to_financial_year, [to_copy.name] * 501)
+
+        frappe.set_user("Guest")
+        try:
+            self.assertRaises(frappe.PermissionError, copy_to_financial_year, [no_rows.name])
+        finally:
+            frappe.set_user("Administrator")
 
 
 class UnitTestMSME(UnitTestCase):

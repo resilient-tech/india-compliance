@@ -6,11 +6,12 @@ from frappe import _, bold
 from frappe.model.document import Document
 from frappe.utils import format_date, getdate, today
 
-from india_compliance.gst_india.utils import send_updated_doc
+from india_compliance.gst_india.utils import commit, send_updated_doc
 from india_compliance.income_tax_india.constants import FINANCIAL_YEAR_REGEX
 from india_compliance.income_tax_india.utils.msme import (
     UDYAM_NUMBER_REGEX,
     get_financial_year_dates,
+    get_indian_fiscal_year,
 )
 
 
@@ -150,3 +151,76 @@ class MSMERegistration(Document):
         self.save()
 
         return send_updated_doc(self)
+
+
+@frappe.whitelist(methods=["POST"])
+def copy_to_financial_year(registrations: str | list, financial_year: str | None = None):
+    frappe.has_permission("MSME Registration", "write", throw=True)
+
+    registrations = frappe.parse_json(registrations)
+    financial_year = financial_year or get_indian_fiscal_year()
+
+    if len(registrations) > 500:
+        frappe.throw(
+            _("Copy supports up to 500 MSME Registrations at a time."),
+            title=_("Too Many MSME Registrations"),
+        )
+
+    frappe.msgprint(_("Copying is queued in the background."), alert=True)
+    frappe.enqueue(
+        copy_latest_classification,
+        registrations=registrations,
+        financial_year=financial_year,
+        queue="short",
+        timeout=1000,
+    )
+
+
+def copy_latest_classification(registrations, financial_year):
+    failed = []
+
+    for idx, name in enumerate(registrations, 1):
+        frappe.db.savepoint("copy_msme_classification")
+        try:
+            _copy_latest_classification(name, financial_year)
+            commit()
+            frappe.publish_progress(
+                percent=idx / len(registrations) * 100,
+                title=_("Copying MSME to {0}").format(financial_year),
+                description=name,
+            )
+
+        except Exception:
+            frappe.db.rollback(save_point="copy_msme_classification")
+            frappe.log_error(
+                _("Copying MSME category to {0} failed").format(financial_year),
+                reference_doctype="MSME Registration",
+                reference_name=name,
+            )
+            failed.append(name)
+
+    return failed
+
+
+def _copy_latest_classification(name, financial_year):
+    registration = frappe.get_doc("MSME Registration", name)
+    rows = sorted(registration.classifications, key=lambda row: row.financial_year)
+
+    if not rows or rows[-1].financial_year >= financial_year:
+        return
+
+    if (
+        registration.is_cancelled
+        and getdate(registration.cancelled_date) < get_financial_year_dates(financial_year)[0]
+    ):
+        return
+
+    registration.append(
+        "classifications",
+        {
+            "financial_year": financial_year,
+            "enterprise_type": rows[-1].enterprise_type,
+            "activity": rows[-1].activity,
+        },
+    )
+    registration.save()
