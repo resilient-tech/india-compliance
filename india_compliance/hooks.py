@@ -157,6 +157,11 @@ _VIRTUAL_FIELD_RESOLVERS = {
         "Asset Movement",
     ): "india_compliance.gst_india.overrides.virtual_fields.resolve_address_displays",
     ("Purchase Receipt",): "india_compliance.gst_india.overrides.virtual_fields.resolve_ineligibility_reason",
+    (
+        "Purchase Order",
+        "Purchase Receipt",
+        "Purchase Invoice",
+    ): "india_compliance.income_tax_india.utils.msme.resolve_msme_status",
 }
 
 ic_virtual_field_resolvers = {}

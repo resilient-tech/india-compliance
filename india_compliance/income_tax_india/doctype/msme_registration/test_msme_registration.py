@@ -223,6 +223,24 @@ class IntegrationTestMSME(IntegrationTestCase):
         self.assertEqual(getdate(row.to_date), getdate("2024-03-31"))
         self.assertEqual(get_msme_registration_details(msme.name, "2023-06-01").enterprise_type, "Micro")
 
+    def test_missing_year_uses_the_latest_earlier_row(self):
+        msme = create_msme_registration(
+            classifications=[
+                {"financial_year": "2022-2023", "enterprise_type": "Small"},
+                {"financial_year": "2024-2025", "enterprise_type": "Micro"},
+            ]
+        )
+
+        carried = get_msme_registration_details(msme.name, "2023-06-01")
+        self.assertEqual((carried.enterprise_type, carried.carried_from), ("Small", "2022-2023"))
+
+        exact = get_msme_registration_details(msme.name, "2024-06-01")
+        self.assertEqual((exact.enterprise_type, exact.carried_from), ("Micro", None))
+
+        before_first_row = get_msme_registration_details(msme.name, "2021-06-01")
+        self.assertIsNone(before_first_row.enterprise_type)
+        self.assertTrue(before_first_row.valid)
+
     def test_period_starts_at_a_mid_year_registration_date(self):
         """An enterprise registered in November was not an MSE the previous April."""
         msme = create_msme_registration(

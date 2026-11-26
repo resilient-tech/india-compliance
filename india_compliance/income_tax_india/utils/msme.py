@@ -4,10 +4,10 @@
 import re
 
 import frappe
-from frappe.query_builder import Case
-from frappe.utils import add_days, add_years, get_first_day, getdate, today
+from frappe import _
+from frappe.utils import add_days, add_years, format_date, get_first_day, getdate, today
 
-from india_compliance.income_tax_india.constants import FISCAL_YEAR_START_MONTH
+from india_compliance.income_tax_india.constants import FISCAL_YEAR_START_MONTH, MSME_PAYMENT_DAYS
 
 UDYAM_NUMBER_REGEX = re.compile(r"^UDYAM-[A-Z]{2}-\d{2}-\d{7}$")
 
@@ -35,37 +35,56 @@ def get_msme_registration_details(msme_registration: str, on_date=None) -> dict 
     if not msme_registration:
         return None
 
-    on_date = getdate(on_date or today())
-    msme = frappe.qb.DocType("MSME Registration")
-    classification = frappe.qb.DocType("India MSME Classification")
+    registration = get_registrations_with_rows([msme_registration]).get(msme_registration)
+    return registration and resolve_registration(registration, on_date)
 
-    registrations = (
-        frappe.qb.from_(msme)
-        .left_join(classification)
-        .on(
-            (classification.parent == msme.name)
-            & (classification.parenttype == "MSME Registration")
-            & (classification.financial_year == get_indian_fiscal_year(on_date))
+
+def get_registrations_with_rows(names) -> dict:
+    if not names:
+        return {}
+
+    registrations = {
+        registration.name: registration
+        for registration in frappe.get_all(
+            "MSME Registration",
+            filters={"name": ("in", names)},
+            fields=["name", "registration_date", "is_cancelled", "cancelled_date"],
         )
-        .select(
-            msme.name,
-            msme.registration_date,
-            msme.is_cancelled,
-            msme.cancelled_date,
-            classification.enterprise_type,
-            classification.activity,
-            Case()
-            .when(msme.registration_date > on_date, 0)
-            .when(msme.is_cancelled == 0, 1)
-            .when(msme.cancelled_date >= on_date, 1)
-            .else_(0)
-            .as_("valid"),
-        )
-        .where(msme.name == msme_registration)
-        .run(as_dict=True)
+    }
+
+    for row in frappe.get_all(
+        "India MSME Classification",
+        filters={"parenttype": "MSME Registration", "parent": ("in", list(registrations))},
+        fields=["parent", "financial_year", "enterprise_type", "activity"],
+        order_by="financial_year desc",
+    ):
+        registrations[row.parent].setdefault("rows", []).append(row)
+
+    return registrations
+
+
+def resolve_registration(registration, on_date=None) -> frappe._dict:
+    on_date = getdate(on_date or today())
+    financial_year = get_indian_fiscal_year(on_date)
+    row = next(
+        (row for row in registration.get("rows", []) if row.financial_year <= financial_year),
+        frappe._dict(),
     )
 
-    return registrations[0] if registrations else None
+    return frappe._dict(
+        name=registration.name,
+        registration_date=registration.registration_date,
+        is_cancelled=registration.is_cancelled,
+        cancelled_date=registration.cancelled_date,
+        enterprise_type=row.enterprise_type,
+        activity=row.activity,
+        carried_from=row.financial_year if row.financial_year != financial_year else None,
+        valid=getdate(registration.registration_date) <= on_date
+        and (
+            not registration.is_cancelled
+            or bool(registration.cancelled_date and getdate(registration.cancelled_date) >= on_date)
+        ),
+    )
 
 
 def is_msme_covered(registration) -> bool:
@@ -88,3 +107,55 @@ def get_msme_registration_for_pan(pan: str) -> str | None:
     registrations = frappe.get_all("MSME Registration", filters={"pan": pan}, pluck="name")
 
     return registrations[0] if len(registrations) == 1 else None
+
+
+def get_supplier_msme_details(supplier: str, on_date) -> dict | None:
+    return get_msme_registration_details(
+        frappe.db.get_value("Supplier", supplier, "msme_registration"), on_date
+    )
+
+
+def get_msme_payment_limit(doc):
+    return add_days(getdate(doc.bill_date or doc.posting_date), MSME_PAYMENT_DAYS)
+
+
+def get_coverage_label(registration) -> str:
+    if not registration.valid:
+        return _("Not valid on this date")
+    if not registration.enterprise_type:
+        return _("Category missing for this year")
+    if registration.activity == "Trading":
+        return _("Trader, not covered")
+    if registration.enterprise_type not in ("Micro", "Small"):
+        return _("{0}, not covered").format(_(registration.enterprise_type))
+    if registration.carried_from:
+        return _("Covered ({0}, carried from {1})").format(
+            _(registration.enterprise_type), registration.carried_from
+        )
+    return _("Covered ({0})").format(_(registration.enterprise_type))
+
+
+def resolve_msme_status(doc):
+    return {"msme_status": get_msme_status(doc)}
+
+
+def get_msme_status(doc):
+    if not doc.get("supplier"):
+        return None
+
+    on_date = doc.get("bill_date") or doc.get("posting_date") or doc.get("transaction_date")
+    registration = get_supplier_msme_details(doc.supplier, on_date)
+    if not registration:
+        return None
+
+    if not is_msme_covered(registration):
+        return _("MSME Registration {0}: {1}").format(registration.name, get_coverage_label(registration))
+
+    status = _("MSME supplier ({0}) · {1}").format(_(registration.enterprise_type), registration.name)
+
+    if doc.doctype == "Purchase Invoice":
+        limit = get_msme_payment_limit(doc)
+        pay_by = min(getdate(doc.due_date), limit) if doc.due_date else limit
+        status += " · " + _("pay by {0}").format(format_date(pay_by))
+
+    return status

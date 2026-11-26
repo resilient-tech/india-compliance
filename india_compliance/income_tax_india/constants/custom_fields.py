@@ -33,6 +33,19 @@ party_fields = [
 ]
 
 CUSTOM_FIELDS = {
+    ("Purchase Order", "Purchase Receipt", "Purchase Invoice"): [
+        {
+            "fieldname": "msme_status",
+            "label": "MSME Status",
+            "fieldtype": "Data",
+            "insert_after": "supplier_name",
+            "is_virtual": 1,
+            "read_only": 1,
+            "depends_on": "eval: doc.msme_status",
+            "print_hide": 1,
+            "translatable": 0,
+        }
+    ],
     "Company": party_fields,
     "Customer": party_fields,
     "Supplier": [
