@@ -1,7 +1,7 @@
 # Copyright (c) 2026, Resilient Tech and Contributors
 # See license.txt
 
-import random
+import secrets
 
 import frappe
 from frappe.tests import IntegrationTestCase, UnitTestCase
@@ -26,9 +26,9 @@ def create_msme_registration(classifications=None, **kwargs):
     """MSME registration with a unique UDYAM number."""
     msme = frappe.new_doc("MSME Registration")
     kwargs.setdefault("registration_date", "2020-04-01")
-    kwargs.setdefault("pan", f"AAAPL{random.randint(1000, 9999)}C")
+    kwargs.setdefault("pan", f"AAAPL{1000 + secrets.randbelow(9000)}C")
     msme.udyam_number = kwargs.pop("udyam_number", None) or (
-        f"UDYAM-MH-12-{random.randint(1000000, 9999999)}"
+        f"UDYAM-MH-12-{1000000 + secrets.randbelow(9000000)}"
     )
     msme.update(kwargs)
 
