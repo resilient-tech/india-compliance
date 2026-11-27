@@ -88,7 +88,6 @@ def _add_comment_to_items(item_names, hsn_code, timestamp=None):
     comment_docs = []
     current_time = timestamp or frappe.utils.now()
     current_user = frappe.session.user
-    # like frappe's Comment: Administrator and Guest by name
     comment_email = current_user if current_user in frappe.STANDARD_USERS else get_email_address(current_user)
     comment_by = get_fullname(current_user)
 

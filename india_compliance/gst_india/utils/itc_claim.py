@@ -384,7 +384,6 @@ def _bulk_update(updates: dict[str, set[str]], doctype: str, source: str) -> Non
         )
 
     user = frappe.session.user
-    # like frappe's Comment: Administrator and Guest by name
     comment_email = user if user in frappe.STANDARD_USERS else get_email_address(user)
     comment_by = get_fullname(user)
     current_time = frappe.utils.now()
