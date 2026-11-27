@@ -1454,6 +1454,14 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
     def test_unmatched_isd_invoice_is_reported_as_missing_in_2b(self):
         doc = self.create_recipient_invoice("ISD-REC-001")
         source_row = doc.source_items[0]
+        frappe.get_doc(
+            {
+                "doctype": "GSTIN",
+                "gstin": self.isd_address.gstin,
+                "legal_name": "_Test ISD Legal Name",
+                "status": "Active",
+            }
+        ).insert()
 
         tool, rows = self.reconcile()
         row = self.isd_row(rows, doc)
@@ -1465,6 +1473,8 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         # the counterparty is the ISD registration, not a supplier
         self.assertEqual(row.supplier_gstin, self.isd_address.gstin)
         self.assertEqual(row.bill_no, "ISD-REC-001")
+        # the ISD query selects no supplier name, so the booked row falls back to the GSTIN record
+        self.assertEqual(row.supplier_name, "_Test ISD Legal Name")
 
         # nothing to reconcile against, so the difference is the credit received
         self.assertEqual(row.tax_difference, -(source_row.distributed_cgst + source_row.distributed_sgst))
@@ -1472,18 +1482,6 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         tool.update({"from_date": "2023-09-01", "to_date": "2023-09-30"})
         rows = tool.reconcile_and_generate_data()
         self.assertNotIn(doc.name, {row.purchase_invoice_name for row in rows})
-
-        # the ISD query selects no supplier name, so the booked row falls back to the GSTIN record
-        frappe.get_doc(
-            {
-                "doctype": "GSTIN",
-                "gstin": self.isd_address.gstin,
-                "legal_name": "_Test ISD Legal Name",
-                "status": "Active",
-            }
-        ).insert()
-        _, rows = self.reconcile()
-        self.assertEqual(self.isd_row(rows, doc).supplier_name, "_Test ISD Legal Name")
 
     def test_isd_invoice_matched_against_2b_isd_row(self):
         doc = self.create_recipient_invoice("ISD-REC-002")
