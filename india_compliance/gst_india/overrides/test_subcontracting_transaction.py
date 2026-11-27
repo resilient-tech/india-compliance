@@ -21,7 +21,7 @@ from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_ord
     create_subcontracting_order,
 )
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import add_to_date, getdate, now_datetime
+from frappe.utils import add_to_date, flt, getdate, now_datetime
 
 from india_compliance.gst_india.utils.e_waybill import mark_e_waybill_as_generated
 from india_compliance.gst_india.utils.taxes_controller import (
@@ -404,13 +404,15 @@ class TestSubcontractingTransaction(FrappeTestCase):
         sco = make_sco()
         se = make_stock_transfer_entry(sco_no=sco.name, rm_items=get_rm_items(sco.supplied_items))
 
+        # receive half, so the supplier still holds raw material to return
+        scr = make_subcontracting_receipt(sco.name)
+        scr.items[0].qty = flt(scr.items[0].qty / 2)
+        scr.save()
+        scr.submit()
+
         return_se = get_materials_from_supplier(sco.name, [d.name for d in sco.supplied_items])
         return_se.supplier = "_Test Registered Supplier"
         return_se.save()
-
-        scr = make_subcontracting_receipt(sco.name)
-        scr.save()
-        scr.submit()
 
         self.assertRaisesRegex(
             frappe.ValidationError,
@@ -606,6 +608,28 @@ class TestAddressMappingAfterMapping(FrappeTestCase):
         self.assertEqual(target_se.bill_to_gstin, source_se.bill_to_gstin)
         self.assertEqual(target_se.ship_from_address, source_se.ship_from_address)
         self.assertEqual(target_se.ship_to_address, source_se.ship_to_address)
+
+    def test_sco_to_se_place_of_supply_follows_bill_to(self):
+        po = create_purchase_order(
+            **SERVICE_ITEM,
+            supplier_warehouse="Finished Goods - _TIRC",
+            supplier_address="_Test Registered Supplier-Billing-3",
+        )
+        sco = create_subcontracting_order(po_name=po.name)
+        # the form gives the order the company's state
+        sco.db_set("place_of_supply", "24-Gujarat")
+
+        se = make_rm_stock_entry(sco.name, get_rm_items(sco.supplied_items))
+        self.assertEqual(se.place_of_supply, "29-Karnataka")
+
+        make_stock_transfer_entry(
+            sco_no=sco.name,
+            rm_items=get_rm_items(sco.supplied_items),
+            bill_from_address=sco.billing_address,
+            bill_to_address=sco.supplier_address,
+        )
+        return_se = get_materials_from_supplier(sco.name, [d.name for d in sco.supplied_items])
+        self.assertEqual(return_se.place_of_supply, "24-Gujarat")
 
 
 def _make_taxes_controller_doc(items=None, taxes=None):

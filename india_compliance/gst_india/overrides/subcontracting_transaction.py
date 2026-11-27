@@ -94,6 +94,9 @@ def after_mapping_stock_entry(doc, method, source_doc):
     set_item_tax_template(doc, source_doc)
     update_address_fields(doc, source_doc)
 
+    if place_of_supply := get_place_of_supply(doc, doc.doctype):
+        doc.place_of_supply = place_of_supply
+
 
 def update_address_fields(doc, source_doc):
 

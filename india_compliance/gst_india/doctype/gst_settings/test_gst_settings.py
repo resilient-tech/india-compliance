@@ -47,6 +47,33 @@ class TestGSTSettings(FrappeTestCase):
                 )
                 break
 
+    def test_validate_account_company(self):
+        accounts = {
+            "account_type": "Output Refund",
+            "cgst_account": "Output Tax CGST Refund - _TIUC",
+            "sgst_account": "Output Tax SGST Refund - _TIUC",
+            "igst_account": "Output Tax IGST Refund - _TIUC",
+        }
+        doc = frappe.get_doc("GST Settings")
+        doc.append("gst_accounts", {"company": "_Test Indian Registered Company", **accounts})
+        with self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(r"^The following accounts do not belong to the company on their row:"),
+        ) as error:
+            doc.save()
+
+        # every wrong account is listed, not only the first, with the company it belongs to
+        for fieldname in ("cgst_account", "sgst_account", "igst_account"):
+            self.assertIn(accounts[fieldname], str(error.exception))
+        self.assertIn("_Test Indian Unregistered Company", str(error.exception))
+
+        doc = frappe.get_doc("GST Settings")
+        row = doc.append("gst_accounts", {"company": "_Test Indian Unregistered Company", **accounts})
+        doc.save()
+
+        doc.remove(row)
+        doc.save()
+
     @change_settings(
         "GST Settings",
         {"enable_e_invoice": 1, "apply_e_invoice_only_for_selected_companies": 0},
