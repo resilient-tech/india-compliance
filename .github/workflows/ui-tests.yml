@@ -1,0 +1,166 @@
+name: UI Tests
+
+on:
+  pull_request:
+
+  push:
+    branches:
+      [
+        develop,
+        version-16-hotfix,
+        version-16,
+      ]
+
+  workflow_dispatch:
+
+env:
+  BRANCH: ${{ github.base_ref || github.ref_name }}
+  SITE: test_site
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-tests-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event.number || github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect UI-relevant changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      ui: ${{ steps.filter.outputs.ui }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            ui:
+              - '**/*.js'
+              - '**/*.html'
+              - '**/*.json'
+              - 'ui_tests/**'
+              - 'pyproject.toml'
+              - '.github/workflows/ui-tests.yml'
+
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.ui == 'true') }}
+
+    name: Playwright UI Tests
+
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: "travis"
+        ports:
+          - 3306:3306
+        options: --health-cmd="mariadb-admin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          check-latest: true
+          cache: yarn
+
+      - name: Add to Hosts
+        run: echo "127.0.0.1 ${{ env.SITE }}" | sudo tee -a /etc/hosts
+
+      - name: Cache pip
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install
+        run: |
+          bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
+        env:
+          BRANCH_TO_CLONE: ${{ env.BRANCH }}
+
+      - name: Resolve dev server port
+        working-directory: /home/runner/frappe-bench
+        run: |
+          PORT=$(awk '/^web:/ { for (i = 1; i < NF; i++) if ($i == "--port") print $(i + 1) }' Procfile)
+          echo "UI_PORT=${PORT:-8000}" >> "$GITHUB_ENV"
+          echo "dev server port: ${PORT:-8000}"
+
+      - name: Configure site and seed test records
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench --site "$SITE" set-config allow_tests true
+          bench --site "$SITE" set-config host_name "http://$SITE:$UI_PORT"
+          # hooks.before_tests: setup wizard, test_records.json, GST sandbox mode.
+          # `bench run-tests` calls this for the Python suite; UI tests need it
+          # invoked explicitly.
+          bench --site "$SITE" execute india_compliance.tests.before_tests
+
+      # install.sh runs `bench init --skip-assets`, which the server tests can live
+      # with. The desk cannot — and this needs frappe's and ERPNext's bundles too,
+      # so `--app india_compliance` alone is not enough.
+      - name: Build assets
+        working-directory: /home/runner/frappe-bench
+        run: bench build
+
+      - name: Wait for the dev server
+        run: |
+          timeout 120 bash -c \
+            "until curl -sf http://$SITE:$UI_PORT/api/method/ping > /dev/null; do sleep 2; done"
+          echo "UI test server ready on :$UI_PORT"
+
+      - name: Install Playwright browser
+        working-directory: /home/runner/frappe-bench
+        run: ./env/bin/playwright install --with-deps chromium
+
+      - name: Run UI tests
+        working-directory: /home/runner/frappe-bench/apps/india_compliance
+        run: /home/runner/frappe-bench/env/bin/pytest
+        env:
+          SITE: ${{ env.SITE }}
+          FRAPPE_SITES_PATH: /home/runner/frappe-bench/sites
+          SITE_PORT: ${{ env.UI_PORT }}
+          FRAPPE_USER: Administrator
+          ADMIN_PASSWORD: admin
+          PY_COLORS: "1"
+          COLUMNS: "160"
+
+      - name: Upload traces, videos and screenshots
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: test-results
+          path: /home/runner/frappe-bench/apps/india_compliance/test-results/
+          retention-days: 7
