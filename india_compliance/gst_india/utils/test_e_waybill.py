@@ -24,6 +24,7 @@ from india_compliance.gst_india.constants import (
     SHIP_TO_GSTIN_APPLICABLE_DATE,
 )
 from india_compliance.gst_india.constants.e_waybill import SUB_SUPPLY_TYPES
+from india_compliance.gst_india.doctype.e_waybill_log.e_waybill_log import fetch_latest_data
 from india_compliance.gst_india.overrides.sales_invoice import (
     cancel_e_waybill_e_invoice,
     is_e_waybill_applicable,
@@ -136,7 +137,9 @@ class TestEWaybill(IntegrationTestCase):
     def test_generate_e_waybill(self):
         """Test whitelisted method `generate_e_waybill`"""
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
-        self._generate_e_waybill(si.name)
+        test_data = copy.deepcopy(self.e_waybill_test_data.goods_item_with_ewaybill)
+        test_data["response_data"]["result"]["alert"] = ", Distance between these two pincodes is 12, "
+        self._generate_e_waybill(si.name, test_data=test_data)
 
         self.assertDocumentEqual(
             {
@@ -146,6 +149,7 @@ class TestEWaybill(IntegrationTestCase):
             },
             frappe.get_doc("e-Waybill Log", {"reference_name": si.name}),
         )
+        self.assertEqual(frappe.db.get_value("Sales Invoice", si.name, "distance"), 12)
 
     @responses.activate
     def test_update_vehicle_info(self):
@@ -268,6 +272,43 @@ class TestEWaybill(IntegrationTestCase):
 
         fetch_e_waybill_data(doctype="Sales Invoice", docname=si.name, attach=False)
 
+        si.reload()
+        cancelled_e_waybill = si.ewaybill
+        mark_e_waybill_as_cancelled(
+            si.doctype,
+            si.name,
+            values={
+                "reason": "Data Entry Mistake",
+                "remark": "Manually Cancelled",
+                "cancelled_on": str(now_datetime()),
+            },
+        )
+        mark_e_waybill_as_generated(
+            si.doctype,
+            si.name,
+            values={
+                "ewaybill": "351002721234",
+                "e_waybill_date": str(now_datetime()),
+                "valid_upto": str(add_to_date(now_datetime(), days=1)),
+            },
+        )
+
+        api_calls_before = len(responses.calls)
+        fetch_latest_data(cancelled_e_waybill)
+        self.assertEqual(len(responses.calls), api_calls_before + 1)
+        self.assertIn(f"ewbNo={cancelled_e_waybill}", responses.calls[-1].request.url)
+
+        si.reload()
+        frappe.delete_doc("e-Waybill Log", si.ewaybill)
+
+        for attach in (False, True):
+            with self.assertRaisesRegex(
+                frappe.ValidationError, f"e-Waybill Log {si.ewaybill} not found"
+            ) as cm:
+                fetch_e_waybill_data(doctype="Sales Invoice", docname=si.name, attach=attach)
+
+            self.assertNotIsInstance(cm.exception, frappe.DoesNotExistError)
+
     @responses.activate
     def test_credit_note_e_waybill(self):
         si = create_sales_invoice(
@@ -357,6 +398,21 @@ class TestEWaybill(IntegrationTestCase):
             "Manually Generated",
         )
 
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        values = {"e_waybill_date": str(e_waybill_date), "valid_upto": str(valid_upto)}
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "should be 12 or 14 digits long",
+            mark_e_waybill_as_generated,
+            si.doctype,
+            si.name,
+            values={**values, "ewaybill": "3510027212341"},
+        )
+
+        mark_e_waybill_as_generated(si.doctype, si.name, values={**values, "ewaybill": "3510 0272 1234 12"})
+        self.assertEqual(frappe.db.get_value("Sales Invoice", si.name, "ewaybill"), "35100272123412")
+
     def test_mark_e_waybill_as_cancelled(self):
         """Cancel date entered by the user should be stored as-is"""
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
@@ -387,6 +443,14 @@ class TestEWaybill(IntegrationTestCase):
         e_waybill_log = frappe.get_doc("e-Waybill Log", "351002721233")
         self.assertEqual(e_waybill_log.is_cancelled, 1)
         self.assertEqual(e_waybill_log.cancelled_on, cancelled_on)
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "has no e-Waybill",
+            fetch_e_waybill_data,
+            doctype=si.doctype,
+            docname=si.name,
+        )
 
     @responses.activate
     def test_get_e_waybill_cancel_data(self):

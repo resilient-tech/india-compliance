@@ -19,7 +19,9 @@ from india_compliance.gst_india.doctype.isd_distribution_invoice.test_isd_distri
     setup_isd_fixtures,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
+    AutoReconcile,
     BuildExcel,
+    generate_excel_attachment,
 )
 from india_compliance.gst_india.utils.gstr_2 import save_gstr_2b
 from india_compliance.gst_india.utils.itc_claim import (
@@ -267,10 +269,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
     @change_settings("Buying Settings", {"supp_master_name": "Naming Series"})
     def test_supplier_name_of_unbooked_invoice_is_the_supplier_title(self):
-        """
-        A row with no Purchase Invoice takes its supplier name from the GSTIN.
-        That must be the supplier's name, as on every other row, not its docname.
-        """
+        """An unbooked row shows "Unknown" despite a known name, or a docname instead of the name."""
         supplier = frappe.get_doc(
             {
                 "doctype": "Supplier",
@@ -310,6 +309,120 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertEqual(rows[0].match_status, "Only in 2A/2B")
         self.assertEqual(rows[0].supplier, supplier.name)
         self.assertEqual(rows[0].supplier_name, supplier.supplier_name)
+
+        # with no supplier: the row's own 2B name, then the GSTIN record (legal name before trade
+        # name), then the 2B name on the GSTIN's latest invoice from any company
+        frappe.get_doc(
+            {
+                "doctype": "GSTIN",
+                "gstin": "24AADFT5917A1ZK",
+                "legal_name": "_Test Legal Name",
+                "trade_name": "_Test Trade Name",
+                "status": "Active",
+            }
+        ).insert()
+
+        unbooked = {}
+        for key, supplier_gstin, supplier_name, bill_no, bill_date, company_gstin, return_period in (
+            # the 2B with the older invoice is downloaded last
+            (
+                None,
+                "24AUTPV8831F1ZZ",
+                "_Test Name From Another 2B Row",
+                "RECO-NAME-006",
+                "2024-01-20",
+                "27AAQCA8719H1Z6",
+                "012024",
+            ),
+            (
+                None,
+                "24AUTPV8831F1ZZ",
+                "_Test Older 2B Name",
+                "RECO-NAME-005",
+                "2024-01-05",
+                "24AAQCA8719H1ZC",
+                "012024",
+            ),
+            ("2B name", "24AUTPV8831F1ZZ", "", "RECO-NAME-007", "2024-01-10", "24AAQCA8719H1ZC", "022024"),
+            (
+                "own name",
+                "24AADFT5917A1ZK",
+                "_Test Own 2B Name",
+                "RECO-NAME-009",
+                "2024-01-10",
+                "24AAQCA8719H1ZC",
+                "022024",
+            ),
+            (
+                None,
+                "24AADFT5917A1ZK",
+                "_Test Newer 2B Name",
+                "RECO-NAME-010",
+                "2024-01-10",
+                "24AAQCA8719H1ZC",
+                "012024",
+            ),
+            (
+                "gstin record",
+                "24AADFT5917A1ZK",
+                "",
+                "RECO-NAME-008",
+                "2024-01-10",
+                "24AAQCA8719H1ZC",
+                "022024",
+            ),
+        ):
+            gst_is_row = create_gst_inward_supply(
+                supplier_name=supplier_name,
+                supplier_gstin=supplier_gstin,
+                company_gstin=company_gstin,
+                bill_no=bill_no,
+                bill_date=bill_date,
+                return_period_2b=return_period,
+                gen_date_2b="2024-02-14",
+            )
+            if key:
+                unbooked[key] = gst_is_row.name
+
+        rows = {row.inward_supply_name: row for row in prt.reconcile_and_generate_data()}
+        self.assertEqual(rows[unbooked["own name"]].supplier_name, "_Test Own 2B Name")
+        self.assertEqual(rows[unbooked["gstin record"]].supplier_name, "_Test Legal Name")
+        self.assertEqual(rows[unbooked["2B name"]].supplier, "")
+        self.assertEqual(rows[unbooked["2B name"]].supplier_name, "_Test Name From Another 2B Row")
+
+        # the detail view loads this one row alone, with no other 2B row beside it
+        detail = frappe.get_doc(prt.as_dict()).get_invoice_details(None, unbooked["2B name"])
+        self.assertEqual(detail.supplier_name, "_Test Name From Another 2B Row")
+
+    def test_supplier_file_is_named_as_in_the_supplier_tab(self):
+        """The emailed file takes an invoice's "Unknown" instead of the supplier tab's name."""
+        gst_is = create_gst_inward_supply(
+            supplier_name="",
+            supplier_gstin="24AQTPC8950E1ZO",
+            bill_no="RECO-FILE-001",
+            bill_date="2024-02-10",
+            return_period_2b="022024",
+            gen_date_2b="2024-02-14",
+        )
+        data = {
+            "match_summary": [],
+            "supplier_summary": [{"supplier_name": "Shree Traders", "supplier_gstin": "24AQTPC8950E1ZO"}],
+            "purchases": [],
+            "inward_supplies": [gst_is.name],
+        }
+        doc = {
+            "doctype": "Purchase Reconciliation Tool",
+            "company": "_Test Indian Registered Company",
+            "company_gstin": "24AAQCA8719H1ZC",
+            "from_date": "2024-02-01",
+            "to_date": "2024-02-29",
+            "gst_return": "GSTR 2B",
+            "include_ignored": 0,
+        }
+
+        file = generate_excel_attachment(json.dumps(data), json.dumps(doc))[0]
+        # frappe suffixes the name when a file left by an aborted run already has it
+        self.assertTrue(file.file_name.startswith("Shree_Traders_24AQTPC8950E1ZO"), file.file_name)
 
     def test_itc_claim_period_on_reconciliation_match(self):
         """
@@ -361,6 +474,43 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertTrue(rows[0].inward_supply_name)
         itc_claim_period = frappe.db.get_value("Purchase Invoice", mid_month_pinv.name, "itc_claim_period")
         self.assertEqual(itc_claim_period, "012024")
+
+    def test_auto_reconcile_matches_without_storing_the_company(self):
+        stored_tool = frappe.db.get_singles_dict("Purchase Reconciliation Tool")
+        posting_date = str(getdate())
+        return_period = getdate().strftime("%m%Y")
+        pinv = create_purchase_invoice(
+            bill_no="AUTO-RECO-001", bill_date=posting_date, posting_date=posting_date
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="AUTO-RECO-001", bill_date=posting_date, return_period_2b=return_period
+        )
+        create_purchase_invoice(bill_no="AUTO-RECO-002", bill_date=posting_date, posting_date=posting_date)
+        ignored_gst_is = create_gst_inward_supply(
+            bill_no="AUTO-RECO-002", bill_date=posting_date, return_period_2b=return_period
+        )
+        ignored_pinv = create_purchase_invoice(
+            bill_no="AUTO-RECO-003", bill_date=posting_date, posting_date=posting_date
+        )
+        create_gst_inward_supply(
+            bill_no="AUTO-RECO-003", bill_date=posting_date, return_period_2b=return_period
+        )
+        frappe.get_doc("Purchase Reconciliation Tool").apply_action(
+            [
+                {"inward_supply_name": ignored_gst_is.name},
+                {"purchase_doctype": "Purchase Invoice", "purchase_invoice_name": ignored_pinv.name},
+            ],
+            "Ignore",
+        )
+
+        AutoReconcile().reconcile_purchases_for_company("_Test Indian Registered Company")
+
+        self.assertEqual(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"), pinv.name)
+        self.assertFalse(frappe.db.get_value("GST Inward Supply", ignored_gst_is.name, "link_name"))
+        self.assertEqual(
+            frappe.db.get_value("Purchase Invoice", ignored_pinv.name, "reconciliation_status"), "Ignored"
+        )
+        self.assertEqual(frappe.db.get_singles_dict("Purchase Reconciliation Tool"), stored_tool)
 
     def test_import_history_lists_only_generated_2b_months(self):
         tool = frappe.get_doc("Purchase Reconciliation Tool")
@@ -1304,6 +1454,14 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
     def test_unmatched_isd_invoice_is_reported_as_missing_in_2b(self):
         doc = self.create_recipient_invoice("ISD-REC-001")
         source_row = doc.source_items[0]
+        frappe.get_doc(
+            {
+                "doctype": "GSTIN",
+                "gstin": self.isd_address.gstin,
+                "legal_name": "_Test ISD Legal Name",
+                "status": "Active",
+            }
+        ).insert()
 
         tool, rows = self.reconcile()
         row = self.isd_row(rows, doc)
@@ -1315,6 +1473,8 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         # the counterparty is the ISD registration, not a supplier
         self.assertEqual(row.supplier_gstin, self.isd_address.gstin)
         self.assertEqual(row.bill_no, "ISD-REC-001")
+        # the ISD query selects no supplier name, so the booked row falls back to the GSTIN record
+        self.assertEqual(row.supplier_name, "_Test ISD Legal Name")
 
         # nothing to reconcile against, so the difference is the credit received
         self.assertEqual(row.tax_difference, -(source_row.distributed_cgst + source_row.distributed_sgst))

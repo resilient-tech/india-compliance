@@ -110,13 +110,15 @@ class PurchaseReconciliationTool(Document):
         if frappe.flags.in_install or frappe.flags.in_migrate:
             return
 
-        _Reconciler = Reconciler(**self.get_reco_doc())
-        for row in ORIGINAL_VS_AMENDED:
-            _Reconciler.reconcile(row["original"], row["amended"])
-
+        self.reconcile()
         self.ReconciledData = ReconciledData(**self.get_reco_doc())
 
         return self.ReconciledData.get()
+
+    def reconcile(self):
+        _Reconciler = Reconciler(**self.get_reco_doc())
+        for row in ORIGINAL_VS_AMENDED:
+            _Reconciler.reconcile(row["original"], row["amended"])
 
     @frappe.whitelist()
     def upload_gstr(self, return_type: str, period: str, file_path: str):
@@ -700,18 +702,17 @@ class AutoReconcile:
             self.reconcile_purchases_for_company(company)
 
     def reconcile_purchases_for_company(self, company):
-        purchase_reconciliation_tool = frappe.get_doc("Purchase Reconciliation Tool")
-        purchase_reconciliation_tool.update(
+        frappe.get_doc(
             {
+                "doctype": "Purchase Reconciliation Tool",
                 "company": company,
                 "company_gstin": "All",
                 "gst_return": "Both GSTR 2A & 2B",
                 "from_date": self.inward_supply_from_date,
                 "to_date": self.today,
+                "include_ignored": 0,
             }
-        )
-
-        purchase_reconciliation_tool.save(ignore_permissions=True)
+        ).reconcile()
 
     def get_reconciliation_company_list(self):
         """Returns list of companies for which auto reconciliation is enabled and credentials are available"""
@@ -850,9 +851,12 @@ class BuildExcel:
             prefix="inward_supply",
         )
 
+        # name the file as the supplier tab names this supplier
+        supplier = (self.data.get("supplier_summary") or data)[0]
+
         # remove special characters (not allowed in excel sheet name)
-        self.supplier_name = re.sub(r"[<>[\]?:|*]", "", data[0].get("supplier_name"))
-        self.supplier_gstin = data[0].get("supplier_gstin")
+        self.supplier_name = re.sub(r"[<>[\]?:|*]", "", supplier.get("supplier_name"))
+        self.supplier_gstin = supplier.get("supplier_gstin")
 
         return self.process_data(data, self.invoice_header)
 
