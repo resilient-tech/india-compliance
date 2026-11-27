@@ -8,6 +8,7 @@ import {
     TCS_REGEX,
     GST_INVOICE_NUMBER_FORMAT,
     PAN_REGEX,
+    UDYAM_NUMBER_REGEX,
 } from "./regex_constants";
 
 const INWARD_SECTION_MAPPING = {
@@ -756,6 +757,51 @@ Object.assign(india_compliance, {
             if (row.invoice_category === "ITC Reversed") return acc - value;
             return acc + value;
         }, 0);
+    },
+
+    get_indian_fiscal_year(date = frappe.datetime.get_today()) {
+        const start = moment(this.fiscal_year_start(date)).year();
+        return `${start}-${start + 1}`;
+    },
+
+    get_indian_fiscal_year_options(years_before = 9, years_after = 0, from_date = undefined) {
+        const current_start = parseInt(this.get_indian_fiscal_year().split("-")[0], 10);
+        const first_start = from_date
+            ? parseInt(this.get_indian_fiscal_year(from_date).split("-")[0], 10)
+            : current_start - years_before;
+        const last_start = Math.max(current_start + years_after, first_start);
+
+        const options = [];
+        for (let start = first_start; start <= last_start; start++) {
+            options.push(`${start}-${start + 1}`);
+        }
+
+        return from_date ? options : options.reverse();
+    },
+
+    setup_indian_fiscal_year_options(frm, table_field, fieldname = "financial_year", from_date = undefined) {
+        const grid = frm.fields_dict[table_field]?.grid;
+        if (!grid) return;
+
+        const options = this.get_indian_fiscal_year_options(9, 1, from_date);
+        grid.update_docfield_property(fieldname, "options", options);
+
+        // an Autocomplete reads its options once, when the control is built
+        for (const row of grid.grid_rows || []) {
+            row?.on_grid_fields_dict?.[fieldname]?.set_data(options);
+        }
+    },
+
+    validate_udyam_number(udyam_number) {
+        if (!udyam_number) return;
+
+        udyam_number = udyam_number.trim().toUpperCase();
+
+        if (!UDYAM_NUMBER_REGEX.test(udyam_number)) {
+            frappe.throw(__("Invalid UDYAM Registration Number. Expected format: UDYAM-XX-00-0000000"));
+        }
+
+        return udyam_number;
     },
 
     fiscal_year_start(date) {

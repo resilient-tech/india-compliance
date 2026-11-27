@@ -121,6 +121,7 @@ doctype_js = {
     "Supplier": [
         "gst_india/client_scripts/party.js",
         "gst_india/client_scripts/supplier.js",
+        "income_tax_india/client_scripts/supplier.js",
     ],
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
     "Customize Form": "audit_trail/client_scripts/customize_form.js",
@@ -156,6 +157,11 @@ _VIRTUAL_FIELD_RESOLVERS = {
         "Asset Movement",
     ): "india_compliance.gst_india.overrides.virtual_fields.resolve_address_displays",
     ("Purchase Receipt",): "india_compliance.gst_india.overrides.virtual_fields.resolve_ineligibility_reason",
+    (
+        "Purchase Order",
+        "Purchase Receipt",
+        "Purchase Invoice",
+    ): "india_compliance.income_tax_india.utils.msme.resolve_msme_status",
 }
 
 ic_virtual_field_resolvers = {}
@@ -326,6 +332,7 @@ doc_events = {
         "validate": [
             "india_compliance.gst_india.overrides.supplier.validate",
             "india_compliance.gst_india.overrides.party.validate_party",
+            "india_compliance.income_tax_india.overrides.supplier.validate",
         ],
         "after_insert": ("india_compliance.gst_india.overrides.party.create_primary_address"),
     },
