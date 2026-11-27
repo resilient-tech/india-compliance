@@ -224,9 +224,9 @@ def process_gstr_1_returns_info(company, gstin, e_filed_list):
         if key in gstr1_logs:
             if gstr1_logs[key] != info["arn"]:
                 frappe.db.set_value(DOCTYPE, key, filing_details)
-                _update_gstr_1_filed_upto(filed_upto)
 
-            # No updates if status is same
+            # a return filed through the app already has this ARN in its log
+            _update_gstr_1_filed_upto(filed_upto)
             continue
 
         frappe.get_doc(
