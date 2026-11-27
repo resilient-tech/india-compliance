@@ -10,7 +10,7 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Abs, IfNull, Sum
+from frappe.query_builder.functions import Abs, IfNull, Max, Sum
 from frappe.utils import add_months, add_years, cint, format_date, get_first_day, getdate, rounded
 from pypika.terms import LiteralValue
 from rapidfuzz import fuzz, process
