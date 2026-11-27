@@ -239,7 +239,10 @@ doc_events = {
             "india_compliance.gst_india.overrides.purchase_invoice.before_update_after_submit",
         ],
         "before_insert": "india_compliance.gst_india.overrides.transaction.clear_e_invoice_e_waybill_on_amend",
-        "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
+        "before_cancel": [
+            "india_compliance.gst_india.overrides.journal_entry.prevent_cancel_of_invoice_linked_in_itc_entry",
+            "india_compliance.gst_india.utils.e_waybill.before_cancel",
+        ],
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
         "on_cancel": "india_compliance.gst_india.overrides.purchase_invoice.on_cancel",
     },
@@ -420,6 +423,9 @@ regional_overrides = {
         ),
         "erpnext.accounts.doctype.tax_withholding_category.tax_withholding_category.get_tax_id_for_party": (
             "india_compliance.income_tax_india.overrides.tax_withholding_category.get_tax_id_for_party"
+        ),
+        "erpnext.accounts.doctype.journal_entry.services.reference_validator.is_link_used_as_reference_only": (
+            "india_compliance.gst_india.overrides.journal_entry.is_link_used_as_reference_only"
         ),
     }
 }
