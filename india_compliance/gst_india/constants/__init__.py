@@ -30,6 +30,8 @@ TAX_TYPES = (*GST_TAX_TYPES, *GST_RCM_TAX_TYPES, *GST_REFUND_TAX_TYPES)
 
 GST_PARTY_TYPES = ("Customer", "Supplier", "Company")
 
+ITC_VOUCHER_TYPES = ("Reversal Of ITC", "Reclaim of ITC Reversal")
+
 # Stock Entry purposes for Subcontracting Inward (company is the job worker)
 SUBCONTRACTING_INWARD_PURPOSES = ("Subcontracting Delivery", "Return Raw Material to Customer")
 
