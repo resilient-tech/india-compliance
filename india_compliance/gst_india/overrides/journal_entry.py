@@ -14,6 +14,7 @@ def is_link_used_as_reference_only(doc, row):
         doc.voucher_type in ITC_VOUCHER_TYPES
         and row.reference_type == "Purchase Invoice"
         and not row.party_type
+        and is_indian_registered_company(doc)
     )
 
 

@@ -4,6 +4,7 @@ import frappe
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 from frappe.tests import IntegrationTestCase, change_settings
 
+from india_compliance.gst_india.overrides.journal_entry import is_link_used_as_reference_only
 from india_compliance.gst_india.utils.tests import (
     create_itc_reclaim_journal_entry,
     create_itc_reversal_journal_entry,
@@ -166,6 +167,15 @@ class TestJournalEntry(IntegrationTestCase):
             create_itc_reversal_journal_entry,
             draft,
         )
+
+    def test_itc_link_only_for_registered_company(self):
+        """An unregistered company's ITC entry skips ERPNext's reference checks and ours."""
+        doc = frappe._dict(voucher_type="Reversal Of ITC", company="_Test Indian Unregistered Company")
+        row = frappe._dict(reference_type="Purchase Invoice")
+        self.assertFalse(is_link_used_as_reference_only(doc, row))
+
+        doc.company = "_Test Indian Registered Company"
+        self.assertTrue(is_link_used_as_reference_only(doc, row))
 
     def _submit_itc_entry_linked_to_invoice(self, create_itc_entry, invoice):
         entry = create_itc_entry(tax_amount=9, company_gstin=invoice.company_gstin, do_not_submit=True)
