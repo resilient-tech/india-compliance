@@ -337,6 +337,26 @@ class TestRawReturnDataRoundTrip(IntegrationTestCase):
         summary = frappe.parse_json(frappe.db.get_value("GST Return Log", log_name, "section_summary"))
         self.assertEqual(summary["sections"][0]["documents"], 2)
 
+    def test_failed_month_keeps_the_months_synced_before_it(self):
+        """A re-raised failure makes the job roll back every month already synced"""
+        synced, failed = "112024", "122024"
+        raw = {"docdata": {"b2b": [{"ctin": GSTIN, "trdnm": "X", "inv": [{"inum": "I1"}]}]}}
+
+        def download(periods):
+            store_raw_return_data(GSTIN, ReturnType.GSTR2B.value, synced, raw)
+            frappe.throw(f"Could not download GSTR-2B for {failed}")
+
+        with (
+            patch.object(GSTR2BAdapter, "download", side_effect=download),
+            patch.object(controller.frappe, "publish_realtime") as publish,
+        ):
+            controller._sync_return_data(GSTIN, ReturnType.GSTR2B.value, [synced, failed])
+
+        log_name = f"{ReturnType.GSTR2B.value}-{synced}-{GSTIN}"
+        summary = frappe.parse_json(frappe.db.get_value("GST Return Log", log_name, "section_summary"))
+        self.assertEqual(summary["sections"][0]["documents"], 1)
+        self.assertEqual(publish.call_args.args[1]["title"], "Sync Failed")
+
 
 class TestGSTReturnExportController(IntegrationTestCase):
     @classmethod
