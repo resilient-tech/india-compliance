@@ -240,3 +240,29 @@ class TestGSTReturnLog(IntegrationTestCase):
         rows = [[cell.value for cell in row] for row in sheet.iter_rows()]
         column = rows[1].index("Tax Difference")
         self.assertEqual(sorted(row[column] for row in rows[2:]), [0, 18])
+
+    def test_comment_names_the_user_by_email(self):
+        from frappe.core.doctype.user.test_user import test_user
+
+        doc = frappe._dict(
+            {
+                "posting_date": getdate(self.POSTING_DATE),
+                "company_gstin": self.GSTIN,
+                "doctype": "Purchase Invoice",
+                "name": "PINV-TEST-0002",
+            }
+        )
+        with test_user(roles=["System Manager"], generated_id=True) as user:
+            frappe.set_user(user.name)
+            try:
+                add_comment_to_gst_return_log(doc, "submitted")
+            finally:
+                frappe.set_user("Administrator")
+
+        content = frappe.get_value(
+            "Comment",
+            {"reference_doctype": "GST Return Log", "reference_name": self.log_name},
+            "content",
+            order_by="creation desc",
+        )
+        self.assertIn(f"has been submitted by {user.email}", content)

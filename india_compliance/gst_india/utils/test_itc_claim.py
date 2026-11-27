@@ -2,6 +2,7 @@
 # See license.txt
 
 import re
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -10,6 +11,7 @@ from frappe.utils import getdate
 from india_compliance.gst_india.utils import get_periods_between_dates
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
+    _bulk_update,
     _calculate_itc_claim_period,
     _get_section_16_4_deadline,
     _is_gstr3b_filed,
@@ -405,3 +407,40 @@ class TestITCClaim(IntegrationTestCase):
         result = _calculate_itc_claim_period(doc, filed={"012024"}, ims_action="Rejected")
         # filed period is locked — returns None (no update)
         self.assertIsNone(result)
+
+    def test_claim_period_comment_is_by_the_users_email(self):
+        from frappe.core.doctype.user.test_user import test_user
+
+        invoice = frappe.generate_hash()
+        with (
+            test_user(roles=["System Manager"], generated_id=True) as user,
+            patch.object(frappe.db, "set_value"),
+        ):
+            frappe.set_user(user.name)
+            try:
+                _bulk_update({"012024": {invoice}}, "Purchase Invoice", "test")
+            finally:
+                frappe.set_user("Administrator")
+
+            comment = frappe.db.get_value(
+                "Comment",
+                {"reference_doctype": "Purchase Invoice", "reference_name": invoice},
+                ["comment_email", "comment_by", "owner"],
+                as_dict=True,
+            )
+
+        self.assertEqual(comment.comment_email, user.email)
+        self.assertEqual(comment.comment_by, frappe.utils.get_fullname(user.name))
+        self.assertEqual(comment.owner, user.name)
+
+    def test_claim_period_comment_by_administrator_keeps_the_name(self):
+        invoice = frappe.generate_hash()
+        with patch.object(frappe.db, "set_value"):
+            _bulk_update({"012024": {invoice}}, "Purchase Invoice", "test")
+
+        comment_email = frappe.db.get_value(
+            "Comment",
+            {"reference_doctype": "Purchase Invoice", "reference_name": invoice},
+            "comment_email",
+        )
+        self.assertEqual(comment_email, "Administrator")

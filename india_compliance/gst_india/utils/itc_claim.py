@@ -14,7 +14,9 @@ from frappe.query_builder.functions import IfNull
 from frappe.utils import (
     add_months,
     formatdate,
+    get_email_address,
     get_first_day,
+    get_fullname,
     get_last_day,
     get_table_name,
     getdate,
@@ -382,6 +384,8 @@ def _bulk_update(updates: dict[str, set[str]], doctype: str, source: str) -> Non
         )
 
     user = frappe.session.user
+    comment_email = user if user in frappe.STANDARD_USERS else get_email_address(user)
+    comment_by = get_fullname(user)
     current_time = frappe.utils.now()
     comments = []
     for period, names in updates.items():
@@ -392,8 +396,8 @@ def _bulk_update(updates: dict[str, set[str]], doctype: str, source: str) -> Non
                 {
                     "name": random_string(10),
                     "comment_type": "Info",
-                    "comment_email": user,
-                    "comment_by": user,
+                    "comment_email": comment_email,
+                    "comment_by": comment_by,
                     "creation": current_time,
                     "modified": current_time,
                     "modified_by": user,

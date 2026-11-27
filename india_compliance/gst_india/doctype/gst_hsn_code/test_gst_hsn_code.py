@@ -6,6 +6,7 @@ import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 
 from india_compliance.gst_india.doctype.gst_hsn_code.gst_hsn_code import (
+    _add_comment_to_items,
     update_taxes_in_item_master,
 )
 from india_compliance.gst_india.utils import get_hsn_code_list
@@ -104,3 +105,36 @@ class TestGSTHSNCode(IntegrationTestCase):
         item.save()
         update_taxes_in_item_master(taxes=taxes, hsn_code="100000")
         self.assertDocumentEqual(taxes[0], frappe.get_doc("Item", "SKU9999").taxes[0])
+
+    def test_item_comment_is_by_the_users_email(self):
+        from frappe.core.doctype.user.test_user import test_user
+
+        item_name = frappe.generate_hash()
+        with test_user(roles=["System Manager"], generated_id=True) as user:
+            frappe.set_user(user.name)
+            try:
+                _add_comment_to_items([item_name], "100000")
+            finally:
+                frappe.set_user("Administrator")
+
+            comment = frappe.db.get_value(
+                "Comment",
+                {"reference_doctype": "Item", "reference_name": item_name},
+                ["comment_email", "comment_by", "owner"],
+                as_dict=True,
+            )
+
+        self.assertEqual(comment.comment_email, user.email)
+        self.assertEqual(comment.comment_by, frappe.utils.get_fullname(user.name))
+        self.assertEqual(comment.owner, user.name)
+
+    def test_item_comment_by_administrator_keeps_the_name(self):
+        item_name = frappe.generate_hash()
+        _add_comment_to_items([item_name], "100000")
+
+        comment_email = frappe.db.get_value(
+            "Comment",
+            {"reference_doctype": "Item", "reference_name": item_name},
+            "comment_email",
+        )
+        self.assertEqual(comment_email, "Administrator")

@@ -12,6 +12,7 @@ from frappe.utils import (
     get_datetime_str,
     get_last_day,
     get_link_to_form,
+    get_user_display_id,
     getdate,
 )
 from frappe.utils.response import json_handler
@@ -272,7 +273,7 @@ def add_comment_to_gst_return_log(doc, action):
     log = get_gst_return_log(log_name)
     log.add_comment(
         "Comment",
-        f"{doc.doctype} : {get_link_to_form(doc.doctype, doc.name)} has been {action} by {frappe.session.user}",
+        f"{doc.doctype} : {get_link_to_form(doc.doctype, doc.name)} has been {action} by {get_user_display_id()}",
     )
 
 
