@@ -1473,6 +1473,18 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         rows = tool.reconcile_and_generate_data()
         self.assertNotIn(doc.name, {row.purchase_invoice_name for row in rows})
 
+        # the ISD query selects no supplier name, so the booked row falls back to the GSTIN record
+        frappe.get_doc(
+            {
+                "doctype": "GSTIN",
+                "gstin": self.isd_address.gstin,
+                "legal_name": "_Test ISD Legal Name",
+                "status": "Active",
+            }
+        ).insert()
+        _, rows = self.reconcile()
+        self.assertEqual(self.isd_row(rows, doc).supplier_name, "_Test ISD Legal Name")
+
     def test_isd_invoice_matched_against_2b_isd_row(self):
         doc = self.create_recipient_invoice("ISD-REC-002")
         source_row = doc.source_items[0]
