@@ -392,6 +392,21 @@ class TestEWaybill(FrappeTestCase):
             "Manually Generated",
         )
 
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        values = {"e_waybill_date": str(e_waybill_date), "valid_upto": str(valid_upto)}
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            "should be 12 or 14 digits long",
+            mark_e_waybill_as_generated,
+            si.doctype,
+            si.name,
+            values={**values, "ewaybill": "3510027212341"},
+        )
+
+        mark_e_waybill_as_generated(si.doctype, si.name, values={**values, "ewaybill": "3510 0272 1234 12"})
+        self.assertEqual(frappe.db.get_value("Sales Invoice", si.name, "ewaybill"), "35100272123412")
+
     def test_mark_e_waybill_as_cancelled(self):
         """Cancel date entered by the user should be stored as-is"""
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
