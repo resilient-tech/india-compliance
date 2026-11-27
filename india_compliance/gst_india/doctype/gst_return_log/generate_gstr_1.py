@@ -819,6 +819,14 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
 
 class FileGSTR1:
+    def mark_as_already_filed(self, response):
+        # GSTN answers AUTH117 when the return was filed on the portal before the tracker saw it
+        if response.get("error_type") != "already_filed":
+            return False
+
+        self.db_set({"filing_status": "Filed"})
+        return True
+
     def reset_gstr1(self, is_nil_return, force):
         verify_request_in_progress(self, force)
 
@@ -828,6 +836,8 @@ class FileGSTR1:
 
         api = GSTR1API(self)
         response = api.reset_gstr_1_data(self.return_period)
+        if self.mark_as_already_filed(response):
+            return {"filing_status": "Filed"}
 
         set_gstr_actions(self, "reset", response.get("reference_id"), api.request_id)
 
@@ -880,6 +890,8 @@ class FileGSTR1:
         # Make API Request
         api = GSTR1API(self)
         response = api.save_gstr_1_data(self.return_period, json_data)
+        if self.mark_as_already_filed(response):
+            return {"filing_status": "Filed"}
 
         set_gstr_actions(self, "upload", response.get("reference_id"), api.request_id)
 
@@ -931,6 +943,8 @@ class FileGSTR1:
 
         api = GSTR1API(self)
         response = api.proceed_to_file("GSTR1", self.return_period, is_nil_return)
+        if self.mark_as_already_filed(response):
+            return {"filing_status": "Filed"}
 
         # Return Form already ready to be filed
         if (response.error and response.error.error_cd == "RET00003") or is_nil_return:
@@ -1013,6 +1027,8 @@ class FileGSTR1:
         summary = self.get_json_for("authenticated_summary")
         api = GSTR1API(self)
         response = api.file_gstr_1(self.return_period, summary, pan, otp)
+        if self.mark_as_already_filed(response):
+            return {"filing_status": "Filed"}
 
         # Latest Summary is not available. Please generate summary and try again.
         if response.error and response.error.error_cd == "RET09001":

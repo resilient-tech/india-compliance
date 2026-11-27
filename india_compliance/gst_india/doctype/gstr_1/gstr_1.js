@@ -2908,7 +2908,17 @@ class GSTR1Action extends FileGSTR1Dialog {
         taxpayer_api.call({
             method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.perform_gstr1_action",
             args: args,
-            callback: (response) => callback && callback(response),
+            callback: (response) => {
+                if (response.message?.filing_status !== "Filed") return callback && callback(response);
+
+                frappe.msgprint(
+                    __("GST Portal reports this GSTR-1 as already filed. Status updated to Filed."),
+                );
+                this.filing_dialog?.hide();
+                this.toggle_actions(true);
+                render_empty_state(this.frm);
+                this.generate_gstr1_data();
+            },
         });
     }
 

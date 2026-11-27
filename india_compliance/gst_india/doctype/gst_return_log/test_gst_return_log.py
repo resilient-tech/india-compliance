@@ -10,6 +10,7 @@ import openpyxl
 from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
+from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API, GSTR3bAPI
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     ReconcileGSTR1,
 )
@@ -43,6 +44,39 @@ class TestGSTReturnLog(IntegrationTestCase):
     def setUp(self):
         # the log is created by the test that needs it: test_add_comment asserts there is none
         self.log_name = f"GSTR1-{getdate(self.POSTING_DATE).strftime('%m%Y')}-{self.GSTIN}"
+
+    def test_only_gstr1_api_reads_auth117_as_already_filed(self):
+        for api_class, error_type in ((GSTR1API, "already_filed"), (GSTR3bAPI, None)):
+            with patch.object(api_class, "__init__", return_value=None):
+                api = api_class()
+
+            api.company_gstin = self.GSTIN
+            response = frappe._dict(error=frappe._dict(error_cd="AUTH117"))
+            self.assertEqual(api.is_ignored_error(response), bool(error_type))
+            self.assertEqual(response.get("error_type"), error_type)
+
+    @patch("india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1.GSTR1API")
+    def test_already_filed_answer_marks_the_return_filed(self, mock_api):
+        already_filed = frappe._dict(error_type="already_filed")
+        mock_api.return_value.reset_gstr_1_data.return_value = already_filed
+        mock_api.return_value.proceed_to_file.return_value = already_filed
+
+        log = frappe.get_doc(
+            {
+                "doctype": "GST Return Log",
+                "company": "_Test Indian Registered Company",
+                "gstin": self.GSTIN,
+                "return_period": "022098",
+                "return_type": "GSTR1",
+            }
+        ).insert()
+
+        for action in (log.reset_gstr1, log.proceed_to_file_gstr1):
+            log.db_set("filing_status", "Not Filed")
+            self.assertEqual(action(is_nil_return=False, force=True), {"filing_status": "Filed"})
+            self.assertEqual(frappe.db.get_value("GST Return Log", log.name, "filing_status"), "Filed")
+
+        self.assertFalse(log.reload().actions)
 
     def test_add_comment_creates_log_when_missing(self):
         self.assertFalse(frappe.db.exists("GST Return Log", self.log_name))
