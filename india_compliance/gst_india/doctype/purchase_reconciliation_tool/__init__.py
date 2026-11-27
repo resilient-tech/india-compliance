@@ -1248,9 +1248,7 @@ class ReconciledData(BaseReconciliation):
 
         # IMS and 2A rows carry no name; another 2B row for the GSTIN may
         unknown_rows = [
-            data
-            for data in reconciliation_data
-            if data.supplier_name == "Unknown" and not data.purchase_invoice_name and data.supplier_gstin
+            data for data in reconciliation_data if data.supplier_name == "Unknown" and data.supplier_gstin
         ]
         if unknown_rows:
             names = self.get_inward_supply_names({data.supplier_gstin for data in unknown_rows})
@@ -1274,9 +1272,9 @@ class ReconciledData(BaseReconciliation):
         party = purchase or self.guess_supplier(data.supplier_gstin)
         gstin_info = self.gstin_map.get(data.supplier_gstin, frappe._dict())
 
-        supplier_name = party.get("supplier_name") or inward_supply.get("supplier_name")
-        if not purchase:
-            supplier_name = supplier_name or get_gstin_name(gstin_info)
+        supplier_name = (
+            party.get("supplier_name") or inward_supply.get("supplier_name") or get_gstin_name(gstin_info)
+        )
 
         data.update(
             {
