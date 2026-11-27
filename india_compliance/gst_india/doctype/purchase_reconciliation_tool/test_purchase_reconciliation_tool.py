@@ -269,10 +269,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
     @change_settings("Buying Settings", {"supp_master_name": "Naming Series"})
     def test_supplier_name_of_unbooked_invoice_is_the_supplier_title(self):
-        """
-        A row with no Purchase Invoice takes its supplier name from the GSTIN.
-        That must be the supplier's name, as on every other row, not its docname.
-        """
+        """An unbooked row shows "Unknown" despite a known name, or a docname instead of the name."""
         supplier = frappe.get_doc(
             {
                 "doctype": "Supplier",
@@ -312,6 +309,90 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertEqual(rows[0].match_status, "Only in 2A/2B")
         self.assertEqual(rows[0].supplier, supplier.name)
         self.assertEqual(rows[0].supplier_name, supplier.supplier_name)
+
+        # with no supplier: the row's own 2B name, then the GSTIN record (legal name before trade
+        # name), then the 2B name on the GSTIN's latest invoice from any company
+        frappe.get_doc(
+            {
+                "doctype": "GSTIN",
+                "gstin": "24AADFT5917A1ZK",
+                "legal_name": "_Test Legal Name",
+                "trade_name": "_Test Trade Name",
+                "status": "Active",
+            }
+        ).insert()
+
+        unbooked = {}
+        for key, supplier_gstin, supplier_name, bill_no, bill_date, company_gstin, return_period in (
+            # the 2B with the older invoice is downloaded last
+            (
+                None,
+                "24AUTPV8831F1ZZ",
+                "_Test Name From Another 2B Row",
+                "RECO-NAME-006",
+                "2024-01-20",
+                "27AAQCA8719H1Z6",
+                "012024",
+            ),
+            (
+                None,
+                "24AUTPV8831F1ZZ",
+                "_Test Older 2B Name",
+                "RECO-NAME-005",
+                "2024-01-05",
+                "24AAQCA8719H1ZC",
+                "012024",
+            ),
+            ("2B name", "24AUTPV8831F1ZZ", "", "RECO-NAME-007", "2024-01-10", "24AAQCA8719H1ZC", "022024"),
+            (
+                "own name",
+                "24AADFT5917A1ZK",
+                "_Test Own 2B Name",
+                "RECO-NAME-009",
+                "2024-01-10",
+                "24AAQCA8719H1ZC",
+                "022024",
+            ),
+            (
+                None,
+                "24AADFT5917A1ZK",
+                "_Test Newer 2B Name",
+                "RECO-NAME-010",
+                "2024-01-10",
+                "24AAQCA8719H1ZC",
+                "012024",
+            ),
+            (
+                "gstin record",
+                "24AADFT5917A1ZK",
+                "",
+                "RECO-NAME-008",
+                "2024-01-10",
+                "24AAQCA8719H1ZC",
+                "022024",
+            ),
+        ):
+            gst_is_row = create_gst_inward_supply(
+                supplier_name=supplier_name,
+                supplier_gstin=supplier_gstin,
+                company_gstin=company_gstin,
+                bill_no=bill_no,
+                bill_date=bill_date,
+                return_period_2b=return_period,
+                gen_date_2b="2024-02-14",
+            )
+            if key:
+                unbooked[key] = gst_is_row.name
+
+        rows = {row.inward_supply_name: row for row in prt.reconcile_and_generate_data()}
+        self.assertEqual(rows[unbooked["own name"]].supplier_name, "_Test Own 2B Name")
+        self.assertEqual(rows[unbooked["gstin record"]].supplier_name, "_Test Legal Name")
+        self.assertEqual(rows[unbooked["2B name"]].supplier, "")
+        self.assertEqual(rows[unbooked["2B name"]].supplier_name, "_Test Name From Another 2B Row")
+
+        # the detail view loads this one row alone, with no other 2B row beside it
+        detail = frappe.get_doc(prt.as_dict()).get_invoice_details(None, unbooked["2B name"])
+        self.assertEqual(detail.supplier_name, "_Test Name From Another 2B Row")
 
     def test_supplier_file_is_named_as_in_the_supplier_tab(self):
         """The emailed file takes an invoice's "Unknown" instead of the supplier tab's name."""
