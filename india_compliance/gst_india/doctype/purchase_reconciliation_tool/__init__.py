@@ -10,7 +10,7 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Abs, IfNull, Sum
+from frappe.query_builder.functions import Abs, IfNull, Max, Sum
 from frappe.utils import add_months, add_years, cint, format_date, get_first_day, getdate, rounded
 from pypika.terms import LiteralValue
 from rapidfuzz import fuzz, process
@@ -22,6 +22,7 @@ from india_compliance.gst_india.utils.gstr_2 import (
     ISD_CATEGORY,
     NON_RECONCILE_CATEGORY,
     ReturnType,
+    get_gstin_name,
 )
 from india_compliance.gst_india.utils.itc_claim import (
     SUPPORTED_DOCTYPES,
@@ -1245,6 +1246,18 @@ class ReconciledData(BaseReconciliation):
             if retain_doc and purchase:
                 BaseUtil.update_cess_amount(purchase)
 
+        # IMS and 2A rows carry no name; another 2B row for the GSTIN may
+        unknown_rows = [
+            data
+            for data in reconciliation_data
+            if data.supplier_name == "Unknown" and not data.purchase_invoice_name and data.supplier_gstin
+        ]
+        if unknown_rows:
+            names = self.get_inward_supply_names({data.supplier_gstin for data in unknown_rows})
+            for data in unknown_rows:
+                if name := names.get(data.supplier_gstin):
+                    data.supplier_name = name
+
     def update_fields(self, data, purchase, inward_supply):
         # Update accounting dimension fields
         for dimension in self.dimension_fields:
@@ -1259,9 +1272,12 @@ class ReconciledData(BaseReconciliation):
             data[field] = purchase.get(field) or inward_supply.get(field)
 
         party = purchase or self.guess_supplier(data.supplier_gstin)
-        supplier_name = party.get("supplier_name") or inward_supply.get("supplier_name")
-
         gstin_info = self.gstin_map.get(data.supplier_gstin, frappe._dict())
+
+        supplier_name = party.get("supplier_name") or inward_supply.get("supplier_name")
+        if not purchase:
+            supplier_name = supplier_name or get_gstin_name(gstin_info)
+
         data.update(
             {
                 "supplier": party.get("supplier") or "",
@@ -1312,9 +1328,24 @@ class ReconciledData(BaseReconciliation):
         records = frappe.get_all(
             "GSTIN",
             filters={"name": ("in", list(supplier_gstins))},
-            fields=["name", "status", "cancelled_date"],
+            fields=["name", "status", "cancelled_date", "legal_name", "trade_name"],
         )
         return frappe._dict({r.name: r for r in records})
+
+    def get_inward_supply_names(self, gstins):
+        """2B name on each GSTIN's latest invoice, from any company's inward supplies."""
+        GIS = frappe.qb.DocType("GST Inward Supply")
+        named = (
+            frappe.qb.from_(GIS)
+            .select(GIS.supplier_gstin, GIS.supplier_name)
+            .where(GIS.supplier_gstin.isin(gstins))
+            .where(IfNull(GIS.supplier_name, "") != "")
+            .groupby(GIS.supplier_gstin, GIS.supplier_name)
+            .orderby(Max(GIS.bill_date))
+            .run(as_dict=True)
+        )
+        # earliest invoice first, so the latest invoice's name is written last
+        return frappe._dict({row.supplier_gstin: row.supplier_name for row in named})
 
     def update_amount_difference(self, data, purchase, inward_supply):
         data.taxable_value_difference = rounded(
