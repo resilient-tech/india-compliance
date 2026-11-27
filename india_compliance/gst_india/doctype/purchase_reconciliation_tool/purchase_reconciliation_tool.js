@@ -62,10 +62,11 @@ async function add_gstr2b_alert(frm) {
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
         patch_set_active_tab(frm);
+        // onload's date-range call returns the doc, so the company must be set before it goes out
+        frm.doc.company = frappe.defaults.get_user_default("Company");
 
         await frappe.require(["purchase_reconciliation_tool.bundle.js", "india_compliance.bundle.css"]);
 
-        frm.doc.company = frappe.defaults.get_user_default("Company");
         frm.trigger("company");
 
         frm.reconciliation_tabs = new PurchaseReconciliationTool(
@@ -152,8 +153,8 @@ frappe.ui.form.on(DOCTYPE, {
                     frm.dashboard.set_headline("Successfully Imported");
                     setTimeout(() => {
                         frm.dashboard.clear_headline();
+                        frm.trigger("company_gstin");
                     }, 2000);
-                    frm.save();
                 }, 1000);
             }
         });
