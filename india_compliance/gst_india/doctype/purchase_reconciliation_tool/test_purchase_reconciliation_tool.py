@@ -311,7 +311,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertEqual(rows[0].supplier_name, supplier.supplier_name)
 
         # with no supplier: the row's own 2B name, then the GSTIN record (legal name before trade
-        # name), then the newest 2B name for the GSTIN from any company
+        # name), then the 2B name on the GSTIN's latest invoice from any company
         frappe.get_doc(
             {
                 "doctype": "GSTIN",
@@ -323,34 +323,61 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         ).insert()
 
         unbooked = {}
-        for key, supplier_gstin, supplier_name, bill_no, company_gstin, return_period in (
-            (None, "24AUTPV8831F1ZZ", "_Test Older 2B Name", "RECO-NAME-005", "24AAQCA8719H1ZC", "012024"),
+        for key, supplier_gstin, supplier_name, bill_no, bill_date, company_gstin, return_period in (
+            # the 2B with the older invoice is downloaded last
             (
                 None,
                 "24AUTPV8831F1ZZ",
                 "_Test Name From Another 2B Row",
                 "RECO-NAME-006",
+                "2024-01-20",
                 "27AAQCA8719H1Z6",
                 "012024",
             ),
-            ("2B name", "24AUTPV8831F1ZZ", "", "RECO-NAME-007", "24AAQCA8719H1ZC", "022024"),
+            (
+                None,
+                "24AUTPV8831F1ZZ",
+                "_Test Older 2B Name",
+                "RECO-NAME-005",
+                "2024-01-05",
+                "24AAQCA8719H1ZC",
+                "012024",
+            ),
+            ("2B name", "24AUTPV8831F1ZZ", "", "RECO-NAME-007", "2024-01-10", "24AAQCA8719H1ZC", "022024"),
             (
                 "own name",
                 "24AADFT5917A1ZK",
                 "_Test Own 2B Name",
                 "RECO-NAME-009",
+                "2024-01-10",
                 "24AAQCA8719H1ZC",
                 "022024",
             ),
-            (None, "24AADFT5917A1ZK", "_Test Newer 2B Name", "RECO-NAME-010", "24AAQCA8719H1ZC", "012024"),
-            ("gstin record", "24AADFT5917A1ZK", "", "RECO-NAME-008", "24AAQCA8719H1ZC", "022024"),
+            (
+                None,
+                "24AADFT5917A1ZK",
+                "_Test Newer 2B Name",
+                "RECO-NAME-010",
+                "2024-01-10",
+                "24AAQCA8719H1ZC",
+                "012024",
+            ),
+            (
+                "gstin record",
+                "24AADFT5917A1ZK",
+                "",
+                "RECO-NAME-008",
+                "2024-01-10",
+                "24AAQCA8719H1ZC",
+                "022024",
+            ),
         ):
             gst_is_row = create_gst_inward_supply(
                 supplier_name=supplier_name,
                 supplier_gstin=supplier_gstin,
                 company_gstin=company_gstin,
                 bill_no=bill_no,
-                bill_date="2024-01-10",
+                bill_date=bill_date,
                 return_period_2b=return_period,
                 gen_date_2b="2024-02-14",
             )
