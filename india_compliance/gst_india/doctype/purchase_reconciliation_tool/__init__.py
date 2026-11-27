@@ -1335,7 +1335,7 @@ class ReconciledData(BaseReconciliation):
         return frappe._dict({r.name: r for r in records})
 
     def get_inward_supply_names(self, gstins):
-        """Newest 2B name for each GSTIN, from any company's inward supplies."""
+        """2B name on each GSTIN's latest invoice, from any company's inward supplies."""
         GIS = frappe.qb.DocType("GST Inward Supply")
         named = (
             frappe.qb.from_(GIS)
@@ -1343,10 +1343,10 @@ class ReconciledData(BaseReconciliation):
             .where(GIS.supplier_gstin.isin(gstins))
             .where(IfNull(GIS.supplier_name, "") != "")
             .groupby(GIS.supplier_gstin, GIS.supplier_name)
-            .orderby(Max(GIS.creation))
+            .orderby(Max(GIS.bill_date))
             .run(as_dict=True)
         )
-        # oldest first, so the newest name is written last
+        # earliest invoice first, so the latest invoice's name is written last
         return frappe._dict({row.supplier_gstin: row.supplier_name for row in named})
 
     def update_amount_difference(self, data, purchase, inward_supply):
